@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Users, Plus, Clock, Settings, LogOut, Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
+import API_BASE_URL from '../config/api.js'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -89,7 +90,7 @@ const Dashboard = () => {
     setLoadingHostedEvents(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get('http://localhost:5000/api/events/my-hosted', {
+      const response = await axios.get(`${API_BASE_URL}/api/events/my-hosted`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../config/api.js';
 import { 
   Search, 
   Filter, 
@@ -58,7 +59,7 @@ const EventDiscovery = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/events');
+      const response = await axios.get(`${API_BASE_URL}/api/events`);
       // Backend returns { events: [...], totalPages, currentPage, total }
       const eventsData = response.data.events || [];
       setEvents(Array.isArray(eventsData) ? eventsData : []);
@@ -226,7 +227,7 @@ const EventDiscovery = () => {
         return;
       }
 
-      await axios.post(`http://localhost:5000/api/events/${eventId}/register`, {}, {
+      await axios.post(`${API_BASE_URL}/api/events/${eventId}/register`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

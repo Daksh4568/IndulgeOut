@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config/api.js';
 
 const AuthContext = createContext();
 
@@ -28,7 +29,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/auth/profile');
+      const response = await axios.get(`${API_BASE_URL}/api/auth/profile`);
       setUser(response.data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -41,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, userData);
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
@@ -60,7 +61,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', credentials);
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, credentials);
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
@@ -85,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateUserInterests = async (interests) => {
     try {
-      const response = await axios.put('http://localhost:5000/api/users/interests', { interests });
+      const response = await axios.put(`${API_BASE_URL}/api/users/interests`, { interests });
       setUser(response.data);
       return { success: true };
     } catch (error) {
