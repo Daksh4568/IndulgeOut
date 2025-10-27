@@ -1,9 +1,9 @@
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import { body, validationResult } from 'express-validator';
-import Event from '../models/Event.js';
-import User from '../models/User.js';
-import { sendEventRegistrationEmail, sendEventNotificationToHost } from '../utils/emailService.js';
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
+const Event = require('../models/Event.js');
+const User = require('../models/User.js');
+const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
 
 const router = express.Router();
 
@@ -299,4 +299,4 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;

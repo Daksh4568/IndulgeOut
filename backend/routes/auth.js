@@ -1,8 +1,8 @@
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import { body, validationResult } from 'express-validator';
-import User from '../models/User.js';
-import { sendWelcomeEmail } from '../utils/emailService.js';
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
+const User = require('../models/User.js');
+const { sendWelcomeEmail } = require('../utils/emailService.js');
 
 const router = express.Router();
 
@@ -147,4 +147,4 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;

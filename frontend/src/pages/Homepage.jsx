@@ -107,7 +107,7 @@ function Homepage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Custom CSS for additional animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;

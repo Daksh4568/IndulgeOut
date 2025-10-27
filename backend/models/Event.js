@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
   title: {
@@ -132,4 +132,4 @@ eventSchema.methods.updateParticipantCount = function() {
   return this.save();
 };
 
-export default mongoose.model('Event', eventSchema);
+module.exports = mongoose.model('Event', eventSchema);
