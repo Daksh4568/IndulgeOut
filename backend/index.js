@@ -15,6 +15,7 @@ const app = express();
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/indulgeout';
+    console.log('Index.js env' , mongoURI);
     
     // Simplified connection options for Vercel serverless
     await mongoose.connect(mongoURI, {
@@ -23,7 +24,7 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-    console.log('✅ MongoDB connected successfully');
+    console.log('✅ MongoDB connected successfully' , mongoURI);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     // In production, continue without exiting
@@ -35,15 +36,24 @@ connectDB();
 
 // CORS Configuration for cross-origin access
 const corsOptions = {
-  origin: true, // Allow all origins
+  origin: [
+    'https://indulge-out-ra22.vercel.app',
+    'https://indulge-out-ra22-8vofoo7xx.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   optionsSuccessStatus: 200
 };
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
