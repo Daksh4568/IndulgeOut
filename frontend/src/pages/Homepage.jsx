@@ -557,18 +557,6 @@ function Homepage() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IndulgeOut</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Link
-                to="/events"
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Events
-              </Link>
-              <Link
-                to="/communities"
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Communities
-              </Link>
               <DarkModeToggle />
               <Link
                 to="/login"
@@ -1110,8 +1098,6 @@ function Homepage() {
             <div>
               <h4 className="font-semibold mb-4">Community</h4>
               <ul className="space-y-2 text-gray-400 dark:text-gray-500">
-                <li><Link to="/events" className="hover:text-white dark:hover:text-gray-300 transition-colors">Events</Link></li>
-                <li><Link to="/communities" className="hover:text-white dark:hover:text-gray-300 transition-colors">Communities</Link></li>
                 <li><Link to="/groups" className="hover:text-white dark:hover:text-gray-300 transition-colors">Groups</Link></li>
                 <li><Link to="/blog" className="hover:text-white dark:hover:text-gray-300 transition-colors">Blog</Link></li>
               </ul>
