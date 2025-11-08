@@ -11,28 +11,44 @@ const recommendationRoutes = require('./routes/recommendations.js');
 
 const app = express();
 
-// Database connection with retry logic
+// Global variable to cache the database connection
+let cachedDb = null;
+
 const connectDB = async () => {
+  // If we have a cached connection, return it
+  if (cachedDb && mongoose.connection.readyState === 1) {
+    return cachedDb;
+  }
+
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/indulgeout';
-    console.log('Index.js env' , mongoURI);
+    console.log('Index.js env', mongoURI);
     
-    // Simplified connection options for Vercel serverless
-    await mongoose.connect(mongoURI, {
+    // Optimized connection options for Vercel serverless
+    const connection = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000, // Increased timeout
       socketTimeoutMS: 45000,
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      serverSelectionRetryDelayMS: 5000, // Keep trying to send operations for 5 seconds
+      heartbeatFrequencyMS: 10000, // Send a ping to check if connection is alive every 10 seconds
+      bufferMaxEntries: 0, // Disable mongoose buffering
+      bufferCommands: false, // Disable mongoose buffering
     });
-    console.log('✅ MongoDB connected successfully' , mongoURI);
+    
+    cachedDb = connection;
+    console.log('✅ MongoDB connected successfully', mongoURI);
+    return connection;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
-    // In production, continue without exiting
+    cachedDb = null;
+    throw error; // Re-throw to handle in routes
   }
 };
 
-// Connect to database
-connectDB();
+// Connect to database initially
+connectDB().catch(console.error);
 
 // CORS Configuration for cross-origin access
 const corsOptions = {
@@ -51,6 +67,23 @@ app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Database connection middleware
+app.use(async (req, res, next) => {
+  try {
+    // Ensure database connection before each request
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(503).json({ 
+      message: 'Database temporarily unavailable. Please try again.', 
+      error: 'SERVICE_UNAVAILABLE' 
+    });
+  }
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
