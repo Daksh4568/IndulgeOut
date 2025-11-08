@@ -1,3 +1,7 @@
+# Documentation files
+README.md
+TECHNICAL-DOCUMENTATION.md
+
 # Dependencies
 node_modules/
 npm-debug.log*

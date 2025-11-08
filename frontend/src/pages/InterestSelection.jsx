@@ -2,10 +2,11 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import DarkModeToggle from '../components/DarkModeToggle'
 
 const InterestSelection = () => {
   const navigate = useNavigate()
-  const { updateUserInterests } = useAuth()
+  const { updateUserInterests, user, isCommunityMember } = useAuth()
   const [selectedInterests, setSelectedInterests] = useState([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -103,8 +104,14 @@ const InterestSelection = () => {
       const result = await updateUserInterests(interestNames)
       
       if (result.success) {
-        // Navigate to events page for regular users
-        navigate('/events')
+        // Navigate based on user role
+        if (isCommunityMember) {
+          // Community members (hosts) go to dashboard where they can create/manage events
+          navigate('/dashboard')
+        } else {
+          // Regular users go to events page to discover events
+          navigate('/events')
+        }
       } else {
         alert('Failed to update interests. Please try again.')
       }
@@ -117,14 +124,17 @@ const InterestSelection = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">IndulgeOut</h1>
-            <div className="text-sm text-gray-500">
-              Step 2 of 2
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IndulgeOut</h1>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Step 2 of 2
+              </div>
+              <DarkModeToggle />
             </div>
           </div>
         </div>
@@ -133,12 +143,14 @@ const InterestSelection = () => {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             What are you interested in?
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Select your interests to discover events and communities that match your passions. 
-            You can always update these later.
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            {isCommunityMember 
+              ? 'Select your interests to help create relevant events and connect with like-minded community members. You can always update these later.'
+              : 'Select your interests to discover events and communities that match your passions. You can always update these later.'
+            }
           </p>
         </div>
 
@@ -186,7 +198,7 @@ const InterestSelection = () => {
         {/* Selected count and action */}
         <div className="text-center">
           <div className="mb-6">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {selectedInterests.length === 0 
                 ? 'No interests selected yet'
                 : `${selectedInterests.length} interest${selectedInterests.length === 1 ? '' : 's'} selected`
@@ -206,15 +218,15 @@ const InterestSelection = () => {
               </div>
             ) : (
               <div className="flex items-center">
-                Continue to Dashboard
+                {isCommunityMember ? 'Continue to Dashboard' : 'Continue to Events'}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </div>
             )}
           </button>
 
           <button
-            onClick={() => navigate('/dashboard')}
-            className="mt-4 text-gray-500 hover:text-gray-700 underline"
+            onClick={() => navigate(isCommunityMember ? '/dashboard' : '/events')}
+            className="mt-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline transition-colors"
           >
             Skip for now
           </button>

@@ -1,6 +1,79 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const userAnalyticsSchema = new mongoose.Schema({
+  // Event Registration Analytics
+  registeredEvents: [{
+    event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
+    category: { type: String },
+    registeredAt: { type: Date, default: Date.now },
+    attended: { type: Boolean, default: false },
+    rating: { type: Number, min: 1, max: 5 },
+    location: {
+      city: String,
+      state: String,
+      country: String
+    }
+  }],
+  
+  // Community Participation Analytics
+  joinedCommunities: [{
+    community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community' },
+    category: { type: String },
+    joinedAt: { type: Date, default: Date.now },
+    activityLevel: { 
+      type: String, 
+      enum: ['low', 'medium', 'high'], 
+      default: 'low' 
+    },
+    postsCount: { type: Number, default: 0 },
+    likesReceived: { type: Number, default: 0 }
+  }],
+  
+  // Location Analytics
+  locationHistory: [{
+    city: { type: String, required: true },
+    state: String,
+    country: { type: String, default: 'India' },
+    coordinates: {
+      latitude: Number,
+      longitude: Number
+    },
+    frequency: { type: Number, default: 1 },
+    lastSeen: { type: Date, default: Date.now }
+  }],
+  
+  // Behavioral Analytics
+  categoryPreferences: [{
+    category: { type: String, required: true },
+    score: { type: Number, default: 1 }, // Weighted score based on interactions
+    lastInteraction: { type: Date, default: Date.now }
+  }],
+  
+  // Search Analytics
+  searchHistory: [{
+    query: String,
+    filters: {
+      category: String,
+      location: String,
+      priceRange: String
+    },
+    resultsCount: Number,
+    clickedEvent: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
+    searchedAt: { type: Date, default: Date.now }
+  }],
+  
+  // Recommendation Metrics
+  recommendationMetrics: {
+    totalRecommendationsShown: { type: Number, default: 0 },
+    recommendationsClicked: { type: Number, default: 0 },
+    recommendationsRegistered: { type: Number, default: 0 },
+    clickThroughRate: { type: Number, default: 0 },
+    conversionRate: { type: Number, default: 0 },
+    lastCalculated: { type: Date, default: Date.now }
+  }
+});
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -40,7 +113,13 @@ const userSchema = new mongoose.Schema({
   location: {
     city: String,
     state: String,
-    country: String
+    country: { type: String, default: 'India' },
+    coordinates: {
+      latitude: Number,
+      longitude: Number
+    },
+    timezone: String,
+    zipCode: String
   },
   profilePicture: String,
   bio: String,
@@ -48,6 +127,32 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  
+  // Enhanced Analytics Data
+  analytics: userAnalyticsSchema,
+  
+  // User Preferences
+  preferences: {
+    emailNotifications: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: true },
+    eventReminders: { type: Boolean, default: true },
+    communityUpdates: { type: Boolean, default: true },
+    recommendationFrequency: { 
+      type: String, 
+      enum: ['daily', 'weekly', 'monthly'], 
+      default: 'weekly' 
+    },
+    maxTravelDistance: { type: Number, default: 50 }, // in kilometers
+    preferredEventTimes: [{ 
+      type: String, 
+      enum: ['morning', 'afternoon', 'evening', 'night'] 
+    }],
+    priceRange: {
+      min: { type: Number, default: 0 },
+      max: { type: Number, default: 10000 }
+    }
+  },
+  
   registeredEvents: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Event'

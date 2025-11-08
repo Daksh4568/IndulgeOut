@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUserProfile = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/auth/profile`);
-      setUser(response.data);
+      setUser(response.data.user); // Extract user from response.data.user
     } catch (error) {
       console.error('Error fetching user profile:', error);
       localStorage.removeItem('token');
@@ -87,7 +87,8 @@ export const AuthProvider = ({ children }) => {
   const updateUserInterests = async (interests) => {
     try {
       const response = await axios.put(`${API_BASE_URL}/api/users/interests`, { interests });
-      setUser(response.data);
+      // Extract the user object from the response
+      setUser(response.data.user || response.data);
       return { success: true };
     } catch (error) {
       console.error('Error updating interests:', error);

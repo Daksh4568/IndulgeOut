@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Calendar, MapPin, Heart, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import DarkModeToggle from '../components/DarkModeToggle';
 
 function Homepage() {
   const navigate = useNavigate();
@@ -171,24 +172,24 @@ function Homepage() {
 
   const testimonials = [
     {
-      name: 'Sarah Chen',
+      name: 'Rahul Sharma',
       text: 'Found my hiking tribe through IndulgeOut. Best decision ever!',
       interest: 'Adventure & Outdoors'
     },
     {
-      name: 'Mike Rodriguez',
+      name: 'Lakshya Thakur',
       text: 'Amazing food events and met incredible people who share my passion.',
       interest: 'Sip & Savor'
     },
     {
-      name: 'Emma Thompson',
+      name: 'Ankita',
       text: 'The art workshops here are fantastic. So many creative souls!',
       interest: 'Art & DIY'
     }
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Custom CSS for additional animations */}
       <style>{`
         @keyframes fadeInUp {
@@ -549,22 +550,35 @@ function Homepage() {
         }
       `}</style>
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">IndulgeOut</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IndulgeOut</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Link
+                to="/events"
+                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Events
+              </Link>
+              <Link
+                to="/communities"
+                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Communities
+              </Link>
+              <DarkModeToggle />
+              <Link
                 to="/login"
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Sign In
               </Link>
               <Link
                 to="/register"
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Get Started
               </Link>
@@ -574,12 +588,12 @@ function Homepage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary-50 to-blue-50 py-20 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 py-20 overflow-hidden transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center relative z-10">
             {/* Animated Hero Title with Enhanced Typewriter Effect */}
             <div className="mb-6">
-              <h1 className={`text-4xl md:text-6xl font-bold text-gray-900 transform transition-all duration-1500 ${
+              <h1 className={`text-4xl md:text-6xl font-bold text-gray-900 dark:text-white transform transition-all duration-1500 ${
                 isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
               }`}>
                 <span className="block slide-in-rotate text-glow-secondary">
@@ -597,7 +611,7 @@ function Homepage() {
                 </span>
               </h1>
             </div>
-            <p className={`text-xl text-gray-600 mb-8 max-w-3xl mx-auto transform transition-all duration-1000 delay-1000 ${
+            <p className={`text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto transform transition-all duration-1000 delay-1000 ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`}>
               Connect with like-minded people around food, music, sports, art, and experiences. 
@@ -671,13 +685,13 @@ function Homepage() {
       </section>
 
       {/* Creative Hobby Connection Animation */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 text-glow-secondary">Where Passions Connect</h2>
-            <p className="text-xl text-gray-600">Watch how IndulgeOut brings hobby enthusiasts together</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 text-glow-secondary">Where Passions Connect</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Watch how IndulgeOut brings hobby enthusiasts together</p>
           </div>
           
           {/* Central Hub Animation */}
@@ -760,24 +774,24 @@ function Homepage() {
           </div>
           
           {/* Interactive Phase Indicators */}
-          <div className="flex justify-center mt-12 space-x-4">
-            <div className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 0 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 text-gray-600'
+          <div className="flex flex-wrap justify-center mt-12 space-x-2 sm:space-x-4 gap-y-2">
+            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
+              animationPhase === 0 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
             }`}>
               Discover Hobbies
             </div>
-            <div className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 1 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 text-gray-600'
+            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
+              animationPhase === 1 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
             }`}>
               Find Your Tribe
             </div>
-            <div className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 2 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 text-gray-600'
+            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
+              animationPhase === 2 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
             }`}>
               Join Events
             </div>
-            <div className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 3 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 text-gray-600'
+            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
+              animationPhase === 3 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
             }`}>
               Build Connections
             </div>
@@ -786,22 +800,22 @@ function Homepage() {
           {/* Description based on current phase */}
           <div className="text-center mt-8 h-16">
             {animationPhase === 0 && (
-              <p className="text-lg text-gray-600 animate-fadeIn">
+              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
                 Explore diverse hobbies from mountain climbing to book clubs
               </p>
             )}
             {animationPhase === 1 && (
-              <p className="text-lg text-gray-600 animate-fadeIn">
+              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
                 Connect with like-minded people who share your passions
               </p>
             )}
             {animationPhase === 2 && (
-              <p className="text-lg text-gray-600 animate-fadeIn">
+              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
                 Participate in exciting events and activities near you
               </p>
             )}
             {animationPhase === 3 && (
-              <p className="text-lg text-gray-600 animate-fadeIn">
+              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
                 Form lasting friendships through shared experiences
               </p>
             )}
@@ -809,13 +823,13 @@ function Homepage() {
         </div>
         
         {/* Background Decorative Elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-gradient-to-br from-primary-200 to-primary-300 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-16 h-16 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full opacity-20 animate-bounce"></div>
-        <div className="absolute top-1/2 right-20 w-12 h-12 bg-gradient-to-br from-purple-200 to-purple-300 rounded-full opacity-20 floating-3d"></div>
+        <div className="absolute top-10 left-10 w-20 h-20 bg-gradient-to-br from-primary-200 to-primary-300 dark:from-primary-600 dark:to-primary-700 rounded-full opacity-20 dark:opacity-30 animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-16 h-16 bg-gradient-to-br from-blue-200 to-blue-300 dark:from-blue-600 dark:to-blue-700 rounded-full opacity-20 dark:opacity-30 animate-bounce"></div>
+        <div className="absolute top-1/2 right-20 w-12 h-12 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-600 dark:to-purple-700 rounded-full opacity-20 dark:opacity-30 floating-3d"></div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {stats.map((stat, index) => (
@@ -826,10 +840,10 @@ function Homepage() {
                 }`}
                 style={{transitionDelay: `${800 + index * 200}ms`}}
               >
-                <div className="text-4xl font-bold text-primary-600 mb-2 text-glow-secondary floating-3d" style={{animationDelay: `${index * 0.5}s`}}>
+                <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2 floating-3d" style={{animationDelay: `${index * 0.5}s`}}>
                   {stat.number}
                 </div>
-                <div className="text-gray-600 transform transition-all duration-300 hover:scale-105">{stat.label}</div>
+                <div className="text-gray-600 dark:text-gray-300 transform transition-all duration-300 hover:scale-105">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -837,67 +851,67 @@ function Homepage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600">Simple steps to find your community</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">How It Works</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Simple steps to find your community</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`} style={{transitionDelay: '1200ms'}}>
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300">
-                <Users className="h-8 w-8 text-primary-600" />
+              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300">
+                <Users className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary">Choose Your Interests</h3>
-              <p className="text-gray-600">Select from food, sports, art, music, and more</p>
+              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Choose Your Interests</h3>
+              <p className="text-gray-600 dark:text-gray-400">Select from food, sports, art, music, and more</p>
             </div>
             
             <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`} style={{transitionDelay: '1400ms'}}>
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.2s'}}>
-                <Calendar className="h-8 w-8 text-primary-600" />
+              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.2s'}}>
+                <Calendar className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary">Discover Events</h3>
-              <p className="text-gray-600">Find events that match your passions</p>
+              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Discover Events</h3>
+              <p className="text-gray-600 dark:text-gray-400">Find events that match your passions</p>
             </div>
             
             <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`} style={{transitionDelay: '1600ms'}}>
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.4s'}}>
-                <MapPin className="h-8 w-8 text-primary-600" />
+              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.4s'}}>
+                <MapPin className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary">Join Locally</h3>
-              <p className="text-gray-600">Meet people in your area</p>
+              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Join Locally</h3>
+              <p className="text-gray-600 dark:text-gray-400">Meet people in your area</p>
             </div>
             
             <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`} style={{transitionDelay: '1800ms'}}>
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.6s'}}>
-                <Heart className="h-8 w-8 text-primary-600" />
+              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.6s'}}>
+                <Heart className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary">Build Connections</h3>
-              <p className="text-gray-600">Form lasting friendships</p>
+              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Build Connections</h3>
+              <p className="text-gray-600 dark:text-gray-400">Form lasting friendships</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Interest Categories */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore Your Interests</h2>
-            <p className="text-xl text-gray-600">Find your passion and connect with others</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore Your Interests</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Find your passion and connect with others</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -947,13 +961,13 @@ function Homepage() {
       </section>
 
       {/* Testimonials Carousel */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Community Says</h2>
-            <p className="text-xl text-gray-600">Real stories from real people</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">What Our Community Says</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Real stories from real people</p>
           </div>
           
           {/* Carousel Container */}
@@ -961,16 +975,16 @@ function Homepage() {
             {/* Navigation Buttons */}
             <button 
               onClick={prevTestimonial}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group border border-gray-200 dark:border-gray-600"
             >
-              <ChevronLeft className="h-6 w-6 text-gray-600 group-hover:text-primary-600 transition-colors duration-300" />
+              <ChevronLeft className="h-6 w-6 text-gray-600 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300" />
             </button>
             
             <button 
               onClick={nextTestimonial}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group border border-gray-200 dark:border-gray-600"
             >
-              <ChevronRight className="h-6 w-6 text-gray-600 group-hover:text-primary-600 transition-colors duration-300" />
+              <ChevronRight className="h-6 w-6 text-gray-600 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300" />
             </button>
 
             {/* Testimonials Slider */}
@@ -984,7 +998,7 @@ function Homepage() {
                     key={index}
                     className="w-full flex-shrink-0 px-8"
                   >
-                    <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700">
                       {/* Stars */}
                       <div className="flex justify-center items-center mb-6">
                         {[...Array(5)].map((_, i) => (
@@ -997,14 +1011,14 @@ function Homepage() {
                       </div>
                       
                       {/* Quote */}
-                      <blockquote className="text-xl text-gray-700 text-center mb-8 italic font-medium leading-relaxed">
+                      <blockquote className="text-xl text-gray-700 dark:text-gray-300 text-center mb-8 italic font-medium leading-relaxed">
                         "{testimonial.text}"
                       </blockquote>
                       
                       {/* Author */}
-                      <div className="text-center border-t pt-6">
-                        <p className="font-bold text-xl text-gray-900 mb-2">{testimonial.name}</p>
-                        <p className="text-primary-600 font-semibold text-lg">{testimonial.interest}</p>
+                      <div className="text-center border-t border-gray-200 dark:border-gray-600 pt-6">
+                        <p className="font-bold text-xl text-gray-900 dark:text-white mb-2">{testimonial.name}</p>
+                        <p className="text-primary-600 dark:text-primary-400 font-semibold text-lg">{testimonial.interest}</p>
                       </div>
                     </div>
                   </div>
@@ -1025,14 +1039,14 @@ function Homepage() {
                   className={`w-3 h-3 rounded-full transition-all duration-300 hover:scale-125 ${
                     index === currentTestimonial 
                       ? 'bg-primary-600 scale-125' 
-                      : 'bg-gray-300 hover:bg-gray-400'
+                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
                   }`}
                 />
               ))}
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-1 mt-6">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mt-6">
               <div 
                 className="bg-primary-600 h-1 rounded-full transition-all duration-100 ease-linear"
                 style={{ 
@@ -1046,7 +1060,7 @@ function Homepage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary-600 relative overflow-hidden">
+      <section className="py-20 bg-primary-600 dark:bg-primary-700 relative overflow-hidden transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className={`text-3xl font-bold text-white mb-4 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
@@ -1060,7 +1074,7 @@ function Homepage() {
           </p>
           <Link
             to="/register"
-            className={`inline-block bg-white text-primary-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 hover:shadow-2xl ${
+            className={`inline-block bg-white hover:bg-gray-100 dark:bg-gray-100 dark:hover:bg-white text-primary-600 dark:text-primary-700 px-8 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-110 hover:shadow-2xl ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`}
             style={{transitionDelay: '3900ms'}}
@@ -1070,47 +1084,48 @@ function Homepage() {
         </div>
         
         {/* Animated background elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-white bg-opacity-10 rounded-full animate-ping"></div>
-        <div className="absolute bottom-10 right-20 w-16 h-16 bg-white bg-opacity-10 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/2 right-10 w-12 h-12 bg-white bg-opacity-10 rounded-full animate-bounce"></div>
+        <div className="absolute top-10 left-10 w-20 h-20 bg-white bg-opacity-10 dark:bg-opacity-20 rounded-full animate-ping"></div>
+        <div className="absolute bottom-10 right-20 w-16 h-16 bg-white bg-opacity-10 dark:bg-opacity-20 rounded-full animate-pulse"></div>
+        <div className="absolute top-1/2 right-10 w-12 h-12 bg-white bg-opacity-10 dark:bg-opacity-20 rounded-full animate-bounce"></div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12 border-t border-gray-800 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4">IndulgeOut</h3>
-              <p className="text-gray-400">
+              <p className="text-gray-400 dark:text-gray-500">
                 Connecting communities through shared interests and experiences.
               </p>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/about" className="hover:text-white">About</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-white">How it Works</Link></li>
-                <li><Link to="/pricing" className="hover:text-white">Pricing</Link></li>
+              <ul className="space-y-2 text-gray-400 dark:text-gray-500">
+                <li><Link to="/about" className="hover:text-white dark:hover:text-gray-300 transition-colors">About</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-white dark:hover:text-gray-300 transition-colors">How it Works</Link></li>
+                <li><Link to="/pricing" className="hover:text-white dark:hover:text-gray-300 transition-colors">Pricing</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Community</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/events" className="hover:text-white">Events</Link></li>
-                <li><Link to="/groups" className="hover:text-white">Groups</Link></li>
-                <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
+              <ul className="space-y-2 text-gray-400 dark:text-gray-500">
+                <li><Link to="/events" className="hover:text-white dark:hover:text-gray-300 transition-colors">Events</Link></li>
+                <li><Link to="/communities" className="hover:text-white dark:hover:text-gray-300 transition-colors">Communities</Link></li>
+                <li><Link to="/groups" className="hover:text-white dark:hover:text-gray-300 transition-colors">Groups</Link></li>
+                <li><Link to="/blog" className="hover:text-white dark:hover:text-gray-300 transition-colors">Blog</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
-                <li><Link to="/help" className="hover:text-white">Help Center</Link></li>
-                <li><Link to="/privacy" className="hover:text-white">Privacy</Link></li>
+              <ul className="space-y-2 text-gray-400 dark:text-gray-500">
+                <li><Link to="/contact" className="hover:text-white dark:hover:text-gray-300 transition-colors">Contact</Link></li>
+                <li><Link to="/help" className="hover:text-white dark:hover:text-gray-300 transition-colors">Help Center</Link></li>
+                <li><Link to="/privacy" className="hover:text-white dark:hover:text-gray-300 transition-colors">Privacy</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+          <div className="border-t border-gray-800 dark:border-gray-700 mt-8 pt-8 text-center text-gray-400 dark:text-gray-500">
             <p>&copy; 2025 IndulgeOut. All rights reserved.</p>
           </div>
         </div>

@@ -4,25 +4,10 @@ const { body, validationResult } = require('express-validator');
 const Event = require('../models/Event.js');
 const User = require('../models/User.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
+const { authMiddleware } = require('../utils/authUtils.js');
+const recommendationEngine = require('../services/recommendationEngine.js');
 
 const router = express.Router();
-
-// Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-};
 
 // Get all events (with filtering)
 router.get('/', async (req, res) => {
@@ -68,9 +53,9 @@ router.get('/', async (req, res) => {
 });
 
 // Get events hosted by the authenticated user
-router.get('/my-hosted', authenticateToken, async (req, res) => {
+router.get('/my-hosted', authMiddleware, async (req, res) => {
   try {
-    const events = await Event.find({ host: req.user.userId })
+    const events = await Event.find({ host: req.user.id })
       .populate('host', 'name email')
       .populate('participants.user', 'name email')
       .sort({ date: 1 });
@@ -105,7 +90,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new event (community members only)
-router.post('/', authenticateToken, [
+router.post('/', authMiddleware, [
   body('title').trim().isLength({ min: 3 }).withMessage('Title must be at least 3 characters'),
   body('description').trim().isLength({ min: 10 }).withMessage('Description must be at least 10 characters'),
   body('categories').isArray({ min: 1 }).withMessage('At least one category is required'),
@@ -125,15 +110,15 @@ router.post('/', authenticateToken, [
     }
 
     // Check if user is community member
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.id);
     if (!user || user.role !== 'community_member') {
       return res.status(403).json({ message: 'Only community members can create events' });
     }
 
     const eventData = {
       ...req.body,
-      host: req.user.userId,
-      createdBy: req.user.userId
+      host: req.user.id,
+      createdBy: req.user.id
     };
 
     const event = new Event(eventData);
@@ -157,9 +142,10 @@ router.post('/', authenticateToken, [
 });
 
 // Register for event
-router.post('/:id/register', authenticateToken, async (req, res) => {
+router.post('/:id/register', authMiddleware, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).populate('host', 'name email');
+    const userId = req.user.userId || req.user.id;
     
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -192,6 +178,22 @@ router.post('/:id/register', authenticateToken, async (req, res) => {
     user.registeredEvents.push(event._id);
     await user.save();
 
+    // Update analytics for recommendation engine
+    try {
+      await recommendationEngine.updateEventRegistrationAnalytics(req.user.userId, event._id);
+    } catch (analyticsError) {
+      console.error('Failed to update analytics:', analyticsError);
+      // Continue without failing the registration
+    }
+
+    // Update analytics for recommendation system
+    try {
+      await recommendationEngine.updateEventRegistrationAnalytics(userId, event._id);
+    } catch (analyticsError) {
+      console.error('Failed to update analytics:', analyticsError);
+      // Don't fail the registration if analytics update fails
+    }
+
     // Send confirmation email to user
     try {
       await sendEventRegistrationEmail(user.email, user.name, event);
@@ -222,9 +224,9 @@ router.post('/:id/register', authenticateToken, async (req, res) => {
 });
 
 // Get events by user interests
-router.get('/recommended/for-me', authenticateToken, async (req, res) => {
+router.get('/recommended/for-me', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.id);
     
     if (!user || !user.interests.length) {
       return res.status(400).json({ message: 'No interests found for user' });
@@ -247,7 +249,7 @@ router.get('/recommended/for-me', authenticateToken, async (req, res) => {
 });
 
 // Update event (host only)
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     
@@ -256,7 +258,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user is the host
-    if (event.host.toString() !== req.user.userId) {
+    if (event.host.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Only event host can update this event' });
     }
 
@@ -277,7 +279,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete event (host only)
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     
@@ -286,7 +288,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user is the host
-    if (event.host.toString() !== req.user.userId) {
+    if (event.host.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Only event host can delete this event' });
     }
 

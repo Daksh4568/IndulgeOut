@@ -5,6 +5,8 @@ const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth.js');
 const eventRoutes = require('./routes/events.js');
 const userRoutes = require('./routes/users.js');
+const communityRoutes = require('./routes/communities.js');
+const recommendationRoutes = require('./routes/recommendations.js');
 
 dotenv.config();
 
@@ -57,6 +59,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/communities', communityRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
@@ -79,4 +83,4 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Export for Vercel
-export default app;
+module.exports = app;

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import DarkModeToggle from '../components/DarkModeToggle'
 
 const Register = () => {
   const [searchParams] = useSearchParams()
@@ -53,12 +54,8 @@ const Register = () => {
       })
       
       if (result.success) {
-        // Redirect based on user type
-        if (formData.role === 'user') {
-          navigate('/interests')
-        } else {
-          navigate('/dashboard')
-        }
+        // All users should go through interest selection first
+        navigate('/interests')
       } else {
         setError(result.error)
       }
@@ -70,17 +67,20 @@ const Register = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-300">
+      <div className="absolute top-4 right-4">
+        <DarkModeToggle />
+      </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
-          <Link to="/" className="text-2xl font-bold text-gray-900">
+          <Link to="/" className="text-2xl font-bold text-gray-900 dark:text-white">
             IndulgeOut
           </Link>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
           {formData.role === 'community_member' ? 'Become a Host' : 'Join the Community'}
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
           {formData.role === 'community_member' 
             ? 'Start hosting amazing events for your community'
             : 'Discover events that match your interests'
@@ -89,17 +89,17 @@ const Register = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10 transition-colors duration-300">
           {/* Role Toggle */}
           <div className="mb-6">
-            <div className="flex rounded-lg border border-gray-200 p-1">
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-600 p-1 bg-gray-50 dark:bg-gray-700">
               <button
                 type="button"
                 onClick={() => setFormData({...formData, role: 'user'})}
                 className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   formData.role === 'user'
                     ? 'bg-primary-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -111,7 +111,7 @@ const Register = () => {
                 className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   formData.role === 'community_member'
                     ? 'bg-primary-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
                 <Users className="h-4 w-4 mr-2" />
@@ -128,7 +128,7 @@ const Register = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Full Name
               </label>
               <div className="mt-1">
@@ -139,7 +139,7 @@ const Register = () => {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 transition-colors"
                   placeholder="Enter your full name"
                 />
               </div>

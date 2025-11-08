@@ -46,6 +46,7 @@ router.put('/interests', authenticateToken, async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         interests: user.interests
       }
     });
@@ -98,6 +99,35 @@ router.put('/profile', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get user's registered events
+router.get('/registered-events', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId)
+      .populate({
+        path: 'registeredEvents',
+        populate: {
+          path: 'host',
+          select: 'name'
+        }
+      });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Filter out any null events (in case some events were deleted)
+    const validEvents = user.registeredEvents.filter(event => event !== null);
+
+    res.json({
+      success: true,
+      events: validEvents
+    });
+  } catch (error) {
+    console.error('Error fetching registered events:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
