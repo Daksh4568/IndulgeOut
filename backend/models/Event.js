@@ -108,6 +108,34 @@ const eventSchema = new mongoose.Schema({
     default: false
   },
   registrationDeadline: Date,
+  analytics: {
+    views: {
+      type: Number,
+      default: 0
+    },
+    clicks: {
+      type: Number,
+      default: 0
+    },
+    registrations: {
+      type: Number,
+      default: 0
+    },
+    clickHistory: [{
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      },
+      source: {
+        type: String,
+        default: 'event_discovery'
+      }
+    }]
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

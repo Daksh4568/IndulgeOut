@@ -84,10 +84,16 @@ const CommunityDetail = () => {
       return;
     }
 
+    // Check if user is already a member before making the request
+    if (isUserMember()) {
+      alert('You are already a member of this community');
+      return;
+    }
+
     try {
       setIsJoining(true);
       const token = localStorage.getItem('token');
-      await axios.post(
+      const response = await axios.post(
         `${API_BASE_URL}/api/communities/${id}/join`,
         {},
         {
@@ -95,11 +101,21 @@ const CommunityDetail = () => {
         }
       );
       
+      // Update the community state with the returned data
+      if (response.data.community) {
+        setCommunity(response.data.community);
+      }
+      
       alert('Successfully joined community!');
-      fetchCommunityData();
     } catch (error) {
       console.error('Error joining community:', error);
-      alert(error.response?.data?.message || 'Error joining community');
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('already a member')) {
+        // If user is already a member, refresh the community data
+        fetchCommunityData();
+        alert('You are already a member of this community');
+      } else {
+        alert(error.response?.data?.message || 'Error joining community');
+      }
     } finally {
       setIsJoining(false);
     }
@@ -110,7 +126,7 @@ const CommunityDetail = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post(
+      const response = await axios.post(
         `${API_BASE_URL}/api/communities/${id}/leave`,
         {},
         {
@@ -118,8 +134,12 @@ const CommunityDetail = () => {
         }
       );
       
+      // Update the community state with the returned data
+      if (response.data.community) {
+        setCommunity(response.data.community);
+      }
+      
       alert('Successfully left community');
-      fetchCommunityData();
     } catch (error) {
       console.error('Error leaving community:', error);
       alert(error.response?.data?.message || 'Error leaving community');
@@ -172,10 +192,26 @@ const CommunityDetail = () => {
   };
 
   const isUserMember = () => {
-    if (!user || !community) return false;
-    return community.members?.some(member => 
-      (member.user._id || member.user) === user.id
-    );
+    if (!user || !community || !community.members) return false;
+    
+    const userId = user.id || user._id;
+    console.log('Debug isUserMember:', {
+      userId,
+      user,
+      communityMembers: community.members,
+      memberIds: community.members.map(m => ({
+        original: m.user,
+        id: m.user?._id || m.user?.id || m.user
+      }))
+    });
+    
+    const isMember = community.members.some(member => {
+      const memberId = member.user?._id || member.user?.id || member.user;
+      return memberId === userId;
+    });
+    
+    console.log('Is user member?', isMember);
+    return isMember;
   };
 
   const formatDate = (date) => {

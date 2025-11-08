@@ -166,10 +166,22 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
       user: req.user.id,
       joinedAt: new Date()
     });
-    
+
     await community.save();
     
-    res.json({ message: 'Successfully joined community' });
+    // Populate the updated community data
+    const updatedCommunity = await Community.findById(req.params.id)
+      .populate('host', 'name email profilePicture bio')
+      .populate('members.user', 'name profilePicture')
+      .populate('forum.author', 'name profilePicture')
+      .populate('forum.replies.author', 'name profilePicture')
+      .populate('testimonials.author', 'name profilePicture')
+      .populate('testimonials.event', 'title');
+
+    res.json({ 
+      message: 'Successfully joined community',
+      community: updatedCommunity 
+    });
   } catch (error) {
     console.error('Error joining community:', error);
     res.status(500).json({ message: 'Server error' });
@@ -194,10 +206,22 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     community.members = community.members.filter(
       member => member.user.toString() !== req.user.id
     );
-    
+
     await community.save();
     
-    res.json({ message: 'Successfully left community' });
+    // Populate the updated community data
+    const updatedCommunity = await Community.findById(req.params.id)
+      .populate('host', 'name email profilePicture bio')
+      .populate('members.user', 'name profilePicture')
+      .populate('forum.author', 'name profilePicture')
+      .populate('forum.replies.author', 'name profilePicture')
+      .populate('testimonials.author', 'name profilePicture')
+      .populate('testimonials.event', 'title');
+    
+    res.json({ 
+      message: 'Successfully left community',
+      community: updatedCommunity 
+    });
   } catch (error) {
     console.error('Error leaving community:', error);
     res.status(500).json({ message: 'Server error' });

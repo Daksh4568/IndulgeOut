@@ -91,9 +91,17 @@ const EventDiscovery = () => {
       const eventsData = response.data.events || [];
       console.log('Events data:', eventsData);
       
-      // Process events to add coordinates if they don't exist
+      // Process events to add coordinates if they don't exist and normalize coordinate format
       const processedEvents = await Promise.all(
         eventsData.map(async (event) => {
+          // Normalize coordinates format from latitude/longitude to lat/lng
+          if (event.location?.coordinates?.latitude && event.location?.coordinates?.longitude) {
+            event.location.coordinates = {
+              lat: event.location.coordinates.latitude,
+              lng: event.location.coordinates.longitude
+            };
+          }
+          
           if (!event.coordinates && !event.location?.coordinates) {
             // Try to get coordinates from location
             const locationStr = event.location?.city || event.location?.address || event.venue;
@@ -114,7 +122,7 @@ const EventDiscovery = () => {
         })
       );
       
-      // Check if any events have coordinates
+      // Check if any events have coordinates (after normalization)
       const eventsWithCoords = processedEvents.filter(event => 
         (event.coordinates && event.coordinates.lat && event.coordinates.lng) ||
         (event.location?.coordinates && event.location.coordinates.lat && event.location.coordinates.lng)
@@ -180,6 +188,28 @@ const EventDiscovery = () => {
   // Helper function to check if event matches user interests
   const matchesUserInterests = (event) => {
     return user?.interests && event.categories?.some(cat => user.interests.includes(cat));
+  };
+
+  // Function to track event clicks for analytics
+  const trackEventClick = async (eventId) => {
+    try {
+      await axios.post(`${API_BASE_URL}/api/events/${eventId}/click`, {}, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      console.log('Event click tracked successfully');
+    } catch (error) {
+      console.warn('Failed to track event click:', error);
+    }
+  };
+
+  // Handle event card click with tracking
+  const handleEventClick = async (event) => {
+    // Track the click
+    await trackEventClick(event._id);
+    // Navigate to event detail
+    navigate(`/events/${event._id}`);
   };
 
   const setSampleEvents = () => {
@@ -637,7 +667,7 @@ const EventDiscovery = () => {
                 <SimpleEventsMap 
                   events={eventsWithCoordinates}
                   userLocation={userLocation}
-                  onEventSelect={(event) => navigate(`/event/${event._id}`)}
+                  onEventSelect={(event) => handleEventClick(event)}
                 />
               );
             })()}
@@ -671,7 +701,7 @@ const EventDiscovery = () => {
               <div 
                 key={event._id} 
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105"
-                onClick={() => navigate(`/event/${event._id}`)}
+                onClick={() => handleEventClick(event)}
               >
                 {/* Event Image */}
                 <div className="relative h-48 bg-gray-200 dark:bg-gray-700">

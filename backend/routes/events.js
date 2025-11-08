@@ -301,4 +301,51 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Track event click for analytics
+router.post('/:id/click', authMiddleware, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id;
+    
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Initialize analytics if it doesn't exist
+    if (!event.analytics) {
+      event.analytics = {
+        views: 0,
+        clicks: 0,
+        registrations: 0,
+        clickHistory: []
+      };
+    }
+
+    // Increment click count
+    event.analytics.clicks = (event.analytics.clicks || 0) + 1;
+    
+    // Add click to history (optional, for detailed analytics)
+    if (!event.analytics.clickHistory) {
+      event.analytics.clickHistory = [];
+    }
+    
+    event.analytics.clickHistory.push({
+      user: userId,
+      timestamp: new Date(),
+      source: 'event_discovery'
+    });
+
+    await event.save();
+
+    res.json({ 
+      message: 'Click tracked successfully',
+      totalClicks: event.analytics.clicks 
+    });
+  } catch (error) {
+    console.error('Track click error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 module.exports = router;
