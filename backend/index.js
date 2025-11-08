@@ -36,12 +36,7 @@ connectDB();
 
 // CORS Configuration for cross-origin access
 const corsOptions = {
-  origin: [
-    'https://indulge-out-ra22.vercel.app',
-    'https://indulge-out-ra22-8vofoo7xx.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
