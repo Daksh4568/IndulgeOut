@@ -13,37 +13,22 @@ const app = express();
 
 // Global variable to cache the database connection
 let cachedDb = null;
-
 const connectDB = async () => {
-  // If we have a cached connection, return it
-  if (cachedDb && mongoose.connection.readyState === 1) {
-    return cachedDb;
-  }
-
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/indulgeout';
-    console.log('Index.js env', mongoURI);
-    
-    // Optimized connection options for Vercel serverless
-    const connection = await mongoose.connect(mongoURI, {
+    console.log('Server.js env' , mongoURI);
+    await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000, // Increased timeout
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionRetryDelayMS: 5000, // Keep trying to send operations for 5 seconds
-      heartbeatFrequencyMS: 10000, // Send a ping to check if connection is alive every 10 seconds
-      bufferMaxEntries: 0, // Disable mongoose buffering
-      bufferCommands: false, // Disable mongoose buffering
     });
-    
-    cachedDb = connection;
     console.log('✅ MongoDB connected successfully', mongoURI);
-    return connection;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
-    cachedDb = null;
-    throw error; // Re-throw to handle in routes
+    console.log('📝 Note: If you haven\'t set up MongoDB yet, add MONGODB_URI to your .env file');
+    console.log('💡 For local development, you can use: mongodb://localhost:27017/indulgeout');
+    console.log('🌐 For cloud database, use your MongoDB Atlas connection string');
+    // Don't exit the process in development to allow frontend testing
+    // process.exit(1);
   }
 };
 
