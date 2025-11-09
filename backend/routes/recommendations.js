@@ -20,12 +20,24 @@ router.get('/events', authMiddleware, async (req, res) => {
     
     console.log('Recommendations generated:', recommendations.length);
     
+    // Track that recommendations were shown to the user
+    if (recommendations.length > 0) {
+      try {
+        await recommendationEngine.updateRecommendationMetrics(userId, recommendations.length);
+        console.log(`Tracked ${recommendations.length} recommendations shown to user ${userId}`);
+      } catch (trackingError) {
+        console.error('Error tracking recommendations shown:', trackingError);
+        // Don't fail the request if tracking fails
+      }
+    }
+    
     res.json({
       success: true,
       data: recommendations,
       meta: {
         total: recommendations.length,
-        userId: userId
+        userId: userId,
+        timestamp: new Date().toISOString()
       }
     });
   } catch (error) {

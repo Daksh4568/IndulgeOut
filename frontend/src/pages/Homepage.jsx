@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Calendar, MapPin, Heart, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
+import VideoAnimation from '../components/VideoAnimation';
 
 function Homepage() {
   const navigate = useNavigate();
@@ -671,6 +672,9 @@ function Homepage() {
           <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-600 morph-bubble opacity-18"></div>
         </div>
       </section>
+
+      {/* Video Animation Section */}
+      <VideoAnimation />
 
       {/* Creative Hobby Connection Animation */}
       <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors duration-300">

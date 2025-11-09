@@ -45,7 +45,27 @@ const RecommendationsSection = () => {
     }
   };
 
-  const handleEventClick = (eventId) => {
+  const handleEventClick = async (eventId) => {
+    // Track the click
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/recommendations/track/click`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ eventId })
+        });
+        console.log('Recommendation click tracked for event:', eventId);
+      }
+    } catch (error) {
+      console.error('Error tracking recommendation click:', error);
+      // Don't prevent navigation if tracking fails
+    }
+    
+    // Navigate to event
     navigate(`/event/${eventId}`);
   };
 
@@ -180,9 +200,9 @@ const RecommendationsSection = () => {
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
                 {getCategoryIcon(rec.event.categories)}
               </div>
-              {rec.matchPercentage && (
+              {(rec.confidence || rec.score) && (
                 <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
-                  {Math.round(rec.matchPercentage)}%
+                  {Math.round((rec.confidence || rec.score * 100))}%
                 </div>
               )}
             </div>
@@ -238,8 +258,18 @@ const RecommendationsSection = () => {
                 </div>
               </div>
 
-              {/* Reason for recommendation */}
-              {rec.reason && (
+              {/* Reasons for recommendation */}
+              {rec.reasons && rec.reasons.length > 0 && (
+                <div className="mt-2 flex items-center gap-1">
+                  <Heart className="h-3 w-3 text-pink-500" />
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    {rec.reasons[0]} {rec.reasons.length > 1 && `+${rec.reasons.length - 1} more`}
+                  </span>
+                </div>
+              )}
+
+              {/* Legacy reason support */}
+              {!rec.reasons && rec.reason && (
                 <div className="mt-2 flex items-center gap-1">
                   <Heart className="h-3 w-3 text-pink-500" />
                   <span className="text-xs text-green-600 dark:text-green-400 font-medium">

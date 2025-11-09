@@ -68,47 +68,6 @@ class RecommendationEngine {
    */
   async generateRecommendationsForUser(user, limit = 10) {
     try {
-
-      // Initialize analytics if not present (for existing users)
-      if (!user.analytics) {
-        console.log('Initializing analytics for existing user:', userId);
-        await User.findByIdAndUpdate(userId, {
-          $set: {
-            analytics: {
-              registeredEvents: [],
-              joinedCommunities: [],
-              locationHistory: [],
-              categoryPreferences: [],
-              searchHistory: [],
-              recommendationMetrics: {
-                totalRecommendationsShown: 0,
-                recommendationsClicked: 0,
-                recommendationsRegistered: 0,
-                clickThroughRate: 0,
-                conversionRate: 0,
-                lastCalculated: new Date()
-              }
-            }
-          }
-        });
-        
-        // Refetch user with updated analytics
-        const updatedUser = await User.findById(userId);
-        return this.generateRecommendationsForUser(updatedUser, limit);
-      }
-
-      return this.generateRecommendationsForUser(user, limit);
-    } catch (error) {
-      console.error('Error generating recommendations:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Generate recommendations for a user with analytics
-   */
-  async generateRecommendationsForUser(user, limit = 10) {
-    try {
       // Get all available events (excluding already registered ones)
       const registeredEventIds = user.registeredEvents || [];
       const availableEvents = await Event.find({
@@ -121,9 +80,9 @@ class RecommendationEngine {
         return [];
       }
 
-      // Calculate scores for each event
+      // Calculate scores for each event using enhanced algorithm
       const eventScores = await Promise.all(
-        availableEvents.map(event => this.calculateEventScore(user, event))
+        availableEvents.map(event => this.calculateEnhancedEventScore(user, event))
       );
 
       // Sort by score and return top recommendations
@@ -132,13 +91,12 @@ class RecommendationEngine {
         .slice(0, limit)
         .map(item => ({
           event: item.event,
-          score: item.score,
-          reasons: item.reasons
+          score: Math.round(item.score * 100) / 100, // Round to 2 decimal places
+          reasons: item.reasons,
+          confidence: this.calculateConfidence(item.score, item.reasons)
         }));
 
-      // Update user's recommendation metrics
-      await this.updateRecommendationMetrics(user._id, recommendations.length);
-
+      // Note: Recommendation metrics will be updated when served to user
       return recommendations;
     } catch (error) {
       console.error('Error generating recommendations for user:', error);
@@ -147,52 +105,237 @@ class RecommendationEngine {
   }
 
   /**
-   * Calculate recommendation score for a specific event
-   * @param {Object} user - User object with analytics
-   * @param {Object} event - Event object
-   * @returns {Object} Event with calculated score and reasons
+   * Enhanced event scoring with machine learning-like behavior
    */
-  async calculateEventScore(user, event) {
+  async calculateEnhancedEventScore(user, event) {
     let totalScore = 0;
-    const reasons = [];
+    let reasons = [];
 
-    // 1. INTERESTS SCORE (35%)
+    // 1. Interest matching with historical preference learning (40%)
     const interestScore = this.calculateInterestScore(user, event);
-    totalScore += interestScore * this.weights.interests;
-    if (interestScore > 0) {
-      reasons.push(`Matches your interest in ${event.categories?.[0] || 'this category'}`);
+    totalScore += interestScore * 0.4;
+    if (interestScore > 0.5) {
+      reasons.push(`Matches your interest in ${event.categories?.[0] || 'this activity'}`);
     }
 
-    // 2. LOCATION SCORE (25%)
+    // 2. Location proximity with travel patterns (25%)
     const locationScore = await this.calculateLocationScore(user, event);
-    totalScore += locationScore * this.weights.location;
-    if (locationScore > 0.7) {
-      reasons.push(`Near your preferred locations`);
+    totalScore += locationScore * 0.25;
+    if (locationScore > 0.6) {
+      reasons.push(`Near your location or preferred areas`);
     }
 
-    // 3. RECENT ACTIVITY SCORE (20%)
-    const activityScore = this.calculateRecentActivityScore(user, event);
-    totalScore += activityScore * this.weights.recentActivity;
-    if (activityScore > 0.5) {
-      reasons.push(`Similar to events you've attended recently`);
+    // 3. Behavioral pattern matching (20%)
+    const behaviorScore = await this.calculateBehavioralScore(user, event);
+    totalScore += behaviorScore * 0.2;
+    if (behaviorScore > 0.5) {
+      reasons.push(`Similar to events you've enjoyed before`);
     }
 
-    // 4. COMMUNITY-BASED FILTERING SCORE (20%)
-    const communityScore = await this.calculateCommunityScore(user, event);
-    totalScore += communityScore * this.weights.communityBasedFiltering;
-    if (communityScore > 0.5) {
-      reasons.push(`Popular in communities you've joined`);
+    // 4. Community and social connections (15%)
+    const socialScore = await this.calculateSocialScore(user, event);
+    totalScore += socialScore * 0.15;
+    if (socialScore > 0.5) {
+      reasons.push(`Popular in your communities`);
     }
 
-    // Additional factors
-    const bonusScore = this.calculateBonusFactors(user, event);
-    totalScore += bonusScore;
+    // 5. Temporal preferences and availability
+    const timeScore = this.calculateTimeScore(user, event);
+    totalScore += timeScore * 0.1;
+
+    // 6. Engagement and popularity boost
+    const popularityScore = await this.calculatePopularityScore(event);
+    totalScore += popularityScore * 0.05;
+
+    // Apply user-specific learning adjustments
+    const learningAdjustment = this.calculateLearningAdjustment(user, event);
+    totalScore = totalScore * learningAdjustment;
 
     return {
       event,
       score: Math.min(totalScore, 1), // Cap at 1.0
       reasons
     };
+  }
+
+  /**
+   * Calculate behavioral pattern score based on user's past actions
+   */
+  async calculateBehavioralScore(user, event) {
+    const userAnalytics = user.analytics;
+    if (!userAnalytics) return 0.1;
+
+    let score = 0;
+
+    // Check similar event types user has registered for
+    const registeredEvents = userAnalytics.registeredEvents || [];
+    const similarEvents = registeredEvents.filter(reg => {
+      return event.categories?.some(cat => reg.category === cat);
+    });
+
+    if (similarEvents.length > 0) {
+      score += Math.min(similarEvents.length * 0.15, 0.6);
+    }
+
+    // Check time-of-day preferences
+    const eventHour = new Date(event.date).getHours();
+    const userEventTimes = registeredEvents.map(reg => new Date(reg.registeredAt).getHours());
+    const preferredHours = this.getPreferredHours(userEventTimes);
+    
+    if (preferredHours.includes(eventHour)) {
+      score += 0.2;
+    }
+
+    // Check consistency in event frequency
+    const recentEvents = registeredEvents.filter(reg => 
+      new Date(reg.registeredAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    );
+    
+    if (recentEvents.length > 0) {
+      score += 0.2; // User is actively engaging
+    }
+
+    return Math.min(score, 1);
+  }
+
+  /**
+   * Calculate social score based on community connections
+   */
+  async calculateSocialScore(user, event) {
+    let score = 0;
+
+    // Check if event is in user's joined communities
+    const userCommunities = user.analytics?.joinedCommunities || [];
+    const eventCommunityId = event.community?.toString();
+    
+    if (eventCommunityId && userCommunities.some(comm => 
+      comm.community?.toString() === eventCommunityId)) {
+      score += 0.7;
+    }
+
+    // Check if event category matches user's community interests
+    const communityCategories = userCommunities.map(comm => comm.category);
+    const eventCategories = event.categories || [];
+    
+    const categoryMatch = eventCategories.some(cat => 
+      communityCategories.includes(cat)
+    );
+    
+    if (categoryMatch) {
+      score += 0.3;
+    }
+
+    return Math.min(score, 1);
+  }
+
+  /**
+   * Calculate time-based preferences
+   */
+  calculateTimeScore(user, event) {
+    const eventDate = new Date(event.date);
+    const eventDay = eventDate.getDay(); // 0 = Sunday, 6 = Saturday
+    const eventHour = eventDate.getHours();
+
+    let score = 0.5; // Base score
+
+    // Weekend events generally have higher engagement
+    if (eventDay === 0 || eventDay === 6) {
+      score += 0.2;
+    }
+
+    // Evening events (6-9 PM) are popular
+    if (eventHour >= 18 && eventHour <= 21) {
+      score += 0.2;
+    }
+
+    // Avoid very early or very late events
+    if (eventHour < 7 || eventHour > 22) {
+      score -= 0.3;
+    }
+
+    return Math.max(score, 0.1);
+  }
+
+  /**
+   * Calculate popularity score based on event engagement
+   */
+  async calculatePopularityScore(event) {
+    const analytics = event.analytics || {};
+    const registrations = event.registrations?.length || 0;
+    const clicks = analytics.clicks || 0;
+    const maxCapacity = event.maxAttendees || 100;
+
+    let score = 0;
+
+    // High registration rate
+    const registrationRate = registrations / maxCapacity;
+    if (registrationRate > 0.7) {
+      score += 0.4;
+    } else if (registrationRate > 0.5) {
+      score += 0.2;
+    }
+
+    // High click-through rate
+    if (clicks > 10) {
+      score += 0.3;
+    } else if (clicks > 5) {
+      score += 0.1;
+    }
+
+    return Math.min(score, 0.5); // Cap at 0.5 to not overwhelm other factors
+  }
+
+  /**
+   * Apply learning adjustments based on user's historical behavior
+   */
+  calculateLearningAdjustment(user, event) {
+    const metrics = user.analytics?.recommendationMetrics;
+    if (!metrics) return 1.0;
+
+    const { clickThroughRate, conversionRate } = metrics;
+    
+    // If user has low engagement, slightly boost diverse recommendations
+    if (clickThroughRate < 0.1) {
+      return 1.1; // Slight boost to encourage exploration
+    }
+
+    // If user has high conversion, maintain strong recommendations
+    if (conversionRate > 0.3) {
+      return 1.05;
+    }
+
+    return 1.0; // No adjustment
+  }
+
+  /**
+   * Calculate confidence level for the recommendation
+   */
+  calculateConfidence(score, reasons) {
+    const reasonCount = reasons.length;
+    const baseConfidence = score * 100;
+    
+    // Boost confidence with more reasons
+    const reasonBoost = Math.min(reasonCount * 5, 20);
+    
+    return Math.min(baseConfidence + reasonBoost, 100);
+  }
+
+  /**
+   * Get user's preferred event hours based on historical data
+   */
+  getPreferredHours(eventTimes) {
+    if (eventTimes.length === 0) return [18, 19, 20]; // Default evening hours
+    
+    const hourCounts = {};
+    eventTimes.forEach(hour => {
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    
+    // Return hours with highest frequency
+    return Object.entries(hourCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([hour]) => parseInt(hour));
   }
 
   /**
@@ -393,37 +536,217 @@ class RecommendationEngine {
   }
 
   /**
-   * Track recommendation interaction (click/register)
+   * Track recommendation interaction (click/register) with enhanced analytics
    */
   async trackRecommendationInteraction(userId, eventId, action) {
     try {
-      const updateField = action === 'click' ? 
-        'analytics.recommendationMetrics.recommendationsClicked' :
-        'analytics.recommendationMetrics.recommendationsRegistered';
+      const user = await User.findById(userId);
+      if (!user) return;
 
+      // Initialize analytics if not present
+      if (!user.analytics) {
+        user.analytics = {
+          registeredEvents: [],
+          joinedCommunities: [],
+          locationHistory: [],
+          categoryPreferences: [],
+          searchHistory: [],
+          recommendationMetrics: {
+            totalRecommendationsShown: 0,
+            recommendationsClicked: 0,
+            recommendationsRegistered: 0,
+            clickThroughRate: 0,
+            conversionRate: 0,
+            lastCalculated: new Date()
+          }
+        };
+      }
+
+      // Update metrics based on action
+      if (action === 'click') {
+        user.analytics.recommendationMetrics.recommendationsClicked += 1;
+        
+        // Track the clicked event for learning
+        await this.trackEventInteraction(userId, eventId, 'click');
+      } else if (action === 'register') {
+        user.analytics.recommendationMetrics.recommendationsRegistered += 1;
+        
+        // Track the registration for learning
+        await this.trackEventInteraction(userId, eventId, 'register');
+      }
+
+      // Recalculate rates
+      const metrics = user.analytics.recommendationMetrics;
+      if (metrics.totalRecommendationsShown > 0) {
+        metrics.clickThroughRate = metrics.recommendationsClicked / metrics.totalRecommendationsShown;
+        metrics.conversionRate = metrics.recommendationsClicked > 0 ? 
+          metrics.recommendationsRegistered / metrics.recommendationsClicked : 0;
+      }
+
+      // Update lastCalculated before saving
+      user.analytics.recommendationMetrics.lastCalculated = new Date();
+      
+      // Save updated analytics
       await User.findByIdAndUpdate(userId, {
-        $inc: { [updateField]: 1 }
+        $set: { 
+          analytics: user.analytics
+        }
       });
 
-      // Calculate new rates
-      const user = await User.findById(userId);
-      const metrics = user.analytics?.recommendationMetrics;
-      
-      if (metrics) {
-        const clickThroughRate = metrics.totalRecommendationsShown > 0 ? 
-          metrics.recommendationsClicked / metrics.totalRecommendationsShown : 0;
-        const conversionRate = metrics.recommendationsClicked > 0 ? 
-          metrics.recommendationsRegistered / metrics.recommendationsClicked : 0;
-
-        await User.findByIdAndUpdate(userId, {
-          $set: {
-            'analytics.recommendationMetrics.clickThroughRate': clickThroughRate,
-            'analytics.recommendationMetrics.conversionRate': conversionRate
-          }
-        });
-      }
+      console.log(`Tracked ${action} for user ${userId}, event ${eventId}`);
     } catch (error) {
       console.error('Error tracking recommendation interaction:', error);
+    }
+  }
+
+  /**
+   * Track specific event interactions for machine learning
+   */
+  async trackEventInteraction(userId, eventId, action) {
+    try {
+      const event = await Event.findById(eventId);
+      if (!event) return;
+
+      const user = await User.findById(userId);
+      if (!user) return;
+
+      // Track user's category preferences
+      if (event.categories && event.categories.length > 0) {
+        const category = event.categories[0];
+        await this.updateCategoryPreference(userId, category, action);
+      }
+
+      // Track location preferences
+      if (event.location && event.location.city) {
+        await this.updateLocationHistory(userId, event.location, action);
+      }
+
+      // Update event analytics
+      await this.updateEventAnalytics(eventId, action);
+
+    } catch (error) {
+      console.error('Error tracking event interaction:', error);
+    }
+  }
+
+  /**
+   * Update user's category preferences based on interactions
+   */
+  async updateCategoryPreference(userId, category, action) {
+    try {
+      const user = await User.findById(userId);
+      if (!user || !user.analytics) return;
+
+      let categoryPrefs = user.analytics.categoryPreferences || [];
+      let existingPref = categoryPrefs.find(pref => pref.category === category);
+
+      if (existingPref) {
+        // Update existing preference
+        const scoreIncrease = action === 'register' ? 2 : 1;
+        existingPref.score += scoreIncrease;
+        existingPref.interactions += 1;
+        existingPref.lastInteraction = new Date();
+      } else {
+        // Add new preference
+        categoryPrefs.push({
+          category: category,
+          score: action === 'register' ? 2 : 1,
+          interactions: 1,
+          lastInteraction: new Date()
+        });
+      }
+
+      // Sort by score and keep top 10 preferences
+      categoryPrefs = categoryPrefs
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'analytics.categoryPreferences': categoryPrefs }
+      });
+
+    } catch (error) {
+      console.error('Error updating category preference:', error);
+    }
+  }
+
+  /**
+   * Update user's location history and preferences
+   */
+  async updateLocationHistory(userId, location, action) {
+    try {
+      const user = await User.findById(userId);
+      if (!user || !user.analytics) return;
+
+      let locationHistory = user.analytics.locationHistory || [];
+      let existingLocation = locationHistory.find(loc => 
+        loc.city.toLowerCase() === location.city.toLowerCase()
+      );
+
+      if (existingLocation) {
+        existingLocation.frequency += action === 'register' ? 2 : 1;
+        existingLocation.lastVisit = new Date();
+      } else {
+        locationHistory.push({
+          city: location.city,
+          state: location.state || '',
+          frequency: action === 'register' ? 2 : 1,
+          lastVisit: new Date()
+        });
+      }
+
+      // Keep top 15 locations
+      locationHistory = locationHistory
+        .sort((a, b) => b.frequency - a.frequency)
+        .slice(0, 15);
+
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'analytics.locationHistory': locationHistory }
+      });
+
+    } catch (error) {
+      console.error('Error updating location history:', error);
+    }
+  }
+
+  /**
+   * Update event-specific analytics
+   */
+  async updateEventAnalytics(eventId, action) {
+    try {
+      const event = await Event.findById(eventId);
+      if (!event) return;
+
+      if (!event.analytics) {
+        event.analytics = {
+          views: 0,
+          clicks: 0,
+          registrations: 0,
+          clickThroughRate: 0,
+          conversionRate: 0,
+          lastUpdated: new Date()
+        };
+      }
+
+      if (action === 'click') {
+        event.analytics.clicks += 1;
+      } else if (action === 'register') {
+        event.analytics.registrations += 1;
+      }
+
+      // Calculate rates
+      if (event.analytics.views > 0) {
+        event.analytics.clickThroughRate = event.analytics.clicks / event.analytics.views;
+        if (event.analytics.clicks > 0) {
+          event.analytics.conversionRate = event.analytics.registrations / event.analytics.clicks;
+        }
+      }
+
+      event.analytics.lastUpdated = new Date();
+      await event.save();
+
+    } catch (error) {
+      console.error('Error updating event analytics:', error);
     }
   }
 
@@ -457,85 +780,7 @@ class RecommendationEngine {
     } catch (error) {
       console.error('Error updating event registration analytics:', error);
     }
-  }
-
-  /**
-   * Update category preference score
-   */
-  async updateCategoryPreference(userId, category) {
-    if (!category) return;
-
-    try {
-      const user = await User.findById(userId);
-      const categoryPrefs = user.analytics?.categoryPreferences || [];
-      const existingPref = categoryPrefs.find(pref => pref.category === category);
-
-      if (existingPref) {
-        // Increase score for existing preference using positional operator
-        await User.findOneAndUpdate(
-          { _id: userId, 'analytics.categoryPreferences.category': category },
-          {
-            $inc: { 'analytics.categoryPreferences.$.score': 1 },
-            $set: { 'analytics.categoryPreferences.$.lastInteraction': new Date() }
-          }
-        );
-      } else {
-        // Add new category preference
-        await User.findByIdAndUpdate(userId, {
-          $push: {
-            'analytics.categoryPreferences': {
-              category,
-              score: 1,
-              lastInteraction: new Date()
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error updating category preference:', error);
-    }
-  }
-
-  /**
-   * Update location history
-   */
-  async updateLocationHistory(userId, location) {
-    if (!location?.city) return;
-
-    try {
-      const user = await User.findById(userId);
-      const locationHistory = user.analytics?.locationHistory || [];
-      const existingLocation = locationHistory.find(loc => 
-        loc.city.toLowerCase() === location.city.toLowerCase()
-      );
-
-      if (existingLocation) {
-        // Update frequency for existing location using positional operator
-        await User.findOneAndUpdate(
-          { _id: userId, 'analytics.locationHistory.city': { $regex: new RegExp(`^${location.city}$`, 'i') } },
-          {
-            $inc: { 'analytics.locationHistory.$.frequency': 1 },
-            $set: { 'analytics.locationHistory.$.lastSeen': new Date() }
-          }
-        );
-      } else {
-        // Add new location
-        await User.findByIdAndUpdate(userId, {
-          $push: {
-            'analytics.locationHistory': {
-              city: location.city,
-              state: location.state,
-              country: location.country || 'India',
-              frequency: 1,
-              lastSeen: new Date()
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error updating location history:', error);
-    }
-  }
+}
 }
 
 module.exports = new RecommendationEngine();
