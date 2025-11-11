@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
+import Testimonial3D from '../components/Testimonial3D';
 import { 
   ArrowLeft,
   Users, 
@@ -38,6 +39,23 @@ const CommunityDetail = () => {
   const [newTestimonial, setNewTestimonial] = useState({ content: '', rating: 5 });
   const [isJoining, setIsJoining] = useState(false);
   const [hostCommunities, setHostCommunities] = useState([]);
+
+  // Function to close testimonials and return to overview
+  const handleCloseTestimonials = () => {
+    setActiveTab('overview');
+  };
+
+  // Handle escape key to close testimonials
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === 'Escape' && activeTab === 'testimonials') {
+        handleCloseTestimonials();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [activeTab]);
 
   useEffect(() => {
     fetchCommunityData();
@@ -262,7 +280,36 @@ const CommunityDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <>
+      {/* 3D Testimonial View - Full Screen */}
+      {activeTab === 'testimonials' && (
+        <div className="fixed inset-0 z-50">
+          {/* Exit Button */}
+          <button
+            onClick={() => setActiveTab('overview')}
+            className="absolute top-6 left-6 z-60 p-3 bg-black/20 backdrop-blur-sm rounded-full text-white hover:bg-black/30 transition-all duration-300 flex items-center space-x-2 group"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="hidden sm:block">Back to Community</span>
+          </button>
+
+          {/* Dark Mode Toggle */}
+          <div className="absolute top-6 right-6 z-60">
+            <DarkModeToggle />
+          </div>
+
+          {/* 3D Testimonial Component */}
+          <Testimonial3D 
+            testimonials={community?.testimonials} 
+            isVisible={activeTab === 'testimonials'}
+            onClose={handleCloseTestimonials}
+          />
+        </div>
+      )}
+
+      {/* Regular Community Detail View */}
+      {activeTab !== 'testimonials' && (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -486,14 +533,26 @@ const CommunityDetail = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all ${
+                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all relative group ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    ? tab.id === 'testimonials'
+                      ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                      : 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
+                } ${tab.id === 'testimonials' ? 'hover:scale-105' : ''}`}
               >
-                <tab.icon className="h-4 w-4" />
-                {tab.name}
+                {/* Special glow effect for testimonials tab */}
+                {tab.id === 'testimonials' && activeTab === tab.id && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg blur-sm"></div>
+                )}
+                <tab.icon className={`h-4 w-4 relative z-10 ${
+                  tab.id === 'testimonials' && activeTab === tab.id ? 'animate-pulse' : ''
+                }`} />
+                <span className="relative z-10">{tab.name}</span>
+                {/* 3D indicator for testimonials */}
+                {tab.id === 'testimonials' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full opacity-80 group-hover:scale-110 transition-transform"></div>
+                )}
               </button>
             ))}
           </div>
@@ -976,7 +1035,9 @@ const CommunityDetail = () => {
           </div>
         )}
       </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 

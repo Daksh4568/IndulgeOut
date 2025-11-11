@@ -6,11 +6,12 @@ const { sendWelcomeEmail } = require('../utils/emailService.js');
 
 const router = express.Router();
 
-// Register user
+// Register user (Traditional email/password method)
 router.post('/register', [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('phoneNumber').matches(/^[6-9]\d{9}$/).withMessage('Please provide a valid 10-digit Indian mobile number'),
   body('role').isIn(['user', 'community_member']).withMessage('Invalid role')
 ], async (req, res) => {
   try {
@@ -22,29 +23,47 @@ router.post('/register', [
       });
     }
 
-    const { name, email, password, role, interests, location } = req.body;
+    const { name, email, password, phoneNumber, role, interests, location } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists with email or phone
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { phoneNumber }] 
+    });
+    
     if (existingUser) {
-      return res.status(409).json({ message: 'User with this email already exists' });
+      if (existingUser.email === email) {
+        return res.status(409).json({ message: 'User with this email already exists' });
+      }
+      if (existingUser.phoneNumber === phoneNumber) {
+        return res.status(409).json({ message: 'User with this phone number already exists' });
+      }
     }
 
     // Create new user
     const user = new User({
-      name,
+      name: name, // Keep as 'name' to match User model
       email,
       password,
+      phoneNumber,
       role,
       interests: interests || [],
-      location: location || {}
+      location: location || {},
+      isOTPUser: false, // This is a password-based user
+      otpVerification: {
+        isPhoneVerified: false // Phone not verified yet for password users
+      },
+      analytics: {
+        registrationDate: new Date(),
+        registrationMethod: 'password',
+        lastLogin: new Date()
+      }
     });
 
     await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, phoneNumber: user.phoneNumber, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );

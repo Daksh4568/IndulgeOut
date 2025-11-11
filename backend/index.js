@@ -8,6 +8,7 @@ const eventRoutes = require('./routes/events.js');
 const userRoutes = require('./routes/users.js');
 const communityRoutes = require('./routes/communities.js');
 const recommendationRoutes = require('./routes/recommendations.js');
+const otpRoutes = require('./routes/otp.js');
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/otp', otpRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',

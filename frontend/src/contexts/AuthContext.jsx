@@ -84,6 +84,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      await fetchUserProfile();
+    }
+  };
+
   const updateUserInterests = async (interests) => {
     try {
       const response = await axios.put(`${API_BASE_URL}/api/users/interests`, { interests });
@@ -105,6 +113,7 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    refreshUser,
     updateUserInterests,
     isAuthenticated: !!user,
     isCommunityMember: user?.role === 'community_member'

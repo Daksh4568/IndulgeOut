@@ -87,10 +87,37 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
-  password: {
+  phoneNumber: {
     type: String,
     required: true,
+    unique: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        // Indian mobile number validation (10 digits)
+        return /^[6-9]\d{9}$/.test(v);
+      },
+      message: 'Please provide a valid Indian mobile number (10 digits)'
+    }
+  },
+  password: {
+    type: String,
+    required: function() {
+      // Password is required only if user doesn't use OTP login
+      return !this.isOTPUser;
+    },
     minlength: 6
+  },
+  isOTPUser: {
+    type: Boolean,
+    default: false // true if user prefers OTP login over password
+  },
+  otpVerification: {
+    otp: String,
+    otpExpiry: Date,
+    isPhoneVerified: { type: Boolean, default: false },
+    otpAttempts: { type: Number, default: 0, max: 5 },
+    lastOTPSent: Date
   },
   role: {
     type: String,
