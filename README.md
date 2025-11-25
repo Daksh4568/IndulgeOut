@@ -159,10 +159,79 @@ The application uses Nodemailer for sending emails. For Gmail:
 - `GET /api/users/profile` - Get user profile
 - `PUT /api/users/profile` - Update user profile
 
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+### **Phase 1: Month 1 (1,000 DAU) - ₹4,800/month**
 
-#### Code-Level Optimizations:
-✅ **Lazy Loading**: Videos only load when component is visible
-✅ **Intersection Observer**: Pauses videos when not in viewport
-✅ **Preload Strategy**: Metadata preloading for faster start
-✅ **Memory Management**: Proper cleanup and reference handling
-✅ **Progressive Enhancement**: Graceful fallbacks for slow connections
+| Service | Monthly Cost (₹) | Basic Configuration |
+|---------|-------------------|---------------------|
+| **AWS Lambda** | ₹800 | Standard x86, 512MB memory, basic setup |
+| **API Gateway** | ₹600 | Basic caching, standard endpoints |
+| **DynamoDB On-Demand** | ₹400 | 5GB storage, 300K reads, 50K writes |
+| **S3 Storage** | ₹300 | 20GB basic file storage |
+| **CloudFront CDN** | ₹800 | Basic global distribution |
+| **ElastiCache** | ₹800 | t3.micro instance |
+| **CloudWatch** | ₹400 | Standard monitoring |
+| **Route 53** | ₹200 | Basic DNS |
+| **AWS WAF** | ₹300 | Basic security rules |
+| **SES (Email)** | ₹200 | Email notifications |
+
+### **Phase 2: Months 2-3 (2,000 DAU) - ₹6,800/month**
+
+| Service | Monthly Cost (₹) | Scaling Factor |
+|---------|-------------------|----------------|
+| **AWS Lambda** | ₹1,200 | 2M requests, standard config |
+| **API Gateway** | ₹800 | 2M API calls |
+| **DynamoDB On-Demand** | ₹800 | 10GB storage, 600K reads, 100K writes |
+| **S3 Storage** | ₹400 | 40GB storage |
+| **CloudFront CDN** | ₹1,200 | Increased bandwidth |
+| **ElastiCache** | ₹1,200 | t3.small instance |
+| **CloudWatch** | ₹600 | Enhanced monitoring |
+| **Route 53** | ₹200 | DNS management |
+| **AWS WAF** | ₹400 | Security rules |
+| **SES (Email)** | ₹200 | Email notifications |
+
+### **Phase 3: Months 4-7 (5,000 DAU) - ₹12,500/month**
+
+| Service | Monthly Cost (₹) | Scaling Requirements |
+|---------|-------------------|----------------------|
+| **AWS Lambda** | ₹3,500 | 5M requests, standard memory |
+| **API Gateway** | ₹2,000 | 5M API calls |
+| **DynamoDB On-Demand** | ₹2,000 | 25GB storage, 1.5M reads, 300K writes |
+| **S3 Storage** | ₹600 | 100GB storage |
+| **CloudFront CDN** | ₹2,500 | Global distribution |
+| **ElastiCache** | ₹1,500 | t3.medium |
+| **CloudWatch** | ₹800 | Detailed monitoring |
+| **AWS WAF** | ₹500 | Enhanced security |
+| **SES (Email)** | ₹300 | Higher email volume |
+
+### **Phase 4: Months 8-10 (7,000 DAU) - ₹17,500/month**
+
+| Service | Monthly Cost (₹) | Growing Infrastructure |
+|---------|-------------------|------------------------|
+| **AWS Lambda** | ₹5,000 | 7M requests, some optimization |
+| **API Gateway** | ₹2,800 | Higher traffic volume |
+| **DynamoDB On-Demand** | ₹3,000 | 40GB storage, 2.5M reads, 500K writes |
+| **S3 Storage** | ₹800 | 150GB storage |
+| **CloudFront CDN** | ₹3,500 | Global content distribution |
+| **ElastiCache** | ₹2,000 | t3.large |
+| **CloudWatch** | ₹1,000 | Advanced monitoring |
+| **AWS WAF** | ₹600 | Security scaling |
+| **SES (Email)** | ₹400 | Email notifications |
+| **Route 53** | ₹200 | DNS management |
+
+### **Phase 5: Months 11-12 (10,000 DAU) - ₹25,000/month**
+
+| Service | Monthly Cost (₹) | Full Scale Operations |
+|---------|-------------------|----------------------|
+| **AWS Lambda** | ₹7,500 | 10M requests, standard config |
+| **API Gateway** | ₹4,000 | High volume traffic |
+| **DynamoDB On-Demand** | ₹4,500 | 60GB storage, 4M reads, 800K writes |
+| **S3 Storage** | ₹1,000 | 200GB storage |
+| **CloudFront CDN** | ₹5,000 | Global distribution |
+| **ElastiCache** | ₹2,500 | r6g.large |
+| **CloudWatch** | ₹1,200 | Comprehensive monitoring |
+| **AWS WAF** | ₹800 | Advanced security |
+| **SES (Email)** | ₹500 | High email volume |
+| **Route 53** | ₹200 | DNS management |
+| **SNS (Push Notifications)** | ₹300 | Mobile push notifications |
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
