@@ -160,35 +160,35 @@ The application uses Nodemailer for sending emails. For Gmail:
 - `PUT /api/users/profile` - Update user profile
 
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-### **Phase 1: Month 1 (1,000 DAU) - ₹4,800/month**
+### **Phase 1: Month 1 (1,000 DAU) - ₹3,500/month**
 
 | Service | Monthly Cost (₹) | Basic Configuration |
 |---------|-------------------|---------------------|
 | **AWS Lambda** | ₹800 | Standard x86, 512MB memory, basic setup |
-| **API Gateway** | ₹600 | Basic caching, standard endpoints |
+| **API Gateway** | ₹600 | Basic setup, no caching initially |
 | **DynamoDB On-Demand** | ₹400 | 5GB storage, 300K reads, 50K writes |
 | **S3 Storage** | ₹300 | 20GB basic file storage |
-| **CloudFront CDN** | ₹800 | Basic global distribution |
-| **ElastiCache** | ₹800 | t3.micro instance |
 | **CloudWatch** | ₹400 | Standard monitoring |
 | **Route 53** | ₹200 | Basic DNS |
 | **AWS WAF** | ₹300 | Basic security rules |
 | **SES (Email)** | ₹200 | Email notifications |
+| **Direct S3 Delivery** | ₹300 | Files served directly from S3 (no CDN) |
 
 ### **Phase 2: Months 2-3 (2,000 DAU) - ₹6,800/month**
 
 | Service | Monthly Cost (₹) | Scaling Factor |
 |---------|-------------------|----------------|
 | **AWS Lambda** | ₹1,200 | 2M requests, standard config |
-| **API Gateway** | ₹800 | 2M API calls |
+| **API Gateway** | ₹800 | 2M API calls, basic caching enabled |
 | **DynamoDB On-Demand** | ₹800 | 10GB storage, 600K reads, 100K writes |
 | **S3 Storage** | ₹400 | 40GB storage |
-| **CloudFront CDN** | ₹1,200 | Increased bandwidth |
-| **ElastiCache** | ₹1,200 | t3.small instance |
+| **CloudFront CDN** | ₹1,200 | Adding CDN for global users |
+| **ElastiCache** | ₹800 | t3.micro - add caching for performance |
 | **CloudWatch** | ₹600 | Enhanced monitoring |
 | **Route 53** | ₹200 | DNS management |
 | **AWS WAF** | ₹400 | Security rules |
 | **SES (Email)** | ₹200 | Email notifications |
+| **S3 Data Transfer** | ₹200 | Direct delivery until CDN setup |
 
 ### **Phase 3: Months 4-7 (5,000 DAU) - ₹12,500/month**
 
