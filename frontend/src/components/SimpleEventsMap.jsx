@@ -150,25 +150,36 @@ const SimpleEventsMap = ({ events = [], userLocation, onEventSelect }) => {
 
         const marker = L.marker([lat, lng], { icon: markerIcon });
         
-        // Create popup content
-        const popupContent = `
-          <div style="min-width: 200px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${event.title || 'Untitled Event'}</h3>
-            <p style="margin: 0 0 8px 0; font-size: 14px; color: #666;">${event.description ? event.description.substring(0, 100) + (event.description.length > 100 ? '...' : '') : 'No description'}</p>
-            <div style="font-size: 12px; color: #888;">
-              <div>📅 ${formatDate(event.date)}</div>
-              <div>📍 ${event.venue || event.location?.city || 'Location TBD'}</div>
-              ${event.price?.amount ? `<div>💰 ₹${event.price.amount}</div>` : '<div>💰 Free</div>'}
+        // Create tooltip content (shows on hover)
+        const tooltipContent = `
+          <div style="min-width: 250px; padding: 4px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; color: #1f2937;">${event.title || 'Untitled Event'}</h3>
+            <p style="margin: 0 0 8px 0; font-size: 13px; color: #4b5563; line-height: 1.4;">${event.description ? event.description.substring(0, 120) + (event.description.length > 120 ? '...' : '') : 'No description'}</p>
+            <div style="font-size: 12px; color: #6b7280; line-height: 1.6;">
+              <div style="margin-bottom: 4px;">📅 ${formatDate(event.date)}</div>
+              <div style="margin-bottom: 4px;">📍 ${event.venue || event.location?.city || 'Location TBD'}</div>
+              <div style="margin-bottom: 4px;">${event.price?.amount ? `💰 ₹${event.price.amount}` : '💰 Free'}</div>
+              ${event.currentParticipants !== undefined ? `<div>👥 ${event.currentParticipants}/${event.maxParticipants} joined</div>` : ''}
             </div>
-            <button onclick="window.selectEvent('${event._id}')" style="margin-top: 8px; padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">View Details</button>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center;">
+              Click to view full details
+            </div>
           </div>
         `;
         
-        marker.bindPopup(popupContent);
+        // Bind tooltip that shows on hover
+        marker.bindTooltip(tooltipContent, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10],
+          opacity: 0.95,
+          className: 'custom-tooltip'
+        });
+        
         marker.addTo(mapInstanceRef.current);
         markersRef.current.push(marker);
 
-        // Handle event selection
+        // Handle event selection on click
         marker.on('click', () => {
           if (onEventSelect) {
             onEventSelect(event);
@@ -260,6 +271,21 @@ const SimpleEventsMap = ({ events = [], userLocation, onEventSelect }) => {
 
   return (
     <div className="relative w-full h-full">
+      <style>{`
+        .custom-tooltip {
+          background: white !important;
+          border: none !important;
+          border-radius: 8px !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+          padding: 0 !important;
+        }
+        .custom-tooltip::before {
+          border-top-color: white !important;
+        }
+        .leaflet-tooltip-top::before {
+          border-top-color: white !important;
+        }
+      `}</style>
       <div ref={mapRef} className="w-full h-full rounded-lg" />
       
       {/* Map Legend */}

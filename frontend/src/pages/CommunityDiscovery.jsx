@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { DISCOVERY_CATEGORIES, CATEGORY_ICONS } from '../constants/eventConstants';
 import { 
   Search, 
@@ -16,11 +17,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import axios from 'axios';
 
 const CommunityDiscovery = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useContext(ToastContext);
   const [communities, setCommunities] = useState([]);
   const [filteredCommunities, setFilteredCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,24 +35,19 @@ const CommunityDiscovery = () => {
 
   // Check if user is a host (community_member)
   const isHost = user?.role === 'community_member';
-  
-  // Debug logging
-  console.log('User object:', user);
-  console.log('User role:', user?.role);
-  console.log('Is host?', isHost);
 
   // Extended categories for communities
   const communityCategories = [
     { id: 'all', name: 'All Communities', icon: '🌐' },
-    { id: 'sip-savor', name: 'Sip & Savor', icon: '🍷' },
-    { id: 'sweat-play', name: 'Sweat & Play', icon: '⚽' },
-    { id: 'art-diy', name: 'Art & DIY', icon: '🎨' },
-    { id: 'social-mixers', name: 'Social Mixers', icon: '🎭' },
-    { id: 'adventure-outdoors', name: 'Adventure & Outdoors', icon: '🏔️' },
-    { id: 'epic-screenings', name: 'Epic Screenings', icon: '🎬' },
-    { id: 'indoor-board-games', name: 'Indoor & Board Games', icon: '🎲' },
-    { id: 'music-performance', name: 'Music & Performance', icon: '🎵' },
-    { id: 'technology', name: 'Technology', icon: '💻' },
+    { id: 'Sip & Savor', name: 'Sip & Savor', icon: '🍷' },
+    { id: 'Sweat & Play', name: 'Sweat & Play', icon: '⚽' },
+    { id: 'Art & DIY', name: 'Art & DIY', icon: '🎨' },
+    { id: 'Social Mixers', name: 'Social Mixers', icon: '🎭' },
+    { id: 'Adventure & Outdoors', name: 'Adventure & Outdoors', icon: '🏔️' },
+    { id: 'Epic Screenings', name: 'Epic Screenings', icon: '🎬' },
+    { id: 'Indoor & Board Games', name: 'Indoor & Board Games', icon: '🎲' },
+    { id: 'Music & Performance', name: 'Music & Performance', icon: '🎵' },
+    { id: 'Technology', name: 'Technology', icon: '💻' },
     { id: 'wellness', name: 'Wellness', icon: '🧘' },
     { id: 'business-networking', name: 'Business & Networking', icon: '🤝' },
     { id: 'education-learning', name: 'Education & Learning', icon: '📚' }
@@ -71,10 +69,7 @@ const CommunityDiscovery = () => {
   const fetchCommunities = async () => {
     try {
       setLoading(true);
-      console.log('Fetching communities...');
-      
       const response = await axios.get(`${API_BASE_URL}/api/communities`);
-      console.log('Communities response:', response.data);
       
       if (response.data.communities) {
         setCommunities(response.data.communities);
@@ -91,9 +86,11 @@ const CommunityDiscovery = () => {
 
     // My Communities filter (for hosts)
     if (showOnlyMyCommunities && user) {
-      filtered = filtered.filter(community => 
-        community.host._id === user.id || community.host === user.id
-      );
+      const userId = user._id || user.id;
+      filtered = filtered.filter(community => {
+        const hostId = community.host?._id || community.host;
+        return hostId === userId || String(hostId) === String(userId);
+      });
     }
 
     // Category filter
@@ -144,7 +141,7 @@ const CommunityDiscovery = () => {
     e.stopPropagation();
     
     if (!user) {
-      alert('Please log in to join communities');
+      toast.warning('Please log in to join communities');
       navigate('/login');
       return;
     }
@@ -159,11 +156,11 @@ const CommunityDiscovery = () => {
         }
       );
       
-      alert('Successfully joined community!');
+      toast.success('Successfully joined community!');
       fetchCommunities(); // Refresh to show updated member count
     } catch (error) {
       console.error('Error joining community:', error);
-      alert(error.response?.data?.message || 'Error joining community');
+      toast.error(error.response?.data?.message || 'Error joining community');
     }
   };
 
@@ -186,66 +183,90 @@ const CommunityDiscovery = () => {
 
   const getButtonState = (community) => {
     if (!user) {
-      return { text: 'Login to Join', disabled: false, action: () => navigate('/login') };
+      return { 
+        text: 'Login to Join', 
+        clickable: true, 
+        className: 'bg-blue-600 text-white hover:bg-blue-700',
+        action: () => navigate('/login') 
+      };
     }
     
     if (isUserHost(community)) {
-      return { text: 'Your Community', disabled: true, action: null };
+      return { 
+        text: 'Your Community', 
+        clickable: false, 
+        className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 cursor-not-allowed',
+        action: null 
+      };
     }
     
     if (isUserMember(community)) {
-      return { text: 'Joined ✓', disabled: true, action: null };
+      return { 
+        text: 'Joined ✓', 
+        clickable: false, 
+        className: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 cursor-not-allowed',
+        action: null 
+      };
     }
     
-    return { text: 'Join', disabled: false, action: (e) => joinCommunity(community._id, e) };
+    return { 
+      text: 'Join', 
+      clickable: true, 
+      className: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
+      action: (e) => joinCommunity(community._id, e) 
+    };
   };
+
+  if (loading) {
+    return <LoadingSpinner text="Loading communities..." />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
+      {/* Header - Mobile Responsive */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                 {isHost ? 'Manage Communities' : 'Discover Communities'}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2 line-clamp-2">
                 {isHost 
                   ? 'Manage your communities and explore others' 
                   : 'Join communities that match your interests and connect with like-minded people'
                 }
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <DarkModeToggle />
               {user && (
                 <>
                   {isHost && (
                     <button
                       onClick={() => setShowOnlyMyCommunities(!showOnlyMyCommunities)}
-                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                      className={`px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base min-h-[44px] touch-manipulation ${
                         showOnlyMyCommunities 
                           ? 'bg-blue-600 text-white' 
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                       }`}
                     >
-                      👤 My Communities
+                      👤 <span className="hidden xs:inline">My Communities</span>
                     </button>
                   )}
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2"
+                    className="px-3 sm:px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 text-sm sm:text-base min-h-[44px] touch-manipulation"
                   >
                     Dashboard
                   </button>
                   {isHost && (
                     <button
                       onClick={() => navigate('/community/create')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm sm:text-base min-h-[44px] touch-manipulation"
                     >
                       <Plus className="h-4 w-4" />
-                      Create Community
+                      <span className="hidden xs:inline">Create Community</span>
                     </button>
                   )}
                 </>
@@ -253,9 +274,9 @@ const CommunityDiscovery = () => {
             </div>
           </div>
 
-          {/* Search and Filters */}
-          <div className="space-y-4">
-            <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search and Filters - Mobile Optimized */}
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
@@ -263,15 +284,15 @@ const CommunityDiscovery = () => {
                   placeholder="Search communities..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px] text-base"
                 />
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 sm:gap-3">
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  className="flex-1 sm:flex-initial px-3 sm:px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px] text-sm sm:text-base"
                 >
                   <option value="">All Locations</option>
                   {locations.map(location => (
@@ -281,30 +302,32 @@ const CommunityDiscovery = () => {
                 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+                  className="px-3 sm:px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation"
                 >
                   <Filter className="h-4 w-4" />
-                  Filters
+                  <span className="hidden sm:inline">Filters</span>
                 </button>
               </div>
             </div>
 
-            {/* Category Pills */}
-            <div className="flex flex-wrap gap-2">
-              {communityCategories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
-                    selectedCategory === category.id
-                      ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-600 shadow-sm'
-                  }`}
-                >
-                  <span className="text-lg">{category.icon}</span>
-                  {category.name}
-                </button>
-              ))}
+            {/* Category Pills - Mobile Scrollable */}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-2 min-w-max sm:flex-wrap sm:min-w-0">
+                {communityCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-h-[44px] touch-manipulation ${
+                      selectedCategory === category.id
+                        ? 'bg-blue-600 text-white shadow-lg transform scale-105'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-600 shadow-sm'
+                    }`}
+                  >
+                    <span className="text-base sm:text-lg">{category.icon}</span>
+                    <span className="hidden xs:inline">{category.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -339,15 +362,14 @@ const CommunityDiscovery = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredCommunities.map((community, index) => (
               <div 
                 key={community._id} 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 group"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 group touch-manipulation"
                 onClick={() => navigate(`/community/${community._id}`)}
                 style={{
-                  animationDelay: `${index * 100}ms`,
-                  animation: 'fadeInUp 0.6s ease-out forwards'
+                  animation: `fadeInUp 0.6s ease-out ${index * 100}ms forwards`
                 }}
               >
                 {/* Community Cover Image */}
@@ -356,6 +378,7 @@ const CommunityDiscovery = () => {
                     <img
                       src={community.coverImage}
                       alt={community.name}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
@@ -395,17 +418,17 @@ const CommunityDiscovery = () => {
                   )}
                 </div>
 
-                {/* Community Details */}
-                <div className="p-6">
+                {/* Community Details - Mobile Optimized */}
+                <div className="p-4 sm:p-6">
                   {/* Category and Rating */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <span className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
                       {community.category}
                     </span>
                     {community.stats?.averageRating > 0 && (
                       <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 fill-current" />
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           {community.stats.averageRating.toFixed(1)}
                         </span>
                       </div>
@@ -413,26 +436,28 @@ const CommunityDiscovery = () => {
                   </div>
 
                   {/* Community Name */}
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {community.name}
                   </h3>
 
                   {/* Short Description */}
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                  <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
                     {community.shortDescription || community.description}
                   </p>
 
                   {/* Location and Members */}
-                  <div className="space-y-2 mb-4">
+                  <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
                     {community.location?.city && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <MapPin className="h-4 w-4" />
-                        {community.location.city}
-                        {community.location.state && `, ${community.location.state}`}
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="line-clamp-1">
+                          {community.location.city}
+                          {community.location.state && `, ${community.location.state}`}
+                        </span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Users className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                       {community.stats?.totalMembers || community.members?.length || 0} members
                     </div>
                   </div>

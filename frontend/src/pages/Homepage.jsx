@@ -553,9 +553,9 @@ function Homepage() {
       {/* Navigation */}
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20 sm:h-24">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IndulgeOut</h1>
+              <img src="/images/indulgeout-logo.png" alt="IndulgeOut" className="h-16 sm:h-20 w-auto" />
             </div>
             <div className="flex items-center space-x-4">
               <DarkModeToggle />
@@ -1084,38 +1084,20 @@ function Homepage() {
       {/* Footer */}
       <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12 border-t border-gray-800 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-xl font-bold mb-4">IndulgeOut</h3>
-              <p className="text-gray-400 dark:text-gray-500">
-                Connecting communities through shared interests and experiences.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Platform</h4>
+          <div className="text-center mb-8">
+            <h3 className="text-2xl sm:text-3xl font-bold mb-4">IndulgeOut</h3>
+            <p className="text-gray-400 dark:text-gray-500 text-sm sm:text-base max-w-2xl mx-auto mb-6">
+              Connecting communities through shared interests and experiences.
+            </p>
+            <div className="inline-block">
+              <h4 className="font-semibold mb-3 text-lg">Platform</h4>
               <ul className="space-y-2 text-gray-400 dark:text-gray-500">
-                <li><Link to="/about" className="hover:text-white dark:hover:text-gray-300 transition-colors">About</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-white dark:hover:text-gray-300 transition-colors">How it Works</Link></li>
-                <li><Link to="/pricing" className="hover:text-white dark:hover:text-gray-300 transition-colors">Pricing</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Community</h4>
-              <ul className="space-y-2 text-gray-400 dark:text-gray-500">
-                <li><Link to="/groups" className="hover:text-white dark:hover:text-gray-300 transition-colors">Groups</Link></li>
-                <li><Link to="/blog" className="hover:text-white dark:hover:text-gray-300 transition-colors">Blog</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400 dark:text-gray-500">
-                <li><Link to="/contact" className="hover:text-white dark:hover:text-gray-300 transition-colors">Contact</Link></li>
-                <li><Link to="/help" className="hover:text-white dark:hover:text-gray-300 transition-colors">Help Center</Link></li>
-                <li><Link to="/privacy" className="hover:text-white dark:hover:text-gray-300 transition-colors">Privacy</Link></li>
+                <li><Link to="/about" className="hover:text-white dark:hover:text-gray-300 transition-colors text-base">About</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 dark:border-gray-700 mt-8 pt-8 text-center text-gray-400 dark:text-gray-500">
+          
+          <div className="border-t border-gray-800 dark:border-gray-700 pt-8 text-center text-gray-400 dark:text-gray-500 text-sm">
             <p>&copy; 2025 IndulgeOut. All rights reserved.</p>
           </div>
         </div>

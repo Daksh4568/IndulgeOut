@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, Image, Plus, MapPin, Users, Globe, Instagram, Facebook, Twitter, Linkedin } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
 import axios from 'axios';
 import API_BASE_URL from '../config/api.js';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import { EVENT_CATEGORIES } from '../constants/eventConstants';
 
 const CommunityCreation = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useContext(ToastContext);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -111,7 +113,7 @@ const CommunityCreation = () => {
         
         if (error) {
           console.error('Upload error:', error);
-          alert('Error uploading image. Please try again.');
+          toast.error('Error uploading image. Please try again.');
           return;
         }
 
@@ -160,7 +162,7 @@ const CommunityCreation = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please log in to create a community');
+        toast.warning('Please log in to create a community');
         navigate('/login');
         return;
       }
@@ -177,12 +179,12 @@ const CommunityCreation = () => {
       );
 
       if (response.data.community) {
-        alert('Community created successfully!');
+        toast.success('Community created successfully!');
         navigate(`/community/${response.data.community._id}`);
       }
     } catch (error) {
       console.error('Error creating community:', error);
-      alert(error.response?.data?.message || 'Error creating community. Please try again.');
+      toast.error(error.response?.data?.message || 'Error creating community. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -194,18 +196,18 @@ const CommunityCreation = () => {
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Create Community
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 hidden xs:block">
                   Build a community around your passion
                 </p>
               </div>
@@ -219,8 +221,8 @@ const CommunityCreation = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Basic Information
             </h2>
             
@@ -236,7 +238,7 @@ const CommunityCreation = () => {
                   onChange={handleInputChange}
                   required
                   maxLength={100}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px] text-base"
                   placeholder="e.g., Mumbai Food Enthusiasts"
                 />
               </div>
@@ -313,13 +315,13 @@ const CommunityCreation = () => {
           </div>
 
           {/* Location */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
               <MapPin className="h-5 w-5" />
               Location
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   City
@@ -362,8 +364,8 @@ const CommunityCreation = () => {
           </div>
 
           {/* Images */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
               <Image className="h-5 w-5" />
               Community Images
             </h2>
@@ -373,7 +375,7 @@ const CommunityCreation = () => {
                 type="button"
                 onClick={openCloudinaryWidget}
                 disabled={isUploading}
-                className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 sm:p-8 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors min-h-[100px] touch-manipulation"
               >
                 <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                 <p className="text-gray-600 dark:text-gray-400">
@@ -573,18 +575,18 @@ const CommunityCreation = () => {
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end gap-4">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[44px] text-base touch-manipulation"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !formData.name || !formData.description || !formData.category}
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 min-h-[44px] text-base touch-manipulation"
             >
               {isLoading ? (
                 <>

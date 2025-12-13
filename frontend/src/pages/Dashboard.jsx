@@ -139,24 +139,17 @@ const Dashboard = () => {
       {/* Navigation */}
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20 sm:h-24">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IndulgeOut</h1>
+              <img src="/images/indulgeout-logo.png" alt="IndulgeOut" className="h-16 sm:h-20 w-auto" />
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700 dark:text-gray-300">Welcome, {user?.name}</span>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <span className="hidden sm:inline text-sm sm:text-base text-gray-700 dark:text-gray-300">Welcome, {user?.name}</span>
               <DarkModeToggle />
-              {user?.role !== 'community_member' && (
-                <Link 
-                  to="/analytics" 
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center space-x-1"
-                  title="Analytics"
-                >
-                  <BarChart3 className="h-5 w-5" />
-                  <span className="hidden md:inline text-sm">Analytics</span>
-                </Link>
-              )}
-              <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+              <button 
+                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+                title="Settings"
+              >
                 <Settings className="h-5 w-5" />
               </button>
               <button 
@@ -164,7 +157,8 @@ const Dashboard = () => {
                   logout()
                   navigate('/')
                 }}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+                title="Logout"
               >
                 <LogOut className="h-5 w-5" />
               </button>
@@ -173,10 +167,10 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Header Section - Mobile Responsive */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {isCommunityMember ? 'Host Dashboard' : 'Your Dashboard'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -189,9 +183,9 @@ const Dashboard = () => {
 
         {/* Navigation Tabs for Hosts */}
         {isCommunityMember && (
-          <div className="mb-8">
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="flex space-x-8">
+          <div className="mb-6 sm:mb-8">
+            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <nav className="flex space-x-6 sm:space-x-8 min-w-max sm:min-w-0">
                 <Link
                   to="/dashboard"
                   className="py-2 px-1 border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 whitespace-nowrap text-sm font-medium"
@@ -216,33 +210,33 @@ const Dashboard = () => {
         )}
 
         {/* Quick Actions */}
-        <div className={`grid grid-cols-1 gap-6 mb-8 ${isCommunityMember ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+        <div className={`grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8 ${isCommunityMember ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 md:grid-cols-3'}`}>
           {isCommunityMember ? (
             <>
               <Link
                 to="/create-event"
-                className="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg text-center transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white p-4 sm:p-6 rounded-lg text-center transition-colors min-h-[120px] flex flex-col items-center justify-center touch-manipulation"
               >
                 <Plus className="h-8 w-8 mx-auto mb-2" />
-                <h3 className="font-semibold">Create New Event</h3>
-                <p className="text-sm text-blue-100">Host an amazing experience</p>
+                <h3 className="font-semibold text-base">Create New Event</h3>
+                <p className="text-xs sm:text-sm text-blue-100">Host an amazing experience</p>
               </Link>
               <Link
                 to="/community/create"
-                className="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg text-center transition-colors"
+                className="bg-purple-600 hover:bg-purple-700 text-white p-4 sm:p-6 rounded-lg text-center transition-colors min-h-[120px] flex flex-col items-center justify-center touch-manipulation"
               >
                 <Globe className="h-8 w-8 mx-auto mb-2" />
-                <h3 className="font-semibold">Create Community</h3>
-                <p className="text-sm text-purple-100">Build your tribe</p>
+                <h3 className="font-semibold text-base">Create Community</h3>
+                <p className="text-xs sm:text-sm text-purple-100">Build your tribe</p>
               </Link>
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-h-[120px] flex flex-col justify-center">
                 <Users className="h-8 w-8 text-blue-600 mb-2" />
-                <h3 className="font-semibold text-gray-900 dark:text-white">Total Attendees</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Total Attendees</h3>
                 <p className="text-2xl font-bold text-blue-600">248</p>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-h-[120px] flex flex-col justify-center">
                 <Calendar className="h-8 w-8 text-green-600 mb-2" />
-                <h3 className="font-semibold text-gray-900 dark:text-white">Events Hosted</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Events Hosted</h3>
                 <p className="text-2xl font-bold text-green-600">12</p>
               </div>
             </>
@@ -272,10 +266,12 @@ const Dashboard = () => {
                 <h3 className="font-semibold text-gray-900">Update Interests</h3>
                 <p className="text-sm text-gray-500">Customize your experience</p>
               </Link>
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-h-[120px] flex flex-col justify-center">
                 <Calendar className="h-8 w-8 text-green-600 mb-2" />
-                <h3 className="font-semibold text-gray-900">Upcoming Events</h3>
-                <p className="text-2xl font-bold text-green-600">3</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Upcoming Events</h3>
+                <p className="text-2xl font-bold text-green-600">
+                  {loadingEvents ? '...' : registeredEvents.filter(event => new Date(event.date) >= new Date()).length}
+                </p>
               </div>
             </>
           )}
@@ -285,13 +281,13 @@ const Dashboard = () => {
           {/* Main Content */}
           <div className="lg:col-span-2">
             {/* Upcoming Events */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6 sm:mb-8">
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                   {user?.role === 'community_member' ? 'Your Upcoming Events' : 'Your Registered Events'}
                 </h2>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {loadingEvents ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -309,21 +305,22 @@ const Dashboard = () => {
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {registeredEvents.map((event) => (
                       <Link 
                         key={event._id} 
                         to={`/event/${event._id}`}
-                        className="flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                        className="flex items-start sm:items-center space-x-3 sm:space-x-4 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors touch-manipulation"
                       >
                         <img 
                           src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=100&h=100&fit=crop'} 
                           alt={event.title}
-                          className="w-16 h-16 rounded-lg object-cover"
+                          loading="lazy"
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
                         />
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{event.title}</h3>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base truncate">{event.title}</h3>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 space-y-1 sm:space-y-0">
                             <span className="flex items-center">
                               <Calendar className="h-4 w-4 mr-1" />
                               {new Date(event.date).toLocaleDateString()}

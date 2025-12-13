@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -20,6 +20,7 @@ import {
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import axios from 'axios';
 
@@ -27,6 +28,7 @@ const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useContext(ToastContext);
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -67,6 +69,13 @@ const EventDetail = () => {
 
   useEffect(() => {
     fetchEvent();
+    
+    // Auto-refresh event data every 30 seconds to show real-time availability
+    const refreshInterval = setInterval(() => {
+      fetchEvent();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(refreshInterval);
   }, [id]);
 
   const fetchEvent = async () => {
@@ -99,9 +108,24 @@ const EventDetail = () => {
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (retryCount = 0) => {
     if (!user) {
       navigate('/login');
+      return;
+    }
+
+    // Check if event date has passed
+    const eventDate = new Date(event.date);
+    const currentDate = new Date();
+    if (eventDate < currentDate) {
+      toast.warning('Cannot register for past events');
+      return;
+    }
+
+    // Check if event is full before attempting registration
+    if (event.participants && event.participants.length >= event.maxParticipants) {
+      toast.error('Sorry, this event is now full!');
+      await fetchEvent(); // Refresh to show current state
       return;
     }
 
@@ -109,10 +133,15 @@ const EventDetail = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // First register for the event
-      const response = await axios.post(`${API_BASE_URL}/api/events/${id}/register`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Register for the event with timeout
+      const response = await axios.post(
+        `${API_BASE_URL}/api/events/${id}/register`, 
+        {}, 
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000 // 10 second timeout
+        }
+      );
       
       // Track if this was from a recommendation
       const isFromRecommendation = sessionStorage.getItem('recommendationSource') === 'true';
@@ -131,19 +160,38 @@ const EventDetail = () => {
       console.log('Registration response:', response.data);
       setIsRegistered(true);
       
-      // Show success message with navigation option
-      const userChoice = window.confirm('Successfully registered for the event! Would you like to go to your dashboard to see your registered events?');
-      
-      if (userChoice) {
-        navigate('/dashboard');
-      } else {
-        // Refresh event data to get updated participant count
-        await fetchEvent();
-      }
+      // Show success message and refresh event data
+      toast.success('Successfully registered for the event! Check your dashboard to see all registered events.');
+      await fetchEvent();
       
     } catch (error) {
       console.error('Registration failed:', error);
-      alert(error.response?.data?.message || 'Registration failed. Please try again.');
+      
+      const errorMessage = error.response?.data?.message;
+      
+      // Handle specific error cases
+      if (errorMessage === 'Event is full') {
+        toast.error('Sorry, this event just filled up! Refreshing...');
+        await fetchEvent();
+      } else if (errorMessage === 'Already registered for this event') {
+        toast.warning('You are already registered for this event');
+        setIsRegistered(true);
+        await fetchEvent();
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        // Retry on timeout (up to 2 retries)
+        if (retryCount < 2) {
+          const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s
+          toast.warning(`Connection timeout. Retrying in ${delay/1000} seconds...`);
+          setTimeout(() => handleRegister(retryCount + 1), delay);
+          return; // Don't set isRegistering to false yet
+        } else {
+          toast.error('Registration timed out. Please check your connection and try again.');
+        }
+      } else if (error.response?.status === 429) {
+        toast.error('Too many requests. Please wait a moment and try again.');
+      } else {
+        toast.error(errorMessage || 'Registration failed. Please try again.');
+      }
     } finally {
       setIsRegistering(false);
     }
@@ -467,12 +515,14 @@ const EventDetail = () => {
               {/* Registration Button */}
               <button
                 onClick={handleRegister}
-                disabled={isRegistering || isRegistered || event.currentParticipants >= event.maxParticipants}
+                disabled={isRegistering || isRegistered || event.currentParticipants >= event.maxParticipants || new Date(event.date) < new Date()}
                 className={`w-full py-3 rounded-lg font-medium text-lg transition-all duration-300 ${
                   isRegistered
-                    ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 cursor-not-allowed'
+                    : new Date(event.date) < new Date()
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     : event.currentParticipants >= event.maxParticipants
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105'
                 } ${isRegistering ? 'animate-pulse' : ''}`}
               >
@@ -482,6 +532,11 @@ const EventDetail = () => {
                   <>
                     <CheckCircle className="inline h-5 w-5 mr-2" />
                     Registered ✓
+                  </>
+                ) : new Date(event.date) < new Date() ? (
+                  <>
+                    <Clock className="inline h-5 w-5 mr-2" />
+                    Event Ended
                   </>
                 ) : event.currentParticipants >= event.maxParticipants ? (
                   <>
@@ -496,14 +551,71 @@ const EventDetail = () => {
                 )}
               </button>
 
+              {/* Availability Alert */}
+              {(() => {
+                const spotsLeft = event.maxParticipants - (event.participants?.length || 0);
+                const percentFilled = ((event.participants?.length || 0) / event.maxParticipants) * 100;
+                
+                if (spotsLeft === 0) {
+                  return (
+                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <p className="text-sm font-medium text-red-800 dark:text-red-200 text-center">
+                        🚫 Event is Full
+                      </p>
+                    </div>
+                  );
+                } else if (spotsLeft <= 10) {
+                  return (
+                    <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg animate-pulse">
+                      <p className="text-sm font-medium text-orange-800 dark:text-orange-200 text-center">
+                        ⚡ Only {spotsLeft} spots left!
+                      </p>
+                    </div>
+                  );
+                } else if (percentFilled >= 50) {
+                  return (
+                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 text-center">
+                        ⏰ {spotsLeft} spots available
+                      </p>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <p className="text-sm font-medium text-green-800 dark:text-green-200 text-center">
+                        ✅ {spotsLeft} spots available
+                      </p>
+                    </div>
+                  );
+                }
+              })()}
+
               {/* Quick Info */}
               <div className="mt-6 space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Spots Available</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {event.maxParticipants - (event.currentParticipants || 0)}
+                  <span className="text-gray-600 dark:text-gray-400">Total Registered</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {event.participants?.length || 0} / {event.maxParticipants}
                   </span>
                 </div>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${
+                      ((event.participants?.length || 0) / event.maxParticipants) >= 0.9 
+                        ? 'bg-red-600' 
+                        : ((event.participants?.length || 0) / event.maxParticipants) >= 0.7 
+                        ? 'bg-orange-500' 
+                        : 'bg-blue-600'
+                    }`}
+                    style={{ 
+                      width: `${Math.min(((event.participants?.length || 0) / event.maxParticipants) * 100, 100)}%` 
+                    }}
+                  />
+                </div>
+                
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Duration</span>
                   <span className="font-medium text-gray-900 dark:text-white">2-3 hours</span>

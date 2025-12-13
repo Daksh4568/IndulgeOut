@@ -1,12 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { ToastContext } from '../App'
 import DarkModeToggle from '../components/DarkModeToggle'
 
 const InterestSelection = () => {
   const navigate = useNavigate()
   const { updateUserInterests, user, isCommunityMember } = useAuth()
+  const toast = useContext(ToastContext)
   const [selectedInterests, setSelectedInterests] = useState([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -89,7 +91,7 @@ const InterestSelection = () => {
 
   const handleSubmit = async () => {
     if (selectedInterests.length === 0) {
-      alert('Please select at least one interest')
+      toast.warning('Please select at least one interest')
       return
     }
 
@@ -113,11 +115,11 @@ const InterestSelection = () => {
           navigate('/events')
         }
       } else {
-        alert('Failed to update interests. Please try again.')
+        toast.error('Failed to update interests. Please try again.')
       }
     } catch (error) {
       console.error('Failed to update interests:', error)
-      alert('Failed to update interests. Please try again.')
+      toast.error('Failed to update interests. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -128,8 +130,8 @@ const InterestSelection = () => {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IndulgeOut</h1>
+          <div className="flex justify-between items-center h-20 sm:h-24">
+            <img src="/images/indulgeout-logo.png" alt="IndulgeOut" className="h-16 sm:h-20 w-auto" />
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Step 2 of 2

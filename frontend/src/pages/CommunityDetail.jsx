@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
@@ -25,12 +25,14 @@ import {
   Quote
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import axios from 'axios';
 
 const CommunityDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useContext(ToastContext);
   const [community, setCommunity] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,14 +99,14 @@ const CommunityDetail = () => {
 
   const joinCommunity = async () => {
     if (!user) {
-      alert('Please log in to join communities');
+      toast.warning('Please log in to join communities');
       navigate('/login');
       return;
     }
 
     // Check if user is already a member before making the request
     if (isUserMember()) {
-      alert('You are already a member of this community');
+      toast.info('You are already a member of this community');
       return;
     }
 
@@ -124,15 +126,15 @@ const CommunityDetail = () => {
         setCommunity(response.data.community);
       }
       
-      alert('Successfully joined community!');
+      toast.success('Successfully joined community!');
     } catch (error) {
       console.error('Error joining community:', error);
       if (error.response?.status === 400 && error.response?.data?.message?.includes('already a member')) {
         // If user is already a member, refresh the community data
         fetchCommunityData();
-        alert('You are already a member of this community');
+        toast.info('You are already a member of this community');
       } else {
-        alert(error.response?.data?.message || 'Error joining community');
+        toast.error(error.response?.data?.message || 'Error joining community');
       }
     } finally {
       setIsJoining(false);
@@ -157,10 +159,10 @@ const CommunityDetail = () => {
         setCommunity(response.data.community);
       }
       
-      alert('Successfully left community');
+      toast.success('Successfully left community');
     } catch (error) {
       console.error('Error leaving community:', error);
-      alert(error.response?.data?.message || 'Error leaving community');
+      toast.error(error.response?.data?.message || 'Error leaving community');
     }
   };
 
@@ -182,7 +184,7 @@ const CommunityDetail = () => {
       fetchCommunityData();
     } catch (error) {
       console.error('Error posting:', error);
-      alert(error.response?.data?.message || 'Error posting message');
+      toast.error(error.response?.data?.message || 'Error posting message');
     }
   };
 
@@ -202,10 +204,10 @@ const CommunityDetail = () => {
       
       setNewTestimonial({ content: '', rating: 5 });
       fetchCommunityData();
-      alert('Testimonial added successfully!');
+      toast.success('Testimonial added successfully!');
     } catch (error) {
       console.error('Error adding testimonial:', error);
-      alert(error.response?.data?.message || 'Error adding testimonial');
+      toast.error(error.response?.data?.message || 'Error adding testimonial');
     }
   };
 

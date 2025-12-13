@@ -1,16 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, UserPlus, ChevronDown, Upload, X, Image, Search } from 'lucide-react'
 import DarkModeToggle from '../components/DarkModeToggle'
 import axios from 'axios'
 import API_BASE_URL from '../config/api.js'
 import { useAuth } from '../contexts/AuthContext'
+import { ToastContext } from '../App'
 import { EVENT_CATEGORIES, COMMUNITIES } from '../constants/eventConstants'
 import locationService from '../services/locationService'
 
 const EventCreation = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const toast = useContext(ToastContext)
   const locationSearchRef = useRef(null)
   
   const [formData, setFormData] = useState({
@@ -127,7 +129,7 @@ const EventCreation = () => {
 
   const handleLocationSearch = (e) => {
     const query = e.target.value
-    setLocationSearchQuery(query)
+    setLocationQuery(query)
     setFormData(prev => ({
       ...prev,
       location: {
@@ -147,35 +149,59 @@ const EventCreation = () => {
 
   const selectLocation = async (suggestion) => {
     try {
-      // Get detailed coordinates for the selected location
-      const coords = await locationService.geocodeAddress(suggestion.display_name)
+      // Extract detailed address components
+      const road = suggestion.address?.road || suggestion.address?.street || suggestion.address?.building || ''
+      const neighbourhood = suggestion.address?.neighbourhood || suggestion.address?.suburb || ''
+      const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || suggestion.address?.municipality || ''
+      const state = suggestion.address?.state || suggestion.address?.province || suggestion.address?.region || ''
+      const zipCode = suggestion.address?.postcode || ''
+      const country = suggestion.address?.country || 'India'
+      
+      // Build precise address from components
+      const addressParts = [road, neighbourhood, city, state, zipCode, country].filter(Boolean)
+      const preciseAddress = addressParts.join(', ') || suggestion.display_name
+      
+      // Get coordinates
+      let coords = {
+        latitude: parseFloat(suggestion.lat),
+        longitude: parseFloat(suggestion.lon)
+      }
+      
+      // Try to get more precise coordinates if available
+      try {
+        const detailedCoords = await locationService.geocodeAddress(suggestion.display_name)
+        coords = {
+          latitude: detailedCoords.lat,
+          longitude: detailedCoords.lng
+        }
+      } catch (coordError) {
+        console.warn('Using suggestion coordinates directly:', coordError)
+      }
       
       setFormData(prev => ({
         ...prev,
         location: {
-          address: suggestion.display_name,
-          city: suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '',
-          state: suggestion.address?.state || suggestion.address?.province || '',
-          zipCode: suggestion.address?.postcode || '',
-          coordinates: {
-            latitude: coords.lat,
-            longitude: coords.lng
-          }
+          address: preciseAddress,
+          city: city,
+          state: state,
+          zipCode: zipCode,
+          coordinates: coords
         }
       }))
       
-      setLocationSearchQuery(suggestion.display_name)
+      // Update the search field with the precise address
+      setLocationQuery(preciseAddress)
       setShowLocationSuggestions(false)
       setLocationSuggestions([])
     } catch (error) {
-      console.error('Error getting location coordinates:', error)
-      // Still set the address even if coordinates fail
+      console.error('Error processing location:', error)
+      // Fallback to basic suggestion data
       setFormData(prev => ({
         ...prev,
         location: {
           address: suggestion.display_name,
-          city: suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '',
-          state: suggestion.address?.state || suggestion.address?.province || '',
+          city: suggestion.address?.city || suggestion.address?.town || '',
+          state: suggestion.address?.state || '',
           zipCode: suggestion.address?.postcode || '',
           coordinates: {
             latitude: parseFloat(suggestion.lat),
@@ -184,7 +210,7 @@ const EventCreation = () => {
         }
       }))
       
-      setLocationSearchQuery(suggestion.display_name)
+      setLocationQuery(suggestion.display_name)
       setShowLocationSuggestions(false)
       setLocationSuggestions([])
     }
@@ -229,7 +255,7 @@ const EventCreation = () => {
       setLocationQuery(address.display_name || 'Current Location')
     } catch (error) {
       console.error('Error getting current location:', error)
-      alert('Could not get your current location. Please search manually.')
+      toast.warning('Could not get your current location. Please search manually.')
     } finally {
       setIsSearchingLocation(false)
     }
@@ -254,34 +280,42 @@ const EventCreation = () => {
       })
       console.log('Set current user location')
       
-      // Try to get address and auto-populate city/state
+      // Try to get address and auto-populate city/state/zipcode
       try {
         console.log('Starting reverse geocoding...')
         const address = await locationService.reverseGeocode(location.latitude, location.longitude)
         console.log('Reverse geocode result:', address)
         
+        const road = address.address?.road || address.address?.street || ''
+        const neighbourhood = address.address?.neighbourhood || address.address?.suburb || ''
         const city = address.city || address.address?.city || address.address?.town || address.address?.village || ''
         const state = address.state || address.address?.state || address.address?.province || ''
+        const zipCode = address.address?.postcode || ''
+        const country = address.address?.country || 'India'
         
-        console.log('Extracted city:', city, 'state:', state)
+        // Build precise address
+        const addressParts = [road, neighbourhood, city, state, zipCode].filter(Boolean)
+        const fullAddress = addressParts.join(', ')
+        
+        console.log('Extracted - Road:', road, 'City:', city, 'State:', state, 'Zip:', zipCode)
         
         setFormData(prev => ({
           ...prev,
           location: {
-            ...prev.location,
-            address: address.display_name || address.formatted || `${city}, ${state}` || 'Current Location',
+            address: fullAddress || address.display_name || 'Current Location',
             city: city,
             state: state,
+            zipCode: zipCode,
             coordinates: {
               latitude: location.latitude,
               longitude: location.longitude
             }
           }
         }))
-        console.log('Updated form data with city and state')
+        console.log('Updated form data with complete address')
         
-        // Also update the location query field to show something
-        setLocationQuery(address.display_name || `${city}, ${state}` || 'Current Location')
+        // Update location query - user can still edit this
+        setLocationQuery(fullAddress || address.display_name || 'Current Location')
       } catch (geocodeError) {
         console.warn('Reverse geocoding failed:', geocodeError)
         // Still set coordinates even if reverse geocoding fails
@@ -297,12 +331,11 @@ const EventCreation = () => {
           }
         }))
         
-        // Set location query even if reverse geocoding failed
         setLocationQuery('Current Location')
       }
     } catch (error) {
       console.error('Error getting current location:', error)
-      alert('Could not get your current location. Please enable location access.')
+      toast.error('Could not get your current location. Please enable location access.')
     } finally {
       setIsSearchingLocation(false)
     }
@@ -390,6 +423,7 @@ const EventCreation = () => {
 
   // Handle city selection
   const selectCity = (city) => {
+    console.log('Selecting city:', city)
     setFormData(prev => ({
       ...prev,
       location: {
@@ -400,10 +434,14 @@ const EventCreation = () => {
     }))
     setShowCityDropdown(false)
     setFilteredCities([])
+    
+    // Show success feedback
+    toast.success(`City selected: ${city.name}`)
   }
 
   // Handle state selection
   const selectState = (state) => {
+    console.log('Selecting state:', state)
     setFormData(prev => ({
       ...prev,
       location: {
@@ -413,6 +451,9 @@ const EventCreation = () => {
     }))
     setShowStateDropdown(false)
     setFilteredStates([])
+    
+    // Show success feedback
+    toast.success(`State selected: ${state.name}`)
   }
 
   // Close suggestions when clicking outside
@@ -489,7 +530,7 @@ const EventCreation = () => {
         
         if (error) {
           console.error('Upload error:', error)
-          alert('Error uploading image. Please try again.')
+          toast.error('Error uploading image. Please try again.')
           return
         }
 
@@ -522,7 +563,7 @@ const EventCreation = () => {
       // Get auth token from localStorage
       const token = localStorage.getItem('token')
       if (!token) {
-        alert('Please log in to create an event')
+        toast.warning('Please log in to create an event')
         navigate('/login')
         return
       }
@@ -547,7 +588,7 @@ const EventCreation = () => {
       })
 
       console.log('Event created successfully:', response.data)
-      alert('Event created successfully!')
+      toast.success('Event created successfully!')
       
       // Navigate back to dashboard
       navigate('/dashboard')
@@ -559,12 +600,12 @@ const EventCreation = () => {
         const errors = error.response.data.errors
         
         if (errors && errors.length > 0) {
-          alert(`Validation errors:\n${errors.map(err => err.msg).join('\n')}`)
+          toast.error(`Validation errors: ${errors.map(err => err.msg).join(', ')}`)
         } else {
-          alert(errorMessage)
+          toast.error(errorMessage)
         }
       } else {
-        alert('Network error. Please check if the backend server is running.')
+        toast.error('Network error. Please check if the backend server is running.')
       }
     } finally {
       setIsLoading(false)
@@ -771,34 +812,54 @@ const EventCreation = () => {
                 type="button"
                 onClick={useCurrentLocation}
                 disabled={isSearchingLocation}
-                className="absolute right-3 top-3 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 flex items-center gap-1"
+                className="absolute right-3 top-3 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 flex items-center gap-1 font-medium transition-colors"
               >
-                <MapPin className="h-3 w-3" />
-                {isSearchingLocation ? 'Getting...' : 'Use Current'}
+                {isSearchingLocation ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Locating...</span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="h-3 w-3" />
+                    <span>Use Current</span>
+                  </>
+                )}
               </button>
               
               {/* Location Suggestions Dropdown */}
               {showLocationSuggestions && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                   {isSearchingLocation ? (
                     <div className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-                      Searching...
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Searching...</span>
+                      </div>
                     </div>
                   ) : locationSuggestions.length > 0 ? (
                     locationSuggestions.map((suggestion, index) => (
                       <button
                         key={suggestion.place_id || index}
                         type="button"
-                        onClick={() => selectLocation(suggestion)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          selectLocation(suggestion)
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          selectLocation(suggestion)
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 cursor-pointer"
                       >
                         <div className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
+                          <MapPin className="h-4 w-4 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {suggestion.address?.road || suggestion.address?.name || 'Unknown Location'}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                               {suggestion.display_name}
                             </p>
                           </div>
@@ -807,7 +868,9 @@ const EventCreation = () => {
                     ))
                   ) : (
                     <div className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-                      No locations found
+                      <MapPin className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                      <p className="text-sm">No locations found</p>
+                      <p className="text-xs mt-1">Try a different search term</p>
                     </div>
                   )}
                 </div>
@@ -842,6 +905,18 @@ const EventCreation = () => {
               </div>
             )}
             
+            {/* Full Address Field - Editable */}
+            <div className="relative">
+              <input
+                type="text"
+                name="location.address"
+                value={formData.location.address}
+                onChange={handleInputChange}
+                placeholder="Complete address (Street, Area, Landmark)"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               {/* City Dropdown */}
               <div className="relative">
@@ -860,19 +935,56 @@ const EventCreation = () => {
                     }
                     setShowCityDropdown(true)
                   }}
-                  placeholder="City"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && filteredCities.length > 0) {
+                      e.preventDefault()
+                      selectCity(filteredCities[0])
+                    } else if (e.key === 'Escape') {
+                      setShowCityDropdown(false)
+                    }
+                  }}
+                  placeholder="City * (Start typing...)"
+                  required
+                  autoComplete="off"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
+                {formData.location.city && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        location: { ...prev.location, city: '' }
+                      }))
+                      setShowCityDropdown(false)
+                      setFilteredCities([])
+                    }}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
                 
                 {/* City Suggestions Dropdown */}
                 {showCityDropdown && filteredCities.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                    <div className="sticky top-0 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                      {filteredCities.length} cit{filteredCities.length > 1 ? 'ies' : 'y'} found • Click to select or press Enter
+                    </div>
                     {filteredCities.map((city, index) => (
                       <button
                         key={index}
                         type="button"
-                        onClick={() => selectCity(city)}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          selectCity(city)
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          selectCity(city)
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 cursor-pointer"
                       >
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {city.name}
@@ -903,19 +1015,56 @@ const EventCreation = () => {
                     }
                     setShowStateDropdown(true)
                   }}
-                  placeholder="State"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && filteredStates.length > 0) {
+                      e.preventDefault()
+                      selectState(filteredStates[0])
+                    } else if (e.key === 'Escape') {
+                      setShowStateDropdown(false)
+                    }
+                  }}
+                  placeholder="State * (Start typing...)"
+                  required
+                  autoComplete="off"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
+                {formData.location.state && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        location: { ...prev.location, state: '' }
+                      }))
+                      setShowStateDropdown(false)
+                      setFilteredStates([])
+                    }}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
                 
                 {/* State Suggestions Dropdown */}
                 {showStateDropdown && filteredStates.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                    <div className="sticky top-0 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                      {filteredStates.length} state{filteredStates.length > 1 ? 's' : ''} found • Click to select or press Enter
+                    </div>
                     {filteredStates.map((state, index) => (
                       <button
                         key={index}
                         type="button"
-                        onClick={() => selectState(state)}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          selectState(state)
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          selectState(state)
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 cursor-pointer"
                       >
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {state.name}
@@ -928,6 +1077,19 @@ const EventCreation = () => {
                   </div>
                 )}
               </div>
+            </div>
+            
+            {/* Zip Code Field */}
+            <div className="relative">
+              <input
+                type="text"
+                name="location.zipCode"
+                value={formData.location.zipCode}
+                onChange={handleInputChange}
+                placeholder="Zip/Postal Code (Optional)"
+                maxLength="10"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              />
             </div>
           </div>
 

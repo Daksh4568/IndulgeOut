@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
+import LoadingSpinner from '../components/LoadingSpinner';
 import SimpleEventsMap from '../components/SimpleEventsMap';
 import { DISCOVERY_CATEGORIES, CATEGORY_ICONS } from '../constants/eventConstants';
 import { 
@@ -17,15 +18,18 @@ import {
   Share2,
   Map,
   List,
+  CheckCircle,
   Navigation
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import locationService from '../services/locationService';
 import axios from 'axios';
 
 const EventDiscovery = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const toast = useContext(ToastContext);
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -351,12 +355,52 @@ const EventDiscovery = () => {
       );
     }
 
-    // Sort by interest relevance: events matching user interests appear first
+    // Sort events: upcoming events first (by date, soonest first), then past events
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      const now = new Date();
+      
+      const isAPast = dateA < now;
+      const isBPast = dateB < now;
+      
+      // If one is past and one is upcoming, upcoming comes first
+      if (isAPast && !isBPast) return 1;
+      if (!isAPast && isBPast) return -1;
+      
+      // If both are upcoming, show soonest first (ascending order)
+      if (!isAPast && !isBPast) return dateA - dateB;
+      
+      // If both are past, show most recent first (descending order)
+      return dateB - dateA;
+    });
+
+    // Secondary sort by interest relevance within upcoming/past groups
     if (user?.interests && user.interests.length > 0) {
       filtered.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        const now = new Date();
+        
+        const isAPast = dateA < now;
+        const isBPast = dateB < now;
+        
+        // Keep upcoming/past separation
+        if (isAPast !== isBPast) {
+          return isAPast ? 1 : -1;
+        }
+        
+        // Within same group (both upcoming or both past), prioritize interest matches
         const aMatches = a.categories?.some(cat => user.interests.includes(cat)) ? 1 : 0;
         const bMatches = b.categories?.some(cat => user.interests.includes(cat)) ? 1 : 0;
-        return bMatches - aMatches; // Events with matching interests first
+        
+        if (aMatches !== bMatches) {
+          return bMatches - aMatches;
+        }
+        
+        // If interest match is same, sort by date
+        if (!isAPast && !isBPast) return dateA - dateB; // Upcoming: soonest first
+        return dateB - dateA; // Past: most recent first
       });
     }
 
@@ -374,7 +418,7 @@ const EventDiscovery = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please log in to register for events');
+        toast.warning('Please log in to register for events');
         navigate('/login');
         return;
       }
@@ -384,14 +428,14 @@ const EventDiscovery = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      alert('Successfully registered for the event!');
+      toast.success('Successfully registered for the event!');
       fetchEvents(); // Refresh events to update participant count
     } catch (error) {
       console.error('Error registering for event:', error);
       if (error.response?.data?.message) {
-        alert(error.response.data.message);
+        toast.error(error.response.data.message);
       } else {
-        alert('Failed to register for event. Please try again.');
+        toast.error('Failed to register for event. Please try again.');
       }
     }
   };
@@ -406,127 +450,130 @@ const EventDiscovery = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading amazing events...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading amazing events..." />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Discover Events</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                Welcome back, {user?.name}!
-              </span>
-              <DarkModeToggle />
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Dashboard
-              </button>
+      {/* Header - Mobile Responsive */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Discover Events</h1>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2 line-clamp-2">
+                Find events that match your interests and connect with like-minded people
+              </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <DarkModeToggle />
+              {user && (
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="px-3 sm:px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 text-sm sm:text-base min-h-[44px] touch-manipulation"
+                >
+                  Dashboard
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search and Filters - Mobile Optimized */}
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors min-h-[44px] text-base"
+                />
+              </div>
+              <div className="flex gap-2 sm:gap-3">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors min-h-[44px] min-w-[44px] touch-manipulation flex-1 sm:flex-initial"
+                >
+                  <Filter className="h-5 w-5" />
+                  <span className="sm:inline">Filters</span>
+                </button>
+                {user?.interests && user.interests.length > 0 && (
+                  <button
+                    onClick={() => setShowOnlyInterested(!showOnlyInterested)}
+                    className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-3 rounded-lg font-medium transition-colors min-h-[44px] touch-manipulation ${
+                      showOnlyInterested
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <Heart className={`h-5 w-5 ${showOnlyInterested ? 'fill-current' : ''}`} />
+                    <span className="hidden sm:inline">My Interests</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Category Pills - Mobile Scrollable */}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-2 min-w-max sm:flex-wrap sm:min-w-0">
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap min-h-[44px] touch-manipulation ${
+                    selectedCategory === category.id
+                      ? 'bg-blue-600 text-white shadow-lg transform scale-105'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-600 shadow-sm'
+                  }`}
+                >
+                  <span className="text-base sm:text-lg">{category.icon}</span>
+                  <span className="hidden xs:inline">{category.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search events, activities, or interests..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              <Filter className="h-5 w-5" />
-              Filters
-            </button>
-            {user?.interests && user.interests.length > 0 && (
-              <button
-                onClick={() => setShowOnlyInterested(!showOnlyInterested)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
-                  showOnlyInterested
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                }`}
-              >
-                <Heart className={`h-5 w-5 ${showOnlyInterested ? 'fill-current' : ''}`} />
-                My Interests
-              </button>
-            )}
-          </div>
-
-          {/* Category Pills */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedCategory === category.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <span>{category.icon}</span>
-                {category.name}
-              </button>
-            ))}
-          </div>
-
-          {/* View Toggle and Location Controls */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+        {/* View Toggle and Location Controls - Mobile Responsive */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4">
             {/* View Mode Toggle */}
             <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('list')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-h-[44px] touch-manipulation ${
                   viewMode === 'list'
                     ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <List className="h-4 w-4" />
-                List View
+                <span className="hidden xs:inline">List View</span>
               </button>
               <button
                 onClick={() => setViewMode('map')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-h-[44px] touch-manipulation ${
                   viewMode === 'map'
                     ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <Map className="h-4 w-4" />
-                Map View
+                <span className="hidden xs:inline">Map View</span>
               </button>
             </div>
 
             {/* Location Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setLocationFilter('all')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-h-[44px] touch-manipulation ${
                     locationFilter === 'all'
                       ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -537,7 +584,7 @@ const EventDiscovery = () => {
                 <button
                   onClick={() => setLocationFilter('nearby')}
                   disabled={!userLocation}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-h-[44px] touch-manipulation ${
                     locationFilter === 'nearby'
                       ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50'
@@ -549,12 +596,12 @@ const EventDiscovery = () => {
               </div>
               
               {locationFilter === 'nearby' && userLocation && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Within</span>
                   <select
                     value={customDistance}
                     onChange={(e) => setCustomDistance(Number(e.target.value))}
-                    className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[40px]"
                   >
                     <option value={5}>5 km</option>
                     <option value={10}>10 km</option>
@@ -696,19 +743,36 @@ const EventDiscovery = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((event) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {filteredEvents.map((event) => {
+              const isPastEvent = new Date(event.date) < new Date();
+              const isRegistered = isUserRegistered(event);
+              return (
               <div 
                 key={event._id} 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105"
+                className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 touch-manipulation ${isPastEvent ? 'opacity-75' : ''}`}
                 onClick={() => handleEventClick(event)}
               >
                 {/* Event Image */}
                 <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
+                  {isPastEvent && (
+                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10">
+                      <span className="bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                        Event Ended
+                      </span>
+                    </div>
+                  )}
+                  {isRegistered && !isPastEvent && (
+                    <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 z-10">
+                      <CheckCircle className="h-3 w-3" />
+                      Registered
+                    </div>
+                  )}
                   {event.images && event.images.length > 0 ? (
                     <img
                       src={event.images[0]}
                       alt={event.title}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -742,56 +806,62 @@ const EventDiscovery = () => {
                   )}
                 </div>
 
-                {/* Simplified Event Details */}
-                <div className="p-4">
+                {/* Simplified Event Details - Mobile Optimized */}
+                <div className="p-3 sm:p-4">
                   {/* Category */}
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+                    <span className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
                       {event.categories && event.categories.length > 0 ? event.categories[0] : 'Event'}
                     </span>
                   </div>
 
                   {/* Event Name */}
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-2">
                     {event.title}
                   </h3>
 
                   {/* Date and Location */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(event.date).toLocaleDateString('en-IN', { 
-                        weekday: 'short', 
-                        day: 'numeric', 
-                        month: 'short',
-                        year: 'numeric'
-                      })} • {event.time}
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="flex items-start gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <Calendar className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span className="line-clamp-1">
+                        {new Date(event.date).toLocaleDateString('en-IN', { 
+                          weekday: 'short', 
+                          day: 'numeric', 
+                          month: 'short',
+                          year: 'numeric'
+                        })} • {event.time}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <MapPin className="h-4 w-4" />
-                      {event.venue ? `${event.venue}, ` : ''}{typeof event.location === 'string' ? event.location : event.location?.city || event.location?.address || 'Location TBD'}
+                    <div className="flex items-start gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span className="line-clamp-2">
+                        {event.venue ? `${event.venue}, ` : ''}{typeof event.location === 'string' ? event.location : event.location?.city || event.location?.address || 'Location TBD'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls - Mobile Responsive */}
         {viewMode === 'list' && totalEvents > eventsPerPage && (
-          <div className="mt-8 flex items-center justify-between">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
               Showing {((currentPage - 1) * eventsPerPage) + 1}-{Math.min(currentPage * eventsPerPage, totalEvents)} of {totalEvents} events
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+                className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 min-h-[44px] touch-manipulation"
               >
-                Previous
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
               </button>
               
               {/* Page Numbers */}
@@ -826,7 +896,7 @@ const EventDiscovery = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalEvents / eventsPerPage)))}
                 disabled={currentPage === Math.ceil(totalEvents / eventsPerPage)}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+                className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 min-h-[44px] touch-manipulation"
               >
                 Next
               </button>

@@ -9,5 +9,17 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // Production optimizations
+    minify: 'terser',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'map-vendor': ['leaflet', 'react-leaflet'],
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000,
   },
 })
