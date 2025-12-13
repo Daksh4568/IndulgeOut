@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const Event = require('../models/Event.js');
 const User = require('../models/User.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
@@ -8,6 +9,22 @@ const { authMiddleware } = require('../utils/authUtils.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 
 const router = express.Router();
+
+// Rate limiter for event registration to prevent abuse
+// Allows 5 registration attempts per 15 minutes per IP
+const registrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: 'Too many registration attempts. Please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req, res) => {
+    res.status(429).json({
+      message: 'Too many registration attempts. Please try again in 15 minutes.',
+      retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
+    });
+  }
+});
 
 // Get all events (with filtering)
 router.get('/', async (req, res) => {
@@ -141,37 +158,61 @@ router.post('/', authMiddleware, [
   }
 });
 
-// Register for event
-router.post('/:id/register', authMiddleware, async (req, res) => {
+// Register for event - with rate limiting
+router.post('/:id/register', registrationLimiter, authMiddleware, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id).populate('host', 'name email');
     const userId = req.user.userId || req.user.id;
     
+    // Use findOneAndUpdate with atomic operations to prevent race conditions
+    // This ensures that the check and update happen atomically
+    const event = await Event.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        // Atomic check: ensure we're under the limit
+        $expr: { $lt: [{ $size: '$participants' }, '$maxParticipants'] },
+        // Ensure user isn't already registered
+        'participants.user': { $ne: userId }
+      },
+      {
+        // Atomic update: add participant
+        $push: {
+          participants: {
+            user: userId,
+            registeredAt: new Date(),
+            status: 'registered'
+          }
+        }
+      },
+      {
+        new: true, // Return updated document
+        runValidators: true
+      }
+    ).populate('host', 'name email');
+
     if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
+      // Check which condition failed
+      const existingEvent = await Event.findById(req.params.id);
+      
+      if (!existingEvent) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      
+      const alreadyRegistered = existingEvent.participants.some(
+        p => p.user.toString() === userId
+      );
+      
+      if (alreadyRegistered) {
+        return res.status(400).json({ message: 'Already registered for this event' });
+      }
+      
+      if (existingEvent.participants.length >= existingEvent.maxParticipants) {
+        return res.status(400).json({ message: 'Event is full' });
+      }
+      
+      return res.status(400).json({ message: 'Registration failed. Please try again.' });
     }
 
-    // Check if event is full
-    if (event.currentParticipants >= event.maxParticipants) {
-      return res.status(400).json({ message: 'Event is full' });
-    }
-
-    // Check if user is already registered
-    const alreadyRegistered = event.participants.some(
-      p => p.user.toString() === req.user.userId
-    );
-    
-    if (alreadyRegistered) {
-      return res.status(400).json({ message: 'Already registered for this event' });
-    }
-
-    // Add user to participants
-    event.participants.push({
-      user: req.user.userId,
-      registeredAt: new Date(),
-      status: 'registered'
-    });
-
+    // Update participant count
     await event.updateParticipantCount();
 
     const user = await User.findById(req.user.userId);
@@ -194,19 +235,23 @@ router.post('/:id/register', authMiddleware, async (req, res) => {
       // Don't fail the registration if analytics update fails
     }
 
-    // Send confirmation email to user
-    try {
-      await sendEventRegistrationEmail(user.email, user.name, event);
-    } catch (emailError) {
-      console.error('Failed to send registration email:', emailError);
-    }
+    // Send emails asynchronously without blocking the response
+    // This prevents email delays from slowing down registration
+    setImmediate(async () => {
+      try {
+        await sendEventRegistrationEmail(user.email, user.name, event);
+      } catch (emailError) {
+        console.error('Failed to send registration email:', emailError);
+      }
+    });
 
-    // Send notification to host
-    try {
-      await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
-    } catch (emailError) {
-      console.error('Failed to send host notification:', emailError);
-    }
+    setImmediate(async () => {
+      try {
+        await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
+      } catch (emailError) {
+        console.error('Failed to send host notification:', emailError);
+      }
+    });
 
     res.json({
       message: 'Successfully registered for event',

@@ -62,13 +62,6 @@ const sendWelcomeEmail = async (userEmail, userName) => {
               <li>🎉 Start hosting your own events (if you're a community member)</li>
             </ul>
             
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.CLIENT_URL}/dashboard" 
-                 style="background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                Explore Events
-              </a>
-            </div>
-            
             <p style="color: #666; line-height: 1.6; margin-top: 30px;">
               Questions? Just reply to this email - we're here to help!
             </p>
@@ -143,14 +136,7 @@ const sendEventRegistrationEmail = async (userEmail, userName, event) => {
               ${event.description}
             </p>
             
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.CLIENT_URL}/events/${event._id}" 
-                 style="background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                View Event Details
-              </a>
-            </div>
-            
-            <p style="color: #666; line-height: 1.6;">
+            <p style="color: #666; line-height: 1.6; margin-top: 30px;">
               Can't wait to see you there!<br>
               The IndulgeOut Team
             </p>
@@ -205,14 +191,7 @@ const sendEventNotificationToHost = async (hostEmail, hostName, user, event) => 
               Your event is getting more popular! Make sure you're prepared for an amazing experience.
             </p>
             
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.CLIENT_URL}/events/${event._id}" 
-                 style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                Manage Event
-              </a>
-            </div>
-            
-            <p style="color: #666; line-height: 1.6;">
+            <p style="color: #666; line-height: 1.6; margin-top: 30px;">
               Keep up the great work!<br>
               The IndulgeOut Team
             </p>

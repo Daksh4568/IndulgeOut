@@ -89,11 +89,14 @@ const userSchema = new mongoose.Schema({
   },
   phoneNumber: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
+    sparse: true, // Allows multiple null values
     trim: true,
     validate: {
       validator: function(v) {
+        // Only validate if phoneNumber is provided
+        if (!v) return true;
         // Indian mobile number validation (10 digits)
         return /^[6-9]\d{9}$/.test(v);
       },
@@ -102,21 +105,18 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: function() {
-      // Password is required only if user doesn't use OTP login
-      return !this.isOTPUser;
-    },
+    required: true, // Password is always required now
     minlength: 6
   },
   isOTPUser: {
     type: Boolean,
-    default: false // true if user prefers OTP login over password
+    default: false
   },
   otpVerification: {
     otp: String,
     otpExpiry: Date,
     isPhoneVerified: { type: Boolean, default: false },
-    otpAttempts: { type: Number, default: 0, max: 5 },
+    otpAttempts: { type: Number, default: 0 },
     lastOTPSent: Date
   },
   role: {
@@ -193,11 +193,13 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
+// Using 10 rounds for better performance under load while maintaining security
+// 10 rounds = ~100-150ms vs 12 rounds = ~300-500ms per hash
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(12);
+    const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {

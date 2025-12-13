@@ -60,7 +60,8 @@ const eventSchema = new mongoose.Schema({
   maxParticipants: {
     type: Number,
     required: true,
-    min: 1
+    min: 1,
+    max: 10000 // Support up to 10,000 participants for large events
   },
   currentParticipants: {
     type: Number,
@@ -148,6 +149,10 @@ const eventSchema = new mongoose.Schema({
 // Index for efficient queries
 eventSchema.index({ date: 1, categories: 1, 'location.city': 1 });
 eventSchema.index({ host: 1, createdBy: 1 });
+// Critical index for registration queries - speeds up participant lookups
+eventSchema.index({ 'participants.user': 1 });
+// Index for checking event availability
+eventSchema.index({ status: 1, date: 1 });
 
 // Virtual for checking if event is full
 eventSchema.virtual('isFull').get(function() {

@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const compression = require('compression');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth.js');
@@ -21,8 +22,14 @@ const connectDB = async () => {
     await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      // Connection pool settings for handling concurrent requests
+      maxPoolSize: 50, // Maximum 50 connections in the pool (up from default 10)
+      minPoolSize: 10, // Maintain at least 10 connections (up from default 0)
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      serverSelectionTimeoutMS: 10000, // Timeout after 10s if no server available
+      heartbeatFrequencyMS: 10000, // Check server health every 10 seconds
     });
-    console.log('✅ MongoDB connected successfully', mongoURI);
+    console.log('✅ MongoDB connected successfully with connection pool', mongoURI);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     console.log('📝 Note: If you haven\'t set up MongoDB yet, add MONGODB_URI to your .env file');
@@ -51,8 +58,20 @@ app.use(cors(corsOptions));
 // Handle preflight requests explicitly
 app.options('*', cors(corsOptions));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Compression middleware - reduces response size by 60-80%
+app.use(compression());
+
+// Body parser with size limits to prevent DoS attacks
+app.use(express.json({ limit: '10mb' })); // Limit JSON payloads to 10MB
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request timeout middleware - prevent hanging requests
+app.use((req, res, next) => {
+  // Set timeout to 30 seconds for all requests
+  req.setTimeout(30000);
+  res.setTimeout(30000);
+  next();
+});
 
 // Database connection middleware
 app.use(async (req, res, next) => {
