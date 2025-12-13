@@ -10,7 +10,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     // Production optimizations
-    minify: 'terser',
+    minify: 'esbuild', // Use esbuild instead of terser (faster and no extra dependency)
     sourcemap: false,
     rollupOptions: {
       output: {
