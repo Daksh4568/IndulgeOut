@@ -10,6 +10,8 @@ const userRoutes = require('./routes/users.js');
 const communityRoutes = require('./routes/communities.js');
 const recommendationRoutes = require('./routes/recommendations.js');
 const otpRoutes = require('./routes/otp.js');
+const exploreRoutes = require('./routes/explore.js');
+const paymentRoutes = require('./routes/payments.js');
 
 const app = express();
 
@@ -97,13 +99,17 @@ app.use('/api/users', userRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/explore', exploreRoutes);
+app.use('/api/payments', paymentRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
   '/api/events', 
   '/api/users',
   '/api/communities',
-  '/api/recommendations'
+  '/api/recommendations',
+  '/api/explore',
+  '/api/payments'
 ]);
 
 // Health check route

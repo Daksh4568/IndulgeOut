@@ -7,6 +7,7 @@ const eventRoutes = require('./routes/events.js');
 const userRoutes = require('./routes/users.js');
 const communityRoutes = require('./routes/communities.js');
 const recommendationRoutes = require('./routes/recommendations.js');
+const exploreRoutes = require('./routes/explore.js');
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/explore', exploreRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

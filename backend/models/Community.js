@@ -84,18 +84,33 @@ const communitySchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'Sip & Savor',
-      'Sweat & Play', 
-      'Art & DIY',
-      'Social Mixers',
-      'Adventure & Outdoors',
+      // Social & Fun
+      'Meet & Mingle',
       'Epic Screenings',
       'Indoor & Board Games',
-      'Music & Performance',
-      'Technology',
-      'Wellness',
-      'Business & Networking',
-      'Education & Learning'
+      'Battle of the Beats',
+      // Creative & Culture
+      'Make & Create',
+      'Open Mics & Jams',
+      'Culture & Heritage',
+      'Underground & Street',
+      // Active & Outdoor
+      'Sweat & Play',
+      'Adventure & Outdoors',
+      'Mind & Body Recharge',
+      // Learn & Build
+      'Learn & Network',
+      'Startup Connect',
+      'Tech Unplugged',
+      // Purpose & Experiences
+      'Make a Difference',
+      'Immersive & Experiential',
+      'Indie Bazaar',
+      // Legacy Categories (for backward compatibility)
+      'Sip & Savor',
+      'Art & DIY',
+      'Social Mixers',
+      'Music & Performance'
     ]
   },
   host: {
@@ -190,6 +205,15 @@ communitySchema.pre('save', function(next) {
   
   next();
 });
+
+// Virtual field for memberCount (for backward compatibility)
+communitySchema.virtual('memberCount').get(function() {
+  return this.members.length;
+});
+
+// Ensure virtuals are included in JSON output
+communitySchema.set('toJSON', { virtuals: true });
+communitySchema.set('toObject', { virtuals: true });
 
 // Index for better search performance
 communitySchema.index({ name: 'text', description: 'text' });

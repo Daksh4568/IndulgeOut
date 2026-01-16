@@ -12,14 +12,33 @@ const eventSchema = new mongoose.Schema({
   },
   categories: [{
     type: String,
-    enum: [
-      'Sip & Savor',
-      'Sweat & Play', 
-      'Art & DIY',
-      'Social Mixers',
-      'Adventure & Outdoors',
+    enum:[
+      // Social & Fun
+      'Meet & Mingle',
       'Epic Screenings',
       'Indoor & Board Games',
+      'Battle of the Beats',
+      // Creative & Culture
+      'Make & Create',
+      'Open Mics & Jams',
+      'Culture & Heritage',
+      'Underground & Street',
+      // Active & Outdoor
+      'Sweat & Play',
+      'Adventure & Outdoors',
+      'Mind & Body Recharge',
+      // Learn & Build
+      'Learn & Network',
+      'Startup Connect',
+      'Tech Unplugged',
+      // Purpose & Experiences
+      'Make a Difference',
+      'Immersive & Experiential',
+      'Indie Bazaar',
+      // Legacy Categories (for backward compatibility)
+      'Sip & Savor',
+      'Art & DIY',
+      'Social Mixers',
       'Music & Performance'
     ],
     required: true
@@ -95,6 +114,11 @@ const eventSchema = new mongoose.Schema({
   images: [String],
   tags: [String],
   requirements: [String],
+  mood: {
+    type: String,
+    enum: ['chill', 'energetic', 'creative', 'social', 'adventure'],
+    default: 'social'
+  },
   status: {
     type: String,
     enum: ['draft', 'published', 'cancelled', 'completed'],
@@ -158,6 +182,15 @@ eventSchema.index({ status: 1, date: 1 });
 eventSchema.virtual('isFull').get(function() {
   return this.currentParticipants >= this.maxParticipants;
 });
+
+// Virtual for ticketPrice (alias for price.amount for easier access)
+eventSchema.virtual('ticketPrice').get(function() {
+  return this.price?.amount || 0;
+});
+
+// Ensure virtuals are included in JSON
+eventSchema.set('toJSON', { virtuals: true });
+eventSchema.set('toObject', { virtuals: true });
 
 // Update current participants count
 eventSchema.methods.updateParticipantCount = function() {

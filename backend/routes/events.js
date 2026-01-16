@@ -48,14 +48,44 @@ router.get('/', async (req, res) => {
       filter.date = { $gte: startDate, $lt: endDate };
     }
 
-    const events = await Event.find(filter)
-      .populate('host', 'name email')
+    const now = new Date();
+    const skip = (page - 1) * limit;
+    
+    // Get upcoming events (sorted by date ascending - soonest first)
+    const upcomingEvents = await Event.find({
+      ...filter,
+      date: { $gte: now }
+    })
+      .populate('host', 'name email profilePicture')
       .populate('participants.user', 'name email')
-      .sort({ date: 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Event.countDocuments(filter);
+      .sort({ date: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    // Get past events (sorted by date descending - most recent first)
+    const pastEvents = await Event.find({
+      ...filter,
+      date: { $lt: now }
+    })
+      .populate('host', 'name email profilePicture')
+      .populate('participants.user', 'name email')
+      .sort({ date: -1, createdAt: -1 })
+      .skip(Math.max(0, skip - upcomingEvents.length))
+      .limit(Math.max(0, parseInt(limit) - upcomingEvents.length));
+    
+    // Combine: upcoming events first, then past events
+    const events = [...upcomingEvents, ...pastEvents];
+    
+    // Get total counts
+    const totalUpcoming = await Event.countDocuments({
+      ...filter,
+      date: { $gte: now }
+    });
+    const totalPast = await Event.countDocuments({
+      ...filter,
+      date: { $lt: now }
+    });
+    const total = totalUpcoming + totalPast;
 
     res.json({
       events,

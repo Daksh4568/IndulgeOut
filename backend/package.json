@@ -6,10 +6,16 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "offline": "serverless offline",
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage prod",
+    "logs": "serverless logs -f api -t",
+    "remove": "serverless remove",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cashfree-pg": "^5.1.0",
     "cloudinary": "^2.8.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
@@ -21,10 +27,14 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.6.3",
     "nodemailer": "^6.9.7",
+    "serverless-http": "^3.2.0",
     "twilio": "^5.10.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "serverless": "^3.38.0",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-offline": "^13.3.0"
   },
   "keywords": [
     "nodejs",
