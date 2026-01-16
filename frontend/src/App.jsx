@@ -18,6 +18,11 @@ import CommunityDiscovery from './pages/CommunityDiscovery'
 import CommunityDetail from './pages/CommunityDetail'
 import AnalyticsPage from './pages/AnalyticsPage'
 import About from './pages/About'
+import ExplorePage from './pages/ExplorePage'
+import CategoriesPage from './pages/CategoriesPage'
+import CategoryDetail from './pages/CategoryDetail'
+import HostPartnerPage from './pages/HostPartnerPage'
+import PaymentCallback from './pages/PaymentCallback'
 
 // Create a toast context
 export const ToastContext = React.createContext(null)
@@ -35,6 +40,10 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Homepage />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/explore" element={<ExplorePage />} />
+                  <Route path="/categories" element={<CategoriesPage />} />
+                  <Route path="/category/:slug" element={<CategoryDetail />} />
+                  <Route path="/host-partner" element={<HostPartnerPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/interests" element={<InterestSelection />} />
@@ -44,9 +53,11 @@ function App() {
                   <Route path="/events/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
                   <Route path="/event/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
                   <Route path="/communities" element={<ErrorBoundary><CommunityDiscovery /></ErrorBoundary>} />
+                  <Route path="/communities/:id" element={<ErrorBoundary><CommunityDetail /></ErrorBoundary>} />
                   <Route path="/community/create" element={<ErrorBoundary><CommunityCreation /></ErrorBoundary>} />
                   <Route path="/community/:id" element={<ErrorBoundary><CommunityDetail /></ErrorBoundary>} />
                   <Route path="/analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
+                  <Route path="/payment-callback" element={<ErrorBoundary><PaymentCallback /></ErrorBoundary>} />
                 </Routes>
                 <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
               </div>

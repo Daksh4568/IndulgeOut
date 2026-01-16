@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
+import LoginPromptModal from '../components/LoginPromptModal';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
@@ -35,6 +36,7 @@ const EventDetail = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Mock reviews data
   const [reviews] = useState([
@@ -110,7 +112,7 @@ const EventDetail = () => {
 
   const handleRegister = async (retryCount = 0) => {
     if (!user) {
-      navigate('/login');
+      setShowLoginPrompt(true);
       return;
     }
 
@@ -133,36 +135,108 @@ const EventDetail = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // Register for the event with timeout
-      const response = await axios.post(
-        `${API_BASE_URL}/api/events/${id}/register`, 
-        {}, 
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000 // 10 second timeout
-        }
-      );
+      // Get ticket price from either ticketPrice field or price.amount
+      const ticketPrice = event.ticketPrice || event.price?.amount || 0;
       
-      // Track if this was from a recommendation
-      const isFromRecommendation = sessionStorage.getItem('recommendationSource') === 'true';
-      if (isFromRecommendation) {
+      // Debug logging
+      console.log('Event details:', {
+        ticketPrice: ticketPrice,
+        eventTicketPrice: event.ticketPrice,
+        priceAmount: event.price?.amount,
+        hasTicketPrice: ticketPrice > 0,
+        eventId: id
+      });
+      
+      // Check if event has ticket price - if yes, initiate payment
+      if (ticketPrice > 0) {
+        console.log('Paid event detected. Initiating payment flow...');
+        
         try {
-          await axios.post(`${API_BASE_URL}/api/recommendations/track/register`, 
+          // Create payment order
+          const paymentResponse = await axios.post(
+            `${API_BASE_URL}/api/payments/create-order`,
             { eventId: id },
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          sessionStorage.removeItem('recommendationSource'); // Clean up
-        } catch (trackingError) {
-          console.error('Failed to track recommendation registration:', trackingError);
+
+          console.log('Payment order response:', paymentResponse.data);
+
+          if (paymentResponse.data.success) {
+            // Store event ID for callback
+            sessionStorage.setItem('payment_event_id', id);
+            
+            // Track if from recommendation
+            const isFromRecommendation = sessionStorage.getItem('recommendationSource') === 'true';
+            if (isFromRecommendation) {
+              sessionStorage.setItem('payment_from_recommendation', 'true');
+            }
+
+            // Check if Cashfree SDK is loaded
+            if (!window.Cashfree) {
+              throw new Error('Cashfree SDK not loaded. Please refresh the page.');
+            }
+
+            // Initialize Cashfree Checkout
+            console.log('Initializing Cashfree checkout...');
+            const cashfree = window.Cashfree({
+              mode: 'sandbox' // Always use sandbox for testing
+            });
+
+            const checkoutOptions = {
+              paymentSessionId: paymentResponse.data.payment_session_id,
+              returnUrl: `${window.location.origin}/payment-callback?order_id=${paymentResponse.data.order_id}`,
+              redirectTarget: '_self'
+            };
+
+            console.log('Opening payment checkout...', checkoutOptions);
+            cashfree.checkout(checkoutOptions);
+            
+            setIsRegistering(false);
+            return; // Exit here as payment will redirect
+          } else {
+            throw new Error('Failed to create payment order');
+          }
+        } catch (paymentError) {
+          console.error('Payment initiation error:', paymentError);
+          console.error('Backend error response:', paymentError.response?.data);
+          setIsRegistering(false);
+          const errorMessage = paymentError.response?.data?.message || 'Failed to initiate payment. Please try again.';
+          toast.error(errorMessage);
+          return; // Don't proceed with free registration
         }
+      } else {
+        console.log('Free event detected. Proceeding with direct registration...');
+        // Free event - proceed with direct registration
+        const response = await axios.post(
+          `${API_BASE_URL}/api/events/${id}/register`, 
+          {}, 
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 10000 // 10 second timeout
+          }
+        );
+        
+        // Track if this was from a recommendation
+        const isFromRecommendation = sessionStorage.getItem('recommendationSource') === 'true';
+        if (isFromRecommendation) {
+          try {
+            await axios.post(`${API_BASE_URL}/api/recommendations/track/register`, 
+              { eventId: id },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            sessionStorage.removeItem('recommendationSource'); // Clean up
+          } catch (trackingError) {
+            console.error('Failed to track recommendation registration:', trackingError);
+          }
+        }
+        
+        console.log('Registration response:', response.data);
+        setIsRegistered(true);
+        
+        // Show success message and refresh event data
+        toast.success('Successfully registered for the event! Check your dashboard to see all registered events.');
+        await fetchEvent();
       }
-      
-      console.log('Registration response:', response.data);
-      setIsRegistered(true);
-      
-      // Show success message and refresh event data
-      toast.success('Successfully registered for the event! Check your dashboard to see all registered events.');
-      await fetchEvent();
       
     } catch (error) {
       console.error('Registration failed:', error);
@@ -226,7 +300,7 @@ const EventDetail = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Event Not Found</h2>
           <button
-            onClick={() => navigate('/events')}
+            onClick={() => navigate(-1)}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Events
@@ -244,10 +318,10 @@ const EventDetail = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/events')}
+                onClick={() => navigate(-1)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5 text-gray-900 dark:text-white" />
               </button>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Event Details</h1>
             </div>
@@ -685,6 +759,15 @@ const EventDetail = () => {
           animation: slideInLeft 0.5s ease-out;
         }
       `}</style>
+
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && (
+        <LoginPromptModal
+          isOpen={showLoginPrompt}
+          onClose={() => setShowLoginPrompt(false)}
+          eventTitle={event?.title}
+        />
+      )}
     </div>
   );
 };

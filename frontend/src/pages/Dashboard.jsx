@@ -540,6 +540,37 @@ const Dashboard = () => {
             {user?.role !== 'community_member' && (
               <RecommendationsSection />
             )}
+
+            {/* App Download CTA */}
+            <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg shadow-lg p-6 text-center">
+              <div className="text-4xl mb-3">📱</div>
+              <h3 className="text-lg font-bold text-white mb-2">
+                Get Our Mobile App
+              </h3>
+              <p className="text-primary-100 text-sm mb-4">
+                Experience IndulgeOut on the go with our mobile app!
+              </p>
+              <div className="flex flex-col gap-2">
+                <a 
+                  href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm transform hover:scale-105 transition-all duration-300"
+                >
+                  <span className="mr-2">🍎</span>
+                  App Store
+                </a>
+                <a 
+                  href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm transform hover:scale-105 transition-all duration-300"
+                >
+                  <span className="mr-2">🤖</span>
+                  Google Play
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>

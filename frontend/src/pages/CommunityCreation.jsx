@@ -43,14 +43,8 @@ const CommunityCreation = () => {
 
   const [currentTag, setCurrentTag] = useState('');
 
-  // Extended categories for communities
-  const communityCategories = [
-    ...EVENT_CATEGORIES,
-    'Technology',
-    'Wellness', 
-    'Business & Networking',
-    'Education & Learning'
-  ];
+  // Use all categories from EVENT_CATEGORIES (includes all 21 categories)
+  const communityCategories = EVENT_CATEGORIES;
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

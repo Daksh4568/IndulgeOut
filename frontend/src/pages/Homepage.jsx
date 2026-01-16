@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Calendar, MapPin, Heart, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Calendar, MapPin, Heart, Star, ArrowRight, ChevronLeft, ChevronRight, Play, Sparkles, TrendingUp, Zap } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
-import VideoAnimation from '../components/VideoAnimation';
+import NavigationBar from '../components/NavigationBar';
 
 function Homepage() {
   const navigate = useNavigate();
@@ -15,10 +15,29 @@ function Homepage() {
   const [secondLineText, setSecondLineText] = useState('');
   const [showSecondLine, setShowSecondLine] = useState(false);
   const [animationPhase, setAnimationPhase] = useState(0);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState('');
+  const [photoSlideIndex, setPhotoSlideIndex] = useState(0);
   
   const typewriterWords = ['Find Your Tribe,'];
   const secondLineWords = 'Live Your Passions';
   const currentWord = typewriterWords[currentWordIndex];
+
+  // Event photos array
+  const eventPhotos = [
+    '/images/Media (4).jpg',
+    '/images/Media (5).jpg',
+    '/images/Media (6).jpg',
+    '/images/Media (7).jpg',
+    '/images/Media (8).jpg',
+    '/images/Media (9).jpg',
+    '/images/Media (10).jpg',
+    '/images/Media (11).jpg',
+    '/images/Media (12).jpg',
+    '/images/Media (13).jpg',
+    '/images/Media (14).jpg',
+    '/images/Media (15).jpg'
+  ];
 
   // Hobby icons and their connection animations
   const hobbies = [
@@ -81,6 +100,14 @@ function Homepage() {
     }, 3000);
     return () => clearInterval(phaseInterval);
   }, []);
+
+  // Auto-slide photos
+  useEffect(() => {
+    const photoInterval = setInterval(() => {
+      setPhotoSlideIndex(prev => (prev + 1) % (eventPhotos.length - 3));
+    }, 3000);
+    return () => clearInterval(photoInterval);
+  }, [eventPhotos.length]);
 
   // Function to render animated letters
   const renderAnimatedText = (text, baseDelay = 0) => {
@@ -173,19 +200,22 @@ function Homepage() {
 
   const testimonials = [
     {
-      name: 'Rahul Sharma',
-      text: 'Found my hiking tribe through IndulgeOut. Best decision ever!',
-      interest: 'Adventure & Outdoors'
+      name: 'Akansha',
+      text: 'I think what I found was a community of people. They\'re not just people who I meet in the book club itself. They\'re people who\'ve become my friends.',
+      interest: 'Nerdy Noveliers Club',
+      videoUrl: 'https://www.youtube.com/embed/uT3Quuy_5-o',
+      videoThumb: 'https://img.youtube.com/vi/uT3Quuy_5-o/maxresdefault.jpg',
+      initial: 'A',
+      color: 'from-red-400 to-pink-500'
     },
     {
-      name: 'Lakshya Thakur',
-      text: 'Amazing food events and met incredible people who share my passion.',
-      interest: 'Sip & Savor'
-    },
-    {
-      name: 'Ankita',
-      text: 'The art workshops here are fantastic. So many creative souls!',
-      interest: 'Art & DIY'
+      name: 'Nishant',
+      text: 'The great thing about IndulgeOut is that it doesn\'t have an outcome orientation, people just come for the love of the experience.',
+      interest: 'Music Club',
+      videoUrl: 'https://www.youtube.com/embed/t62ExT2n4a0',
+      videoThumb: 'https://img.youtube.com/vi/t62ExT2n4a0/maxresdefault.jpg',
+      initial: 'N',
+      color: 'from-teal-500 to-emerald-600'
     }
   ]
 
@@ -550,131 +580,62 @@ function Homepage() {
           transform: rotateY(10deg) rotateX(10deg) scale(1.05);
         }
       `}</style>
+      
       {/* Navigation */}
-      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20 sm:h-24">
-            <div className="flex items-center">
-              <img src="/images/indulgeout-logo.png" alt="IndulgeOut" className="h-16 sm:h-20 w-auto" />
-            </div>
-            <div className="flex items-center space-x-4">
-              <DarkModeToggle />
-              <Link
-                to="/login"
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <NavigationBar />
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 py-20 overflow-hidden transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center relative z-10">
-            {/* Animated Hero Title with Enhanced Typewriter Effect */}
-            <div className="mb-6">
-              <h1 className={`text-4xl md:text-6xl font-bold text-gray-900 dark:text-white transform transition-all duration-1500 ${
-                isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-              }`}>
-                <span className="block slide-in-rotate text-glow-secondary">
-                  {renderAnimatedText(typewriterText, 0.5)}
-                  {showCursor && !showSecondLine && (
-                    <span className="typewriter-cursor text-primary-600">|</span>
-                  )}
-                </span>
-                <br />
-                <span className={`text-primary-600 inline-block perspective-3d text-glow ${showSecondLine ? 'slide-in-rotate' : 'opacity-0'}`}>
-                  {showSecondLine && renderAnimatedText(secondLineText, 2.0)}
-                  {showCursor && showSecondLine && secondLineText.length < secondLineWords.length && (
-                    <span className="typewriter-cursor">|</span>
-                  )}
-                </span>
-              </h1>
-            </div>
-            <p className={`text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto transform transition-all duration-1000 delay-1000 ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`}>
-              Connect with like-minded people around food, music, sports, art, and experiences. 
-              IndulgeOut brings communities together in the real world.
-            </p>
-            <div className={`flex flex-col sm:flex-row gap-4 justify-center transform transition-all duration-1000 delay-1500 ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`}>
-              <Link
-                to="/register"
-                className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg text-lg font-semibold flex items-center justify-center transform hover:scale-105 transition-all duration-300 hover:shadow-lg card-3d"
-              >
-                Join Community
-                <ArrowRight className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform duration-300" />
-              </Link>
-              <Link
-                to="/register?type=host"
-                className="border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white px-8 py-3 rounded-lg text-lg font-semibold transform hover:scale-105 transition-all duration-300 hover:shadow-lg card-3d"
-              >
-                Host Events
-              </Link>
-            </div>
+      {/* Hero Section - Full Screen Video */}
+      <section className="relative w-full h-screen overflow-hidden">
+        {/* Video Background */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          poster="/images/video-poster.jpg"
+          className="absolute top-0 left-0 w-full h-full object-cover"
+        >
+          <source src="/videos/Website Video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+        
+        {/* CTA Overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 z-10">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
+            Where Passions Come Alive
+          </h1>
+          <p className="text-xl md:text-2xl text-white mb-8 max-w-3xl drop-shadow-lg">
+            Connect with like-minded people through shared experiences
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link
+              to="/login"
+              className="bg-white hover:bg-gray-100 text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/register"
+              className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl flex items-center"
+            >
+              Get Started
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
           </div>
         </div>
         
-        {/* Enhanced 3D Floating Elements */}
-        <div className="absolute top-20 left-10 floating-3d">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-blue-500 morph-bubble opacity-20"></div>
-        </div>
-        <div className="absolute bottom-20 left-1/4 floating-3d" style={{animationDelay: '1s'}}>
-          <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-teal-500 morph-bubble opacity-25"></div>
-        </div>
-        <div className="absolute top-1/3 right-20 floating-3d" style={{animationDelay: '2s'}}>
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 morph-bubble opacity-15"></div>
-        </div>
-        
-        {/* 3D Rotating Geometric Shapes */}
-        <div className="absolute top-16 right-16 rotate-y">
-          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 opacity-10 transform rotate-45"></div>
-        </div>
-        <div className="absolute bottom-32 right-32 rotate-y" style={{animationDelay: '3s'}}>
-          <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-600 opacity-15 rounded-full"></div>
-        </div>
-        
-        {/* Strategically placed bubbles away from buttons */}
-        <div className="absolute top-10 left-16 floating-3d">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-300 to-blue-400 morph-bubble opacity-15"></div>
-        </div>
-        <div className="absolute bottom-32 left-20 floating-3d" style={{animationDelay: '1.5s'}}>
-          <div className="w-7 h-7 bg-gradient-to-br from-green-300 to-teal-400 morph-bubble opacity-18"></div>
-        </div>
-        <div className="absolute top-3/4 left-10 floating-3d" style={{animationDelay: '2.2s'}}>
-          <div className="w-5 h-5 bg-gradient-to-br from-cyan-400 to-indigo-500 morph-bubble opacity-20"></div>
-        </div>
-        
-        {/* Enhanced small accent bubbles with 3D transforms */}
-        <div className="absolute top-1/3 left-1/5 floating-3d" style={{animationDelay: '4s'}}>
-          <div className="w-6 h-6 bg-gradient-to-br from-rose-400 to-pink-600 morph-bubble opacity-25"></div>
-        </div>
-        <div className="absolute bottom-1/3 left-1/6 floating-3d" style={{animationDelay: '2.8s'}}>
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-indigo-600 morph-bubble opacity-22"></div>
-        </div>
-        
-        {/* New 3D floating elements */}
-        <div className="absolute top-1/2 left-5 floating-3d" style={{animationDelay: '3.5s'}}>
-          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-600 morph-bubble opacity-20"></div>
-        </div>
-        <div className="absolute bottom-1/4 right-10 floating-3d" style={{animationDelay: '1.8s'}}>
-          <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-600 morph-bubble opacity-18"></div>
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
+          <div className="text-white text-sm font-semibold">SCROLL</div>
+          <div className="w-6 h-10 border-2 border-white rounded-full mx-auto mt-2 flex justify-center">
+            <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
+          </div>
         </div>
       </section>
-
-      {/* Video Animation Section */}
-      <VideoAnimation />
 
       {/* Creative Hobby Connection Animation */}
       <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors duration-300">
@@ -820,285 +781,734 @@ function Homepage() {
         <div className="absolute top-1/2 right-20 w-12 h-12 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-600 dark:to-purple-700 rounded-full opacity-20 dark:opacity-30 floating-3d"></div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white dark:bg-gray-800 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {stats.map((stat, index) => (
-              <div 
-                key={index} 
-                className={`text-center transform transition-all duration-700 hover:scale-110 card-3d perspective-3d ${
-                  isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-                }`}
-                style={{transitionDelay: `${800 + index * 200}ms`}}
-              >
-                <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2 floating-3d" style={{animationDelay: `${index * 0.5}s`}}>
-                  {stat.number}
+      {/* YouTube Testimonials - Vertical Video with Cards */}
+      <section className="py-20 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 relative overflow-hidden">
+        {/* Animated Background Circles */}
+        <div className="absolute top-20 left-10 w-64 h-64 bg-purple-500 rounded-full opacity-20 blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full opacity-20 blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-pink-500 rounded-full opacity-10 blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Community Testimonials</h2>
+            <p className="text-xl text-purple-200">Immersive Experience</p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Vertical Video Player */}
+            <div className="flex justify-center">
+              <div className="relative group">
+                <div 
+                  className="aspect-[9/16] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 cursor-pointer relative bg-black transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-3xl"
+                  onClick={() => {
+                    setCurrentVideoUrl(testimonials[currentTestimonial].videoUrl + '?autoplay=1&rel=1');
+                    setVideoModalOpen(true);
+                  }}
+                >
+                  <img 
+                    src={testimonials[currentTestimonial].videoThumb}
+                    alt="Video Testimonial"
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Play Button Overlay */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/30 via-black/40 to-black/60 group-hover:from-black/40 group-hover:via-black/50 group-hover:to-black/70 transition-all duration-300">
+                    <div className="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300 shadow-2xl mb-4">
+                      <Play className="h-8 w-8 text-white ml-1" fill="currentColor" />
+                    </div>
+                    <div className="text-white text-center px-4">
+                      <p className="text-sm font-semibold mb-3">Watch on YouTube</p>
+                      <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-semibold inline-block animate-pulse">
+                        📺 Subscribe to Our Channel
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* YouTube Shorts Badge */}
+                  <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                    <span>▶</span> Shorts
+                  </div>
                 </div>
-                <div className="text-gray-600 dark:text-gray-300 transform transition-all duration-300 hover:scale-105">{stat.label}</div>
               </div>
-            ))}
+            </div>
+
+            {/* Right Side - Testimonial Cards */}
+            <div className="space-y-8">
+              {/* Testimonial Card */}
+              <div className="relative">
+                <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl min-h-[280px] flex flex-col justify-between">
+                  {/* Quote Icon */}
+                  <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-xl">
+                    <span className="text-3xl text-white">"</span>
+                  </div>
+                  
+                  {/* Stars */}
+                  <div className="flex mb-6">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-6 w-6 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                  
+                  {/* Quote Text */}
+                  <blockquote className="text-white text-lg md:text-xl leading-relaxed mb-6 flex-grow">
+                    "{testimonials[currentTestimonial].text}"
+                  </blockquote>
+                  
+                  {/* Author Info */}
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xl mr-4">
+                      {testimonials[currentTestimonial].initial}
+                    </div>
+                    <div>
+                      <p className="font-bold text-white text-lg">{testimonials[currentTestimonial].name}</p>
+                      <div className="flex items-center text-purple-200 text-sm">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        <span>{testimonials[currentTestimonial].interest}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pagination Dots */}
+                <div className="flex justify-center mt-8 space-x-3">
+                  {testimonials.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setCurrentTestimonial(index);
+                        setIsAutoSliding(false);
+                        setTimeout(() => setIsAutoSliding(true), 8000);
+                      }}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        index === currentTestimonial 
+                          ? 'bg-white w-8' 
+                          : 'bg-white/40 w-2 hover:bg-white/60'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center hover:bg-white/20 transition-all duration-300 cursor-pointer">
+                  <Users className="h-8 w-8 text-purple-300 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-white mb-1">250+</div>
+                  <div className="text-xs text-purple-200">Happy Members</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center hover:bg-white/20 transition-all duration-300 cursor-pointer">
+                  <Star className="h-8 w-8 text-yellow-400 mx-auto mb-2 fill-current" />
+                  <div className="text-2xl font-bold text-white mb-1">89</div>
+                  <div className="text-xs text-purple-200">Success Stories</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center hover:bg-white/20 transition-all duration-300 cursor-pointer">
+                  <Calendar className="h-8 w-8 text-pink-400 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-white mb-1">156</div>
+                  <div className="text-xs text-purple-200">Events Hosted</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* Video Modal - YouTube Shorts Format */}
+      {videoModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-98 z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => {
+            setVideoModalOpen(false);
+            setCurrentVideoUrl('');
+          }}
+        >
+          <div 
+            className="relative w-full max-w-md aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl transform transition-all duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar - Channel Info */}
+            <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 via-black/50 to-transparent p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Channel Avatar */}
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
+                    <span className="text-xl">I</span>
+                  </div>
+                  {/* Channel Name */}
+                  <div>
+                    <a 
+                      href="https://www.youtube.com/@IndulgeOut" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-white font-semibold text-sm hover:underline flex items-center gap-1"
+                    >
+                      IndulgeOut
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
+                        <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
+                      </svg>
+                    </a>
+                  </div>
+                  {/* Subscribe Button */}
+                  <a 
+                    href="https://www.youtube.com/@IndulgeOut?sub_confirmation=1" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  >
+                    Subscribe
+                  </a>
+                </div>
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setVideoModalOpen(false);
+                    setCurrentVideoUrl('');
+                  }}
+                  className="w-10 h-10 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300"
+                >
+                  <span className="text-white text-2xl leading-none">&times;</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Video Iframe */}
+            <iframe
+              className="w-full h-full"
+              src={currentVideoUrl}
+              title="Video Testimonial"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            ></iframe>
+            
+            {/* Floating Subscribe Button - Visible during video */}
+            <div className="absolute top-20 left-0 right-0 z-20 flex justify-center animate-bounce" style={{animationDuration: '3s'}}>
+              <a 
+                href="https://www.youtube.com/@IndulgeOut?sub_confirmation=1" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-bold transition-all duration-300 transform hover:scale-110 shadow-2xl flex items-center gap-2 text-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                Subscribe to Our Channel
+              </a>
+            </div>
+            
+            {/* Bottom Bar - Shorts Label & Info */}
+            <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6">
+              {/* Shorts Badge */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-white">
+                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-2">
+                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M10 20H14V4H10V20ZM4 20H8V12H4V20ZM16 9V20H20V9H16Z"/>
+                    </svg>
+                    <span className="text-sm font-semibold">Shorts</span>
+                  </div>
+                </div>
+                
+                {/* Full Screen Hint */}
+                <div className="text-white/60 text-xs flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                  </svg>
+                  <span>Tap to fullscreen</span>
+                </div>
+              </div>
+              
+              {/* Video Info */}
+              <div className="text-white">
+                <p className="text-sm font-semibold mb-1">{testimonials[currentTestimonial].name}'s Story</p>
+                <p className="text-xs text-white/80 line-clamp-2">{testimonials[currentTestimonial].text}</p>
+              </div>
+              
+              {/* CTA */}
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <a 
+                  href="https://www.youtube.com/@IndulgeOut" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  Watch More on YouTube
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* How It Works - Experience Ecosystem */}
       <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">Simple steps to find your community</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Experience Ecosystem</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Connecting people and businesses through shared passions</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`} style={{transitionDelay: '1200ms'}}>
-              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300">
-                <Users className="h-8 w-8 text-primary-600 dark:text-primary-400" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Choose Your Interests</h3>
-              <p className="text-gray-600 dark:text-gray-400">Select from food, sports, art, music, and more</p>
-            </div>
+          {/* B2C & B2B Split */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8">
             
-            <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`} style={{transitionDelay: '1400ms'}}>
-              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.2s'}}>
-                <Calendar className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+            {/* B2C Track - For Experience Seekers */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center mr-4">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">For Experience Seekers</h3>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Discover Events</h3>
-              <p className="text-gray-600 dark:text-gray-400">Find events that match your passions</p>
+              
+              <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
+                A social experiences platform that helps you discover events, join communities, and connect with people who share your interests.
+              </p>
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Discover Events</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Find local events that match your interests</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Join Communities</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Connect with like-minded enthusiasts</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Build Friendships</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Form lasting connections in real life</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Link
+                to="/explore"
+                className="inline-flex items-center justify-center w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
+                Explore Events
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </div>
-            
-            <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`} style={{transitionDelay: '1600ms'}}>
-              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.4s'}}>
-                <MapPin className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+
+            {/* B2B Track - For Partners */}
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mr-4">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">For Communities & Venues</h3>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Join Locally</h3>
-              <p className="text-gray-600 dark:text-gray-400">Meet people in your area</p>
-            </div>
-            
-            <div className={`text-center transform transition-all duration-700 hover:scale-105 card-3d ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`} style={{transitionDelay: '1800ms'}}>
-              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 floating-3d hover:shadow-lg transition-shadow duration-300" style={{animationDelay: '0.6s'}}>
-                <Heart className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+              
+              <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
+                A marketplace ecosystem that connects communities, venues, and brands with engaged audiences seeking authentic experiences.
+              </p>
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Reach Your Audience</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Connect with people passionate about your niche</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Grow Your Business</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Fill your venue with engaged community members</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Track Performance</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Get insights and analytics on your events</p>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-glow-secondary text-gray-900 dark:text-white">Build Connections</h3>
-              <p className="text-gray-600 dark:text-gray-400">Form lasting friendships</p>
+              
+              <Link
+                to="/host-partner"
+                className="inline-flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg"
+              >
+                <Zap className="mr-2 h-5 w-5" />
+                Become a Partner
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Interest Categories */}
+      {/* Social Proof */}
       <section className="py-20 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 transform transition-all duration-1000 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore Your Interests</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">Find your passion and connect with others</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Trusted by Communities</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Join thousands who've found their tribe</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {interests.map((interest, index) => (
-              <div
-                key={index}
-                className={`group relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:-translate-y-2 hover:scale-105 card-3d perspective-3d card-hover-effect ${
-                  isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-                }`}
-                style={{
-                  transitionDelay: `${2000 + index * 150}ms`,
-                  transformStyle: 'preserve-3d'
-                }}
-              >
-                <div className={`${interest.color} h-48 flex items-center justify-center text-6xl transform transition-transform duration-500 group-hover:scale-110 group-hover:rotate-y-12 relative overflow-hidden`}>
-                  <span className="floating-3d icon-pulse-effect relative z-10" style={{animationDelay: `${index * 0.2}s`}}>
-                    {interest.icon}
-                  </span>
-                  {/* Shimmer effect on hover */}
-                  <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  {/* Floating particles effect */}
-                  <div className="absolute top-2 left-2 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-60 group-hover:animate-ping transition-all duration-500"></div>
-                  <div className="absolute bottom-3 right-4 w-1 h-1 bg-white rounded-full opacity-0 group-hover:opacity-40 group-hover:animate-pulse transition-all duration-700" style={{animationDelay: '0.2s'}}></div>
-                  <div className="absolute top-1/2 right-2 w-1.5 h-1.5 bg-white rounded-full opacity-0 group-hover:opacity-50 group-hover:animate-bounce transition-all duration-600" style={{animationDelay: '0.4s'}}></div>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                  <div className="p-6 text-white transform transition-all duration-500 group-hover:translate-y-0 translate-y-2 group-hover:scale-105">
-                    <h3 className="text-xl font-bold mb-2 text-glow-secondary transform transition-all duration-300 group-hover:scale-110">{interest.name}</h3>
-                    <p className="text-gray-200 opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4 group-hover:scale-105">
-                      {interest.description}
-                    </p>
-                  </div>
-                </div>
-                {/* Enhanced animated border with 3D effect */}
-                <div className="absolute inset-0 border-2 border-transparent group-hover:border-primary-400 rounded-xl transition-all duration-500 group-hover:shadow-inner group-hover:border-opacity-80"></div>
-                
-                {/* 3D depth effect overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
-                
-                {/* Glowing corner effect */}
-                <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-bl-xl"></div>
-                <div className="absolute bottom-0 left-0 w-6 h-6 bg-gradient-to-tr from-primary-400/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-tr-xl"></div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">10,000+</div>
+              <div className="text-gray-600 dark:text-gray-400">Active Members</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">500+</div>
+              <div className="text-gray-600 dark:text-gray-400">Monthly Events</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">50+</div>
+              <div className="text-gray-600 dark:text-gray-400">Partner Venues</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">17</div>
+              <div className="text-gray-600 dark:text-gray-400">Categories</div>
+            </div>
+          </div>
+          
+          {/* Event Photos Slider */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Past Events Highlights</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPhotoSlideIndex(prev => Math.max(0, prev - 1))}
+                  disabled={photoSlideIndex === 0}
+                  className="p-2 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setPhotoSlideIndex(prev => Math.min(eventPhotos.length - 4, prev + 1))}
+                  disabled={photoSlideIndex >= eventPhotos.length - 4}
+                  className="p-2 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Carousel */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 transform transition-all duration-1000 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`}>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">What Our Community Says</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">Real stories from real people</p>
-          </div>
-          
-          {/* Carousel Container */}
-          <div className="relative max-w-4xl mx-auto">
-            {/* Navigation Buttons */}
-            <button 
-              onClick={prevTestimonial}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group border border-gray-200 dark:border-gray-600"
-            >
-              <ChevronLeft className="h-6 w-6 text-gray-600 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300" />
-            </button>
+            </div>
             
-            <button 
-              onClick={nextTestimonial}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group border border-gray-200 dark:border-gray-600"
-            >
-              <ChevronRight className="h-6 w-6 text-gray-600 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300" />
-            </button>
-
-            {/* Testimonials Slider */}
-            <div className="overflow-hidden rounded-2xl">
+            <div className="overflow-hidden rounded-xl">
               <div 
-                className="flex transition-transform duration-700 ease-in-out"
-                style={{ transform: `translateX(-${currentTestimonial * 100}%)` }}
+                className="flex transition-transform duration-700 ease-in-out gap-4"
+                style={{ transform: `translateX(-${photoSlideIndex * (100 / 4 + 1)}%)` }}
               >
-                {testimonials.map((testimonial, index) => (
+                {eventPhotos.map((photo, index) => (
                   <div 
-                    key={index}
-                    className="w-full flex-shrink-0 px-8"
+                    key={index} 
+                    className="flex-shrink-0 w-[calc(25%-12px)] aspect-square rounded-lg overflow-hidden group relative shadow-lg hover:shadow-2xl transition-all duration-300"
                   >
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700">
-                      {/* Stars */}
-                      <div className="flex justify-center items-center mb-6">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className="h-6 w-6 text-yellow-400 fill-current transform transition-transform duration-300 hover:scale-125 mx-1"
-                            style={{animationDelay: `${i * 0.1}s`}}
-                          />
-                        ))}
-                      </div>
-                      
-                      {/* Quote */}
-                      <blockquote className="text-xl text-gray-700 dark:text-gray-300 text-center mb-8 italic font-medium leading-relaxed">
-                        "{testimonial.text}"
-                      </blockquote>
-                      
-                      {/* Author */}
-                      <div className="text-center border-t border-gray-200 dark:border-gray-600 pt-6">
-                        <p className="font-bold text-xl text-gray-900 dark:text-white mb-2">{testimonial.name}</p>
-                        <p className="text-primary-600 dark:text-primary-400 font-semibold text-lg">{testimonial.interest}</p>
+                    <img 
+                      src={photo} 
+                      alt={`Event ${index + 1}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+                          <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600">
+                            <div class="text-center">
+                              <div class="text-4xl mb-2">📸</div>
+                              <p class="text-xs text-gray-600 dark:text-gray-400">Event Photo ${index + 1}</p>
+                            </div>
+                          </div>
+                        `;
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute bottom-4 left-4 text-white">
+                        <p className="text-sm font-semibold">Event Memory</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Dots Indicator */}
-            <div className="flex justify-center mt-8 space-x-3">
-              {testimonials.map((_, index) => (
+            
+            {/* Slide Indicator */}
+            <div className="flex justify-center mt-6 gap-2">
+              {Array.from({ length: eventPhotos.length - 3 }).map((_, index) => (
                 <button
                   key={index}
-                  onClick={() => {
-                    setCurrentTestimonial(index);
-                    setIsAutoSliding(false);
-                    setTimeout(() => setIsAutoSliding(true), 8000);
-                  }}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 hover:scale-125 ${
-                    index === currentTestimonial 
-                      ? 'bg-primary-600 scale-125' 
-                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                  onClick={() => setPhotoSlideIndex(index)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    index === photoSlideIndex 
+                      ? 'bg-primary-600 w-8' 
+                      : 'bg-gray-300 dark:bg-gray-600 w-2 hover:bg-primary-400'
                   }`}
                 />
               ))}
             </div>
+          </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mt-6">
-              <div 
-                className="bg-primary-600 h-1 rounded-full transition-all duration-100 ease-linear"
-                style={{ 
-                  width: isAutoSliding ? '100%' : '0%',
-                  animation: isAutoSliding ? 'progress 4s linear infinite' : 'none'
-                }}
-              />
+          {/* Partner Logos - Placeholders */}
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">Our Partners</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((index) => (
+                <div key={index} className="aspect-video bg-white dark:bg-gray-700 rounded-lg shadow-md flex items-center justify-center border border-gray-200 dark:border-gray-600 hover:shadow-xl transition-shadow duration-300">
+                  <div className="text-center p-4">
+                    <div className="text-3xl mb-1">🏢</div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Partner {index}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-primary-600 dark:bg-primary-700 relative overflow-hidden transition-colors duration-300">
+      {/* Download the App - Live */}
+      <section className="py-20 bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="mb-8">
+            <div className="text-6xl mb-4">📱</div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Download the IndulgeOut App
+            </h2>
+            <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+              Experience IndulgeOut on the go. Available now on iOS and Android!
+            </p>
+          </div>
+          
+          {/* App Store Badges */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <a 
+              href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-black hover:bg-gray-900 text-white px-6 py-3 rounded-lg flex items-center transform hover:scale-105 transition-all duration-300 shadow-xl"
+            >
+              <div className="text-2xl mr-3">🍎</div>
+              <div className="text-left">
+                <div className="text-xs">Download on the</div>
+                <div className="text-lg font-semibold">App Store</div>
+              </div>
+            </a>
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-black hover:bg-gray-900 text-white px-6 py-3 rounded-lg flex items-center transform hover:scale-105 transition-all duration-300 shadow-xl"
+            >
+              <div className="text-2xl mr-3">🤖</div>
+              <div className="text-left">
+                <div className="text-xs">GET IT ON</div>
+                <div className="text-lg font-semibold">Google Play</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="py-20 bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 relative overflow-hidden transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className={`text-3xl font-bold text-white mb-4 transform transition-all duration-1000 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`} style={{transitionDelay: '3500ms'}}>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Ready to Find Your Community?
           </h2>
-          <p className={`text-xl text-primary-100 mb-8 transform transition-all duration-1000 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`} style={{transitionDelay: '3700ms'}}>
-            Join thousands of people connecting over shared interests
+          <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of people connecting over shared interests and experiences
           </p>
-          <Link
-            to="/register"
-            className={`inline-block bg-white hover:bg-gray-100 dark:bg-gray-100 dark:hover:bg-white text-primary-600 dark:text-primary-700 px-8 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-110 hover:shadow-2xl ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`}
-            style={{transitionDelay: '3900ms'}}
-          >
-            Get Started Today
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center bg-white hover:bg-gray-100 text-primary-600 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-2xl"
+            >
+              Get Started Free
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+            <Link
+              to="/explore"
+              className="inline-flex items-center justify-center bg-transparent border-2 border-white hover:bg-white hover:text-primary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              Explore Events
+            </Link>
+          </div>
         </div>
         
         {/* Animated background elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-white bg-opacity-10 dark:bg-opacity-20 rounded-full animate-ping"></div>
-        <div className="absolute bottom-10 right-20 w-16 h-16 bg-white bg-opacity-10 dark:bg-opacity-20 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/2 right-10 w-12 h-12 bg-white bg-opacity-10 dark:bg-opacity-20 rounded-full animate-bounce"></div>
+        <div className="absolute top-10 left-10 w-20 h-20 bg-white bg-opacity-10 rounded-full animate-ping"></div>
+        <div className="absolute bottom-10 right-20 w-16 h-16 bg-white bg-opacity-10 rounded-full animate-pulse"></div>
+        <div className="absolute top-1/2 right-10 w-12 h-12 bg-white bg-opacity-10 rounded-full animate-bounce"></div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12 border-t border-gray-800 dark:border-gray-700 transition-colors duration-300">
+      <footer className="bg-gray-900 dark:bg-black text-white py-16 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl sm:text-3xl font-bold mb-4">IndulgeOut</h3>
-            <p className="text-gray-400 dark:text-gray-500 text-sm sm:text-base max-w-2xl mx-auto mb-6">
-              Connecting communities through shared interests and experiences.
-            </p>
-            <div className="inline-block">
-              <h4 className="font-semibold mb-3 text-lg">Platform</h4>
-              <ul className="space-y-2 text-gray-400 dark:text-gray-500">
-                <li><Link to="/about" className="hover:text-white dark:hover:text-gray-300 transition-colors text-base">About</Link></li>
+          {/* Main Footer Content */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+            {/* Brand Column */}
+            <div>
+              <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+                IndulgeOut
+              </h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">
+                Connecting communities through shared interests and real-world experiences.
+              </p>
+              <div className="mb-6">
+                <p className="text-sm text-gray-400 mb-3">Download Our App</p>
+                <div className="flex flex-col gap-2">
+                  <a 
+                    href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-xs transition-all duration-300"
+                  >
+                    <span className="mr-2">🍎</span>
+                    <span>App Store</span>
+                  </a>
+                  <a 
+                    href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-xs transition-all duration-300"
+                  >
+                    <span className="mr-2">🤖</span>
+                    <span>Google Play</span>
+                  </a>
+                </div>
+              </div>
+              <div className="flex space-x-4">
+                <a href="#" className="w-10 h-10 bg-gray-800 hover:bg-primary-600 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110">
+                  <span className="text-lg">📘</span>
+                </a>
+                <a href="#" className="w-10 h-10 bg-gray-800 hover:bg-primary-600 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110">
+                  <span className="text-lg">📷</span>
+                </a>
+                <a href="#" className="w-10 h-10 bg-gray-800 hover:bg-primary-600 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110">
+                  <span className="text-lg">🐦</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Platform Links */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Platform</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link to="/explore" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Explore Events
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/categories" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Categories
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/host-partner" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Host & Partner
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/about" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    About Us
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Support Links */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Support</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link to="/contact" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/support" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/faq" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    FAQ
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal Links */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/cookies" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                    Cookie Policy
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 dark:border-gray-700 pt-8 text-center text-gray-400 dark:text-gray-500 text-sm">
-            <p>&copy; 2025 IndulgeOut. All rights reserved.</p>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <p className="text-gray-500 text-sm mb-4 md:mb-0">
+                &copy; {new Date().getFullYear()} IndulgeOut. All rights reserved.
+              </p>
+              <div className="flex items-center space-x-6 text-sm text-gray-500">
+                <span>Made with ❤️ for communities</span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

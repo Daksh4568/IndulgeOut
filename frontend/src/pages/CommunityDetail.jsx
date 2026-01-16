@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
 import Testimonial3D from '../components/Testimonial3D';
+import LoginPromptModal from '../components/LoginPromptModal';
 import { 
   ArrowLeft,
   Users, 
@@ -41,6 +42,7 @@ const CommunityDetail = () => {
   const [newTestimonial, setNewTestimonial] = useState({ content: '', rating: 5 });
   const [isJoining, setIsJoining] = useState(false);
   const [hostCommunities, setHostCommunities] = useState([]);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Function to close testimonials and return to overview
   const handleCloseTestimonials = () => {
@@ -99,8 +101,7 @@ const CommunityDetail = () => {
 
   const joinCommunity = async () => {
     if (!user) {
-      toast.warning('Please log in to join communities');
-      navigate('/login');
+      setShowLoginPrompt(true);
       return;
     }
 
@@ -271,7 +272,7 @@ const CommunityDetail = () => {
             Community not found
           </h2>
           <button
-            onClick={() => navigate('/communities')}
+            onClick={() => navigate(-1)}
             className="text-blue-600 hover:text-blue-700"
           >
             Back to Communities
@@ -318,11 +319,11 @@ const CommunityDetail = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/communities')}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 text-gray-900 dark:text-white"
               >
                 <ArrowLeft className="h-5 w-5" />
-                Back to Communities
+                Back
               </button>
               {/* Dashboard link for hosts */}
               {user && community && user.id === community.host._id && (
@@ -383,17 +384,22 @@ const CommunityDetail = () => {
                   </div>
                 </div>
                 
-                {user && user.id !== community.host._id && (
+                {(!user || (user && user.id !== community.host._id)) && !isUserMember() && (
                   <button
-                    onClick={isUserMember() ? leaveCommunity : joinCommunity}
+                    onClick={joinCommunity}
                     disabled={isJoining}
-                    className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                      isUserMember()
-                        ? 'bg-red-100 text-red-800 hover:bg-red-200'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-105'
-                    }`}
+                    className="px-6 py-3 rounded-lg font-medium transition-all bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-105"
                   >
-                    {isJoining ? 'Joining...' : isUserMember() ? 'Leave Community' : 'Join Community'}
+                    {isJoining ? 'Joining...' : 'Join Community'}
+                  </button>
+                )}
+                {user && user.id !== community.host._id && isUserMember() && (
+                  <button
+                    onClick={leaveCommunity}
+                    disabled={isJoining}
+                    className="px-6 py-3 rounded-lg font-medium transition-all bg-red-100 text-red-800 hover:bg-red-200"
+                  >
+                    Leave Community
                   </button>
                 )}
               </div>
@@ -1039,6 +1045,13 @@ const CommunityDetail = () => {
       </div>
         </div>
       )}
+
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        eventTitle={community?.name}
+      />
     </>
   );
 };

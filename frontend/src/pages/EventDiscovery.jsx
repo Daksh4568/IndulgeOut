@@ -903,6 +903,41 @@ const EventDiscovery = () => {
             </div>
           </div>
         )}
+
+        {/* App Download CTA Banner */}
+        <div className="mt-12 bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 rounded-2xl p-8 text-center shadow-xl">
+          <div className="text-4xl mb-4">📱</div>
+          <h3 className="text-2xl font-bold text-white mb-3">Get the Full Experience</h3>
+          <p className="text-primary-100 mb-6 max-w-2xl mx-auto">
+            Download the IndulgeOut app for easier event browsing, instant notifications, and exclusive mobile features!
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <a 
+              href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center bg-black hover:bg-gray-900 text-white px-6 py-3 rounded-lg transform hover:scale-105 transition-all duration-300 shadow-lg"
+            >
+              <span className="text-2xl mr-3">🍎</span>
+              <div className="text-left">
+                <div className="text-xs">Download on the</div>
+                <div className="text-base font-semibold">App Store</div>
+              </div>
+            </a>
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center bg-black hover:bg-gray-900 text-white px-6 py-3 rounded-lg transform hover:scale-105 transition-all duration-300 shadow-lg"
+            >
+              <span className="text-2xl mr-3">🤖</span>
+              <div className="text-left">
+                <div className="text-xs">GET IT ON</div>
+                <div className="text-base font-semibold">Google Play</div>
+              </div>
+            </a>
+          </div>
+        </div>
       </>
     )}
       </div>

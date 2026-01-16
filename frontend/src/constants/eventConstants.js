@@ -1,25 +1,63 @@
 // Shared constants for event categories
 export const EVENT_CATEGORIES = [
-  'Sip & Savor',
-  'Sweat & Play',
-  'Art & DIY',
-  'Social Mixers',
-  'Adventure & Outdoors',
+  // Social & Fun
+  'Meet & Mingle',
   'Epic Screenings',
   'Indoor & Board Games',
+  'Battle of the Beats',
+  // Creative & Culture
+  'Make & Create',
+  'Open Mics & Jams',
+  'Culture & Heritage',
+  'Underground & Street',
+  // Active & Outdoor
+  'Sweat & Play',
+  'Adventure & Outdoors',
+  'Mind & Body Recharge',
+  // Learn & Build
+  'Learn & Network',
+  'Startup Connect',
+  'Tech Unplugged',
+  // Purpose & Experiences
+  'Make a Difference',
+  'Immersive & Experiential',
+  'Indie Bazaar',
+  // Legacy Categories
+  'Sip & Savor',
+  'Art & DIY',
+  'Social Mixers',
   'Music & Performance'
 ];
 
 // Category icons mapping for display
 export const CATEGORY_ICONS = {
-  'Sip & Savor': '🍷',
-  'Sweat & Play': '⚽',
-  'Art & DIY': '🎨',
-  'Social Mixers': '🎭',
-  'Adventure & Outdoors': '🏔️',
+  // Social & Fun
+  'Meet & Mingle': '🎉',
   'Epic Screenings': '🎬',
   'Indoor & Board Games': '🎲',
-  'Music & Performance': '🎵'
+  'Battle of the Beats': '🎵',
+  // Creative & Culture
+  'Make & Create': '🎨',
+  'Open Mics & Jams': '🎤',
+  'Culture & Heritage': '🏛️',
+  'Underground & Street': '🎭',
+  // Active & Outdoor
+  'Sweat & Play': '⚽',
+  'Adventure & Outdoors': '🏔️',
+  'Mind & Body Recharge': '🧘',
+  // Learn & Build
+  'Learn & Network': '📚',
+  'Startup Connect': '🚀',
+  'Tech Unplugged': '💻',
+  // Purpose & Experiences
+  'Make a Difference': '❤️',
+  'Immersive & Experiential': '✨',
+  'Indie Bazaar': '🛍️',
+  // Legacy Categories
+  'Sip & Savor': '🍷',
+  'Art & DIY': '🎨',
+  'Social Mixers': '🎊',
+  'Music & Performance': '🎸'
 };
 
 // Discovery page categories with IDs and icons
