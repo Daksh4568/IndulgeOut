@@ -12,36 +12,8 @@ const eventSchema = new mongoose.Schema({
   },
   categories: [{
     type: String,
-    enum:[
-      // Social & Fun
-      'Meet & Mingle',
-      'Epic Screenings',
-      'Indoor & Board Games',
-      'Battle of the Beats',
-      // Creative & Culture
-      'Make & Create',
-      'Open Mics & Jams',
-      'Culture & Heritage',
-      'Underground & Street',
-      // Active & Outdoor
-      'Sweat & Play',
-      'Adventure & Outdoors',
-      'Mind & Body Recharge',
-      // Learn & Build
-      'Learn & Network',
-      'Startup Connect',
-      'Tech Unplugged',
-      // Purpose & Experiences
-      'Make a Difference',
-      'Immersive & Experiential',
-      'Indie Bazaar',
-      // Legacy Categories (for backward compatibility)
-      'Sip & Savor',
-      'Art & DIY',
-      'Social Mixers',
-      'Music & Performance'
-    ],
-    required: true
+    required: true,
+    trim: true
   }],
   date: {
     type: Date,
@@ -138,6 +110,10 @@ const eventSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
+    uniqueViews: {
+      type: Number,
+      default: 0
+    },
     clicks: {
       type: Number,
       default: 0
@@ -146,6 +122,39 @@ const eventSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
+    shares: {
+      type: Number,
+      default: 0
+    },
+    favorites: {
+      type: Number,
+      default: 0
+    },
+    conversionRate: {
+      type: Number,
+      default: 0
+    },
+    clickThroughRate: {
+      type: Number,
+      default: 0
+    },
+    // Daily view tracking
+    viewHistory: [{
+      date: {
+        type: String,  // YYYY-MM-DD format
+        required: true
+      },
+      count: {
+        type: Number,
+        default: 1
+      }
+    }],
+    // Track unique viewers
+    viewedBy: [{
+      user: mongoose.Schema.Types.ObjectId,
+      viewedAt: Date,
+      viewCount: { type: Number, default: 1 }
+    }],
     clickHistory: [{
       user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -159,12 +168,29 @@ const eventSchema = new mongoose.Schema({
         type: String,
         default: 'event_discovery'
       }
-    }]
+    }],
+    // Last updated timestamp
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  
+  // Review Statistics
+  avgRating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  totalReviews: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
@@ -192,10 +218,141 @@ eventSchema.virtual('ticketPrice').get(function() {
 eventSchema.set('toJSON', { virtuals: true });
 eventSchema.set('toObject', { virtuals: true });
 
+// Validate categories exist in Category collection
+eventSchema.pre('save', async function(next) {
+  if (this.isModified('categories') && this.categories.length > 0) {
+    try {
+      const Category = mongoose.model('Category');
+      const validCategories = await Category.find({ name: { $in: this.categories } }).select('name');
+      const validNames = validCategories.map(cat => cat.name);
+      
+      const invalidCategories = this.categories.filter(cat => !validNames.includes(cat));
+      if (invalidCategories.length > 0) {
+        throw new Error(`Invalid categories: ${invalidCategories.join(', ')}. Please use valid category names from the Category collection.`);
+      }
+    } catch (error) {
+      return next(error);
+    }
+  }
+  next();
+});
+
+// Update category analytics after event is created
+eventSchema.post('save', async function(doc) {
+  if (doc.categories && doc.categories.length > 0) {
+    try {
+      const Category = mongoose.model('Category');
+      // Update event count for all categories
+      await Promise.all(doc.categories.map(categoryName => 
+        Category.findOneAndUpdate(
+          { name: categoryName },
+          { $inc: { 'analytics.eventCount': 1 } }
+        )
+      ));
+    } catch (error) {
+      console.error('Failed to update category analytics:', error);
+    }
+  }
+});
+
 // Update current participants count
 eventSchema.methods.updateParticipantCount = function() {
   this.currentParticipants = this.participants.filter(p => p.status === 'registered').length;
   return this.save();
+};
+
+// Track event view (using atomic operations to prevent version conflicts)
+eventSchema.methods.trackView = async function(userId = null) {
+  const today = new Date().toISOString().split('T')[0];
+  const Event = this.constructor;
+  
+  // Use atomic operations to prevent version conflicts
+  const updateOps = {
+    $inc: { 'analytics.views': 1 },
+    $set: { 'analytics.lastUpdated': new Date() }
+  };
+  
+  // Add daily view record atomically
+  await Event.findByIdAndUpdate(
+    this._id,
+    {
+      ...updateOps,
+      $push: {
+        'analytics.viewHistory': {
+          $each: [{ date: today, count: 1 }],
+          $slice: -90 // Keep only last 90 days
+        }
+      }
+    },
+    { new: true }
+  );
+  
+  // Handle user-specific tracking separately if userId provided
+  if (userId) {
+    const event = await Event.findById(this._id);
+    const existingViewer = event.analytics.viewedBy.find(v => v.user.toString() === userId.toString());
+    
+    if (existingViewer) {
+      // Update existing viewer
+      await Event.findOneAndUpdate(
+        { _id: this._id, 'analytics.viewedBy.user': userId },
+        {
+          $inc: { 'analytics.viewedBy.$.viewCount': 1 },
+          $set: { 'analytics.viewedBy.$.viewedAt': new Date() }
+        }
+      );
+    } else {
+      // Add new viewer
+      await Event.findByIdAndUpdate(
+        this._id,
+        {
+          $push: { 'analytics.viewedBy': { user: userId, viewedAt: new Date(), viewCount: 1 } },
+          $inc: { 'analytics.uniqueViews': 1 }
+        }
+      );
+    }
+  }
+};
+
+// Track event click (using atomic operations to prevent version conflicts)
+eventSchema.methods.trackClick = async function(userId = null, source = 'event_discovery') {
+  const Event = this.constructor;
+  
+  const updateOps = {
+    $inc: { 'analytics.clicks': 1 },
+    $set: { 'analytics.lastUpdated': new Date() }
+  };
+  
+  if (userId) {
+    updateOps.$push = {
+      'analytics.clickHistory': {
+        user: userId,
+        timestamp: new Date(),
+        source
+      }
+    };
+  }
+  
+  await Event.findByIdAndUpdate(this._id, updateOps);
+  
+  // Update click-through rate in a separate operation
+  const event = await Event.findById(this._id);
+  if (event.analytics.views > 0) {
+    const ctr = (event.analytics.clicks / event.analytics.views * 100).toFixed(2);
+    await Event.findByIdAndUpdate(
+      this._id,
+      { $set: { 'analytics.clickThroughRate': ctr } }
+    );
+  }
+};
+
+// Update conversion rate
+eventSchema.methods.updateConversionRate = async function() {
+  if (this.analytics.views > 0) {
+    this.analytics.conversionRate = (this.currentParticipants / this.analytics.views * 100).toFixed(2);
+  }
+  this.analytics.lastUpdated = new Date();
+  await this.save();
 };
 
 module.exports = mongoose.model('Event', eventSchema);

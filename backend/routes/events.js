@@ -380,38 +380,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.post('/:id/click', authMiddleware, async (req, res) => {
   try {
     const eventId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.userId;
     
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Initialize analytics if it doesn't exist
-    if (!event.analytics) {
-      event.analytics = {
-        views: 0,
-        clicks: 0,
-        registrations: 0,
-        clickHistory: []
-      };
-    }
-
-    // Increment click count
-    event.analytics.clicks = (event.analytics.clicks || 0) + 1;
-    
-    // Add click to history (optional, for detailed analytics)
-    if (!event.analytics.clickHistory) {
-      event.analytics.clickHistory = [];
-    }
-    
-    event.analytics.clickHistory.push({
-      user: userId,
-      timestamp: new Date(),
-      source: 'event_discovery'
-    });
-
-    await event.save();
+    // Use the trackClick method from Event model
+    await event.trackClick(userId, 'event_discovery');
 
     res.json({ 
       message: 'Click tracked successfully',
@@ -419,6 +396,31 @@ router.post('/:id/click', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Track click error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Track event view for analytics
+router.post('/:id/view', async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user?.userId || null; // Optional auth
+    
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Use the trackView method from Event model
+    await event.trackView(userId);
+
+    res.json({ 
+      message: 'View tracked successfully',
+      totalViews: event.analytics.views,
+      uniqueViews: event.analytics.uniqueViews
+    });
+  } catch (error) {
+    console.error('Track view error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });

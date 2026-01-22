@@ -45,8 +45,9 @@ router.post('/register', registrationLimiter, [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('phoneNumber').matches(/^[6-9]\d{9}$/).withMessage('Please provide a valid 10-digit Indian mobile number'),
-  body('role').isIn(['user', 'community_member']).withMessage('Invalid role')
+  body('phoneNumber').optional().matches(/^[6-9]\d{9}$/).withMessage('Please provide a valid 10-digit Indian mobile number'),
+  body('role').isIn(['user', 'host_partner']).withMessage('Invalid role'),
+  body('hostPartnerType').optional().isIn(['community_organizer', 'venue', 'brand_sponsor']).withMessage('Invalid host partner type')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -57,7 +58,7 @@ router.post('/register', registrationLimiter, [
       });
     }
 
-    const { name, email, password, phoneNumber, role, interests, location } = req.body;
+    const { name, email, password, phoneNumber, role, hostPartnerType, interests, location } = req.body;
 
     // Check if user already exists with email or phone
     const existingUser = await User.findOne({ 
@@ -80,6 +81,7 @@ router.post('/register', registrationLimiter, [
       password,
       phoneNumber,
       role,
+      hostPartnerType: role === 'host_partner' ? hostPartnerType : undefined,
       interests: interests || [],
       location: location || {},
       isOTPUser: false, // This is a password-based user
@@ -97,7 +99,7 @@ router.post('/register', registrationLimiter, [
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, email: user.email, phoneNumber: user.phoneNumber, role: user.role },
+      { userId: user._id, email: user.email, phoneNumber: user.phoneNumber, role: user.role, hostPartnerType: user.hostPartnerType },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -156,7 +158,7 @@ router.post('/login', loginLimiter, [
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role, hostPartnerType: user.hostPartnerType },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -169,6 +171,7 @@ router.post('/login', loginLimiter, [
         name: user.name,
         email: user.email,
         role: user.role,
+        hostPartnerType: user.hostPartnerType,
         interests: user.interests
       }
     });

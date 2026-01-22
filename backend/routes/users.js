@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.js');
+const Community = require('../models/Community.js');
 
 const router = express.Router();
 
@@ -77,20 +78,82 @@ router.get('/profile', authenticateToken, async (req, res) => {
 // Update user profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { name, bio, location } = req.body;
+    const { 
+      name, 
+      bio, 
+      location, 
+      communityProfile, 
+      venueProfile, 
+      brandProfile,
+      onboardingCompleted,
+      createCommunity 
+    } = req.body;
     
+    const updateData = {
+      ...(name && { name }),
+      ...(bio && { bio }),
+      ...(location && { location }),
+      ...(communityProfile && { communityProfile }),
+      ...(venueProfile && { venueProfile }),
+      ...(brandProfile && { brandProfile }),
+      ...(onboardingCompleted !== undefined && { onboardingCompleted })
+    };
+
     const user = await User.findByIdAndUpdate(
       req.user.userId,
-      { 
-        ...(name && { name }),
-        ...(bio && { bio }),
-        ...(location && { location })
-      },
+      updateData,
       { new: true }
     );
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    // If createCommunity flag is true, create a Community document
+    if (createCommunity && communityProfile && user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
+      // Check if community already exists for this user
+      const existingCommunity = await Community.findOne({ host: user._id });
+      
+      if (!existingCommunity) {
+        const newCommunity = new Community({
+          name: communityProfile.communityName,
+          description: communityProfile.communityDescription || `Join ${communityProfile.communityName} for exciting ${communityProfile.primaryCategory} experiences`,
+          shortDescription: communityProfile.communityDescription?.substring(0, 200) || `${communityProfile.primaryCategory} community`,
+          category: communityProfile.primaryCategory,
+          host: user._id,
+          isPrivate: communityProfile.communityType === 'curated',
+          location: {
+            city: communityProfile.city || user.location?.city,
+            state: user.location?.state,
+            country: user.location?.country || 'India'
+          },
+          socialLinks: {
+            instagram: communityProfile.instagram,
+            facebook: communityProfile.facebook,
+            website: communityProfile.website
+          },
+          images: communityProfile.pastEventPhotos || [],
+          coverImage: communityProfile.pastEventPhotos?.[0] || null,
+          members: [{
+            user: user._id,
+            joinedAt: new Date(),
+            role: 'admin' // Creator is admin
+          }],
+          tags: [communityProfile.primaryCategory.toLowerCase(), 'community', 'events'],
+          stats: {
+            totalEvents: 0,
+            totalMembers: 1,
+            averageRating: 0
+          },
+          isActive: true,
+          forum: [], // Empty forum initially
+          testimonials: [] // Empty testimonials initially
+        });
+
+        await newCommunity.save();
+        
+        console.log(`✅ Created community "${communityProfile.communityName}" for organizer ${user.name}`);
+      }
     }
 
     res.json({

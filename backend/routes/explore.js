@@ -17,33 +17,116 @@ router.get('/events/search', async (req, res) => {
       return res.json({ events: [], suggestions: [] });
     }
 
-    const searchRegex = new RegExp(q, 'i');
+    // Enhanced search with word boundaries and partial matching
+    const searchTerm = q.trim();
+    const searchWords = searchTerm.split(' ').filter(word => word.length > 0);
     
-    // Search in multiple fields
-    const events = await Event.find({
+    // Create flexible regex patterns for better matching
+    const exactRegex = new RegExp(searchTerm, 'i');
+    const wordRegexes = searchWords.map(word => new RegExp(word, 'i'));
+    
+    // Category synonyms mapping for semantic search
+    const categoryMappings = {
+      'sports': ['Sweat & Play', 'cricket', 'football', 'basketball', 'tennis', 'badminton', 'sports'],
+      'food': ['Sip & Savor', 'restaurant', 'dining', 'food', 'cuisine', 'cooking'],
+      'art': ['Art & DIY', 'Make & Create', 'painting', 'craft', 'creative', 'art'],
+      'music': ['Music & Performance', 'Battle of the Beats', 'Open Mics & Jams', 'concert', 'band', 'music'],
+      'outdoor': ['Adventure & Outdoors', 'hiking', 'camping', 'trekking', 'nature', 'outdoor'],
+      'fitness': ['Sweat & Play', 'Mind & Body Recharge', 'yoga', 'gym', 'workout', 'fitness'],
+      'tech': ['Tech Unplugged', 'Learn & Network', 'technology', 'coding', 'programming', 'tech'],
+      'social': ['Meet & Mingle', 'Social Mixers', 'networking', 'meetup', 'social'],
+      'movies': ['Epic Screenings', 'film', 'cinema', 'movies', 'screening'],
+      'games': ['Indoor & Board Games', 'gaming', 'board games', 'video games']
+    };
+    
+    // Check if search term matches any category mapping
+    let expandedSearchTerms = [searchTerm];
+    for (const [key, values] of Object.entries(categoryMappings)) {
+      if (searchTerm.toLowerCase().includes(key)) {
+        expandedSearchTerms.push(...values);
+      }
+    }
+    
+    // Build comprehensive search query with relevance scoring
+    const searchQuery = {
       status: 'published',
       $or: [
-        { title: searchRegex },
-        { description: searchRegex },
-        { tags: searchRegex },
-        { 'location.city': searchRegex },
-        { categories: searchRegex }
+        // Exact title match (highest priority)
+        { title: exactRegex },
+        // Description match
+        { description: exactRegex },
+        // Tags match
+        { tags: { $in: wordRegexes } },
+        // Categories match (with expanded terms)
+        { categories: { $in: expandedSearchTerms.map(term => new RegExp(term, 'i')) } },
+        // Location match
+        { 'location.city': exactRegex },
+        { 'location.address': exactRegex },
+        // Individual word matches
+        ...wordRegexes.map(regex => ({ title: regex })),
+        ...wordRegexes.map(regex => ({ description: regex }))
       ]
-    })
+    };
+    
+    // Search with population and sorting by relevance
+    let events = await Event.find(searchQuery)
       .populate('host', 'name email')
-      .sort({ date: -1 })
-      .limit(parseInt(limit));
+      .limit(parseInt(limit) * 2); // Get more to filter and sort
+    
+    // Calculate relevance score for each event
+    events = events.map(event => {
+      let score = 0;
+      const eventData = event.toObject();
+      
+      // Title exact match (highest score)
+      if (exactRegex.test(eventData.title)) score += 100;
+      
+      // Category match
+      if (eventData.categories?.some(cat => exactRegex.test(cat))) score += 50;
+      
+      // Tag match
+      if (eventData.tags?.some(tag => exactRegex.test(tag))) score += 40;
+      
+      // Description match
+      if (exactRegex.test(eventData.description)) score += 30;
+      
+      // Location match
+      if (exactRegex.test(eventData.location?.city)) score += 20;
+      
+      // Word matches
+      wordRegexes.forEach(regex => {
+        if (regex.test(eventData.title)) score += 15;
+        if (eventData.categories?.some(cat => regex.test(cat))) score += 10;
+        if (eventData.tags?.some(tag => regex.test(tag))) score += 8;
+      });
+      
+      // Boost for upcoming events
+      if (new Date(eventData.date) > new Date()) score += 10;
+      
+      // Boost for popular events
+      score += (eventData.currentParticipants || 0) * 0.5;
+      
+      return { ...eventData, _id: event._id, relevanceScore: score };
+    });
+    
+    // Sort by relevance and limit
+    events = events
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, parseInt(limit));
 
-    console.log(`✅ Found ${events.length} events matching "${q}"`);
+    console.log(`✅ Found ${events.length} events matching "${q}" (expanded: ${expandedSearchTerms.join(', ')})`);
 
-    // Generate autocomplete suggestions
+    // Generate smart autocomplete suggestions
     const suggestions = [
       ...new Set([
         ...events.map(e => e.title),
-        ...events.map(e => e.location.city),
-        ...events.flatMap(e => e.categories)
+        ...events.flatMap(e => e.categories || []),
+        ...events.flatMap(e => e.tags || []),
+        ...events.map(e => e.location?.city).filter(Boolean)
       ])
-    ].slice(0, 5);
+    ]
+      .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
+      .slice(0, 8);
 
     console.log('💡 Suggestions:', suggestions);
     res.json({ events, suggestions });

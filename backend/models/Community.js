@@ -83,35 +83,7 @@ const communitySchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: [
-      // Social & Fun
-      'Meet & Mingle',
-      'Epic Screenings',
-      'Indoor & Board Games',
-      'Battle of the Beats',
-      // Creative & Culture
-      'Make & Create',
-      'Open Mics & Jams',
-      'Culture & Heritage',
-      'Underground & Street',
-      // Active & Outdoor
-      'Sweat & Play',
-      'Adventure & Outdoors',
-      'Mind & Body Recharge',
-      // Learn & Build
-      'Learn & Network',
-      'Startup Connect',
-      'Tech Unplugged',
-      // Purpose & Experiences
-      'Make a Difference',
-      'Immersive & Experiential',
-      'Indie Bazaar',
-      // Legacy Categories (for backward compatibility)
-      'Sip & Savor',
-      'Art & DIY',
-      'Social Mixers',
-      'Music & Performance'
-    ]
+    trim: true
   },
   host: {
     type: mongoose.Schema.Types.ObjectId,
@@ -194,8 +166,25 @@ const communitySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Middleware to update stats
-communitySchema.pre('save', function(next) {
+// Validate and update stats before saving
+communitySchema.pre('save', async function(next) {
+  // Note: Category validation disabled - storing category as string
+  // TODO: If you create a Category model in the future, uncomment validation below
+  /*
+  if (this.isModified('category') && this.category) {
+    try {
+      const Category = mongoose.model('Category');
+      const validCategory = await Category.findOne({ name: this.category });
+      if (!validCategory) {
+        throw new Error(`Invalid category: ${this.category}. Please use a valid category name from the Category collection.`);
+      }
+    } catch (error) {
+      return next(error);
+    }
+  }
+  */
+  
+  // Update stats
   this.stats.totalMembers = this.members.length;
   
   if (this.testimonials.length > 0) {
@@ -205,6 +194,24 @@ communitySchema.pre('save', function(next) {
   
   next();
 });
+
+// Note: Category analytics disabled - no Category model exists
+// TODO: If you create a Category model in the future, uncomment this hook
+/*
+communitySchema.post('save', async function(doc) {
+  if (doc.category) {
+    try {
+      const Category = mongoose.model('Category');
+      await Category.findOneAndUpdate(
+        { name: doc.category },
+        { $inc: { 'analytics.communityCount': 1 } }
+      );
+    } catch (error) {
+      console.error('Failed to update category analytics:', error);
+    }
+  }
+});
+*/
 
 // Virtual field for memberCount (for backward compatibility)
 communitySchema.virtual('memberCount').get(function() {

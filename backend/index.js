@@ -12,6 +12,14 @@ const recommendationRoutes = require('./routes/recommendations.js');
 const otpRoutes = require('./routes/otp.js');
 const exploreRoutes = require('./routes/explore.js');
 const paymentRoutes = require('./routes/payments.js');
+const categoryRoutes = require('./routes/categories.js');
+const organizerRoutes = require('./routes/organizer.js');
+const venueRoutes = require('./routes/venues.js');
+const brandRoutes = require('./routes/brands.js');
+const collaborationRoutes = require('./routes/collaborations.js');
+const adminRoutes = require('./routes/admin.js');
+const userDashboardRoutes = require('./routes/userDashboard.js');
+const reviewRoutes = require('./routes/reviews.js');
 
 const app = express();
 
@@ -95,12 +103,21 @@ app.use(async (req, res, next) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/events', reviewRoutes); // Review routes under /api/events
+app.use('/api/reviews', reviewRoutes); // Also accessible under /api/reviews
 app.use('/api/users', userRoutes);
+app.use('/api/users', userDashboardRoutes); // User dashboard endpoints
 app.use('/api/communities', communityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/explore', exploreRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/organizer', organizerRoutes);
+app.use('/api/venues', venueRoutes);
+app.use('/api/brands', brandRoutes);
+app.use('/api/collaborations', collaborationRoutes);
+app.use('/api/admin', adminRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
@@ -109,7 +126,13 @@ console.log('✅ All routes registered:', [
   '/api/communities',
   '/api/recommendations',
   '/api/explore',
-  '/api/payments'
+  '/api/payments',
+  '/api/categories',
+  '/api/organizer',
+  '/api/venues',
+  '/api/brands',
+  '/api/collaborations',
+  '/api/admin'
 ]);
 
 // Health check route
