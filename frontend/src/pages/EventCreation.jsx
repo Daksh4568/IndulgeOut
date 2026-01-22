@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, UserPlus, ChevronDown, Upload, X, Image, Search } from 'lucide-react'
-import DarkModeToggle from '../components/DarkModeToggle'
+import NavigationBar from '../components/NavigationBar'
 import axios from 'axios'
-import API_BASE_URL from '../config/api.js'
+import API_BASE_URL, { API_URL } from '../config/api.js'
 import { useAuth } from '../contexts/AuthContext'
 import { ToastContext } from '../App'
 import { EVENT_CATEGORIES, COMMUNITIES } from '../constants/eventConstants'
@@ -11,6 +11,8 @@ import locationService from '../services/locationService'
 
 const EventCreation = () => {
   const navigate = useNavigate()
+  const { id: eventId } = useParams()
+  const isEditMode = Boolean(eventId)
   const { user } = useAuth()
   const toast = useContext(ToastContext)
   const locationSearchRef = useRef(null)
@@ -60,8 +62,10 @@ const EventCreation = () => {
   const [filteredStates, setFilteredStates] = useState([])
   const [showCityDropdown, setShowCityDropdown] = useState(false)
   const [showStateDropdown, setShowStateDropdown] = useState(false)
-
-  const categories = EVENT_CATEGORIES
+  const [categories, setCategories] = useState([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
+  const [categoryAnalytics, setCategoryAnalytics] = useState([])
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
 
   const communities = COMMUNITIES
 
@@ -78,6 +82,145 @@ const EventCreation = () => {
     'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
     'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi'
   ]
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true)
+        const response = await fetch(`${API_URL}/api/categories/flat`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories')
+        }
+
+        const data = await response.json()
+        
+        if (data.success && data.categories) {
+          // Transform API categories to match the format expected by the form
+          const formattedCategories = data.categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            emoji: cat.emoji
+          }))
+          setCategories(formattedCategories)
+        } else {
+          throw new Error('Invalid response format')
+        }
+      } catch (error) {
+        console.error('Error fetching categories, using fallback:', error)
+        // Fallback to hardcoded categories
+        setCategories(EVENT_CATEGORIES)
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+
+    const fetchCategoryAnalytics = async () => {
+      try {
+        setLoadingAnalytics(true)
+        const response = await axios.get(`${API_BASE_URL}/api/categories/popular?limit=10`)
+        
+        if (response.data.categories) {
+          setCategoryAnalytics(response.data.categories)
+        }
+      } catch (error) {
+        console.error('Error fetching category analytics:', error)
+        setCategoryAnalytics([])
+      } finally {
+        setLoadingAnalytics(false)
+      }
+    }
+
+    fetchCategories()
+    fetchCategoryAnalytics()
+  }, [])
+
+  // Fetch event data if in edit mode
+  useEffect(() => {
+    const fetchEventData = async () => {
+      if (!isEditMode || !eventId) return
+
+      try {
+        setIsLoading(true)
+        const token = localStorage.getItem('token')
+        const response = await axios.get(`${API_BASE_URL}/api/events/${eventId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        const event = response.data.event || response.data
+        console.log('Loaded event data:', event)
+        
+        // Format date for input (YYYY-MM-DD)
+        let formattedDate = ''
+        if (event.date) {
+          try {
+            const eventDate = new Date(event.date)
+            if (!isNaN(eventDate.getTime())) {
+              formattedDate = eventDate.toISOString().split('T')[0]
+            }
+          } catch (err) {
+            console.error('Error formatting date:', err)
+          }
+        }
+
+        // Populate form with existing event data
+        setFormData({
+          title: event.title || '',
+          description: event.description || '',
+          categories: event.categories || [],
+          date: formattedDate,
+          time: event.time || '',
+          location: {
+            address: event.location?.address || '',
+            city: event.location?.city || '',
+            state: event.location?.state || '',
+            zipCode: event.location?.zipCode || '',
+            coordinates: {
+              latitude: event.location?.coordinates?.latitude || null,
+              longitude: event.location?.coordinates?.longitude || null
+            }
+          },
+          maxParticipants: event.maxParticipants || '',
+          price: {
+            amount: event.price?.amount || 0,
+            currency: event.price?.currency || 'USD'
+          },
+          community: event.community || '',
+          coHosts: event.coHosts || [],
+          requirements: event.requirements || [],
+          isPrivate: event.isPrivate || false
+        })
+
+        // Set location query for display
+        if (event.location?.address) {
+          setLocationQuery(event.location.address)
+        }
+
+        // Set uploaded images if they exist
+        if (event.images && event.images.length > 0) {
+          const imageObjects = event.images.map((url, index) => ({
+            url,
+            public_id: `existing_${index}`,
+            resource_type: 'image'
+          }))
+          setUploadedImages(imageObjects)
+        }
+
+        toast.success('Event loaded for editing')
+      } catch (error) {
+        console.error('Error fetching event:', error)
+        toast.error('Failed to load event data')
+        navigate('/organizer/dashboard')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchEventData()
+  }, [isEditMode, eventId])
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -100,11 +243,12 @@ const EventCreation = () => {
   }
 
   const handleCategoryToggle = (category) => {
+    const categoryName = typeof category === 'string' ? category : category.name;
     setFormData(prev => ({
       ...prev,
-      categories: prev.categories.includes(category)
-        ? prev.categories.filter(c => c !== category)
-        : [...prev.categories, category].slice(0, 3) // Max 3 categories
+      categories: prev.categories.includes(categoryName)
+        ? prev.categories.filter(c => c !== categoryName)
+        : [...prev.categories, categoryName].slice(0, 3) // Max 3 categories
     }))
   }
 
@@ -579,24 +723,36 @@ const EventCreation = () => {
         images: uploadedImages.map(img => img.url) // Send Cloudinary URLs
       }
 
-      // Make API call to create event
-      const response = await axios.post(`${API_BASE_URL}/api/events`, eventData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      console.log('Event created successfully:', response.data)
-      toast.success('Event created successfully!')
+      let response
+      if (isEditMode) {
+        // Update existing event
+        response = await axios.put(`${API_BASE_URL}/api/events/${eventId}`, eventData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        console.log('Event updated successfully:', response.data)
+        toast.success('Event updated successfully!')
+      } else {
+        // Create new event
+        response = await axios.post(`${API_BASE_URL}/api/events`, eventData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        console.log('Event created successfully:', response.data)
+        toast.success('Event created successfully!')
+      }
       
       // Navigate back to dashboard
-      navigate('/dashboard')
+      navigate('/organizer/dashboard')
     } catch (error) {
-      console.error('Failed to create event:', error)
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} event:`, error)
       if (error.response) {
         // Server responded with error status
-        const errorMessage = error.response.data.message || 'Failed to create event'
+        const errorMessage = error.response.data.message || `Failed to ${isEditMode ? 'update' : 'create'} event`
         const errors = error.response.data.errors
         
         if (errors && errors.length > 0) {
@@ -614,21 +770,26 @@ const EventCreation = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Header */}
+      {/* Navigation Bar with Logo */}
+      <NavigationBar />
+      
+      {/* Page Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <button
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 mr-4 transition-colors"
+                onClick={() => navigate('/organizer/dashboard')}
+                className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5 mr-1" />
-                Back
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                <span>{isEditMode ? 'Back to Dashboard' : 'Back to Dashboard'}</span>
               </button>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Create New Event</h1>
             </div>
-            <DarkModeToggle />
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {isEditMode ? 'Edit Event' : 'Create New Event'}
+            </h1>
+            <div className="w-32"></div>
           </div>
         </div>
       </div>
@@ -739,17 +900,52 @@ const EventCreation = () => {
             {showCategoryDropdown && (
               <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg transition-colors">
                 <div className="p-4">
+                  {/* Category Analytics - Trending Categories */}
+                  {!loadingAnalytics && categoryAnalytics.length > 0 && (
+                    <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-600">
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 flex items-center">
+                        🔥 Popular Categories
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {categoryAnalytics.slice(0, 6).map((cat) => (
+                          <button
+                            key={cat.name}
+                            type="button"
+                            onClick={() => handleCategoryToggle(cat)}
+                            disabled={formData.categories.length >= 3 && !formData.categories.includes(cat.name)}
+                            className={`p-2 rounded-lg text-left text-xs border transition-all ${
+                              formData.categories.includes(cat.name)
+                                ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-300'
+                                : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-750'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            <div className="font-medium">{cat.emoji} {cat.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {cat.eventCount} events · {cat.totalParticipants} attendees
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All Categories */}
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                    All Categories
+                  </h4>
                   <div className="grid grid-cols-1 gap-2">
                     {categories.map((category) => (
-                      <label key={category} className="flex items-center">
+                      <label key={category.id || category.name} className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={formData.categories.includes(category)}
+                          checked={formData.categories.includes(category.name)}
                           onChange={() => handleCategoryToggle(category)}
-                          disabled={formData.categories.length >= 3 && !formData.categories.includes(category)}
+                          disabled={formData.categories.length >= 3 && !formData.categories.includes(category.name)}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                         />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{category}</span>
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          {category.emoji} {category.name}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -1199,10 +1395,10 @@ const EventCreation = () => {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating Event...
+                  {isEditMode ? 'Updating Event...' : 'Creating Event...'}
                 </div>
               ) : (
-                'Create Event'
+                isEditMode ? 'Update Event' : 'Create Event'
               )}
             </button>
           </div>

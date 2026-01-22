@@ -111,8 +111,8 @@ const InterestSelection = () => {
           // Community members (hosts) go to dashboard where they can create/manage events
           navigate('/dashboard')
         } else {
-          // Regular users go to events page to discover events
-          navigate('/events')
+          // Regular users go to explore page to discover events
+          navigate('/explore')
         }
       } else {
         toast.error('Failed to update interests. Please try again.')
@@ -220,14 +220,14 @@ const InterestSelection = () => {
               </div>
             ) : (
               <div className="flex items-center">
-                {isCommunityMember ? 'Continue to Dashboard' : 'Continue to Events'}
+                {isCommunityMember ? 'Continue to Dashboard' : 'Continue to Explore'}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </div>
             )}
           </button>
 
           <button
-            onClick={() => navigate(isCommunityMember ? '/dashboard' : '/events')}
+            onClick={() => navigate(isCommunityMember ? '/dashboard' : '/explore')}
             className="mt-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline transition-colors"
           >
             Skip for now

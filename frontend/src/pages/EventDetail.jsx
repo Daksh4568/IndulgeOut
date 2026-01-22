@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -18,7 +18,7 @@ import {
   User
 } from 'lucide-react';
 import API_BASE_URL from '../config/api.js';
-import DarkModeToggle from '../components/DarkModeToggle';
+import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -37,40 +37,20 @@ const EventDetail = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-
-  // Mock reviews data
-  const [reviews] = useState([
-    {
-      id: 1,
-      user: { name: 'Priya Sharma', avatar: '👩‍💼' },
-      rating: 5,
-      date: '2024-10-15',
-      comment: 'Amazing event! The organization was top-notch and I learned so much. Definitely recommend to others.',
-      helpful: 12,
-      eventDate: '2024-10-10'
-    },
-    {
-      id: 2,
-      user: { name: 'Rahul Mehta', avatar: '👨‍💻' },
-      rating: 4,
-      date: '2024-10-14',
-      comment: 'Great experience overall. The venue was perfect and the activities were engaging. Worth the money!',
-      helpful: 8,
-      eventDate: '2024-10-10'
-    },
-    {
-      id: 3,
-      user: { name: 'Sneha Patel', avatar: '👩‍🎨' },
-      rating: 5,
-      date: '2024-10-13',
-      comment: 'Exceeded my expectations! The instructor was knowledgeable and the hands-on activities were fantastic.',
-      helpful: 15,
-      eventDate: '2024-10-10'
-    }
-  ]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewStats, setReviewStats] = useState(null);
+  const viewTracked = useRef(false);
 
   useEffect(() => {
     fetchEvent();
+    fetchReviews();
+    
+    // Track event view only once
+    if (!viewTracked.current) {
+      trackEventView();
+      viewTracked.current = true;
+    }
     
     // Auto-refresh event data every 30 seconds to show real-time availability
     const refreshInterval = setInterval(() => {
@@ -79,6 +59,20 @@ const EventDetail = () => {
     
     return () => clearInterval(refreshInterval);
   }, [id]);
+
+  const trackEventView = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API_BASE_URL}/api/events/${id}/view`,
+        {},
+        token ? { headers: { 'Authorization': `Bearer ${token}` } } : {}
+      );
+      console.log('Event view tracked successfully');
+    } catch (error) {
+      console.warn('Failed to track event view:', error);
+    }
+  };
 
   const fetchEvent = async () => {
     try {
@@ -107,6 +101,19 @@ const EventDetail = () => {
       setError('Event not found');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/api/events/${id}/reviews?limit=20`);
+      setReviews(response.data.reviews || []);
+      setReviewStats(response.data.statistics || {});
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -284,7 +291,8 @@ const EventDetail = () => {
     return CATEGORY_ICONS[categoryName] || '🎉';
   };
 
-  const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
+  const averageRating = reviewStats?.avgRating || event?.avgRating || 0;
+  const totalReviews = reviewStats?.totalReviews || event?.totalReviews || 0;
 
   if (loading) {
     return (
@@ -312,23 +320,7 @@ const EventDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-900 dark:text-white" />
-              </button>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Event Details</h1>
-            </div>
-            <DarkModeToggle />
-          </div>
-        </div>
-      </header>
+      <NavigationBar />
 
       {/* Hero Section */}
       <div className="relative h-96 overflow-hidden">
@@ -494,78 +486,130 @@ const EventDetail = () => {
                         <span className="font-medium text-gray-900 dark:text-white">
                           {averageRating.toFixed(1)}
                         </span>
-                        <span className="text-gray-600 dark:text-gray-400">({reviews.length} reviews)</span>
+                        <span className="text-gray-600 dark:text-gray-400">({totalReviews} reviews)</span>
                       </div>
                     </div>
                     
                     {/* Rating breakdown */}
-                    <div className="space-y-2">
-                      {[5, 4, 3, 2, 1].map((rating) => {
-                        const count = reviews.filter(r => r.rating === rating).length;
-                        const percentage = (count / reviews.length) * 100;
-                        return (
-                          <div key={rating} className="flex items-center gap-3">
-                            <span className="text-sm w-8">{rating}★</span>
-                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div 
-                                className="bg-yellow-400 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${percentage}%` }}
-                              ></div>
+                    {reviewStats?.ratingDistribution && (
+                      <div className="space-y-2">
+                        {[5, 4, 3, 2, 1].map((rating) => {
+                          const count = reviewStats.ratingDistribution[rating] || 0;
+                          const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                          return (
+                            <div key={rating} className="flex items-center gap-3">
+                              <span className="text-sm w-8">{rating}★</span>
+                              <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className="bg-yellow-400 h-2 rounded-full transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-gray-600 dark:text-gray-400 w-8">{count}</span>
                             </div>
-                            <span className="text-sm text-gray-600 dark:text-gray-400 w-8">{count}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Individual Reviews */}
-                  <div className="space-y-4">
-                    {reviews.map((review, index) => (
-                      <div 
-                        key={review.id} 
-                        className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm animate-slideInLeft"
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-lg">
-                              {review.user.avatar}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900 dark:text-white">{review.user.name}</div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                {new Date(review.date).toLocaleDateString('en-IN')}
+                  {reviewsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <div className="space-y-4">
+                      {reviews.map((review, index) => (
+                        <div 
+                          key={review._id} 
+                          className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm animate-slideInLeft"
+                          style={{ animationDelay: `${index * 0.1}s` }}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-lg">
+                                {review.user?.profilePicture ? (
+                                  <img src={review.user.profilePicture} alt={review.user.name} className="w-full h-full rounded-full object-cover" />
+                                ) : (
+                                  review.user?.name?.charAt(0).toUpperCase()
+                                )}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <div className="font-medium text-gray-900 dark:text-white">{review.user?.name}</div>
+                                  {review.isVerifiedAttendee && (
+                                    <CheckCircle className="h-4 w-4 text-green-500" title="Verified Attendee" />
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                  {new Date(review.createdAt).toLocaleDateString('en-IN')}
+                                </div>
                               </div>
                             </div>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < review.rating 
+                                      ? 'text-yellow-400 fill-current' 
+                                      : 'text-gray-300 dark:text-gray-600'
+                                  }`}
+                                />
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating 
-                                    ? 'text-yellow-400 fill-current' 
-                                    : 'text-gray-300 dark:text-gray-600'
-                                }`}
-                              />
-                            ))}
+                          <p className="text-gray-600 dark:text-gray-400 mb-3">{review.comment}</p>
+                          
+                          {/* Review Photos */}
+                          {review.photos && review.photos.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2 mb-3">
+                              {review.photos.map((photo, idx) => (
+                                <img 
+                                  key={idx} 
+                                  src={photo} 
+                                  alt={`Review photo ${idx + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg"
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                            <button className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+                              <ThumbsUp className="h-4 w-4" />
+                              Helpful ({review.helpfulCount || 0})
+                            </button>
                           </div>
+
+                          {/* Host Response */}
+                          {review.response && (
+                            <div className="mt-4 ml-8 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-l-2 border-indigo-500">
+                              <div className="flex items-center gap-2 mb-2">
+                                <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <span className="font-medium text-sm text-indigo-600 dark:text-indigo-400">Host Response</span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">{review.response.text}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                {new Date(review.response.respondedAt).toLocaleDateString('en-IN')}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-gray-600 dark:text-gray-400 mb-3">{review.comment}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                          <button className="flex items-center gap-1 hover:text-blue-600 transition-colors">
-                            <ThumbsUp className="h-4 w-4" />
-                            Helpful ({review.helpful})
-                          </button>
-                          <button className="flex items-center gap-1 hover:text-blue-600 transition-colors">
-                            <MessageCircle className="h-4 w-4" />
-                            Reply
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
+                      <Star className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        No reviews yet
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Be the first to review this event!
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

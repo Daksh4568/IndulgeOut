@@ -36,7 +36,19 @@ const Login = () => {
       })
       
       if (result.success) {
-        navigate('/dashboard')
+        // Route based on user role
+        const { user } = result
+        if (user.role === 'admin') {
+          navigate('/admin/dashboard')
+        } else if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
+          navigate('/organizer/dashboard')
+        } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
+          navigate('/venue/dashboard')
+        } else if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
+          navigate('/brand/dashboard')
+        } else {
+          navigate('/dashboard')
+        }
       } else {
         setError(result.error)
       }

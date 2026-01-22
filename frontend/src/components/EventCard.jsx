@@ -1,9 +1,11 @@
 import { MapPin, Calendar, Users, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { CATEGORY_ICONS } from '../constants/eventConstants';
 
 const EventCard = ({ event, onFavorite, showLoginPrompt }) => {
   const [isFavorited, setIsFavorited] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleFavorite = (e) => {
     e.preventDefault();
@@ -27,6 +29,8 @@ const EventCard = ({ event, onFavorite, showLoginPrompt }) => {
     return timeString;
   };
 
+  const isPastEvent = new Date(event.date) < new Date();
+
   const getPriceBadge = () => {
     if (event.price?.amount === 0) {
       return <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">Free</span>;
@@ -47,22 +51,56 @@ const EventCard = ({ event, onFavorite, showLoginPrompt }) => {
     return moodMap[mood] || '🎉';
   };
 
+  const getCategoryIcon = () => {
+    // Handle both 'categories' array and 'category' string
+    const category = event.categories?.[0] || event.category;
+    
+    if (category) {
+      // Try exact match first
+      if (CATEGORY_ICONS[category]) {
+        return CATEGORY_ICONS[category];
+      }
+      
+      // Try case-insensitive match
+      const categoryKey = Object.keys(CATEGORY_ICONS).find(
+        key => key.toLowerCase() === category.toLowerCase()
+      );
+      
+      if (categoryKey) {
+        return CATEGORY_ICONS[categoryKey];
+      }
+    }
+    
+    // Default fallback
+    return '🎉';
+  };
+
   return (
     <Link
       to={`/events/${event._id}`}
-      className="group block bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+      className={`group block bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''}`}
     >
       {/* Image */}
       <div className="relative aspect-video overflow-hidden bg-gray-200 dark:bg-gray-700">
-        {event.images && event.images.length > 0 ? (
+        {isPastEvent && (
+          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10">
+            <span className="bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-semibold">
+              Event Ended
+            </span>
+          </div>
+        )}
+        {event.images && event.images.length > 0 && !imageError ? (
           <img
             src={event.images[0]}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            onError={() => setImageError(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <Calendar className="h-16 w-16" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
+            <span className="text-9xl" role="img" aria-label="category icon">
+              {getCategoryIcon()}
+            </span>
           </div>
         )}
         

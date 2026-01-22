@@ -1,9 +1,9 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, Image, Plus, MapPin, Users, Globe, Instagram, Facebook, Twitter, Linkedin } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
 import axios from 'axios';
-import API_BASE_URL from '../config/api.js';
+import API_BASE_URL, { API_URL } from '../config/api.js';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import { EVENT_CATEGORIES } from '../constants/eventConstants';
@@ -42,9 +42,44 @@ const CommunityCreation = () => {
   });
 
   const [currentTag, setCurrentTag] = useState('');
+  const [communityCategories, setCommunityCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Use all categories from EVENT_CATEGORIES (includes all 21 categories)
-  const communityCategories = EVENT_CATEGORIES;
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await fetch(`${API_URL}/api/categories/flat`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.categories) {
+          // Transform API categories to match the format expected by the form
+          const formattedCategories = data.categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            emoji: cat.emoji
+          }));
+          setCommunityCategories(formattedCategories);
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error fetching categories, using fallback:', error);
+        // Fallback to hardcoded categories
+        setCommunityCategories(EVENT_CATEGORIES);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -283,8 +318,8 @@ const CommunityCreation = () => {
                   >
                     <option value="">Select a category</option>
                     {communityCategories.map(category => (
-                      <option key={category} value={category}>
-                        {category}
+                      <option key={category.id || category.name || category} value={category.name || category}>
+                        {category.emoji ? `${category.emoji} ` : ''}{category.name || category}
                       </option>
                     ))}
                   </select>

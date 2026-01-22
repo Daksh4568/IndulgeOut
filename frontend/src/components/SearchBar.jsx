@@ -66,6 +66,8 @@ const SearchBar = ({ onSearch, placeholder = "Search events, communities, people
     // Set new timeout for debounce
     timeoutRef.current = setTimeout(() => {
       debouncedSearch(value);
+      // Trigger real-time search in parent component
+      onSearch(value);
     }, 300);
   };
 

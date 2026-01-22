@@ -14,20 +14,57 @@ const CategoryDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const category = getCategoryBySlug(slug);
+  const fallbackCategory = getCategoryBySlug(slug);
 
+  const [category, setCategory] = useState(fallbackCategory);
   const [events, setEvents] = useState([]);
   const [communities, setCommunities] = useState([]);
   const [filters, setFilters] = useState({});
   const [loading, setLoading] = useState(true);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  // Fetch category from API
+  useEffect(() => {
+    if (slug) {
+      fetchCategory();
+    }
+  }, [slug]);
+
+  const fetchCategory = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/categories/${slug}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch category');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.category) {
+        setCategory(data.category);
+        setUsingFallback(false);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error('Error fetching category, using fallback:', error);
+      // Fallback to frontend constants
+      if (fallbackCategory) {
+        setCategory(fallbackCategory);
+        setUsingFallback(true);
+      } else {
+        navigate('/categories');
+      }
+    }
+  };
 
   // If category not found, redirect to categories page
   useEffect(() => {
-    if (!category) {
+    if (!category && !fallbackCategory) {
       navigate('/categories');
     }
-  }, [category, navigate]);
+  }, [category, fallbackCategory, navigate]);
 
   // Fetch events and communities for this category
   useEffect(() => {
@@ -132,6 +169,17 @@ const CategoryDetail = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <NavigationBar />
 
+      {/* Fallback Mode Indicator */}
+      {usingFallback && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <p className="text-yellow-800 dark:text-yellow-200 text-sm text-center">
+              ℹ️ Viewing cached category data (API unavailable)
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className={`relative bg-gradient-to-br ${category.color} pt-24 pb-16 overflow-hidden`}>
         {/* Pattern Overlay */}
@@ -211,13 +259,19 @@ const CategoryDetail = () => {
           {/* Stats */}
           <div className="flex justify-center gap-8 mt-8 text-white">
             <div className="text-center">
-              <div className="text-3xl font-bold">{events.length}+</div>
+              <div className="text-3xl font-bold">{category.analytics?.eventCount || events.length}+</div>
               <div className="text-white/75">Events</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold">{communities.length}+</div>
+              <div className="text-3xl font-bold">{category.analytics?.communityCount || communities.length}+</div>
               <div className="text-white/75">Communities</div>
             </div>
+            {category.analytics?.views > 0 && (
+              <div className="text-center">
+                <div className="text-3xl font-bold">{category.analytics.views}</div>
+                <div className="text-white/75">Views</div>
+              </div>
+            )}
           </div>
         </div>
       </section>

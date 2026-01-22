@@ -593,10 +593,13 @@ function Homepage() {
           muted
           playsInline
           preload="metadata"
-          poster="/images/video-poster.jpg"
+          poster="/images/placeholder.png"
           className="absolute top-0 left-0 w-full h-full object-cover"
         >
-          <source src="/videos/Website Video.mp4" type="video/mp4" />
+          {/* Cloudinary optimized video - auto quality and format */}
+          <source src="https://res.cloudinary.com/dtxgkrfdn/video/upload/q_auto:best,f_auto/v1768809157/Website_Video_tdrkqe.mp4" type="video/mp4" />
+          {/* Direct Cloudinary MP4 fallback */}
+          <source src="https://res.cloudinary.com/dtxgkrfdn/video/upload/v1768809157/Website_Video_tdrkqe.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
         

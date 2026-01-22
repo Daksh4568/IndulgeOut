@@ -116,7 +116,12 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     updateUserInterests,
     isAuthenticated: !!user,
-    isCommunityMember: user?.role === 'community_member'
+    // Legacy support: old 'community_member' role OR new host_partner system
+    isCommunityMember: user?.role === 'community_member' || user?.role === 'host_partner',
+    isHostPartner: user?.role === 'host_partner',
+    isCommunityOrganizer: user?.role === 'host_partner' && user?.hostPartnerType === 'community_organizer',
+    isVenue: user?.role === 'host_partner' && user?.hostPartnerType === 'venue',
+    isBrandSponsor: user?.role === 'host_partner' && user?.hostPartnerType === 'brand_sponsor'
   };
 
   return (

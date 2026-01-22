@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, UserPlus, Users, Home } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, Users, Home, Building2, Sparkles, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import DarkModeToggle from '../components/DarkModeToggle'
 
@@ -15,13 +15,15 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     phoneNumber: '',
-    role: searchParams.get('type') === 'host' ? 'community_member' : 'user'
+    role: searchParams.get('type') === 'host' ? 'host_partner' : 'user',
+    hostPartnerType: searchParams.get('type') === 'host' ? 'community_organizer' : ''
   })
   
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false)
 
   const handleChange = (e) => {
     setFormData({
@@ -65,11 +67,24 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         phoneNumber: formData.phoneNumber || undefined,
-        role: formData.role
+        role: formData.role,
+        hostPartnerType: formData.hostPartnerType || undefined
       })
 
       if (result.success) {
-        navigate('/interests')
+        // Route based on role
+        if (formData.role === 'user') {
+          navigate('/interests')
+        } else if (formData.role === 'host_partner') {
+          // Route to appropriate onboarding based on hostPartnerType
+          if (formData.hostPartnerType === 'community_organizer') {
+            navigate('/onboarding/community')
+          } else if (formData.hostPartnerType === 'venue') {
+            navigate('/onboarding/venue')
+          } else if (formData.hostPartnerType === 'brand_sponsor') {
+            navigate('/onboarding/brand')
+          }
+        }
       } else {
         setError(result.error)
       }
@@ -80,8 +95,35 @@ const Register = () => {
     }
   }
 
-  const handleRoleToggle = (role) => {
-    setFormData({ ...formData, role })
+  const handleRoleToggle = (role, hostPartnerType = '') => {
+    setFormData({ 
+      ...formData, 
+      role,
+      hostPartnerType: role === 'host_partner' ? hostPartnerType : ''
+    })
+    setShowRoleDropdown(false)
+  }
+
+  const getRoleLabel = () => {
+    if (formData.role === 'user') return 'Join as User'
+    
+    const labels = {
+      'community_organizer': 'Communities & Organizers',
+      'venue': 'Venues',
+      'brand_sponsor': 'Brands & Sponsors'
+    }
+    return labels[formData.hostPartnerType] || 'Host & Partner'
+  }
+
+  const getRoleIcon = () => {
+    if (formData.role === 'user') return <UserPlus className="h-4 w-4" />
+    
+    const icons = {
+      'community_organizer': <Users className="h-4 w-4" />,
+      'venue': <Building2 className="h-4 w-4" />,
+      'brand_sponsor': <Sparkles className="h-4 w-4" />
+    }
+    return icons[formData.hostPartnerType] || <Users className="h-4 w-4" />
   }
 
   return (
@@ -117,31 +159,102 @@ const Register = () => {
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10 transition-colors duration-300">
           
           {/* Role Selection */}
-          <div className="mb-6 flex rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => handleRoleToggle('user')}
-              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                formData.role === 'user'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              <UserPlus className="h-4 w-4" />
-              Join as User
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRoleToggle('community_member')}
-              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                formData.role === 'community_member'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              <Users className="h-4 w-4" />
-              Become Host
-            </button>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              I want to
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleRoleToggle('user')}
+                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 rounded-lg ${
+                  formData.role === 'user'
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <UserPlus className="h-4 w-4" />
+                Join as User
+              </button>
+              
+              <div className="flex-1 relative">
+                <button
+                  type="button"
+                  onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                  className={`w-full py-3 px-4 text-sm font-medium transition-colors flex items-center justify-between gap-2 rounded-lg ${
+                    formData.role === 'host_partner'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    {getRoleIcon()}
+                    {formData.role === 'host_partner' ? getRoleLabel() : 'Host & Partner'}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showRoleDropdown && (
+                  <div className="absolute z-10 mt-2 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => handleRoleToggle('host_partner', 'community_organizer')}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-3 first:rounded-t-lg transition-colors"
+                    >
+                      <Users className="h-4 w-4 text-purple-600" />
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">Communities & Organizers</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Host events and build communities</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleToggle('host_partner', 'venue')}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-3 border-t border-gray-200 dark:border-gray-600 transition-colors"
+                    >
+                      <Building2 className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">Venues</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">List your space for events</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleToggle('host_partner', 'brand_sponsor')}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-3 border-t border-gray-200 dark:border-gray-600 last:rounded-b-lg transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4 text-orange-600" />
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">Brands & Sponsors</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Partner with communities and events</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Role Description */}
+            {formData.role === 'user' && (
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                🎯 Discover and join amazing events in your city
+              </p>
+            )}
+            {formData.role === 'host_partner' && formData.hostPartnerType === 'community_organizer' && (
+              <p className="mt-2 text-xs text-purple-600 dark:text-purple-400">
+                🎪 Create events, build communities, and grow your audience
+              </p>
+            )}
+            {formData.role === 'host_partner' && formData.hostPartnerType === 'venue' && (
+              <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                🏢 Monetize your space by hosting curated events
+              </p>
+            )}
+            {formData.role === 'host_partner' && formData.hostPartnerType === 'brand_sponsor' && (
+              <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                ✨ Reach engaged audiences through meaningful collaborations
+              </p>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
