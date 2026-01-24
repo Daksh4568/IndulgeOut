@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../config/api';
 import {
   ArrowLeft, Building2, Target, Users, TrendingUp, Globe,
   MessageCircle, Sparkles, CheckCircle, Award, MapPin
@@ -23,7 +23,7 @@ const BrandProfile = () => {
   const fetchBrandDetail = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/brands/${id}`);
+      const response = await api.get(`/brands/${id}`);
       setBrand(response.data);
     } catch (error) {
       console.error('Error fetching brand detail:', error);

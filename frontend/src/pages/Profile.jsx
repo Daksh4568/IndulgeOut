@@ -8,8 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import NavigationBar from '../components/NavigationBar'
-import axios from 'axios'
-import API_BASE_URL from '../config/api.js'
+import { api } from '../config/api.js'
 
 const Profile = () => {
   const navigate = useNavigate()
@@ -54,10 +53,7 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_BASE_URL}/api/users/profile`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await api.get('/users/profile')
       setProfileData(response.data.user)
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -152,13 +148,10 @@ const Profile = () => {
         }
       }
 
-      const response = await axios.put(
-        `${API_BASE_URL}/api/users/profile`,
-        updateData,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      )
+      const response = await api.put(
+        '/users/profile',
+        updateData
+      );
       
       setProfileData(response.data.user)
       setIsEditing(false)
@@ -378,7 +371,7 @@ const Profile = () => {
         {/* Community Organizer Profile */}
         {isCommunityOrganizer && profileData.communityProfile && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Users className="h-5 w-5 text-purple-600" />
               Community Profile
             </h2>
@@ -392,93 +385,160 @@ const Profile = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Primary Category</label>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{profileData.communityProfile.primaryCategory}</p>
+                  <span className="inline-block px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium">
+                    {profileData.communityProfile.primaryCategory}
+                  </span>
                 </div>
               </div>
 
-              {/* Community Type */}
-              <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Community Type</label>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  profileData.communityProfile.communityType === 'open' 
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
-                }`}>
-                  {profileData.communityProfile.communityType === 'open' ? 'Open Community' : 'Curated Community'}
-                </span>
+              {/* Community Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Members</label>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {profileData.communityProfile.memberCount || 0}
+                  </p>
+                </div>
+
+                {profileData.communityProfile.pastEventExperience && (
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Events Hosted</label>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {profileData.communityProfile.pastEventExperience}
+                    </p>
+                  </div>
+                )}
+
+                {profileData.communityProfile.typicalAudienceSize && (
+                  <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Typical Audience</label>
+                    </div>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {profileData.communityProfile.typicalAudienceSize}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Community Type & Established */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Community Type</label>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                    profileData.communityProfile.communityType === 'open' 
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                      : 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
+                  }`}>
+                    {profileData.communityProfile.communityType === 'open' ? 'Open Community' : 'Curated Community'}
+                  </span>
+                </div>
+                {profileData.communityProfile.established && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Established</label>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {new Date(profileData.communityProfile.established).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Description */}
               {profileData.communityProfile.communityDescription && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Description</label>
-                  <p className="text-gray-700 dark:text-gray-300">{profileData.communityProfile.communityDescription}</p>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">About the Community</label>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profileData.communityProfile.communityDescription}</p>
+                </div>
+              )}
+
+              {/* Past Event Photos */}
+              {profileData.communityProfile.pastEventPhotos && profileData.communityProfile.pastEventPhotos.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 block">Past Event Gallery</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {profileData.communityProfile.pastEventPhotos.map((photo, index) => (
+                      <div key={index} className="aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 hover:shadow-lg transition-shadow cursor-pointer">
+                        <img 
+                          src={photo} 
+                          alt={`Event ${index + 1}`}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Contact Person */}
               {profileData.communityProfile.contactPerson && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Contact Person</label>
-                    <p className="text-gray-900 dark:text-white">{profileData.communityProfile.contactPerson.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Email</label>
-                    <p className="text-gray-900 dark:text-white">{profileData.communityProfile.contactPerson.email}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Phone</label>
-                    <p className="text-gray-900 dark:text-white">{profileData.communityProfile.contactPerson.phone}</p>
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 block">Contact Information</label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <User className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Contact Person</p>
+                        <p className="text-gray-900 dark:text-white font-medium">{profileData.communityProfile.contactPerson.name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                        <p className="text-gray-900 dark:text-white font-medium">{profileData.communityProfile.contactPerson.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Phone className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                        <p className="text-gray-900 dark:text-white font-medium">{profileData.communityProfile.contactPerson.phone}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Social Links */}
-              {(profileData.communityProfile.instagramHandle || profileData.communityProfile.facebookPage || profileData.communityProfile.websiteUrl) && (
+              {(profileData.communityProfile.instagram || profileData.communityProfile.facebook || profileData.communityProfile.website) && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">Social Media</label>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 block">Connect With Us</label>
                   <div className="flex flex-wrap gap-3">
-                    {profileData.communityProfile.instagramHandle && (
-                      <a href={`https://instagram.com/${profileData.communityProfile.instagramHandle}`} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 rounded-lg hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors">
+                    {profileData.communityProfile.instagram && (
+                      <a href={`https://instagram.com/${profileData.communityProfile.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" 
+                         className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all font-medium">
                         <Instagram className="h-4 w-4" />
-                        @{profileData.communityProfile.instagramHandle}
+                        @{profileData.communityProfile.instagram.replace('@', '')}
                       </a>
                     )}
-                    {profileData.communityProfile.facebookPage && (
-                      <a href={profileData.communityProfile.facebookPage} target="_blank" rel="noopener noreferrer"
-                         className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                    {profileData.communityProfile.facebook && (
+                      <a href={profileData.communityProfile.facebook} target="_blank" rel="noopener noreferrer"
+                         className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all font-medium">
                         <Facebook className="h-4 w-4" />
-                        Facebook
+                        Facebook Page
                       </a>
                     )}
-                    {profileData.communityProfile.websiteUrl && (
-                      <a href={profileData.communityProfile.websiteUrl} target="_blank" rel="noopener noreferrer"
-                         className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    {profileData.communityProfile.website && (
+                      <a href={profileData.communityProfile.website} target="_blank" rel="noopener noreferrer"
+                         className="flex items-center gap-2 px-4 py-2.5 bg-gray-700 dark:bg-gray-600 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all font-medium">
                         <Globe className="h-4 w-4" />
                         Website
                       </a>
                     )}
                   </div>
-                </div>
-              )}
-
-              {/* Experience & Audience */}
-              {(profileData.communityProfile.pastEventExperience || profileData.communityProfile.typicalAudienceSize) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {profileData.communityProfile.pastEventExperience && (
-                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Events Hosted</label>
-                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{profileData.communityProfile.pastEventExperience}</p>
-                    </div>
-                  )}
-                  {profileData.communityProfile.typicalAudienceSize && (
-                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 block">Typical Audience</label>
-                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{profileData.communityProfile.typicalAudienceSize}</p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

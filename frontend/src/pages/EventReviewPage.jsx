@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import API_BASE_URL from '../config/api';
-import axios from 'axios';
+import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
 import { Star, Upload, X, ArrowLeft, Send, AlertCircle } from 'lucide-react';
 
@@ -29,14 +28,12 @@ const EventReviewPage = () => {
   const fetchEventDetails = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      const response = await axios.get(`${API_BASE_URL}/api/events/${eventId}`, { headers });
+      const response = await api.get(`/events/${eventId}`);
       setEvent(response.data.event || response.data);
 
       // Check if user already reviewed
-      const reviewsRes = await axios.get(`${API_BASE_URL}/api/events/${eventId}/reviews`, { headers });
+      const reviewsRes = await api.get(`/events/${eventId}/reviews`);
       const userReview = reviewsRes.data.reviews.find(
         r => r.user._id === user._id
       );
@@ -114,23 +111,20 @@ const EventReviewPage = () => {
       setSubmitting(true);
       setError('');
 
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       if (existingReview) {
         // Update existing review
-        await axios.put(`${API_BASE_URL}/api/reviews/${existingReview._id}`, {
+        await api.put(`/reviews/${existingReview._id}`, {
           rating,
           comment,
           photos: photoPreview
-        }, { headers });
+        });
       } else {
         // Submit new review
-        await axios.post(`${API_BASE_URL}/api/events/${eventId}/review`, {
+        await api.post(`/events/${eventId}/review`, {
           rating,
           comment,
           photos: photoPreview
-        }, { headers });
+        });
       }
 
       // Navigate to event detail page

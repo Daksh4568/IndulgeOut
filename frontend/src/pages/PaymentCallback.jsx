@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader } from 'lucide-react';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+import { api } from '../config/api';
 
 const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
@@ -25,11 +24,9 @@ const PaymentCallback = () => {
         return;
       }
 
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/api/payments/verify-payment`,
-        { orderId, eventId },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.post(
+        '/payments/verify-payment',
+        { orderId, eventId }
       );
 
       if (response.data.success) {

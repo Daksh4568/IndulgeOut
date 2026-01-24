@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Target, Mail, Phone, Globe, Instagram, Upload, X, Check, AlertCircle } from 'lucide-react'
-import axios from 'axios'
-import API_BASE_URL from '../config/api.js'
+import { api } from '../config/api.js'
 import { useAuth } from '../contexts/AuthContext'
 
 const BrandOnboarding = () => {
@@ -122,15 +121,11 @@ const BrandOnboarding = () => {
     setError('')
 
     try {
-      const token = localStorage.getItem('token')
-      await axios.put(
-        `${API_BASE_URL}/api/users/profile`,
+      await api.put(
+        '/users/profile',
         {
           brandProfile: formData,
           onboardingCompleted: true
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
         }
       )
 

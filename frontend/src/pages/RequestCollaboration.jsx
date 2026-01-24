@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../config/api';
 import { ArrowLeft, Send, Calendar, Users, DollarSign, MessageCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
@@ -52,7 +52,7 @@ const RequestCollaboration = () => {
     try {
       setLoading(true);
       const endpoint = isVenueRequest ? 'venues' : 'brands';
-      const response = await axios.get(`${API_URL}/api/${endpoint}/${id}`);
+      const response = await api.get(`/${endpoint}/${id}`);
       setPartner(response.data);
     } catch (error) {
       console.error('Error fetching partner detail:', error);

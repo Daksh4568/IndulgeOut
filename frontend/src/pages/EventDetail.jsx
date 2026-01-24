@@ -17,13 +17,12 @@ import {
   Ticket,
   User
 } from 'lucide-react';
-import API_BASE_URL from '../config/api.js';
+import { api } from '../config/api.js';
 import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
-import axios from 'axios';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -37,6 +36,7 @@ const EventDetail = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [quantity, setQuantity] = useState(1); // Number of slots to book
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewStats, setReviewStats] = useState(null);
@@ -62,12 +62,7 @@ const EventDetail = () => {
 
   const trackEventView = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_BASE_URL}/api/events/${id}/view`,
-        {},
-        token ? { headers: { 'Authorization': `Bearer ${token}` } } : {}
-      );
+      await api.post(`/events/${id}/view`);
       console.log('Event view tracked successfully');
     } catch (error) {
       console.warn('Failed to track event view:', error);
@@ -77,7 +72,7 @@ const EventDetail = () => {
   const fetchEvent = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/events/${id}`);
+      const response = await api.get(`/events/${id}`);
       setEvent(response.data.event); // Backend returns { event: ... }
       
       // Check if user is already registered
@@ -107,7 +102,7 @@ const EventDetail = () => {
   const fetchReviews = async () => {
     try {
       setReviewsLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/events/${id}/reviews?limit=20`);
+      const response = await api.get(`/events/${id}/reviews?limit=20`);
       setReviews(response.data.reviews || []);
       setReviewStats(response.data.statistics || {});
     } catch (error) {
@@ -132,7 +127,7 @@ const EventDetail = () => {
     }
 
     // Check if event is full before attempting registration
-    if (event.participants && event.participants.length >= event.maxParticipants) {
+    if (event.currentParticipants >= event.maxParticipants) {
       toast.error('Sorry, this event is now full!');
       await fetchEvent(); // Refresh to show current state
       return;
@@ -140,8 +135,6 @@ const EventDetail = () => {
 
     setIsRegistering(true);
     try {
-      const token = localStorage.getItem('token');
-      
       // Get ticket price from either ticketPrice field or price.amount
       const ticketPrice = event.ticketPrice || event.price?.amount || 0;
       
@@ -160,10 +153,9 @@ const EventDetail = () => {
         
         try {
           // Create payment order
-          const paymentResponse = await axios.post(
-            `${API_BASE_URL}/api/payments/create-order`,
-            { eventId: id },
-            { headers: { Authorization: `Bearer ${token}` } }
+          const paymentResponse = await api.post(
+            '/payments/create-order',
+            { eventId: id }
           );
 
           console.log('Payment order response:', paymentResponse.data);
@@ -214,11 +206,10 @@ const EventDetail = () => {
       } else {
         console.log('Free event detected. Proceeding with direct registration...');
         // Free event - proceed with direct registration
-        const response = await axios.post(
-          `${API_BASE_URL}/api/events/${id}/register`, 
-          {}, 
+        const response = await api.post(
+          `/events/${id}/register`, 
+          { quantity }, // Send quantity
           {
-            headers: { Authorization: `Bearer ${token}` },
             timeout: 10000 // 10 second timeout
           }
         );
@@ -227,9 +218,8 @@ const EventDetail = () => {
         const isFromRecommendation = sessionStorage.getItem('recommendationSource') === 'true';
         if (isFromRecommendation) {
           try {
-            await axios.post(`${API_BASE_URL}/api/recommendations/track/register`, 
-              { eventId: id },
-              { headers: { Authorization: `Bearer ${token}` } }
+            await api.post('/recommendations/track/register', 
+              { eventId: id }
             );
             sessionStorage.removeItem('recommendationSource'); // Clean up
           } catch (trackingError) {
@@ -240,8 +230,10 @@ const EventDetail = () => {
         console.log('Registration response:', response.data);
         setIsRegistered(true);
         
-        // Show success message and refresh event data
-        toast.success('Successfully registered for the event! Check your dashboard to see all registered events.');
+        // Show success message
+        toast.success(`Successfully registered for ${quantity} spot${quantity > 1 ? 's' : ''}!`);
+        
+        // Refresh event data to show View Ticket button
         await fetchEvent();
       }
       
@@ -630,49 +622,96 @@ const EventDetail = () => {
                 )}
               </div>
 
+              {/* Quantity Selector - Only show if not registered, user role is 'user', and spots available */}
+              {!isRegistered && user?.role === 'user' && new Date(event.date) >= new Date() && event.currentParticipants < event.maxParticipants && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Number of Spots
+                  </label>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold transition-colors"
+                      disabled={quantity <= 1}
+                    >
+                      −
+                    </button>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white w-12 text-center">
+                      {quantity}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const availableSpots = event.maxParticipants - (event.participants?.length || 0);
+                        setQuantity(Math.min(10, availableSpots, quantity + 1));
+                      }}
+                      className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold transition-colors"
+                      disabled={quantity >= 10 || quantity >= (event.maxParticipants - (event.participants?.length || 0))}
+                    >
+                      +
+                    </button>
+                  </div>
+                  {quantity > 1 && event.price?.amount > 0 && (
+                    <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      Total: ₹{(event.price.amount * quantity).toLocaleString('en-IN')}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Registration Button */}
-              <button
-                onClick={handleRegister}
-                disabled={isRegistering || isRegistered || event.currentParticipants >= event.maxParticipants || new Date(event.date) < new Date()}
-                className={`w-full py-3 rounded-lg font-medium text-lg transition-all duration-300 ${
-                  isRegistered
-                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 cursor-not-allowed'
-                    : new Date(event.date) < new Date()
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : event.currentParticipants >= event.maxParticipants
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105'
-                } ${isRegistering ? 'animate-pulse' : ''}`}
-              >
-                {isRegistering ? (
-                  'Registering...'
-                ) : isRegistered ? (
-                  <>
-                    <CheckCircle className="inline h-5 w-5 mr-2" />
-                    Registered ✓
-                  </>
-                ) : new Date(event.date) < new Date() ? (
-                  <>
-                    <Clock className="inline h-5 w-5 mr-2" />
-                    Event Ended
-                  </>
-                ) : event.currentParticipants >= event.maxParticipants ? (
-                  <>
-                    <XCircle className="inline h-5 w-5 mr-2" />
-                    Event Full
-                  </>
-                ) : (
-                  <>
-                    <Ticket className="inline h-5 w-5 mr-2" />
-                    Register Now
-                  </>
-                )}
-              </button>
+              {isRegistered ? (
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full py-3 rounded-lg font-medium text-lg transition-all duration-300 bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <Ticket className="h-5 w-5" />
+                  View Ticket
+                </button>
+              ) : user && user.role !== 'user' ? (
+                // Non-user accounts cannot register
+                <div className="w-full py-3 px-4 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <Users className="inline h-4 w-4 mr-1" />
+                    Only regular users can register for events
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleRegister}
+                  disabled={isRegistering || event.currentParticipants >= event.maxParticipants || new Date(event.date) < new Date()}
+                  className={`w-full py-3 rounded-lg font-medium text-lg transition-all duration-300 ${
+                    new Date(event.date) < new Date()
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      : event.currentParticipants >= event.maxParticipants
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105'
+                  } ${isRegistering ? 'animate-pulse' : ''}`}
+                >
+                  {isRegistering ? (
+                    'Registering...'
+                  ) : new Date(event.date) < new Date() ? (
+                    <>
+                      <Clock className="inline h-5 w-5 mr-2" />
+                      Event Ended
+                    </>
+                  ) : event.currentParticipants >= event.maxParticipants ? (
+                    <>
+                      <XCircle className="inline h-5 w-5 mr-2" />
+                      Event Full
+                    </>
+                  ) : (
+                    <>
+                      <Ticket className="inline h-5 w-5 mr-2" />
+                      {quantity > 1 ? `Book ${quantity} Spots` : 'Register Now'}
+                    </>
+                  )}
+                </button>
+              )}
 
               {/* Availability Alert */}
               {(() => {
-                const spotsLeft = event.maxParticipants - (event.participants?.length || 0);
-                const percentFilled = ((event.participants?.length || 0) / event.maxParticipants) * 100;
+                const spotsLeft = event.maxParticipants - (event.currentParticipants || 0);
+                const percentFilled = ((event.currentParticipants || 0) / event.maxParticipants) * 100;
                 
                 if (spotsLeft === 0) {
                   return (
@@ -714,7 +753,7 @@ const EventDetail = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Total Registered</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {event.participants?.length || 0} / {event.maxParticipants}
+                    {event.currentParticipants || 0} / {event.maxParticipants}
                   </span>
                 </div>
                 
@@ -722,14 +761,14 @@ const EventDetail = () => {
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                   <div 
                     className={`h-full transition-all duration-500 ${
-                      ((event.participants?.length || 0) / event.maxParticipants) >= 0.9 
+                      ((event.currentParticipants || 0) / event.maxParticipants) >= 0.9 
                         ? 'bg-red-600' 
-                        : ((event.participants?.length || 0) / event.maxParticipants) >= 0.7 
+                        : ((event.currentParticipants || 0) / event.maxParticipants) >= 0.7 
                         ? 'bg-orange-500' 
                         : 'bg-blue-600'
                     }`}
                     style={{ 
-                      width: `${Math.min(((event.participants?.length || 0) / event.maxParticipants) * 100, 100)}%` 
+                      width: `${Math.min(((event.currentParticipants || 0) / event.maxParticipants) * 100, 100)}%` 
                     }}
                   />
                 </div>

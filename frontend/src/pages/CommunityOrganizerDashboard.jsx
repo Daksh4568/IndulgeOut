@@ -5,12 +5,11 @@ import {
   Eye, Target, Clock, ChevronRight, Plus, Edit, Copy,
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   ArrowUpRight, ArrowDownRight, Filter, Download, Bell,
-  Building2, Sparkles
+  Building2, Sparkles, QrCode
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+import { api } from '../config/api';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 
 const CommunityOrganizerDashboard = () => {
@@ -47,24 +46,15 @@ const CommunityOrganizerDashboard = () => {
     try {
       setLoading(true);
       
-      // Get auth token
-      const token = localStorage.getItem('token');
-      const axiosInstance = axios.create({
-        baseURL: API_BASE_URL,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
       // Fetch all dashboard data in parallel
       const [actionRes, eventsRes, earningsRes, analyticsRes, insightsRes] = await Promise.all([
-        axiosInstance.get('/api/organizer/action-required'),
-        axiosInstance.get('/api/organizer/events'),
-        axiosInstance.get('/api/organizer/earnings'),
-        axiosInstance.get('/api/organizer/analytics', {
+        api.get('/organizer/action-required'),
+        api.get('/organizer/events'),
+        api.get('/organizer/earnings'),
+        api.get('/organizer/analytics', {
           params: { dateRange: selectedDateRange }
         }),
-        axiosInstance.get('/api/organizer/insights')
+        api.get('/organizer/insights')
       ]);
 
       setActionItems(actionRes.data);
@@ -81,11 +71,7 @@ const CommunityOrganizerDashboard = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/api/organizer/analytics`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+      const response = await api.get('/organizer/analytics', {
         params: {
           dateRange: selectedDateRange
         }
@@ -376,16 +362,48 @@ const CommunityOrganizerDashboard = () => {
 
                   {/* Quick Actions */}
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/edit-event/${event._id}`);
-                      }}
-                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Edit</span>
-                    </button>
+                    {/* Show Analytics & Scan for live/past events with participants */}
+                    {(activeTab === 'live' || activeTab === 'past') && event.currentParticipants > 0 && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/organizer/events/${event._id}/analytics`);
+                          }}
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium transition-colors"
+                          title="View Analytics"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          <span>Analytics</span>
+                        </button>
+                        {activeTab === 'live' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/scan-tickets?eventId=${event._id}`);
+                            }}
+                            className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/40 dark:hover:bg-green-900/60 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium transition-colors"
+                            title="Scan Tickets"
+                          >
+                            <QrCode className="h-4 w-4" />
+                            <span>Scan</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {/* Edit button - only show for draft and live events, not past events */}
+                    {activeTab !== 'past' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/edit-event/${event._id}`);
+                        }}
+                        className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>Edit</span>
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

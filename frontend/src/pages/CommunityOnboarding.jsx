@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, MapPin, Mail, Phone, Instagram, Globe, Upload, X, Check, AlertCircle } from 'lucide-react'
-import axios from 'axios'
-import API_BASE_URL, { API_URL } from '../config/api.js'
+import { api, API_URL } from '../config/api.js'
 import { useAuth } from '../contexts/AuthContext'
 
 const CommunityOnboarding = () => {

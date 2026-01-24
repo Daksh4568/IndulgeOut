@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building2, MapPin, Users, Phone, Mail, Upload, X, Check, AlertCircle } from 'lucide-react'
-import axios from 'axios'
-import API_BASE_URL from '../config/api.js'
+import { api } from '../config/api.js'
 import { useAuth } from '../contexts/AuthContext'
 
 const VenueOnboarding = () => {
@@ -135,15 +134,11 @@ const VenueOnboarding = () => {
     setError('')
 
     try {
-      const token = localStorage.getItem('token')
-      await axios.put(
-        `${API_BASE_URL}/api/users/profile`,
+      await api.put(
+        '/users/profile',
         {
           venueProfile: formData,
           onboardingCompleted: true
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
         }
       )
 

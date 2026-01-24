@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, UserPlus, ChevronDown, Upload, X, Image, Search } from 'lucide-react'
 import NavigationBar from '../components/NavigationBar'
-import axios from 'axios'
-import API_BASE_URL, { API_URL } from '../config/api.js'
+import { api, API_URL } from '../config/api.js'
 import { useAuth } from '../contexts/AuthContext'
 import { ToastContext } from '../App'
 import { EVENT_CATEGORIES, COMMUNITIES } from '../constants/eventConstants'
@@ -119,7 +118,7 @@ const EventCreation = () => {
     const fetchCategoryAnalytics = async () => {
       try {
         setLoadingAnalytics(true)
-        const response = await axios.get(`${API_BASE_URL}/api/categories/popular?limit=10`)
+        const response = await api.get('/categories/popular?limit=10')
         
         if (response.data.categories) {
           setCategoryAnalytics(response.data.categories)
@@ -143,21 +142,26 @@ const EventCreation = () => {
 
       try {
         setIsLoading(true)
-        const token = localStorage.getItem('token')
-        const response = await axios.get(`${API_BASE_URL}/api/events/${eventId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+        const response = await api.get(`/events/${eventId}`)
 
         const event = response.data.event || response.data
         console.log('Loaded event data:', event)
+        
+        // Check if event is in the past - prevent editing past events
+        const eventDate = new Date(event.date)
+        const now = new Date()
+        now.setHours(0, 0, 0, 0) // Reset time to start of today
+        
+        if (eventDate < now) {
+          toast.error('❌ Cannot edit past events. This event has already occurred.')
+          navigate('/organizer/dashboard')
+          return
+        }
         
         // Format date for input (YYYY-MM-DD)
         let formattedDate = ''
         if (event.date) {
           try {
-            const eventDate = new Date(event.date)
             if (!isNaN(eventDate.getTime())) {
               formattedDate = eventDate.toISOString().split('T')[0]
             }
@@ -704,14 +708,6 @@ const EventCreation = () => {
     setIsLoading(true)
 
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('token')
-      if (!token) {
-        toast.warning('Please log in to create an event')
-        navigate('/login')
-        return
-      }
-
       console.log('Event data:', formData)
       
       // Prepare the event data for the API
@@ -726,22 +722,12 @@ const EventCreation = () => {
       let response
       if (isEditMode) {
         // Update existing event
-        response = await axios.put(`${API_BASE_URL}/api/events/${eventId}`, eventData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        response = await api.put(`/events/${eventId}`, eventData)
         console.log('Event updated successfully:', response.data)
         toast.success('Event updated successfully!')
       } else {
         // Create new event
-        response = await axios.post(`${API_BASE_URL}/api/events`, eventData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        response = await api.post('/events', eventData)
         console.log('Event created successfully:', response.data)
         toast.success('Event created successfully!')
       }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../config/api';
 import {
   MapPin, Users, Search, Filter, Building2, Coffee, 
   Music, Dumbbell, Home, Briefcase, Wine, Star,
@@ -87,9 +87,7 @@ const BrowseVenues = () => {
   const fetchVenues = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/venues/browse`, {
-        headers: user ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}
-      });
+      const response = await api.get('/venues/browse');
       setVenues(response.data);
       setFilteredVenues(response.data);
     } catch (error) {

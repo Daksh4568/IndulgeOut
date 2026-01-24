@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../config/api';
 import {
   MapPin, Users, Calendar, Clock, Wifi, Car, Wind, Music,
   Projector, Utensils, Wine, Home, Activity, CheckCircle,
@@ -25,7 +25,7 @@ const VenueProfile = () => {
   const fetchVenueDetail = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/venues/${id}`);
+      const response = await api.get(`/venues/${id}`);
       setVenue(response.data);
     } catch (error) {
       console.error('Error fetching venue detail:', error);

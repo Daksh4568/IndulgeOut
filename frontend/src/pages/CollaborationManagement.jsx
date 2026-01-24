@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../config/api';
 import {
   ArrowLeft, MessageCircle, Check, X, Clock, AlertCircle,
   User, Calendar, Users, DollarSign, Send, Building2, Sparkles
@@ -34,14 +34,10 @@ const CollaborationManagement = () => {
     try {
       setLoading(true);
       const endpoint = activeTab === 'received' 
-        ? `${API_URL}/api/collaborations/received`
-        : `${API_URL}/api/collaborations/sent`;
+        ? '/collaborations/received'
+        : '/collaborations/sent';
       
-      const response = await axios.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.get(endpoint);
       
       setCollaborations(response.data);
     } catch (error) {

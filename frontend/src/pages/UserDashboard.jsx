@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
+import TicketViewer from '../components/TicketViewer';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import { 
   Calendar, MapPin, Clock, Users, Heart, Star, 
@@ -24,6 +24,8 @@ const UserDashboard = () => {
   const [peopleRecommendations, setPeopleRecommendations] = useState([]);
   const [rewards, setRewards] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [showTicketViewer, setShowTicketViewer] = useState(false);
   
   // Carousel refs
   const upcomingScrollRef = useRef(null);
@@ -38,21 +40,12 @@ const UserDashboard = () => {
     try {
       setLoading(true);
       
-      // Get auth token
-      const token = localStorage.getItem('token');
-      const api = axios.create({
-        baseURL: API_BASE_URL,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
       const [eventsRes, interestsRes, communitiesRes, peopleRes, rewardsRes] = await Promise.all([
-        api.get('/api/users/my-events'),
-        api.get('/api/users/my-interests'),
-        api.get('/api/users/my-communities'),
-        api.get('/api/users/people-recommendations'),
-        api.get('/api/users/my-rewards')
+        api.get('/users/my-events'),
+        api.get('/users/my-interests'),
+        api.get('/users/my-communities'),
+        api.get('/users/people-recommendations'),
+        api.get('/users/my-rewards')
       ]);
 
       setMyEvents(eventsRes.data);
@@ -202,7 +195,8 @@ const UserDashboard = () => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/events/${event._id}`);
+                      setSelectedTicket(event._id);
+                      setShowTicketViewer(true);
                     }}
                     className="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-semibold"
                   >
@@ -741,6 +735,17 @@ const UserDashboard = () => {
           </section>
         </div>
       </div>
+
+      {/* Ticket Viewer Modal */}
+      {showTicketViewer && (
+        <TicketViewer
+          eventId={selectedTicket}
+          onClose={() => {
+            setShowTicketViewer(false);
+            setSelectedTicket(null);
+          }}
+        />
+      )}
     </div>
   );
 };

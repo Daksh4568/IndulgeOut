@@ -2,8 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, Image, Plus, MapPin, Users, Globe, Instagram, Facebook, Twitter, Linkedin } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
-import axios from 'axios';
-import API_BASE_URL, { API_URL } from '../config/api.js';
+import { api, API_URL } from '../config/api.js';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import { EVENT_CATEGORIES } from '../constants/eventConstants';
@@ -189,23 +188,7 @@ const CommunityCreation = () => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.warning('Please log in to create a community');
-        navigate('/login');
-        return;
-      }
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/communities`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const response = await api.post('/communities', formData);
 
       if (response.data.community) {
         toast.success('Community created successfully!');

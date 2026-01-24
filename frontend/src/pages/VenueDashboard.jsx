@@ -7,8 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+import { api } from '../config/api';
 
 const VenueDashboard = () => {
   const navigate = useNavigate();
@@ -28,7 +27,7 @@ const VenueDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/venues/dashboard`);
+      const response = await api.get('/venues/dashboard');
       setDashboardData(response.data);
       setError(null);
     } catch (err) {

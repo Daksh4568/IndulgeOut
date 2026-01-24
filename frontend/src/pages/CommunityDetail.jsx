@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API_BASE_URL from '../config/api.js';
+import { api } from '../config/api.js';
 import DarkModeToggle from '../components/DarkModeToggle';
 import Testimonial3D from '../components/Testimonial3D';
 import LoginPromptModal from '../components/LoginPromptModal';
@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
-import axios from 'axios';
 
 const CommunityDetail = () => {
   const { id } = useParams();
@@ -68,7 +67,7 @@ const CommunityDetail = () => {
   const fetchCommunityData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/communities/${id}`);
+      const response = await api.get(`/communities/${id}`);
       
       if (response.data.community) {
         setCommunity(response.data.community);
@@ -88,7 +87,7 @@ const CommunityDetail = () => {
 
   const fetchHostCommunities = async (hostId) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/communities/host/${hostId}`);
+      const response = await api.get(`/communities/host/${hostId}`);
       if (response.data.communities) {
         // Filter out the current community
         const otherCommunities = response.data.communities.filter(c => c._id !== id);
@@ -113,14 +112,7 @@ const CommunityDetail = () => {
 
     try {
       setIsJoining(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/api/communities/${id}/join`,
-        {},
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      const response = await api.post(`/communities/${id}/join`, {});
       
       // Update the community state with the returned data
       if (response.data.community) {
@@ -146,14 +138,7 @@ const CommunityDetail = () => {
     if (!user) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/api/communities/${id}/leave`,
-        {},
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      const response = await api.post(`/communities/${id}/leave`, {});
       
       // Update the community state with the returned data
       if (response.data.community) {
@@ -172,14 +157,7 @@ const CommunityDetail = () => {
     if (!newPost.trim() || !user) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_BASE_URL}/api/communities/${id}/forum`,
-        { content: newPost },
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      await api.post(`/communities/${id}/forum`, { content: newPost });
       
       setNewPost('');
       fetchCommunityData();
@@ -194,14 +172,7 @@ const CommunityDetail = () => {
     if (!newTestimonial.content.trim() || !user) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_BASE_URL}/api/communities/${id}/testimonials`,
-        newTestimonial,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      await api.post(`/communities/${id}/testimonials`, newTestimonial);
       
       setNewTestimonial({ content: '', rating: 5 });
       fetchCommunityData();

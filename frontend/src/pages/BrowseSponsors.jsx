@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../config/api';
 import {
   Search, Filter, Building2, Target, TrendingUp,
   ArrowRight, X, Sparkles, Users, MapPin, Globe
@@ -86,9 +86,7 @@ const BrowseSponsors = () => {
   const fetchBrands = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/brands/browse`, {
-        headers: user ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}
-      });
+      const response = await api.get('/brands/browse');
       setBrands(response.data);
       setFilteredBrands(response.data);
     } catch (error) {
