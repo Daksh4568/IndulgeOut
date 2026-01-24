@@ -7,6 +7,7 @@ const User = require('../models/User.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
 const { authMiddleware } = require('../utils/authUtils.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
+const ticketService = require('../services/ticketService.js');
 
 const router = express.Router();
 
@@ -192,32 +193,76 @@ router.post('/', authMiddleware, [
 router.post('/:id/register', registrationLimiter, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
+    const { quantity = 1 } = req.body; // Get quantity from request, default to 1
+    
+    // Check if user is allowed to register (only regular users, not host_partner or admin)
+    const User = require('../models/User');
+    const currentUser = await User.findById(userId);
+    
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (currentUser.role !== 'user') {
+      return res.status(403).json({ 
+        message: 'Only regular users can register for events. Organizers, venues, and sponsors cannot register as attendees.' 
+      });
+    }
+    
+    // Validate quantity
+    const ticketQuantity = Math.min(Math.max(parseInt(quantity) || 1, 1), 10);
+    console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}`);
+    
+    // First check if user is already registered
+    const existingEvent = await Event.findById(req.params.id);
+    
+    if (!existingEvent) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    const alreadyRegistered = existingEvent.participants.some(
+      p => p.user.toString() === userId
+    );
+    
+    if (alreadyRegistered) {
+      return res.status(400).json({ message: 'Already registered for this event' });
+    }
+    
+    // Check if enough spots are available (use currentParticipants to account for quantity)
+    const availableSpots = existingEvent.maxParticipants - (existingEvent.currentParticipants || 0);
+    if (ticketQuantity > availableSpots) {
+      return res.status(400).json({ 
+        message: `Only ${availableSpots} spot(s) available. You requested ${ticketQuantity}.`
+      });
+    }
     
     // Use findOneAndUpdate with atomic operations to prevent race conditions
-    // This ensures that the check and update happen atomically
+    console.log(`🔄 Incrementing currentParticipants by ${ticketQuantity} for event ${req.params.id}`);
     const event = await Event.findOneAndUpdate(
       {
         _id: req.params.id,
-        // Atomic check: ensure we're under the limit
-        $expr: { $lt: [{ $size: '$participants' }, '$maxParticipants'] },
         // Ensure user isn't already registered
         'participants.user': { $ne: userId }
       },
       {
-        // Atomic update: add participant
+        // Atomic update: add participant with quantity AND increment currentParticipants by quantity
         $push: {
           participants: {
             user: userId,
             registeredAt: new Date(),
-            status: 'registered'
+            status: 'registered',
+            quantity: ticketQuantity
           }
-        }
+        },
+        $inc: { currentParticipants: ticketQuantity }
       },
       {
-        new: true, // Return updated document
+        new: true,
         runValidators: true
       }
     ).populate('host', 'name email');
+    
+    console.log(`✅ Event updated: currentParticipants is now ${event?.currentParticipants}`);
 
     if (!event) {
       // Check which condition failed
@@ -242,8 +287,8 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       return res.status(400).json({ message: 'Registration failed. Please try again.' });
     }
 
-    // Update participant count
-    await event.updateParticipantCount();
+    // currentParticipants already incremented atomically in the update query above
+    // No need to call updateParticipantCount()
 
     const user = await User.findById(req.user.userId);
     user.registeredEvents.push(event._id);
@@ -265,11 +310,33 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       // Don't fail the registration if analytics update fails
     }
 
+    // Generate ticket for the event
+    let ticket = null;
+    try {
+      ticket = await ticketService.generateTicket({
+        userId: userId,
+        eventId: event._id,
+        amount: (event.price?.amount || 0) * ticketQuantity, // Total price based on quantity
+        paymentId: req.body.paymentId || null,
+        ticketType: ticketQuantity > 1 ? 'group' : 'general',
+        quantity: ticketQuantity,
+        metadata: {
+          registrationSource: 'web',
+          registeredAt: new Date(),
+          slotsBooked: ticketQuantity
+        }
+      });
+      console.log(`✅ Ticket generated: ${ticket.ticketNumber} (${ticketQuantity} slot${ticketQuantity > 1 ? 's' : ''})`);
+    } catch (ticketError) {
+      console.error('❌ Failed to generate ticket:', ticketError);
+      // Continue without failing the registration
+    }
+
     // Send emails asynchronously without blocking the response
     // This prevents email delays from slowing down registration
     setImmediate(async () => {
       try {
-        await sendEventRegistrationEmail(user.email, user.name, event);
+        await sendEventRegistrationEmail(user.email, user.name, event, ticket);
       } catch (emailError) {
         console.error('Failed to send registration email:', emailError);
       }
@@ -285,6 +352,11 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
 
     res.json({
       message: 'Successfully registered for event',
+      ticket: ticket ? {
+        ticketNumber: ticket.ticketNumber,
+        qrCode: ticket.qrCode,
+        id: ticket._id
+      } : null,
       event: {
         id: event._id,
         title: event.title,
@@ -337,18 +409,31 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only event host can update this event' });
     }
 
+    // Prevent editing past events
+    const eventDate = new Date(event.date);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Reset time to start of today
+    
+    if (eventDate < now) {
+      return res.status(400).json({ 
+        message: '❌ Cannot edit past events. This event has already occurred.' 
+      });
+    }
+
     const updatedEvent = await Event.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     ).populate('host', 'name email');
 
+    console.log(`✅ Event updated: ${updatedEvent.title}`);
+    
     res.json({
       message: 'Event updated successfully',
       event: updatedEvent
     });
   } catch (error) {
-    console.error('Update event error:', error);
+    console.error('❌ Update event error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -422,6 +507,95 @@ router.post('/:id/view', async (req, res) => {
   } catch (error) {
     console.error('Track view error:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// @route   GET /api/events/:id/analytics
+// @desc    Get event attendance analytics with check-in status (organizer only)
+// @access  Private
+router.get('/:id/analytics', authMiddleware, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Event not found' 
+      });
+    }
+    
+    // Authorization: Only event host or co-hosts can view analytics
+    const isAuthorized = 
+      event.host.toString() === req.user.id ||
+      (event.coHosts && event.coHosts.some(coHost => coHost.toString() === req.user.id));
+    
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view analytics for this event'
+      });
+    }
+    
+    // Get all tickets for this event with user details
+    const Ticket = require('../models/Ticket');
+    const tickets = await Ticket.find({ event: eventId })
+      .populate('user', 'name email phoneNumber profilePicture')
+      .populate('checkInBy', 'name')
+      .sort({ purchaseDate: -1 });
+    
+    // Calculate statistics
+    const totalRegistered = tickets.length;
+    const checkedIn = tickets.filter(t => t.status === 'checked_in').length;
+    const notCheckedIn = tickets.filter(t => t.status === 'active').length;
+    const cancelled = tickets.filter(t => t.status === 'cancelled').length;
+    
+    // Format attendee data
+    const attendees = tickets.map(ticket => ({
+      ticketId: ticket._id, // Unique ticket ID for React key
+      userId: ticket.user._id,
+      name: ticket.user.name,
+      email: ticket.user.email,
+      phoneNumber: ticket.user.phoneNumber,
+      profilePicture: ticket.user.profilePicture,
+      ticketNumber: ticket.ticketNumber,
+      ticketType: ticket.metadata?.ticketType || 'general',
+      quantity: ticket.quantity || 1,
+      status: ticket.status,
+      purchaseDate: ticket.purchaseDate,
+      checkInTime: ticket.checkInTime,
+      checkInBy: ticket.checkInBy?.name || null
+    }));
+    
+    // Calculate total slots (sum of all quantities)
+    const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
+    
+    console.log(`✅ Analytics fetched for event: ${event.title} - ${checkedIn}/${totalRegistered} tickets, ${totalSlots} total slots`);
+    
+    res.json({
+      success: true,
+      eventId: event._id,
+      eventTitle: event.title,
+      eventDate: event.date,
+      eventTime: event.time,
+      eventLocation: event.location,
+      statistics: {
+        totalTickets: totalRegistered,
+        totalSlots,
+        checkedIn,
+        notCheckedIn,
+        cancelled,
+        attendanceRate: totalRegistered > 0 ? ((checkedIn / totalRegistered) * 100).toFixed(1) : 0
+      },
+      attendees
+    });
+  } catch (error) {
+    console.error('❌ Error fetching event analytics:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: error.message 
+    });
   }
 });
 

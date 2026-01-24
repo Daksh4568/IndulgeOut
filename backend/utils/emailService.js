@@ -91,7 +91,7 @@ const sendWelcomeEmail = async (userEmail, userName) => {
 };
 
 // Send event registration confirmation email to user
-const sendEventRegistrationEmail = async (userEmail, userName, event) => {
+const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = null) => {
   try {
     const eventDate = new Date(event.date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -100,10 +100,29 @@ const sendEventRegistrationEmail = async (userEmail, userName, event) => {
       day: 'numeric'
     });
 
+    // Build ticket section HTML if ticket is provided
+    const ticketSection = ticket ? `
+      <div style="background: white; padding: 25px; border-radius: 12px; border: 2px dashed #22c55e; margin: 25px 0; text-align: center;">
+        <h3 style="color: #22c55e; margin: 0 0 15px 0;">🎫 Your Event Ticket</h3>
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
+          <img src="${ticket.qrCode}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px auto; display: block;" />
+          <p style="color: #333; font-size: 18px; font-weight: bold; margin: 15px 0;">
+            Ticket #${ticket.ticketNumber}
+          </p>
+          <p style="color: #666; font-size: 14px; margin: 5px 0;">
+            Show this QR code at the event entrance
+          </p>
+        </div>
+        <p style="color: #666; font-size: 13px; margin-top: 15px;">
+          💡 You can also find your ticket in your dashboard
+        </p>
+      </div>
+    ` : '';
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: userEmail,
-      subject: `Registration Confirmed: ${event.title} 🎊`,
+      subject: `🎫 Your Ticket for ${event.title}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
@@ -114,8 +133,10 @@ const sendEventRegistrationEmail = async (userEmail, userName, event) => {
             <h2 style="color: #333; margin-bottom: 20px;">Hi ${userName}! 🎉</h2>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-              Great news! You're all set for this amazing event:
+              Great news! You're all set for this amazing event. Your ticket is attached below.
             </p>
+            
+            ${ticketSection}
             
             <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #22c55e; margin: 20px 0;">
               <h3 style="color: #333; margin: 0 0 15px 0;">${event.title}</h3>
@@ -127,7 +148,7 @@ const sendEventRegistrationEmail = async (userEmail, userName, event) => {
             
             <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
               <p style="color: #92400e; margin: 0;">
-                <strong>📱 What to Bring:</strong> Just yourself and an open mind! We'll take care of the rest.
+                <strong>📱 What to Bring:</strong> Just yourself, your ticket (digital or printed), and an open mind!
               </p>
             </div>
             

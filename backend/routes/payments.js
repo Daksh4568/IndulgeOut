@@ -15,6 +15,17 @@ Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY || '';
 // Set environment: 'SANDBOX' for testing, 'PRODUCTION' for live
 Cashfree.XEnvironment = process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX';
 
+// Determine Cashfree API URL based on secret key
+const CASHFREE_API_URL = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_') 
+  ? 'https://api.cashfree.com'
+  : 'https://sandbox.cashfree.com';
+
+console.log('🔑 Cashfree Configuration:', {
+  appId: process.env.CASHFREE_APP_ID?.substring(0, 10) + '...',
+  environment: Cashfree.XEnvironment,
+  apiUrl: CASHFREE_API_URL
+});
+
 // Create payment order
 router.post('/create-order', authMiddleware, async (req, res) => {
   try {
@@ -89,7 +100,7 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     // Create order with Cashfree using REST API
     const cashfreeResponse = await axios.post(
-      'https://sandbox.cashfree.com/pg/orders',
+      `${CASHFREE_API_URL}/pg/orders`,
       request,
       {
         headers: {
@@ -112,9 +123,21 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('Create payment order error:', error);
+    
+    // Log detailed error response from Cashfree
+    if (error.response) {
+      console.error('Cashfree API Error Response:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+    }
+    
     res.status(500).json({ 
       message: 'Failed to create payment order', 
-      error: error.message 
+      error: error.message,
+      cashfreeError: error.response?.data || null
     });
   }
 });
@@ -129,7 +152,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
 
     // Fetch order status from Cashfree using REST API
     const cashfreeResponse = await axios.get(
-      `https://sandbox.cashfree.com/pg/orders/${orderId}/payments`,
+      `${CASHFREE_API_URL}/pg/orders/${orderId}/payments`,
       {
         headers: {
           'Content-Type': 'application/json',

@@ -71,6 +71,12 @@ const eventSchema = new mongoose.Schema({
       type: String,
       enum: ['registered', 'attended', 'cancelled'],
       default: 'registered'
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 1,
+      max: 10
     }
   }],
   price: {

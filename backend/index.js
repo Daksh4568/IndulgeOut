@@ -19,6 +19,7 @@ const brandRoutes = require('./routes/brands.js');
 const collaborationRoutes = require('./routes/collaborations.js');
 const adminRoutes = require('./routes/admin.js');
 const userDashboardRoutes = require('./routes/userDashboard.js');
+const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
 
 const app = express();
@@ -118,6 +119,7 @@ app.use('/api/venues', venueRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
