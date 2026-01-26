@@ -142,7 +142,7 @@ const EventReviewPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-black">
         <NavigationBar />
         <div className="flex items-center justify-center h-[calc(100vh-80px)]">
           <div className="text-center">
@@ -156,7 +156,7 @@ const EventReviewPage = () => {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-black">
         <NavigationBar />
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="text-center">
@@ -177,7 +177,7 @@ const EventReviewPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-black">
       <NavigationBar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -368,3 +368,4 @@ const EventReviewPage = () => {
 };
 
 export default EventReviewPage;
+

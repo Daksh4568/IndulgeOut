@@ -50,7 +50,7 @@ const PaymentCallback = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
         {status === 'processing' && (
           <>
@@ -112,3 +112,4 @@ const PaymentCallback = () => {
 };
 
 export default PaymentCallback;
+

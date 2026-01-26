@@ -403,7 +403,7 @@ const UserDashboard = () => {
                   <div className="h-24 bg-gradient-to-br from-indigo-500 to-purple-600 relative">
                     <div className="absolute inset-0 bg-black/10"></div>
                     <div className="absolute top-3 right-3">
-                      <span className="px-3 py-1 bg-white/90 dark:bg-gray-900/90 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-full">
+                      <span className="px-3 py-1 bg-white/90 dark:bg-black/90 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-full">
                         {community.upcomingEventsCount || 0} events
                       </span>
                     </div>
@@ -636,7 +636,7 @@ const UserDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-black">
         <NavigationBar />
         <div className="flex items-center justify-center h-[calc(100vh-80px)]">
           <div className="text-center">
@@ -649,7 +649,7 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-black">
       <NavigationBar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -751,3 +751,4 @@ const UserDashboard = () => {
 };
 
 export default UserDashboard;
+

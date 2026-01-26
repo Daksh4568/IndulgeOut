@@ -127,7 +127,7 @@ const Register = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="absolute top-4 left-4">
         <button
           onClick={() => navigate('/')}
@@ -407,3 +407,4 @@ const Register = () => {
 }
 
 export default Register
+

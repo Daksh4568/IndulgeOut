@@ -72,7 +72,7 @@ function About() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
       {/* Navigation */}
       <NavigationBar />
 
@@ -183,7 +183,7 @@ function About() {
 
           <div className="space-y-16">
             {/* For Users */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 border-2 border-purple-200 dark:border-purple-800 shadow-lg">
+            <div className="bg-white dark:bg-black rounded-2xl p-8 border-2 border-purple-200 dark:border-purple-800 shadow-lg">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full">
                   <Users className="h-8 w-8 text-white" />
@@ -235,7 +235,7 @@ function About() {
             </div>
 
             {/* For Communities & Hosts */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+            <div className="bg-white dark:bg-black rounded-2xl p-8 border-2 border-blue-200 dark:border-blue-800 shadow-lg">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
                   <Sparkles className="h-8 w-8 text-white" />
@@ -287,7 +287,7 @@ function About() {
             </div>
 
             {/* For Venues & Brands */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 border-2 border-orange-200 dark:border-orange-800 shadow-lg">
+            <div className="bg-white dark:bg-black rounded-2xl p-8 border-2 border-orange-200 dark:border-orange-800 shadow-lg">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-full">
                   <Building2 className="h-8 w-8 text-white" />
@@ -410,7 +410,7 @@ function About() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 flex items-start gap-4">
+            <div className="bg-white dark:bg-black rounded-xl p-6 flex items-start gap-4">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -422,7 +422,7 @@ function About() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 flex items-start gap-4">
+            <div className="bg-white dark:bg-black rounded-xl p-6 flex items-start gap-4">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -434,7 +434,7 @@ function About() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 flex items-start gap-4">
+            <div className="bg-white dark:bg-black rounded-xl p-6 flex items-start gap-4">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -446,7 +446,7 @@ function About() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 flex items-start gap-4">
+            <div className="bg-white dark:bg-black rounded-xl p-6 flex items-start gap-4">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -653,3 +653,4 @@ function About() {
 }
 
 export default About;
+

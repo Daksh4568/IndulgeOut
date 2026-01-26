@@ -18,10 +18,35 @@ function Homepage() {
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const [photoSlideIndex, setPhotoSlideIndex] = useState(0);
+  const [currentMiddleTestimonial, setCurrentMiddleTestimonial] = useState(0);
   
   const typewriterWords = ['Find Your Tribe,'];
   const secondLineWords = 'Live Your Passions';
   const currentWord = typewriterWords[currentWordIndex];
+
+  // Middle card testimonials
+  const middleTestimonials = [
+    {
+      text: "This is crazy. This is crazy, you should see it for yourself!",
+      author: "Shubham Banerjee"
+    },
+    {
+      text: "The best part was, it's not centered around alcohol and the games were quite fun.",
+      author: "Jay Gohel"
+    },
+    {
+      text: "You guys have set the vibe!",
+      author: "Charvi Patni"
+    },
+    {
+      text: "It was completely different from my normal junkie life. We should have more of these social circles.",
+      author: "Esha Parekh"
+    },
+    {
+      text: "Keep organising such things, we'll keep coming back.",
+      author: "Anusha"
+    }
+  ];
 
   // Event photos array
   const eventPhotos = [
@@ -90,6 +115,14 @@ function Homepage() {
     const interval = setInterval(() => {
       setShowCursor(prev => !prev);
     }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-rotate middle card testimonials every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentMiddleTestimonial((prev) => (prev + 1) % middleTestimonials.length);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -220,7 +253,7 @@ function Homepage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
       {/* Custom CSS for additional animations */}
       <style>{`
         @keyframes fadeInUp {
@@ -579,6 +612,19 @@ function Homepage() {
         .card-3d:hover {
           transform: rotateY(10deg) rotateX(10deg) scale(1.05);
         }
+        
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
       
       {/* Navigation */}
@@ -604,31 +650,13 @@ function Homepage() {
         </video>
         
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         
-        {/* CTA Overlay */}
+        {/* CTA Overlay - Updated Text Only */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 z-10">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
-            Where Passions Come Alive
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 drop-shadow-2xl tracking-tight">
+            YOUR GO-TO FOR OFFLINE<br />EXPERIENCES.
           </h1>
-          <p className="text-xl md:text-2xl text-white mb-8 max-w-3xl drop-shadow-lg">
-            Connect with like-minded people through shared experiences
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              to="/login"
-              className="bg-white hover:bg-gray-100 text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl flex items-center"
-            >
-              Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </div>
         </div>
         
         {/* Scroll Indicator */}
@@ -640,568 +668,342 @@ function Homepage() {
         </div>
       </section>
 
-      {/* Creative Hobby Connection Animation */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors duration-300">
+      {/* Stats Section */}
+      <section className="py-20 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 transform transition-all duration-1000 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`}>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 text-glow-secondary">Where Passions Connect</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">Watch how IndulgeOut brings hobby enthusiasts together</p>
-          </div>
-          
-          {/* Central Hub Animation */}
-          <div className="relative flex items-center justify-center h-96">
-            {/* Central IndulgeOut Hub */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full center-pulse flex items-center justify-center text-white font-bold text-lg shadow-2xl z-20">
-                <div className="text-center">
-                  <div className="text-2xl mb-1">🤝</div>
-                  <div className="text-xs">IndulgeOut</div>
+          <div className="bg-zinc-900/50 border border-zinc-900 rounded-3xl p-8 md:p-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Stat 1 */}
+              <div className="text-center transform hover:scale-105 transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold text-indigo-400 mb-2">
+                  500+
                 </div>
+                <div className="text-base text-gray-300 font-medium">Monthly Events</div>
+              </div>
+              
+              {/* Stat 2 */}
+              <div className="text-center transform hover:scale-105 transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold text-indigo-400 mb-2">
+                  50k+
+                </div>
+                <div className="text-base text-gray-300 font-medium">Active Users</div>
+              </div>
+              
+              {/* Stat 3 */}
+              <div className="text-center transform hover:scale-105 transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold text-indigo-400 mb-2">
+                  42k+
+                </div>
+                <div className="text-base text-gray-300 font-medium">Community Members</div>
               </div>
             </div>
-            
-            {/* Hobby Icons Orbiting Around */}
-            {hobbies.map((hobby, index) => (
-              <div
-                key={index}
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  animation: `orbitalMove ${15 + index * 2}s linear infinite`,
-                  animationDelay: `${index * 0.5}s`
-                }}
-              >
-                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${hobby.color} flex items-center justify-center text-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hobby-float cursor-pointer group`}
-                     style={{animationDelay: `${index * 0.3}s`}}>
-                  <span className="group-hover:scale-125 transition-transform duration-300">
-                    {hobby.icon}
-                  </span>
-                  {/* Hobby Name Tooltip */}
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-30">
-                    {hobby.name}
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {/* Connection Lines SVG */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{zIndex: 10}}>
-              {hobbies.map((hobby, index) => {
-                const centerX = 192; // Half of container width (384px)
-                const centerY = 192; // Half of container height (384px)
-                const radius = 120;
-                const angle = (hobby.angle * Math.PI) / 180;
-                const x = centerX + radius * Math.cos(angle);
-                const y = centerY + radius * Math.sin(angle);
-                
-                return (
-                  <line
-                    key={index}
-                    x1={centerX}
-                    y1={centerY}
-                    x2={x}
-                    y2={y}
-                    stroke="rgba(34, 197, 94, 0.4)"
-                    strokeWidth="2"
-                    className="connection-line"
-                    style={{
-                      animationDelay: `${index * 0.2}s`,
-                      strokeDasharray: '5,5'
-                    }}
-                  />
-                );
-              })}
-            </svg>
-            
-            {/* Floating Connection Particles */}
-            {Array.from({length: 20}).map((_, index) => (
-              <div
-                key={index}
-                className="absolute w-2 h-2 bg-primary-400 rounded-full opacity-60 animate-ping"
-                style={{
-                  left: `${20 + Math.random() * 60}%`,
-                  top: `${20 + Math.random() * 60}%`,
-                  animationDelay: `${Math.random() * 3}s`,
-                  animationDuration: `${2 + Math.random() * 2}s`
-                }}
-              />
-            ))}
-          </div>
-          
-          {/* Interactive Phase Indicators */}
-          <div className="flex flex-wrap justify-center mt-12 space-x-2 sm:space-x-4 gap-y-2">
-            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 0 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-            }`}>
-              Discover Hobbies
-            </div>
-            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 1 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-            }`}>
-              Find Your Tribe
-            </div>
-            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 2 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-            }`}>
-              Join Events
-            </div>
-            <div className={`px-4 sm:px-6 py-3 rounded-full text-sm font-semibold transition-all duration-500 ${
-              animationPhase === 3 ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-            }`}>
-              Build Connections
-            </div>
-          </div>
-          
-          {/* Description based on current phase */}
-          <div className="text-center mt-8 h-16">
-            {animationPhase === 0 && (
-              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
-                Explore diverse hobbies from mountain climbing to book clubs
-              </p>
-            )}
-            {animationPhase === 1 && (
-              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
-                Connect with like-minded people who share your passions
-              </p>
-            )}
-            {animationPhase === 2 && (
-              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
-                Participate in exciting events and activities near you
-              </p>
-            )}
-            {animationPhase === 3 && (
-              <p className="text-lg text-gray-600 dark:text-gray-300 animate-fadeIn">
-                Form lasting friendships through shared experiences
-              </p>
-            )}
           </div>
         </div>
-        
-        {/* Background Decorative Elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-gradient-to-br from-primary-200 to-primary-300 dark:from-primary-600 dark:to-primary-700 rounded-full opacity-20 dark:opacity-30 animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-16 h-16 bg-gradient-to-br from-blue-200 to-blue-300 dark:from-blue-600 dark:to-blue-700 rounded-full opacity-20 dark:opacity-30 animate-bounce"></div>
-        <div className="absolute top-1/2 right-20 w-12 h-12 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-600 dark:to-purple-700 rounded-full opacity-20 dark:opacity-30 floating-3d"></div>
       </section>
 
-      {/* YouTube Testimonials - Vertical Video with Cards */}
-      <section className="py-20 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 relative overflow-hidden">
-        {/* Animated Background Circles */}
-        <div className="absolute top-20 left-10 w-64 h-64 bg-purple-500 rounded-full opacity-20 blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full opacity-20 blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-pink-500 rounded-full opacity-10 blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* Vox Pop Testimonials Section */}
+      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Community Testimonials</h2>
-            <p className="text-xl text-purple-200">Immersive Experience</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Our Vox pops and<br />customer testimonials
+            </h2>
+            <p className="text-xl text-gray-400">
+              Hold on, stay and watch this because you'll for sure love it. No bragging, it's honestly super candid, fun and heart-warming!
+            </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Vertical Video Player */}
-            <div className="flex justify-center">
-              <div className="relative group">
-                <div 
-                  className="aspect-[9/16] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 cursor-pointer relative bg-black transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-3xl"
-                  onClick={() => {
-                    setCurrentVideoUrl(testimonials[currentTestimonial].videoUrl + '?autoplay=1&rel=1');
-                    setVideoModalOpen(true);
-                  }}
-                >
-                  <img 
-                    src={testimonials[currentTestimonial].videoThumb}
-                    alt="Video Testimonial"
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Play Button Overlay */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/30 via-black/40 to-black/60 group-hover:from-black/40 group-hover:via-black/50 group-hover:to-black/70 transition-all duration-300">
-                    <div className="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300 shadow-2xl mb-4">
-                      <Play className="h-8 w-8 text-white ml-1" fill="currentColor" />
-                    </div>
-                    <div className="text-white text-center px-4">
-                      <p className="text-sm font-semibold mb-3">Watch on YouTube</p>
-                      <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-semibold inline-block animate-pulse">
-                        📺 Subscribe to Our Channel
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* YouTube Shorts Badge */}
-                  <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
-                    <span>▶</span> Shorts
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {/* Vox Pop 1 */}
+            <div 
+              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black transform transition-all duration-300"
+              onClick={() => {
+                setCurrentVideoUrl('https://www.youtube.com/embed/uT3Quuy_5-o?autoplay=1&rel=1');
+                setVideoModalOpen(true);
+              }}
+            >
+              <img 
+                src="https://img.youtube.com/vi/uT3Quuy_5-o/maxresdefault.jpg"
+                alt="Vox Pop 1"
+                className="w-full h-full object-cover pointer-events-none"
+              />
+              {/* Play Button Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/30 via-black/40 to-black/60 pointer-events-none">
+                <div className="w-14 h-14 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl pointer-events-none">
+                  <Play className="h-6 w-6 text-white ml-1 pointer-events-none" fill="currentColor" />
                 </div>
               </div>
             </div>
 
-            {/* Right Side - Testimonial Cards */}
-            <div className="space-y-8">
-              {/* Testimonial Card */}
-              <div className="relative">
-                <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl min-h-[280px] flex flex-col justify-between">
-                  {/* Quote Icon */}
-                  <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-xl">
-                    <span className="text-3xl text-white">"</span>
-                  </div>
-                  
-                  {/* Stars */}
-                  <div className="flex mb-6">
+            {/* Text Card - Moved to Middle with Animation */}
+            <div className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl">
+              {/* Background Image */}
+              <img 
+                src="/images/Media (5).jpg"
+                alt="Community Event"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Gradient Overlay - Light by default, full on hover */}
+              <div className="absolute inset-0 bg-gradient-to-b from-indigo-600/20 via-indigo-600/30 to-indigo-700/40 group-hover:bg-indigo-600 transition-all duration-500"></div>
+              
+              {/* Quote Icon - Top Left */}
+              <div className="absolute top-4 left-4 text-white/40 text-5xl font-serif">"</div>
+              
+              {/* Content - Always Visible with Transition */}
+              <div className="relative h-full p-6 flex flex-col justify-between items-center text-center">
+                <div className="flex-1 flex flex-col justify-center">
+                  <div className="mb-6 transition-opacity duration-700">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-6 w-6 text-yellow-400 fill-current" />
+                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current inline-block" />
                     ))}
                   </div>
-                  
-                  {/* Quote Text */}
-                  <blockquote className="text-white text-lg md:text-xl leading-relaxed mb-6 flex-grow">
-                    "{testimonials[currentTestimonial].text}"
+                  <blockquote className="text-white text-lg font-bold mb-6 leading-relaxed italic px-2 drop-shadow-lg transition-opacity duration-700">
+                    "{middleTestimonials[currentMiddleTestimonial].text}"
                   </blockquote>
-                  
-                  {/* Author Info */}
-                  <div className="flex items-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xl mr-4">
-                      {testimonials[currentTestimonial].initial}
-                    </div>
-                    <div>
-                      <p className="font-bold text-white text-lg">{testimonials[currentTestimonial].name}</p>
-                      <div className="flex items-center text-purple-200 text-sm">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        <span>{testimonials[currentTestimonial].interest}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pagination Dots */}
-                <div className="flex justify-center mt-8 space-x-3">
-                  {testimonials.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setCurrentTestimonial(index);
-                        setIsAutoSliding(false);
-                        setTimeout(() => setIsAutoSliding(true), 8000);
-                      }}
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        index === currentTestimonial 
-                          ? 'bg-white w-8' 
-                          : 'bg-white/40 w-2 hover:bg-white/60'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center hover:bg-white/20 transition-all duration-300 cursor-pointer">
-                  <Users className="h-8 w-8 text-purple-300 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-white mb-1">250+</div>
-                  <div className="text-xs text-purple-200">Happy Members</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center hover:bg-white/20 transition-all duration-300 cursor-pointer">
-                  <Star className="h-8 w-8 text-yellow-400 mx-auto mb-2 fill-current" />
-                  <div className="text-2xl font-bold text-white mb-1">89</div>
-                  <div className="text-xs text-purple-200">Success Stories</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center hover:bg-white/20 transition-all duration-300 cursor-pointer">
-                  <Calendar className="h-8 w-8 text-pink-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-white mb-1">156</div>
-                  <div className="text-xs text-purple-200">Events Hosted</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Video Modal - YouTube Shorts Format */}
-      {videoModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-98 z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => {
-            setVideoModalOpen(false);
-            setCurrentVideoUrl('');
-          }}
-        >
-          <div 
-            className="relative w-full max-w-md aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl transform transition-all duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top Bar - Channel Info */}
-            <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 via-black/50 to-transparent p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {/* Channel Avatar */}
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                    <span className="text-xl">I</span>
-                  </div>
-                  {/* Channel Name */}
-                  <div>
-                    <a 
-                      href="https://www.youtube.com/@IndulgeOut" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-white font-semibold text-sm hover:underline flex items-center gap-1"
-                    >
-                      IndulgeOut
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
-                        <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
-                      </svg>
-                    </a>
-                  </div>
-                  {/* Subscribe Button */}
-                  <a 
-                    href="https://www.youtube.com/@IndulgeOut?sub_confirmation=1" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg"
-                  >
-                    Subscribe
-                  </a>
+                  <p className="text-white text-sm font-medium drop-shadow-md transition-opacity duration-700">
+                    ~ {middleTestimonials[currentMiddleTestimonial].author}
+                  </p>
                 </div>
                 
-                {/* Close Button */}
+                {/* VIEW ALL Button at Bottom */}
                 <button
-                  onClick={() => {
-                    setVideoModalOpen(false);
-                    setCurrentVideoUrl('');
-                  }}
-                  className="w-10 h-10 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300"
+                  onClick={() => navigate('/explore')}
+                  className="bg-white text-indigo-600 px-6 py-2 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 text-sm shadow-lg"
                 >
-                  <span className="text-white text-2xl leading-none">&times;</span>
+                  VIEW ALL
                 </button>
               </div>
             </div>
-            
-            {/* Video Iframe */}
-            <iframe
-              className="w-full h-full"
-              src={currentVideoUrl}
-              title="Video Testimonial"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            ></iframe>
-            
-            {/* Floating Subscribe Button - Visible during video */}
-            <div className="absolute top-20 left-0 right-0 z-20 flex justify-center animate-bounce" style={{animationDuration: '3s'}}>
-              <a 
-                href="https://www.youtube.com/@IndulgeOut?sub_confirmation=1" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-bold transition-all duration-300 transform hover:scale-110 shadow-2xl flex items-center gap-2 text-sm"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-                Subscribe to Our Channel
-              </a>
-            </div>
-            
-            {/* Bottom Bar - Shorts Label & Info */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6">
-              {/* Shorts Badge */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-white">
-                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-2">
-                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M10 20H14V4H10V20ZM4 20H8V12H4V20ZM16 9V20H20V9H16Z"/>
-                    </svg>
-                    <span className="text-sm font-semibold">Shorts</span>
-                  </div>
+
+            {/* Vox Pop 2 */}
+            <div 
+              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black transform transition-all duration-300"
+              onClick={() => {
+                setCurrentVideoUrl('https://www.youtube.com/embed/t62ExT2n4a0?autoplay=1&rel=1');
+                setVideoModalOpen(true);
+              }}
+            >
+              <img 
+                src="https://img.youtube.com/vi/t62ExT2n4a0/maxresdefault.jpg"
+                alt="Vox Pop 2"
+                className="w-full h-full object-cover pointer-events-none"
+              />
+              {/* Play Button Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/30 via-black/40 to-black/60 pointer-events-none">
+                <div className="w-14 h-14 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl pointer-events-none">
+                  <Play className="h-6 w-6 text-white ml-1 pointer-events-none" fill="currentColor" />
                 </div>
-                
-                {/* Full Screen Hint */}
-                <div className="text-white/60 text-xs flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
-                  </svg>
-                  <span>Tap to fullscreen</span>
-                </div>
-              </div>
-              
-              {/* Video Info */}
-              <div className="text-white">
-                <p className="text-sm font-semibold mb-1">{testimonials[currentTestimonial].name}'s Story</p>
-                <p className="text-xs text-white/80 line-clamp-2">{testimonials[currentTestimonial].text}</p>
-              </div>
-              
-              {/* CTA */}
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <a 
-                  href="https://www.youtube.com/@IndulgeOut" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  Watch More on YouTube
-                </a>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* How It Works - Experience Ecosystem */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      {/* Looking For Events In Your City - Carousel Section */}
+      <section className="py-20 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 transform transition-all duration-1000 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`}>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Experience Ecosystem</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">Connecting people and businesses through shared passions</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Looking For Events In Your City?
+            </h2>
           </div>
           
-          {/* B2C & B2B Split */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8">
-            
-            {/* B2C Track - For Experience Seekers */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center mr-4">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">For Experience Seekers</h3>
-              </div>
-              
-              <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
-                A social experiences platform that helps you discover events, join communities, and connect with people who share your interests.
-              </p>
-              
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                    <span className="text-white font-bold text-sm">✓</span>
+          {/* Tilted Cards Carousel */}
+          <div className="relative h-[500px] flex items-center justify-center perspective-1000">
+            <div className="flex gap-8 overflow-x-auto scrollbar-hide px-20" style={{scrollbarWidth: 'none'}}>
+              {/* Event Card 1 */}
+              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(-5deg)'}}>
+                <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
+                  <div className="h-3/5 bg-blue-500 relative overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🚴</div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Discover Events</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Find local events that match your interests</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                    <span className="text-white font-bold text-sm">✓</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Join Communities</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Connect with like-minded enthusiasts</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                    <span className="text-white font-bold text-sm">✓</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Build Friendships</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Form lasting connections in real life</p>
+                  <div className="p-6 h-2/5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">CALLING ALL BIKE RIDERS!</h3>
+                      <p className="text-blue-100 text-sm">Join our cycling community</p>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Event Card 2 */}
+              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(3deg)'}}>
+                <div className="bg-gradient-to-br from-green-600 to-teal-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
+                  <div className="h-3/5 bg-green-500 relative overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🎭</div>
+                  </div>
+                  <div className="p-6 h-2/5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">SPECIAL KIFAAB</h3>
+                      <p className="text-green-100 text-sm">Theatre performances</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Card 3 */}
+              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(-3deg)'}}>
+                <div className="bg-gradient-to-br from-pink-600 to-rose-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
+                  <div className="h-3/5 bg-pink-500 relative overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🎥</div>
+                  </div>
+                  <div className="p-6 h-2/5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">SCREENING</h3>
+                      <p className="text-pink-100 text-sm">Movie screenings & discussions</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Card 4 */}
+              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(5deg)'}}>
+                <div className="bg-gradient-to-br from-orange-600 to-red-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
+                  <div className="h-3/5 bg-orange-500 relative overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center text-8xl">👩</div>
+                  </div>
+                  <div className="p-6 h-2/5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">WOMEN'S MEETUP</h3>
+                      <p className="text-orange-100 text-sm">Empowerment gatherings</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Card 5 */}
+              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(-4deg)'}}>
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
+                  <div className="h-3/5 bg-purple-500 relative overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🏃</div>
+                  </div>
+                  <div className="p-6 h-2/5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">BIG LAND</h3>
+                      <p className="text-purple-100 text-sm">Season 2 sports events</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Explore Now Button */}
+          <div className="text-center mt-12">
+            <button
+              onClick={() => navigate('/explore')}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-12 py-4 rounded-full text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
+            >
+              EXPLORE NOW
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Partner With Us Section */}
+      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              PARTNER WITH US
+            </h2>
+          </div>
+          
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-16">
+            {/* Left Side - Orbital Icons (smaller) */}
+            <div className="relative flex items-center justify-center w-80 h-80">
+              {/* Central IndulgeOut Logo */}
+              <div className="absolute inset-0 flex items-center justify-center z-20">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold shadow-2xl">
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">🎯</div>
+                    <div className="text-[10px]">indulgeout</div>
+                  </div>
+                </div>
+              </div>
               
-              <Link
-                to="/explore"
-                className="inline-flex items-center justify-center w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                <Sparkles className="mr-2 h-5 w-5" />
-                Explore Events
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+              {/* Orbiting Icons */}
+              {[
+                { icon: '🏢', label: 'Venue', color: 'from-blue-500 to-blue-700', delay: '0s' },
+                { icon: '🎭', label: 'Organizer', color: 'from-purple-500 to-purple-700', delay: '2s' },
+                { icon: '🤝', label: 'Sponsor', color: 'from-pink-500 to-pink-700', delay: '4s' }
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{
+                    animation: `orbitalMove ${15}s linear infinite`,
+                    animationDelay: item.delay
+                  }}
+                >
+                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-lg`}>
+                    <span>{item.icon}</span>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* B2B Track - For Partners */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mr-4">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">For Communities & Venues</h3>
-              </div>
-              
-              <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
-                A marketplace ecosystem that connects communities, venues, and brands with engaged audiences seeking authentic experiences.
-              </p>
-              
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                    <span className="text-white font-bold text-sm">✓</span>
+            {/* Right Side - Stacked Polaroid Cards */}
+            <div className="relative w-full max-w-xl h-[400px] group flex items-center justify-center">
+              {/* Card 1 - Behind (left side) */}
+              <div className="absolute left-8 top-1/2 -translate-y-1/2 w-72 bg-white rounded-lg overflow-hidden shadow-2xl transform -rotate-6 transition-all duration-500 z-10 group-hover:scale-95 hover:!rotate-0 hover:!z-30 hover:!scale-105">
+                <div className="p-4">
+                  <div className="aspect-[3/2] bg-gradient-to-br from-blue-100 to-purple-100 rounded-md mb-2 overflow-hidden">
+                    <img src="/images/Media (5).jpg" alt="Partner event" className="w-full h-full object-cover" />
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Reach Your Audience</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Connect with people passionate about your niche</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                    <span className="text-white font-bold text-sm">✓</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Grow Your Business</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Fill your venue with engaged community members</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                    <span className="text-white font-bold text-sm">✓</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Track Performance</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Get insights and analytics on your events</p>
-                  </div>
+                  <h3 className="text-base font-bold text-gray-900 mb-1.5">
+                    Start Something You Love
+                  </h3>
+                  <p className="text-gray-600 text-xs mb-3 leading-relaxed">
+                    Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.
+                  </p>
+                  <button
+                    onClick={() => navigate('/host-partner')}
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300"
+                  >
+                    Explore the event
+                  </button>
                 </div>
               </div>
-              
-              <Link
-                to="/host-partner"
-                className="inline-flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                <Zap className="mr-2 h-5 w-5" />
-                Become a Partner
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+
+              {/* Card 2 - Front (right side, overlapping) */}
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 w-72 bg-white rounded-lg overflow-hidden shadow-2xl transform rotate-6 transition-all duration-500 z-20 group-hover:scale-95 hover:!rotate-0 hover:!z-30 hover:!scale-105">
+                <div className="p-4">
+                  <div className="aspect-[3/2] bg-gradient-to-br from-pink-100 to-orange-100 rounded-md mb-2 overflow-hidden">
+                    <img src="/images/Media (7).jpg" alt="Community event" className="w-full h-full object-cover" />
+                  </div>
+                  <h3 className="text-base font-bold text-gray-900 mb-1.5">
+                    Start Something You Love
+                  </h3>
+                  <p className="text-gray-600 text-xs mb-3 leading-relaxed">
+                    Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.
+                  </p>
+                  <button
+                    onClick={() => navigate('/host-partner')}
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300"
+                  >
+                    Explore the event
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="text-center mt-20">
+            <button
+              onClick={() => navigate('/host-partner')}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-12 py-4 rounded-full text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
+            >
+              Explore the event
+            </button>
           </div>
         </div>
       </section>
 
       {/* Social Proof */}
-      <section className="py-20 bg-white dark:bg-gray-800 transition-colors duration-300">
+      <section className="py-20 bg-white dark:bg-black transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 transform transition-all duration-1000 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`}>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Trusted by Communities</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">Join thousands who've found their tribe</p>
-          </div>
-          
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">10,000+</div>
-              <div className="text-gray-600 dark:text-gray-400">Active Members</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">500+</div>
-              <div className="text-gray-600 dark:text-gray-400">Monthly Events</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">50+</div>
-              <div className="text-gray-600 dark:text-gray-400">Partner Venues</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">17</div>
-              <div className="text-gray-600 dark:text-gray-400">Categories</div>
-            </div>
-          </div>
           
           {/* Event Photos Slider */}
           <div className="mb-12">
@@ -1278,99 +1080,113 @@ function Homepage() {
             </div>
           </div>
 
-          {/* Partner Logos - Placeholders */}
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">Our Partners</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((index) => (
-                <div key={index} className="aspect-video bg-white dark:bg-gray-700 rounded-lg shadow-md flex items-center justify-center border border-gray-200 dark:border-gray-600 hover:shadow-xl transition-shadow duration-300">
-                  <div className="text-center p-4">
-                    <div className="text-3xl mb-1">🏢</div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Partner {index}</p>
+      
+        </div>
+      </section>
+
+      {/* Download the App - Live */}
+      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            {/* Left Content */}
+            <div className="flex-1 text-left">
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                DOWNLOAD THE APP
+              </h2>
+              <p className="text-lg text-gray-400 mb-8">
+                Get the App
+              </p>
+              
+              {/* App Store Badges */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <a 
+                  href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg flex items-center justify-center transform hover:scale-105 transition-all duration-300"
+                >
+                  <div className="text-2xl mr-3">▶</div>
+                  <div className="text-left">
+                    <div className="text-xs text-gray-400">Download on</div>
+                    <div className="text-base font-semibold">Google Play</div>
+                  </div>
+                </a>
+                <a 
+                  href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg flex items-center justify-center transform hover:scale-105 transition-all duration-300"
+                >
+                  <div className="text-2xl mr-3">🍎</div>
+                  <div className="text-left">
+                    <div className="text-xs text-gray-400">Download on the</div>
+                    <div className="text-base font-semibold">App Store</div>
+                  </div>
+                </a>
+              </div>
+            </div>
+            
+            {/* Right Side - Phone Mockup Placeholder */}
+            <div className="flex-1 flex justify-center lg:justify-end">
+              <div className="relative">
+                {/* Phone 1 */}
+                <div className="relative w-64 h-[500px] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[3rem] border-8 border-zinc-700 shadow-2xl transform rotate-[-5deg]">
+                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-24 h-6 bg-zinc-900 rounded-full"></div>
+                  <div className="p-6 mt-10">
+                    <div className="bg-zinc-700 rounded-lg h-32 mb-4"></div>
+                    <div className="space-y-2">
+                      <div className="bg-zinc-700 rounded h-4 w-3/4"></div>
+                      <div className="bg-zinc-700 rounded h-4 w-1/2"></div>
+                    </div>
                   </div>
                 </div>
-              ))}
+                {/* Phone 2 - Overlapping */}
+                <div className="absolute top-8 left-16 w-64 h-[500px] bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-[3rem] border-8 border-zinc-600 shadow-2xl transform rotate-[8deg]">
+                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-24 h-6 bg-zinc-800 rounded-full"></div>
+                  <div className="p-6 mt-10">
+                    <div className="bg-zinc-600 rounded-lg h-32 mb-4"></div>
+                    <div className="space-y-2">
+                      <div className="bg-zinc-600 rounded h-4 w-2/3"></div>
+                      <div className="bg-zinc-600 rounded h-4 w-3/4"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Download the App - Live */}
-      <section className="py-20 bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-8">
-            <div className="text-6xl mb-4">📱</div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Download the IndulgeOut App
-            </h2>
-            <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-              Experience IndulgeOut on the go. Available now on iOS and Android!
-            </p>
-          </div>
-          
-          {/* App Store Badges */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a 
-              href="https://apps.apple.com/in/app/indulgeout/id6744292040"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-black hover:bg-gray-900 text-white px-6 py-3 rounded-lg flex items-center transform hover:scale-105 transition-all duration-300 shadow-xl"
+      {/* Video Modal */}
+      {videoModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setVideoModalOpen(false)}
+        >
+          <div 
+            className="relative w-full max-w-md aspect-[9/16] bg-black rounded-lg overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setVideoModalOpen(false)}
+              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-300"
             >
-              <div className="text-2xl mr-3">🍎</div>
-              <div className="text-left">
-                <div className="text-xs">Download on the</div>
-                <div className="text-lg font-semibold">App Store</div>
-              </div>
-            </a>
-            <a 
-              href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-black hover:bg-gray-900 text-white px-6 py-3 rounded-lg flex items-center transform hover:scale-105 transition-all duration-300 shadow-xl"
-            >
-              <div className="text-2xl mr-3">🤖</div>
-              <div className="text-left">
-                <div className="text-xs">GET IT ON</div>
-                <div className="text-lg font-semibold">Google Play</div>
-              </div>
-            </a>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <iframe
+              src={currentVideoUrl}
+              className="w-full h-full"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
           </div>
         </div>
-      </section>
-
-      {/* Final CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 relative overflow-hidden transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Find Your Community?
-          </h2>
-          <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of people connecting over shared interests and experiences
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center bg-white hover:bg-gray-100 text-primary-600 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-2xl"
-            >
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            <Link
-              to="/explore"
-              className="inline-flex items-center justify-center bg-transparent border-2 border-white hover:bg-white hover:text-primary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105"
-            >
-              <Sparkles className="mr-2 h-5 w-5" />
-              Explore Events
-            </Link>
-          </div>
+      )}
         </div>
-        
-        {/* Animated background elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-white bg-opacity-10 rounded-full animate-ping"></div>
-        <div className="absolute bottom-10 right-20 w-16 h-16 bg-white bg-opacity-10 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/2 right-10 w-12 h-12 bg-white bg-opacity-10 rounded-full animate-bounce"></div>
-      </section>
-    </div>
+  
   );
 }
 

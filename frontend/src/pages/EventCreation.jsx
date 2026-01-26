@@ -755,7 +755,7 @@ const EventCreation = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
       {/* Navigation Bar with Logo */}
       <NavigationBar />
       

@@ -140,7 +140,7 @@ const BrandOnboarding = () => {
   const progress = calculateProgress()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-black py-12 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Progress Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
@@ -504,3 +504,4 @@ const BrandOnboarding = () => {
 }
 
 export default BrandOnboarding
+
