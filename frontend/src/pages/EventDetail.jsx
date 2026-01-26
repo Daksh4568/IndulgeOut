@@ -177,8 +177,13 @@ const EventDetail = () => {
 
             // Initialize Cashfree Checkout
             console.log('Initializing Cashfree checkout...');
+            
+            // Determine Cashfree mode based on environment
+            const cashfreeMode = import.meta.env.MODE === 'production' ? 'production' : 'sandbox';
+            console.log('Cashfree mode:', cashfreeMode);
+            
             const cashfree = window.Cashfree({
-              mode: 'sandbox' // Always use sandbox for testing
+              mode: cashfreeMode
             });
 
             const checkoutOptions = {
