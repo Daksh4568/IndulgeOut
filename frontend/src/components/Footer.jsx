@@ -87,7 +87,7 @@ const Footer = () => {
             <h4 className="text-lg font-semibold mb-4">Support</h4>
             <ul className="space-y-3">
               <li>
-                <Link to="/contact" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                <Link to="/contact-us" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
                   <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
                   Contact Us
                 </Link>
@@ -112,21 +112,21 @@ const Footer = () => {
             <h4 className="text-lg font-semibold mb-4">Legal</h4>
             <ul className="space-y-3">
               <li>
+                <Link to="/terms-conditions" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                  <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/refunds-cancellations" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
+                  <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
+                  Refunds & Cancellations
+                </Link>
+              </li>
+              <li>
                 <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
                   <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
                   Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
-                  <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link to="/cookies" className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group">
-                  <ArrowRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300" />
-                  Cookie Policy
                 </Link>
               </li>
             </ul>

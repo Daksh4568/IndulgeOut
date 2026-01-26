@@ -41,6 +41,9 @@ import UserDashboard from './pages/UserDashboard'
 import EventReviewPage from './pages/EventReviewPage'
 import ScanTickets from './pages/ScanTickets'
 import EventAnalytics from './pages/EventAnalytics'
+import ContactUs from './pages/ContactUs'
+import TermsConditions from './pages/TermsConditions'
+import RefundsCancellations from './pages/RefundsCancellations'
 
 // Create a toast context
 export const ToastContext = React.createContext(null)
@@ -70,6 +73,9 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Homepage />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/contact-us" element={<ContactUs />} />
+                  <Route path="/terms-conditions" element={<TermsConditions />} />
+                  <Route path="/refunds-cancellations" element={<RefundsCancellations />} />
                   <Route path="/explore" element={<ExplorePage />} />
                   <Route path="/categories" element={<CategoriesPage />} />
                   <Route path="/category/:slug" element={<CategoryDetail />} />
