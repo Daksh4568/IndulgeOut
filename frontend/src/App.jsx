@@ -113,6 +113,8 @@ function App() {
                   <Route path="/organizer/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
                   <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
                 </Routes>
+                {/* Black Gap Before Footer */}
+                <div className="bg-black py-8"></div>
                 <Footer />
                 <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
               </div>

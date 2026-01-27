@@ -1,18 +1,23 @@
 import { MapPin, Calendar, Users, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 
-const EventCard = ({ event, onFavorite, showLoginPrompt }) => {
-  const [isFavorited, setIsFavorited] = useState(false);
+const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
+  const [isFavorited, setIsFavorited] = useState(isSaved);
   const [imageError, setImageError] = useState(false);
 
-  const handleFavorite = (e) => {
+  // Update local state when prop changes
+  useEffect(() => {
+    setIsFavorited(isSaved);
+  }, [isSaved]);
+
+  const handleFavorite = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (onFavorite) {
-      const result = onFavorite(event._id);
+      const result = await onFavorite(event._id);
       if (result !== false) {
         setIsFavorited(!isFavorited);
       }

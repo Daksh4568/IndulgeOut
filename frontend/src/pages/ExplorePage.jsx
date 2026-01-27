@@ -25,6 +25,7 @@ export default function ExplorePage() {
   const [events, setEvents] = useState([]);
   const [eventsPage, setEventsPage] = useState(1);
   const [eventsPagination, setEventsPagination] = useState(null);
+  const [savedEventIds, setSavedEventIds] = useState([]);
   
   // Communities state
   const [featuredCommunities, setFeaturedCommunities] = useState([]);
@@ -38,7 +39,10 @@ export default function ExplorePage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    if (user) {
+      fetchSavedEvents();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (tab === 'events') {
@@ -47,6 +51,20 @@ export default function ExplorePage() {
       fetchCommunities();
     }
   }, [tab, searchQuery, filters, eventsPage, communitiesPage]);
+
+  // Fetch saved events
+  const fetchSavedEvents = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/users/my-events`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await response.json();
+      const savedIds = (data.saved || []).map(event => event._id);
+      setSavedEventIds(savedIds);
+    } catch (error) {
+      console.error('Error fetching saved events:', error);
+    }
+  };
 
   // Fetch events data
   const fetchEvents = async () => {
@@ -209,14 +227,36 @@ export default function ExplorePage() {
   };
 
   // Handle favorite (requires login)
-  const handleFavorite = (itemId) => {
+  const handleFavorite = async (eventId) => {
     if (!user) {
       setShowLoginPrompt(true);
       return false;
     }
-    // TODO: Implement favorite functionality
-    console.log('Favorited:', itemId);
-    return true;
+    
+    try {
+      const isSaved = savedEventIds.includes(eventId);
+      
+      if (isSaved) {
+        // Unsave event
+        await fetch(`${API_URL}/api/users/unsave-event/${eventId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setSavedEventIds(prev => prev.filter(id => id !== eventId));
+      } else {
+        // Save event
+        await fetch(`${API_URL}/api/users/save-event/${eventId}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setSavedEventIds(prev => [...prev, eventId]);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving/unsaving event:', error);
+      return false;
+    }
   };
 
   // Handle tab change
@@ -264,11 +304,11 @@ export default function ExplorePage() {
 
       {/* Tab Selector */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1 overflow-x-auto">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => handleTabChange('events')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+              className={`px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold transition-all border-b-2 whitespace-nowrap ${
                 tab === 'events'
                   ? 'border-orange-500 text-orange-500'
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -304,7 +344,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {loading ? (
           <div className="text-center py-20">
             <div className="animate-spin h-12 w-12 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -318,15 +358,16 @@ export default function ExplorePage() {
                 {/* Top Events Section - Only show if NOT searching */}
                 {!searchQuery && topEvents.length > 0 && (
                   <section>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                       {user ? '✨ Recommended For You' : '🔥 Popular Events'}
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                       {topEvents.map(event => (
                         <EventCard
                           key={event._id}
                           event={event}
                           onFavorite={handleFavorite}
+                          isSaved={savedEventIds.includes(event._id)}
                         />
                       ))}
                     </div>
@@ -335,24 +376,23 @@ export default function ExplorePage() {
 
                 {/* Main Events Grid */}
                 <section>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                     {searchQuery ? `Search Results for "${searchQuery}"` : 'All Events'}
                   </h2>
                   {events.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {events.map(event => (
                           <EventCard
                             key={event._id}
                             event={event}
-                            onFavorite={handleFavorite}
-                          />
+                            onFavorite={handleFavorite}                              isSaved={savedEventIds.includes(event._id)}                          />
                         ))}
                       </div>
                       
                       {/* Pagination Controls */}
                       {eventsPagination && eventsPagination.totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-8">
+                        <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
                           <button
                             onClick={() => setEventsPage(Math.max(1, eventsPage - 1))}
                             disabled={eventsPage === 1}

@@ -142,7 +142,7 @@ const UserDashboard = () => {
       return (
         <div 
           onClick={() => navigate(`/events/${event._id}`)}
-          className="flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer group"
+          className="flex-shrink-0 w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer group"
         >
           {/* Event Image */}
           <div className="relative h-48 overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600">
@@ -652,10 +652,10 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       <NavigationBar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Welcome back, {user?.name?.split(' ')[0]}! 👋
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -668,16 +668,16 @@ const UserDashboard = () => {
           {/* MY EVENTS */}
           <section>
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <div className="border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
                   My Events
                 </h2>
                 
                 {/* Tabs */}
-                <div className="flex gap-2">
+                <div className="flex gap-1 sm:gap-2 overflow-x-auto">
                   <button
                     onClick={() => setActiveTab('upcoming')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
                       activeTab === 'upcoming'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'

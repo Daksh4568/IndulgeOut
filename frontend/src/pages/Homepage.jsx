@@ -19,6 +19,8 @@ function Homepage() {
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const [photoSlideIndex, setPhotoSlideIndex] = useState(0);
   const [currentMiddleTestimonial, setCurrentMiddleTestimonial] = useState(0);
+  const [currentPartnerCard, setCurrentPartnerCard] = useState(0);
+  const [currentPosterIndex, setCurrentPosterIndex] = useState(0);
   
   const typewriterWords = ['Find Your Tribe,'];
   const secondLineWords = 'Live Your Passions';
@@ -48,20 +50,90 @@ function Homepage() {
     }
   ];
 
-  // Event photos array
-  const eventPhotos = [
-    '/images/Media (4).jpg',
-    '/images/Media (5).jpg',
-    '/images/Media (6).jpg',
-    '/images/Media (7).jpg',
-    '/images/Media (8).jpg',
-    '/images/Media (9).jpg',
-    '/images/Media (10).jpg',
-    '/images/Media (11).jpg',
-    '/images/Media (12).jpg',
-    '/images/Media (13).jpg',
-    '/images/Media (14).jpg',
-    '/images/Media (15).jpg'
+  // Partner cards content
+  const partnerCards = [
+    {
+      title: "Start Something You Love",
+      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.",
+      buttonText: "Explore the event",
+      buttonAction: () => navigate('/explore'),
+      image: "/images/Media (5).jpg"
+    },
+    {
+      title: "Start Something You Love",
+      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.",
+      buttonText: "Create Now",
+      buttonAction: () => navigate('/register?role=community_organizer'),
+      image: "/images/Media (5).jpg"
+    },
+    {
+      title: "Collaborate as a Brand",
+      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.",
+      buttonText: "Collaborate Now",
+      buttonAction: () => navigate('/register?role=brand'),
+      image: "/images/brand.jpg"
+    },
+    {
+      title: "Partner as a Venue",
+      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.",
+      buttonText: "Partner Now",
+      buttonAction: () => navigate('/register?role=venue'),
+      image: "/images/venue.jpg"
+    }
+  ];
+
+  // Instagram posts array for social footprint
+  const instagramPosts = [
+    {
+      url: 'https://www.instagram.com/reel/DJmHRyWPrBN/',
+      thumbnail: '/images/Media (4).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DRR6F4mDwOS/',
+      thumbnail: '/images/Media (5).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DS7SzCVj5Rb/',
+      thumbnail: '/images/Media (6).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DNK-U2bPhw4/',
+      thumbnail: '/images/Media (7).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DNalF_4v-QB/',
+      thumbnail: '/images/Media (8).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DOvqdnzDxgd/',
+      thumbnail: '/images/Media (9).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DRW_ZZOj_b7/',
+      thumbnail: '/images/Media (10).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DNfjYlWv6TH/',
+      thumbnail: '/images/Media (11).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/reel/DQtq0DaD8mD/',
+      thumbnail: '/images/Media (12).jpg',
+      type: 'reel'
+    },
+    {
+      url: 'https://www.instagram.com/p/DQUHWnZj3Rb/',
+      thumbnail: '/images/Media (13).jpg',
+      type: 'post'
+    }
   ];
 
   // Hobby icons and their connection animations
@@ -126,6 +198,14 @@ function Homepage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-rotate partner cards every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPartnerCard((prev) => (prev + 1) % partnerCards.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Animation phase controller for hobby connections
   useEffect(() => {
     const phaseInterval = setInterval(() => {
@@ -134,13 +214,13 @@ function Homepage() {
     return () => clearInterval(phaseInterval);
   }, []);
 
-  // Auto-slide photos
+  // Auto-rotate poster cards every 3 seconds
   useEffect(() => {
-    const photoInterval = setInterval(() => {
-      setPhotoSlideIndex(prev => (prev + 1) % (eventPhotos.length - 3));
+    const interval = setInterval(() => {
+      setCurrentPosterIndex((prev) => (prev + 1) % 6);
     }, 3000);
-    return () => clearInterval(photoInterval);
-  }, [eventPhotos.length]);
+    return () => clearInterval(interval);
+  }, []);
 
   // Function to render animated letters
   const renderAnimatedText = (text, baseDelay = 0) => {
@@ -465,10 +545,10 @@ function Homepage() {
         
         @keyframes orbitalMove {
           0% {
-            transform: rotate(0deg) translateX(120px) rotate(0deg);
+            transform: rotate(0deg) translateX(200px) rotate(0deg);
           }
           100% {
-            transform: rotate(360deg) translateX(120px) rotate(-360deg);
+            transform: rotate(360deg) translateX(200px) rotate(-360deg);
           }
         }
         
@@ -800,99 +880,108 @@ function Homepage() {
       </section>
 
       {/* Looking For Events In Your City - Carousel Section */}
-      <section className="py-20 bg-black relative overflow-hidden">
+      <section className="py-16 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
               Looking For Events In Your City?
             </h2>
+            <p className="text-gray-300 text-base max-w-3xl mx-auto">
+              Explore hand-picked, curated offline meetups, experiences and events that will bring you closer to your kind of circle.
+            </p>
           </div>
           
-          {/* Tilted Cards Carousel */}
-          <div className="relative h-[500px] flex items-center justify-center perspective-1000">
-            <div className="flex gap-8 overflow-x-auto scrollbar-hide px-20" style={{scrollbarWidth: 'none'}}>
-              {/* Event Card 1 */}
-              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(-5deg)'}}>
-                <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
-                  <div className="h-3/5 bg-blue-500 relative overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🚴</div>
-                  </div>
-                  <div className="p-6 h-2/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">CALLING ALL BIKE RIDERS!</h3>
-                      <p className="text-blue-100 text-sm">Join our cycling community</p>
+          {/* Deck of Cards Carousel */}
+          <div className="relative h-[280px] sm:h-[350px] lg:h-[380px] flex items-center justify-center mt-8">
+            <div className="relative w-full max-w-5xl h-full flex items-center justify-center">
+              {[0, 1, 2, 3, 4, 5].map((index) => {
+                const position = (index - currentPosterIndex + 6) % 6;
+                
+                // Calculate position and rotation for deck effect
+                let zIndex, scale, translateX, translateY, rotate, opacity;
+                
+                // Mobile responsiveness
+                const isMobile = window.innerWidth < 640;
+                const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
+                
+                if (position === 0) {
+                  // Front card - fully visible, largest
+                  zIndex = 40;
+                  scale = isMobile ? 0.8 : (isTablet ? 0.9 : 1);
+                  translateX = isMobile ? -80 : (isTablet ? -150 : -220);
+                  translateY = 0;
+                  rotate = -10;
+                  opacity = 1;
+                } else if (position === 1) {
+                  zIndex = 35;
+                  scale = isMobile ? 0.75 : (isTablet ? 0.85 : 0.95);
+                  translateX = isMobile ? -40 : (isTablet ? -85 : -130);
+                  translateY = isMobile ? 8 : (isTablet ? 10 : 12);
+                  rotate = -6;
+                  opacity = 0.9;
+                } else if (position === 2) {
+                  zIndex = 30;
+                  scale = isMobile ? 0.7 : (isTablet ? 0.8 : 0.9);
+                  translateX = isMobile ? 0 : (isTablet ? -20 : -40);
+                  translateY = isMobile ? 16 : (isTablet ? 20 : 24);
+                  rotate = -2;
+                  opacity = 0.8;
+                } else if (position === 3) {
+                  zIndex = 25;
+                  scale = isMobile ? 0.65 : (isTablet ? 0.75 : 0.85);
+                  translateX = isMobile ? 40 : (isTablet ? 45 : 50);
+                  translateY = isMobile ? 20 : (isTablet ? 25 : 30);
+                  rotate = 2;
+                  opacity = isMobile ? 0.6 : 0.7;
+                } else if (position === 4) {
+                  zIndex = 20;
+                  scale = isMobile ? 0.6 : (isTablet ? 0.7 : 0.8);
+                  translateX = isMobile ? 80 : (isTablet ? 110 : 140);
+                  translateY = isMobile ? 24 : (isTablet ? 30 : 36);
+                  rotate = 6;
+                  opacity = isMobile ? 0.5 : 0.6;
+                } else {
+                  // Last card - moving to back
+                  zIndex = 15;
+                  scale = isMobile ? 0.55 : (isTablet ? 0.65 : 0.75);
+                  translateX = isMobile ? 120 : (isTablet ? 175 : 230);
+                  translateY = isMobile ? 28 : (isTablet ? 35 : 42);
+                  rotate = 10;
+                  opacity = isMobile ? 0.4 : 0.5;
+                }
+                
+                return (
+                  <div
+                    key={index}
+                    className="absolute transition-all duration-1000 ease-in-out"
+                    style={{
+                      zIndex,
+                      transform: `translate(${translateX}px, ${translateY}px) scale(${scale}) rotate(${rotate}deg)`,
+                      opacity,
+                      left: '50%',
+                      top: '50%',
+                      marginLeft: isMobile ? '-100px' : (isTablet ? '-125px' : '-150px'),
+                      marginTop: isMobile ? '-140px' : (isTablet ? '-165px' : '-190px')
+                    }}
+                  >
+                    <div className="w-[200px] sm:w-[250px] lg:w-[300px] h-[280px] sm:h-[330px] lg:h-[380px] bg-white rounded-lg shadow-2xl overflow-hidden">
+                      <img 
+                        src={`/images/postercard${index + 1}.jpg`} 
+                        alt={`Event poster ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Event Card 2 */}
-              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(3deg)'}}>
-                <div className="bg-gradient-to-br from-green-600 to-teal-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
-                  <div className="h-3/5 bg-green-500 relative overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🎭</div>
-                  </div>
-                  <div className="p-6 h-2/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">SPECIAL KIFAAB</h3>
-                      <p className="text-green-100 text-sm">Theatre performances</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Event Card 3 */}
-              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(-3deg)'}}>
-                <div className="bg-gradient-to-br from-pink-600 to-rose-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
-                  <div className="h-3/5 bg-pink-500 relative overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🎥</div>
-                  </div>
-                  <div className="p-6 h-2/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">SCREENING</h3>
-                      <p className="text-pink-100 text-sm">Movie screenings & discussions</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Event Card 4 */}
-              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(5deg)'}}>
-                <div className="bg-gradient-to-br from-orange-600 to-red-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
-                  <div className="h-3/5 bg-orange-500 relative overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center text-8xl">👩</div>
-                  </div>
-                  <div className="p-6 h-2/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">WOMEN'S MEETUP</h3>
-                      <p className="text-orange-100 text-sm">Empowerment gatherings</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Event Card 5 */}
-              <div className="flex-shrink-0 w-80 transform hover:scale-105 transition-all duration-300" style={{transform: 'rotate(-4deg)'}}>
-                <div className="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl overflow-hidden shadow-2xl h-[400px]">
-                  <div className="h-3/5 bg-purple-500 relative overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center text-8xl">🏃</div>
-                  </div>
-                  <div className="p-6 h-2/5 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">BIG LAND</h3>
-                      <p className="text-purple-100 text-sm">Season 2 sports events</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Explore Now Button */}
-          <div className="text-center mt-12">
+          <div className="text-center mt-10">
             <button
               onClick={() => navigate('/explore')}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white px-12 py-4 rounded-full text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
             >
               EXPLORE NOW
             </button>
@@ -901,99 +990,114 @@ function Homepage() {
       </section>
 
       {/* Partner With Us Section */}
-      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+      <section className="py-20 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="text-center mb-12 lg:mb-16">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6">
               PARTNER WITH US
             </h2>
+            <p className="text-gray-400 text-sm sm:text-base lg:text-lg max-w-3xl mx-auto px-4">
+              A dedicated space for all communities, venues and brands to collaborate for collective community building and experiential marketing.
+            </p>
           </div>
           
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-16">
-            {/* Left Side - Orbital Icons (smaller) */}
-            <div className="relative flex items-center justify-center w-80 h-80">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+            {/* Left Side - Orbital Animation */}
+            <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px]">
               {/* Central IndulgeOut Logo */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold shadow-2xl">
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">🎯</div>
-                    <div className="text-[10px]">indulgeout</div>
-                  </div>
+                <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full bg-black flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
+                  <img 
+                    src="public/images/indulgeout-logo.png"
+                    alt="IndulgeOut Logo" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
               </div>
               
-              {/* Orbiting Icons */}
+              {/* Orbiting Icons with Images and Text Inside Circles */}
               {[
-                { icon: '🏢', label: 'Venue', color: 'from-blue-500 to-blue-700', delay: '0s' },
-                { icon: '🎭', label: 'Organizer', color: 'from-purple-500 to-purple-700', delay: '2s' },
-                { icon: '🤝', label: 'Sponsor', color: 'from-pink-500 to-pink-700', delay: '4s' }
+                { 
+                  label: 'Want to list your venue?', 
+                  icon: '🏢',
+                  bgImage: '/images/Media (6).jpg',
+                  delay: '0s'
+                },
+                { 
+                  label: 'List your brand as collaborator?', 
+                  icon: '🤝',
+                  bgImage: '/images/Media (7).jpg',
+                  delay: '5s'
+                },
+                { 
+                  label: 'Want to list your events?', 
+                  icon: '🎉',
+                  bgImage: '/images/Media (5).jpg',
+                  delay: '10s'
+                }
               ].map((item, index) => (
                 <div
                   key={index}
                   className="absolute inset-0 flex items-center justify-center"
                   style={{
-                    animation: `orbitalMove ${15}s linear infinite`,
+                    animation: `orbitalMove 25s linear infinite`,
                     animationDelay: item.delay
                   }}
                 >
-                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-lg`}>
-                    <span>{item.icon}</span>
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 lg:w-36 lg:h-36 rounded-full overflow-hidden shadow-2xl">
+                    {/* Background Image */}
+                    <img 
+                      src={item.bgImage} 
+                      alt={item.label}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {/* Dark Overlay with reduced opacity */}
+                    <div className="absolute inset-0 bg-black/30"></div>
+                    {/* Content */}
+                    <div className="relative z-10 h-full flex flex-col items-center justify-center p-2 sm:p-3 text-center">
+                      <div className="text-2xl sm:text-3xl lg:text-4xl mb-1 sm:mb-2">{item.icon}</div>
+                      <p className="text-white text-[10px] sm:text-xs font-semibold leading-tight drop-shadow-lg">
+                        {item.label}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Right Side - Stacked Polaroid Cards */}
-            <div className="relative w-full max-w-xl h-[400px] group flex items-center justify-center">
-              {/* Card 1 - Behind (left side) */}
-              <div className="absolute left-8 top-1/2 -translate-y-1/2 w-72 bg-white rounded-lg overflow-hidden shadow-2xl transform -rotate-6 transition-all duration-500 z-10 group-hover:scale-95 hover:!rotate-0 hover:!z-30 hover:!scale-105">
-                <div className="p-4">
-                  <div className="aspect-[3/2] bg-gradient-to-br from-blue-100 to-purple-100 rounded-md mb-2 overflow-hidden">
-                    <img src="/images/Media (5).jpg" alt="Partner event" className="w-full h-full object-cover" />
+            {/* Right Side - Single Auto-Rotating Card */}
+            <div className="relative flex items-center justify-center mt-8 lg:mt-0">
+              <div className="w-full max-w-sm lg:max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-700">
+                <div className="p-6">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl mb-4 overflow-hidden">
+                    <img 
+                      src={partnerCards[currentPartnerCard].image} 
+                      alt={partnerCards[currentPartnerCard].title}
+                      className="w-full h-full object-cover transition-opacity duration-700"
+                    />
                   </div>
-                  <h3 className="text-base font-bold text-gray-900 mb-1.5">
-                    Start Something You Love
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 transition-opacity duration-700">
+                    {partnerCards[currentPartnerCard].title}
                   </h3>
-                  <p className="text-gray-600 text-xs mb-3 leading-relaxed">
-                    Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.
+                  <p className="text-gray-600 text-sm mb-4 leading-relaxed transition-opacity duration-700">
+                    {partnerCards[currentPartnerCard].description}
                   </p>
                   <button
-                    onClick={() => navigate('/host-partner')}
-                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300"
+                    onClick={partnerCards[currentPartnerCard].buttonAction}
+                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
                   >
-                    Explore the event
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 2 - Front (right side, overlapping) */}
-              <div className="absolute right-8 top-1/2 -translate-y-1/2 w-72 bg-white rounded-lg overflow-hidden shadow-2xl transform rotate-6 transition-all duration-500 z-20 group-hover:scale-95 hover:!rotate-0 hover:!z-30 hover:!scale-105">
-                <div className="p-4">
-                  <div className="aspect-[3/2] bg-gradient-to-br from-pink-100 to-orange-100 rounded-md mb-2 overflow-hidden">
-                    <img src="/images/Media (7).jpg" alt="Community event" className="w-full h-full object-cover" />
-                  </div>
-                  <h3 className="text-base font-bold text-gray-900 mb-1.5">
-                    Start Something You Love
-                  </h3>
-                  <p className="text-gray-600 text-xs mb-3 leading-relaxed">
-                    Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.
-                  </p>
-                  <button
-                    onClick={() => navigate('/host-partner')}
-                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300"
-                  >
-                    Explore the event
+                    {partnerCards[currentPartnerCard].buttonText}
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* CTA Button */}
-          <div className="text-center mt-20">
+          {/* Bottom CTA Button */}
+          <div className="text-center mt-12 lg:mt-20">
             <button
               onClick={() => navigate('/host-partner')}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white px-12 py-4 rounded-full text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-2xl"
             >
               Explore the event
             </button>
@@ -1001,158 +1105,71 @@ function Homepage() {
         </div>
       </section>
 
-      {/* Social Proof */}
-      <section className="py-20 bg-white dark:bg-black transition-colors duration-300">
+      {/* Social Footprint - Instagram Posts */}
+      <section className="py-20 bg-black transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* Event Photos Slider */}
-          <div className="mb-12">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Past Events Highlights</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPhotoSlideIndex(prev => Math.max(0, prev - 1))}
-                  disabled={photoSlideIndex === 0}
-                  className="p-2 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setPhotoSlideIndex(prev => Math.min(eventPhotos.length - 4, prev + 1))}
-                  disabled={photoSlideIndex >= eventPhotos.length - 4}
-                  className="p-2 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="overflow-hidden rounded-xl">
-              <div 
-                className="flex transition-transform duration-700 ease-in-out gap-4"
-                style={{ transform: `translateX(-${photoSlideIndex * (100 / 4 + 1)}%)` }}
-              >
-                {eventPhotos.map((photo, index) => (
-                  <div 
-                    key={index} 
-                    className="flex-shrink-0 w-[calc(25%-12px)] aspect-square rounded-lg overflow-hidden group relative shadow-lg hover:shadow-2xl transition-all duration-300"
-                  >
-                    <img 
-                      src={photo} 
-                      alt={`Event ${index + 1}`}
-                      loading="lazy"
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = `
-                          <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600">
-                            <div class="text-center">
-                              <div class="text-4xl mb-2">📸</div>
-                              <p class="text-xs text-gray-600 dark:text-gray-400">Event Photo ${index + 1}</p>
-                            </div>
-                          </div>
-                        `;
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-4 left-4 text-white">
-                        <p className="text-sm font-semibold">Event Memory</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Slide Indicator */}
-            <div className="flex justify-center mt-6 gap-2">
-              {Array.from({ length: eventPhotos.length - 3 }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setPhotoSlideIndex(index)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index === photoSlideIndex 
-                      ? 'bg-primary-600 w-8' 
-                      : 'bg-gray-300 dark:bg-gray-600 w-2 hover:bg-primary-400'
-                  }`}
-                />
-              ))}
-            </div>
+          {/* Section Header */}
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+              Our Social Footprint
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">
+              Follow our journey and community moments on Instagram
+            </p>
           </div>
 
-      
-        </div>
-      </section>
+          {/* Instagram Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {instagramPosts.map((post, index) => (
+              <a
+                key={index}
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative aspect-square rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+              >
+                {/* Thumbnail Image */}
+                <img 
+                  src={post.thumbnail} 
+                  alt={`Instagram ${post.type} ${index + 1}`}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `
+                      <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500">
+                        <div class="text-center text-white">
+                          <svg class="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                          </svg>
+                          <p class="text-sm font-semibold">View on Instagram</p>
+                        </div>
+                      </div>
+                    `;
+                  }}
+                />
+                
+                {/* Overlay on Hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <div className="text-white text-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                    <svg className="w-10 h-10 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                    <p className="text-sm font-semibold">{post.type === 'reel' ? 'Watch Reel' : 'View Post'}</p>
+                  </div>
+                </div>
 
-      {/* Download the App - Live */}
-      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            {/* Left Content */}
-            <div className="flex-1 text-left">
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                DOWNLOAD THE APP
-              </h2>
-              <p className="text-lg text-gray-400 mb-8">
-                Get the App
-              </p>
-              
-              {/* App Store Badges */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://apps.apple.com/in/app/indulgeout/id6744292040"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg flex items-center justify-center transform hover:scale-105 transition-all duration-300"
-                >
-                  <div className="text-2xl mr-3">▶</div>
-                  <div className="text-left">
-                    <div className="text-xs text-gray-400">Download on</div>
-                    <div className="text-base font-semibold">Google Play</div>
+                {/* Reel Icon Indicator */}
+                {post.type === 'reel' && (
+                  <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-800/90 rounded-full p-1.5 shadow-lg">
+                    <svg className="w-4 h-4 text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                    </svg>
                   </div>
-                </a>
-                <a 
-                  href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg flex items-center justify-center transform hover:scale-105 transition-all duration-300"
-                >
-                  <div className="text-2xl mr-3">🍎</div>
-                  <div className="text-left">
-                    <div className="text-xs text-gray-400">Download on the</div>
-                    <div className="text-base font-semibold">App Store</div>
-                  </div>
-                </a>
-              </div>
-            </div>
-            
-            {/* Right Side - Phone Mockup Placeholder */}
-            <div className="flex-1 flex justify-center lg:justify-end">
-              <div className="relative">
-                {/* Phone 1 */}
-                <div className="relative w-64 h-[500px] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[3rem] border-8 border-zinc-700 shadow-2xl transform rotate-[-5deg]">
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-24 h-6 bg-zinc-900 rounded-full"></div>
-                  <div className="p-6 mt-10">
-                    <div className="bg-zinc-700 rounded-lg h-32 mb-4"></div>
-                    <div className="space-y-2">
-                      <div className="bg-zinc-700 rounded h-4 w-3/4"></div>
-                      <div className="bg-zinc-700 rounded h-4 w-1/2"></div>
-                    </div>
-                  </div>
-                </div>
-                {/* Phone 2 - Overlapping */}
-                <div className="absolute top-8 left-16 w-64 h-[500px] bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-[3rem] border-8 border-zinc-600 shadow-2xl transform rotate-[8deg]">
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-24 h-6 bg-zinc-800 rounded-full"></div>
-                  <div className="p-6 mt-10">
-                    <div className="bg-zinc-600 rounded-lg h-32 mb-4"></div>
-                    <div className="space-y-2">
-                      <div className="bg-zinc-600 rounded h-4 w-2/3"></div>
-                      <div className="bg-zinc-600 rounded h-4 w-3/4"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                )}
+              </a>
+            ))}
           </div>
         </div>
       </section>

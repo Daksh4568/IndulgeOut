@@ -9,14 +9,33 @@ const Register = () => {
   const navigate = useNavigate()
   const { register } = useAuth()
   
+  // Get role from URL parameter
+  const urlRole = searchParams.get('role')
+  
+  // Map URL role parameter to internal role structure
+  const getInitialRole = () => {
+    if (urlRole === 'community_organizer') {
+      return { role: 'host_partner', hostPartnerType: 'community_organizer' }
+    } else if (urlRole === 'brand' || urlRole === 'brand_sponsor') {
+      return { role: 'host_partner', hostPartnerType: 'brand_sponsor' }
+    } else if (urlRole === 'venue') {
+      return { role: 'host_partner', hostPartnerType: 'venue' }
+    } else if (searchParams.get('type') === 'host') {
+      return { role: 'host_partner', hostPartnerType: 'community_organizer' }
+    }
+    return { role: 'user', hostPartnerType: '' }
+  }
+  
+  const initialRole = getInitialRole()
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     phoneNumber: '',
-    role: searchParams.get('type') === 'host' ? 'host_partner' : 'user',
-    hostPartnerType: searchParams.get('type') === 'host' ? 'community_organizer' : ''
+    role: initialRole.role,
+    hostPartnerType: initialRole.hostPartnerType
   })
   
   const [showPassword, setShowPassword] = useState(false)
