@@ -58,11 +58,10 @@ router.get('/my-events', authMiddleware, async (req, res) => {
     let saved = [];
     if (savedEventIds.length > 0) {
       const savedEventsData = await Event.find({
-        _id: { $in: savedEventIds },
-        date: { $gte: now }
+        _id: { $in: savedEventIds }
       })
       .populate('host', 'name')
-      .sort({ date: 1 });
+      .sort({ date: -1 });
 
       saved = savedEventsData.map(event => ({
         _id: event._id,
@@ -71,6 +70,8 @@ router.get('/my-events', authMiddleware, async (req, res) => {
         time: event.time,
         venue: event.location?.address || 'TBD',
         city: event.location?.city,
+        location: event.location,
+        images: event.images,
         status: 'Saved',
         hostName: event.host?.name,
         categories: event.categories,

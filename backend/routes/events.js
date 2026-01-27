@@ -599,4 +599,59 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
   }
 });
 
+// Get attendees for a specific event (only for registered users)
+router.get('/:id/attendees', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const eventId = req.params.id;
+    
+    // Find the event
+    const event = await Event.findById(eventId)
+      .populate('participants.user', 'name email profilePicture bio interests');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if the requesting user is registered for this event
+    const isRegistered = event.participants.some(
+      p => p.user._id.toString() === userId
+    );
+    
+    if (!isRegistered) {
+      return res.status(403).json({ 
+        message: 'You must be registered for this event to view attendees' 
+      });
+    }
+    
+    // Return list of attendees (excluding cancelled registrations)
+    const attendees = event.participants
+      .filter(p => p.status !== 'cancelled')
+      .map(p => ({
+        userId: p.user._id,
+        name: p.user.name,
+        profilePicture: p.user.profilePicture,
+        bio: p.user.bio,
+        interests: p.user.interests,
+        registeredAt: p.registeredAt,
+        status: p.status
+      }));
+    
+    res.json({
+      success: true,
+      eventId: event._id,
+      eventTitle: event.title,
+      totalAttendees: attendees.length,
+      attendees
+    });
+  } catch (error) {
+    console.error('❌ Error fetching event attendees:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;
