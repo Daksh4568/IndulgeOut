@@ -46,7 +46,7 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
   const Icon = config.icon;
 
   return (
-    <div className={`fixed top-4 right-4 left-4 sm:left-auto sm:min-w-[320px] sm:max-w-md z-50 animate-slideInRight`}>
+    <div className={`fixed top-20 right-4 left-4 sm:left-auto sm:min-w-[320px] sm:max-w-md z-50 animate-slideInRight`}>
       <div className={`${config.bgColor} ${config.borderColor} border rounded-lg shadow-lg p-4`}>
         <div className="flex items-start gap-3">
           <Icon className={`h-5 w-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
@@ -86,7 +86,7 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
 // Toast Container Component
 export const ToastContainer = ({ toasts, removeToast }) => {
   return (
-    <div className="fixed top-4 right-4 left-4 sm:left-auto space-y-2 z-50 pointer-events-none">
+    <div className="fixed top-20 right-4 left-4 sm:left-auto space-y-2 z-50 pointer-events-none">
       {toasts.map((toast, index) => (
         <div key={toast.id} className="pointer-events-auto" style={{ marginTop: `${index * 70}px` }}>
           <Toast

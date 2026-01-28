@@ -11,11 +11,10 @@ const Footer = () => {
             {/* Logo */}
             <div className="flex items-center gap-3">
               <img 
-                src="/images/indulgeout-logo.png" 
+                src="/images/LogoOrbit.jpg" 
                 alt="IndulgeOut" 
-                className="h-10 w-auto" 
+                className="h-16 w-20 object-contain" 
               />
-              <span className="text-xl font-bold text-white">indulgeóut</span>
             </div>
 
             {/* Resources & Legal */}

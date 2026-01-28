@@ -45,6 +45,8 @@ const EventDetail = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [attendees, setAttendees] = useState([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
+  const [showProfileLockModal, setShowProfileLockModal] = useState(false);
+  const [selectedAttendee, setSelectedAttendee] = useState(null);
   const viewTracked = useRef(false);
 
   useEffect(() => {
@@ -71,6 +73,11 @@ const EventDetail = () => {
       fetchAttendees();
     }
   }, [isRegistered, user]);
+
+  const handleAttendeeClick = (attendee) => {
+    setSelectedAttendee(attendee);
+    setShowProfileLockModal(true);
+  };
 
   const trackEventView = async () => {
     try {
@@ -170,17 +177,23 @@ const EventDetail = () => {
     
     let shareUrl;
     switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${eventTitle}%20${eventUrl}`;
+        break;
+      case 'instagram':
+        // Instagram doesn't have a direct share URL for web, so we'll open Instagram
+        toast?.info('Please share manually on Instagram');
+        window.open('https://www.instagram.com/', '_blank');
+        setShowShareModal(false);
+        return;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${eventUrl}`;
+        break;
       case 'facebook':
         shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${eventUrl}`;
         break;
       case 'twitter':
         shareUrl = `https://twitter.com/intent/tweet?url=${eventUrl}&text=${eventTitle}`;
-        break;
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${eventUrl}`;
-        break;
-      case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${eventTitle}%20${eventUrl}`;
         break;
       case 'telegram':
         shareUrl = `https://t.me/share/url?url=${eventUrl}&text=${eventTitle}`;
@@ -196,7 +209,7 @@ const EventDetail = () => {
   const copyEventLink = () => {
     const eventUrl = window.location.href;
     navigator.clipboard.writeText(eventUrl).then(() => {
-      toast?.success('Event link copied to clipboard!');
+      toast?.success('Link copied!');
       setShowShareModal(false);
     }).catch(err => {
       console.error('Failed to copy link:', err);
@@ -766,7 +779,8 @@ const EventDetail = () => {
                       {attendees.map((attendee, index) => (
                         <div 
                           key={attendee.userId} 
-                          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-300 animate-slideInLeft"
+                          onClick={() => handleAttendeeClick(attendee)}
+                          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-300 animate-slideInLeft cursor-pointer hover:scale-[1.02]"
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <div className="flex items-start gap-4">
@@ -1123,6 +1137,7 @@ const EventDetail = () => {
             
             {/* Social Media Buttons */}
             <div className="space-y-3">
+              {/* 1. WhatsApp */}
               <button
                 onClick={() => shareToSocial('whatsapp')}
                 className="w-full flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors group"
@@ -1135,30 +1150,20 @@ const EventDetail = () => {
                 <span className="font-medium text-gray-900 dark:text-white">Share on WhatsApp</span>
               </button>
               
+              {/* 2. Instagram */}
               <button
-                onClick={() => shareToSocial('facebook')}
-                className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
+                onClick={() => shareToSocial('instagram')}
+                className="w-full flex items-center gap-3 p-4 bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 rounded-lg transition-colors group"
               >
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                   </svg>
                 </div>
-                <span className="font-medium text-gray-900 dark:text-white">Share on Facebook</span>
+                <span className="font-medium text-gray-900 dark:text-white">Share on Instagram</span>
               </button>
               
-              <button
-                onClick={() => shareToSocial('twitter')}
-                className="w-full flex items-center gap-3 p-4 bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 rounded-lg transition-colors group"
-              >
-                <div className="w-10 h-10 bg-sky-500 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                  </svg>
-                </div>
-                <span className="font-medium text-gray-900 dark:text-white">Share on Twitter</span>
-              </button>
-              
+              {/* 3. LinkedIn */}
               <button
                 onClick={() => shareToSocial('linkedin')}
                 className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
@@ -1171,6 +1176,33 @@ const EventDetail = () => {
                 <span className="font-medium text-gray-900 dark:text-white">Share on LinkedIn</span>
               </button>
               
+              {/* 4. Facebook */}
+              <button
+                onClick={() => shareToSocial('facebook')}
+                className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
+              >
+                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                </div>
+                <span className="font-medium text-gray-900 dark:text-white">Share on Facebook</span>
+              </button>
+              
+              {/* 5. Twitter */}
+              <button
+                onClick={() => shareToSocial('twitter')}
+                className="w-full flex items-center gap-3 p-4 bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 rounded-lg transition-colors group"
+              >
+                <div className="w-10 h-10 bg-sky-500 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                  </svg>
+                </div>
+                <span className="font-medium text-gray-900 dark:text-white">Share on Twitter</span>
+              </button>
+              
+              {/* 6. Telegram */}
               <button
                 onClick={() => shareToSocial('telegram')}
                 className="w-full flex items-center gap-3 p-4 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-lg transition-colors group"
@@ -1195,6 +1227,155 @@ const EventDetail = () => {
                 </div>
                 <span className="font-medium text-gray-900 dark:text-white">Copy Link</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Lock Modal */}
+      {showProfileLockModal && selectedAttendee && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setShowProfileLockModal(false)}
+        >
+          <div 
+            className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowProfileLockModal(false)}
+              className="absolute top-4 right-4 z-20 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-700 rounded-full p-1"
+            >
+              <XCircle className="h-7 w-7" />
+            </button>
+
+            {/* Profile Content */}
+            <div className="relative">
+              {/* Profile Info - Name Clear, Rest Blurred */}
+              <div className="p-8 pb-4">
+                <div className="flex flex-col items-center text-center">
+                  {/* Profile Picture - Blurred */}
+                  <div className="filter blur-md pointer-events-none mb-4">
+                    {selectedAttendee.profilePicture ? (
+                      <img 
+                        src={selectedAttendee.profilePicture} 
+                        alt={selectedAttendee.name}
+                        className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-4xl font-semibold">
+                        {selectedAttendee.name?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Name - Clear and Visible */}
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                    {selectedAttendee.name}
+                  </h3>
+                  
+                  {/* User Badge - Clear */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full">
+                      <User className="w-4 h-4" />
+                      User
+                    </span>
+                  </div>
+                  
+                  {/* Blurred Content Section */}
+                  <div className="w-full space-y-4 filter blur-lg pointer-events-none mt-4">
+                    {/* Email */}
+                    <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                      </svg>
+                      <span>user@example.com</span>
+                    </div>
+                    
+                    {/* Joined Date */}
+                    <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <Calendar className="w-4 h-4" />
+                      <span>Joined November 2025</span>
+                    </div>
+                    
+                    {/* Bio Section */}
+                    <div className="mt-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-left">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Bio</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {selectedAttendee.bio || "I love going to events and meeting new people. Looking forward to connecting with everyone!"}
+                      </p>
+                    </div>
+                    
+                    {/* Interests Section */}
+                    <div className="mt-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-left">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Heart className="w-4 h-4 text-green-500 fill-green-500" />
+                        My Interests
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(selectedAttendee.interests || ['Sweat & Play', 'Art & DIY', 'Adventure & Outdoors']).map((interest, idx) => (
+                          <span 
+                            key={idx}
+                            className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-full font-medium"
+                          >
+                            {interest}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lock Overlay with CTA */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-transparent via-black/40 to-black/80 backdrop-blur-[2px] p-6 pt-40">
+                <div className="text-center mb-6 mt-auto">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-white dark:bg-gray-700 rounded-full mb-4 shadow-xl">
+                    <svg className="w-10 h-10 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    Profile Locked
+                  </h3>
+                  <p className="text-gray-200 text-sm mb-6 max-w-sm">
+                    Download the IndulgeOut app to view full profiles and connect with other attendees
+                  </p>
+                </div>
+
+                {/* App Download Buttons */}
+                <div className="w-full max-w-sm space-y-3 mb-6">
+                  <a
+                    href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-3 w-full bg-white hover:bg-gray-100 text-black px-6 py-4 rounded-xl transition-all shadow-xl hover:shadow-2xl hover:scale-105"
+                  >
+                    <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-xs text-gray-600">Download on the</div>
+                      <div className="text-base font-semibold">App Store</div>
+                    </div>
+                  </a>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-3 w-full bg-white hover:bg-gray-100 text-black px-6 py-4 rounded-xl transition-all shadow-xl hover:shadow-2xl hover:scale-105"
+                  >
+                    <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-xs text-gray-600">Get it on</div>
+                      <div className="text-base font-semibold">Google Play</div>
+                    </div>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </div>

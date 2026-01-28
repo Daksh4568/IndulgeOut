@@ -38,13 +38,13 @@ export default function NavigationBar() {
   return (
     <nav className="bg-white dark:bg-black shadow-sm border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center h-16 sm:h-20">
+        <div className="flex items-center justify-between h-16 sm:h-20">
           
           {/* Logo */}
           <div className="flex items-center gap-2">
             <Link to="/" className="hover:opacity-80 transition-opacity">
               <img 
-                src="/images/indulgeout-logo.png" 
+                src="/images/LogoFinal2.jpg" 
                 alt="IndulgeOut" 
                 className="h-12 sm:h-16 w-auto" 
               />
@@ -181,14 +181,17 @@ export default function NavigationBar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <DarkModeToggle />
+            {/* Hide dark mode toggle on mobile */}
+            <div className="hidden sm:block">
+              <DarkModeToggle />
+            </div>
             
             {!user ? (
               // Logged OUT Actions
               <>
                 <Link
                   to="/login"
-                  className="text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
+                  className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
                   style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
                 >
                   LOG IN /SIGN UP
@@ -199,7 +202,7 @@ export default function NavigationBar() {
               <>
                 <Link
                   to="/profile"
-                  className="relative group"
+                  className="hidden sm:block relative group"
                   title="Profile"
                 >
                   <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-2xl hover:scale-110 transition-transform duration-200 shadow-lg">
@@ -209,7 +212,7 @@ export default function NavigationBar() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="hidden sm:block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Logout
                 </button>

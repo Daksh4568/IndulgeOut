@@ -547,10 +547,32 @@ function Homepage() {
         
         @keyframes orbitalMove {
           0% {
-            transform: rotate(0deg) translateX(200px) rotate(0deg);
+            transform: rotate(0deg) translateX(140px) rotate(0deg);
           }
           100% {
-            transform: rotate(360deg) translateX(200px) rotate(-360deg);
+            transform: rotate(360deg) translateX(140px) rotate(-360deg);
+          }
+        }
+        
+        @media (min-width: 640px) {
+          @keyframes orbitalMove {
+            0% {
+              transform: rotate(0deg) translateX(170px) rotate(0deg);
+            }
+            100% {
+              transform: rotate(360deg) translateX(170px) rotate(-360deg);
+            }
+          }
+        }
+        
+        @media (min-width: 1024px) {
+          @keyframes orbitalMove {
+            0% {
+              transform: rotate(0deg) translateX(200px) rotate(0deg);
+            }
+            100% {
+              transform: rotate(360deg) translateX(200px) rotate(-360deg);
+            }
           }
         }
         
@@ -741,8 +763,8 @@ function Homepage() {
           </h1>
         </div>
         
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
+        {/* Scroll Indicator - Hidden on mobile */}
+        <div className="hidden md:block absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
           <div className="text-white text-sm font-semibold">SCROLL</div>
           <div className="w-6 h-10 border-2 border-white rounded-full mx-auto mt-2 flex justify-center">
             <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
@@ -1007,12 +1029,12 @@ function Homepage() {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left Side - Orbital Animation */}
-            <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px]">
+            <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden">
               {/* Central IndulgeOut Logo */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full bg-black flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
                   <img 
-                    src="public/images/indulgeout-logo.png"
+                    src="/images/LogoOrbit.jpg"
                     alt="IndulgeOut Logo" 
                     className="w-full h-full object-contain"
                   />
@@ -1117,23 +1139,61 @@ function Homepage() {
           
           {/* Section Header */}
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
               Our Social Footprint
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-lg" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            <p className="text-gray-400 text-lg" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               Follow our journey and community moments on Instagram
             </p>
           </div>
 
-          {/* Instagram Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {/* Mobile Carousel */}
+          <div className="md:hidden relative">
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex gap-4 pb-4">
+                {instagramPosts.map((post, index) => (
+                  <a
+                    key={index}
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 w-64 aspect-square rounded-2xl overflow-hidden shadow-xl relative"
+                  >
+                    {/* Thumbnail Image */}
+                    <img 
+                      src={post.thumbnail} 
+                      alt={`Instagram ${post.type} ${index + 1}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Instagram Icon Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors">
+                      <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                      </svg>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+            {/* Scroll indicator dots */}
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: Math.ceil(instagramPosts.length / 2) }).map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-gray-600"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Grid */}
+          <div className="hidden md:grid grid-cols-3 lg:grid-cols-5 gap-4">
             {instagramPosts.map((post, index) => (
               <a
                 key={index}
                 href={post.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative aspect-square rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                className="group relative aspect-square rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
               >
                 {/* Thumbnail Image */}
                 <img 
@@ -1141,19 +1201,6 @@ function Homepage() {
                   alt={`Instagram ${post.type} ${index + 1}`}
                   loading="lazy"
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = `
-                      <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500">
-                        <div class="text-center text-white">
-                          <svg class="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                          </svg>
-                          <p class="text-sm font-semibold">View on Instagram</p>
-                        </div>
-                      </div>
-                    `;
-                  }}
                 />
                 
                 {/* Overlay on Hover */}
@@ -1165,15 +1212,6 @@ function Homepage() {
                     <p className="text-sm font-semibold">{post.type === 'reel' ? 'Watch Reel' : 'View Post'}</p>
                   </div>
                 </div>
-
-                {/* Reel Icon Indicator */}
-                {post.type === 'reel' && (
-                  <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-800/90 rounded-full p-1.5 shadow-lg">
-                    <svg className="w-4 h-4 text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-                    </svg>
-                  </div>
-                )}
               </a>
             ))}
           </div>
