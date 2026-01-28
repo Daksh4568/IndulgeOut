@@ -14,20 +14,20 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-  customHeaders:
-    - pattern: '**/*'
-      headers:
-        - key: 'Strict-Transport-Security'
-          value: 'max-age=31536000; includeSubDomains'
-        - key: 'X-Frame-Options'
-          value: 'SAMEORIGIN'
-        - key: 'X-Content-Type-Options'
-          value: 'nosniff'
-        - key: 'X-XSS-Protection'
-          value: '1; mode=block'
-        - key: 'Referrer-Policy'
-          value: 'strict-origin-when-cross-origin'
-    - pattern: '/assets/**'
-      headers:
-        - key: 'Cache-Control'
-          value: 'public, max-age=31536000, immutable'
+customHeaders:
+  - pattern: '**/*'
+    headers:
+      - key: 'Strict-Transport-Security'
+        value: 'max-age=31536000; includeSubDomains'
+      - key: 'X-Frame-Options'
+        value: 'SAMEORIGIN'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'X-XSS-Protection'
+        value: '1; mode=block'
+      - key: 'Referrer-Policy'
+        value: 'strict-origin-when-cross-origin'
+  - pattern: '/assets/**'
+    headers:
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
