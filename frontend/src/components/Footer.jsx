@@ -4,7 +4,7 @@ const Footer = () => {
   return (
     <footer className="bg-black text-white py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Left Column - Logo, Links, Copyright, Social */}
           <div className="flex flex-col space-y-5">
@@ -33,6 +33,11 @@ const Footer = () => {
                       How It Works
                     </Link>
                   </li>
+                  <li>
+                    <Link to="/contact" className="text-gray-400 hover:text-white transition-colors text-sm">
+                      Contact Us
+                    </Link>
+                  </li>
                 </ul>
               </div>
 
@@ -46,7 +51,12 @@ const Footer = () => {
                   </li>
                   <li>
                     <Link to="/terms-conditions" className="text-gray-400 hover:text-white transition-colors text-sm">
-                      Terms of Service
+                      Terms & Conditions
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/refunds-cancellations" className="text-gray-400 hover:text-white transition-colors text-sm">
+                      Refunds & Cancellations
                     </Link>
                   </li>
                 </ul>
@@ -93,32 +103,8 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Right Column - Phones & Get the App */}
-          <div className="flex flex-col items-end space-y-4">
-            {/* Phone Mockups - Even Smaller */}
-            <div className="relative w-36 h-28">
-              <div className="absolute left-0 top-0 w-16 h-32 bg-gray-900 rounded-[1.2rem] border-[2px] border-gray-800 shadow-2xl transform rotate-[-12deg]">
-                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 bg-black rounded-full"></div>
-                <div className="h-full rounded-[0.9rem] overflow-hidden bg-white">
-                  <img 
-                    src="/images/Media (5).jpg" 
-                    alt="App Screenshot 1" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-              <div className="absolute left-8 top-1 w-16 h-32 bg-gray-900 rounded-[1.2rem] border-[2px] border-gray-800 shadow-2xl transform rotate-[12deg]">
-                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 bg-black rounded-full"></div>
-                <div className="h-full rounded-[0.9rem] overflow-hidden bg-white">
-                  <img 
-                    src="/images/Media (6).jpg" 
-                    alt="App Screenshot 2" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-
+          {/* Right Column - Get the App */}
+          <div className="flex flex-col items-end justify-start">
             {/* Get the App Container */}
             <div className="bg-gray-800/90 rounded-xl px-5 py-3 w-full max-w-sm">
               <h3 className="text-sm font-bold text-white text-center mb-0.5">Get the App</h3>

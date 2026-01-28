@@ -188,7 +188,8 @@ export default function NavigationBar() {
               <>
                 <Link
                   to="/login"
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-colors"
+                  className="text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
                 >
                   LOG IN /SIGN UP
                 </Link>
