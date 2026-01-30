@@ -54,7 +54,7 @@ function Homepage() {
   const partnerCards = [
     {
       title: "Start Something You Love",
-      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally. Share your vision, and we'll help you make it real.",
+      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally.",
       buttonText: "Explore the event",
       buttonAction: () => navigate('/explore'),
       image: "/images/Media (5).jpg"
@@ -771,12 +771,17 @@ function Homepage() {
           </div>
         </div>
       </section>
-              py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden
+              
       {/* Stats Section */}
       <section className="py-20 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-20 bg-zinc-900 dark:bg-zinc-900 rounded-3xl p-8 md:p-12">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="relative py-20 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 rounded-3xl p-8 md:p-12 overflow-hidden">
+            {/* Mirror/Glass Effect Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/3 to-transparent"></div>
+            
+            {/* Content */}
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Stat 1 */}
               <div className="text-center transform hover:scale-105 transition-all duration-300">
                 <div className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#5656D3' }}>
@@ -810,7 +815,7 @@ function Homepage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
-              Our Vox pops and<br />customer testimonials
+              Hear From Our Community
             </h2>
             <p className="text-xl text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               Hold on, stay and watch this because you'll for sure love it. No bragging, it's honestly super candid, fun and heart-warming!
@@ -872,8 +877,8 @@ function Homepage() {
                 {/* VIEW ALL Button at Bottom */}
                 <button
                   onClick={() => navigate('/explore')}
-                  className="text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:opacity-90 text-sm shadow-lg"
-                  style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
+                  className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                 >
                   VIEW ALL
                 </button>
@@ -933,46 +938,46 @@ function Homepage() {
                   // Front card - fully visible, largest
                   zIndex = 40;
                   scale = isMobile ? 0.7 : (isTablet ? 0.8 : 0.9);
-                  translateX = isMobile ? -100 : (isTablet ? -220 : -380);
+                  translateX = isMobile ? -100 : (isTablet ? -180 : -280);
                   translateY = 0;
                   rotate = -12;
                   opacity = 1;
                 } else if (position === 1) {
                   zIndex = 35;
                   scale = isMobile ? 0.65 : (isTablet ? 0.75 : 0.85);
-                  translateX = isMobile ? -60 : (isTablet ? -140 : -240);
-                  translateY = isMobile ? 8 : (isTablet ? 10 : 12);
-                  rotate = -8;
-                  opacity = 0.9;
+                  translateX = isMobile ? -60 : (isTablet ? -110 : -170);
+                  translateY = isMobile ? 10 : (isTablet ? 15 : 20);
+                  rotate = -9;
+                  opacity = 1;
                 } else if (position === 2) {
                   zIndex = 30;
                   scale = isMobile ? 0.6 : (isTablet ? 0.7 : 0.8);
-                  translateX = isMobile ? -20 : (isTablet ? -60 : -100);
-                  translateY = isMobile ? 16 : (isTablet ? 20 : 24);
-                  rotate = -4;
-                  opacity = 0.85;
+                  translateX = isMobile ? -20 : (isTablet ? -40 : -60);
+                  translateY = isMobile ? 20 : (isTablet ? 30 : 40);
+                  rotate = -6;
+                  opacity = 1;
                 } else if (position === 3) {
                   zIndex = 25;
                   scale = isMobile ? 0.55 : (isTablet ? 0.65 : 0.75);
-                  translateX = isMobile ? 20 : (isTablet ? 60 : 100);
-                  translateY = isMobile ? 20 : (isTablet ? 25 : 30);
-                  rotate = 4;
-                  opacity = isMobile ? 0.7 : 0.8;
+                  translateX = isMobile ? 20 : (isTablet ? 40 : 60);
+                  translateY = isMobile ? 30 : (isTablet ? 45 : 60);
+                  rotate = -3;
+                  opacity = 1;
                 } else if (position === 4) {
                   zIndex = 20;
                   scale = isMobile ? 0.5 : (isTablet ? 0.6 : 0.7);
-                  translateX = isMobile ? 60 : (isTablet ? 140 : 240);
-                  translateY = isMobile ? 24 : (isTablet ? 30 : 36);
-                  rotate = 8;
-                  opacity = isMobile ? 0.6 : 0.75;
+                  translateX = isMobile ? 60 : (isTablet ? 110 : 170);
+                  translateY = isMobile ? 40 : (isTablet ? 60 : 80);
+                  rotate = -1;
+                  opacity = 1;
                 } else {
                   // Last card - moving to back
                   zIndex = 15;
                   scale = isMobile ? 0.45 : (isTablet ? 0.55 : 0.65);
-                  translateX = isMobile ? 100 : (isTablet ? 220 : 380);
-                  translateY = isMobile ? 28 : (isTablet ? 35 : 42);
-                  rotate = 12;
-                  opacity = isMobile ? 0.5 : 0.7;
+                  translateX = isMobile ? 100 : (isTablet ? 180 : 280);
+                  translateY = isMobile ? 50 : (isTablet ? 75 : 100);
+                  rotate = 0;
+                  opacity = 1;
                 }
                 
                 return (
@@ -1006,8 +1011,9 @@ function Homepage() {
           <div className="text-center mt-10">
             <button
               onClick={() => navigate('/explore')}
-              className="text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
-              style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
+       //       className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
+              className="text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
               EXPLORE NOW
             </button>
@@ -1016,7 +1022,7 @@ function Homepage() {
       </section>
 
       {/* Partner With Us Section */}
-      <section className="py-20 bg-black relative overflow-hidden">
+      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 lg:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6" style={{ fontFamily: 'Oswald, sans-serif' }}>
@@ -1032,9 +1038,9 @@ function Homepage() {
             <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden">
               {/* Central IndulgeOut Logo */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full bg-black flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full bg-zinc-900 backdrop-blur-sm flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
                   <img 
-                    src="/images/LogoOrbit.jpg"
+                    src="/images/LogoOrbital.png"
                     alt="IndulgeOut Logo" 
                     className="w-full h-full object-contain"
                   />
@@ -1070,19 +1076,11 @@ function Homepage() {
                     animationDelay: item.delay
                   }}
                 >
-                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full overflow-hidden shadow-2xl">
-                    {/* Background Image */}
-                    <img 
-                      src={item.bgImage} 
-                      alt={item.label}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    {/* Dark Overlay with reduced opacity */}
-                    <div className="absolute inset-0 bg-black/30"></div>
+                  <div className="relative w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full overflow-hidden shadow-2xl bg-zinc-800/60 backdrop-blur-sm">
                     {/* Content */}
-                    <div className="relative z-10 h-full flex flex-col items-center justify-center p-1.5 sm:p-2 text-center">
-                      <div className="text-xl sm:text-2xl lg:text-3xl mb-0.5 sm:mb-1">{item.icon}</div>
-                      <p className="text-white text-[9px] sm:text-[10px] font-semibold leading-tight drop-shadow-lg">
+                    <div className="relative z-10 h-full flex flex-col items-center justify-center p-2 sm:p-3 text-center">
+                      <div className="text-2xl sm:text-3xl lg:text-4xl mb-1 sm:mb-2">{item.icon}</div>
+                      <p className="text-white text-[10px] sm:text-xs font-semibold leading-tight drop-shadow-lg">
                         {item.label}
                       </p>
                     </div>
@@ -1093,42 +1091,33 @@ function Homepage() {
 
             {/* Right Side - Single Auto-Rotating Card */}
             <div className="relative flex items-center justify-center mt-8 lg:mt-0">
-              <div className="w-full max-w-sm lg:max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-700">
-                <div className="p-6">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl mb-4 overflow-hidden">
-                    <img 
-                      src={partnerCards[currentPartnerCard].image} 
-                      alt={partnerCards[currentPartnerCard].title}
-                      className="w-full h-full object-cover transition-opacity duration-700"
-                    />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 transition-opacity duration-700" style={{ fontFamily: 'Oswald, sans-serif' }}>
+              <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl transition-all duration-700 h-[580px] flex flex-col">
+                {/* Fixed height image container */}
+                <div className="w-full h-[280px] bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden flex-shrink-0">
+                  <img 
+                    src={partnerCards[currentPartnerCard].image} 
+                    alt={partnerCards[currentPartnerCard].title}
+                    className="w-full h-full object-cover transition-opacity duration-700"
+                  />
+                </div>
+                {/* Content area with flex-1 to fill remaining space */}
+                <div className="flex-1 flex flex-col p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4 transition-opacity duration-700" style={{ fontFamily: 'Oswald, sans-serif' }}>
                     {partnerCards[currentPartnerCard].title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed transition-opacity duration-700" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                  <p className="text-gray-600 text-base mb-8 leading-relaxed transition-opacity duration-700 flex-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                     {partnerCards[currentPartnerCard].description}
                   </p>
                   <button
                     onClick={partnerCards[currentPartnerCard].buttonAction}
-                    className="w-full text-white px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 transform hover:scale-105 hover:opacity-90 shadow-lg"
-                    style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
+                    className="w-full text-white px-6 py-3.5 rounded-md text-base font-semibold transition-all duration-300 transform hover:scale-105 hover:opacity-90 shadow-lg"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                   >
                     {partnerCards[currentPartnerCard].buttonText}
                   </button>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Bottom CTA Button */}
-          <div className="text-center mt-12 lg:mt-20">
-            <button
-              onClick={() => navigate('/host-partner')}
-              className="text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
-              style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
-            >
-              Explore the event
-            </button>
           </div>
         </div>
       </section>

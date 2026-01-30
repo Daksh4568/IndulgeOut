@@ -1,7 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Menu, User, Building2, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import DarkModeToggle from './DarkModeToggle';
 import { useState } from 'react';
 
 export default function NavigationBar() {
@@ -63,7 +62,7 @@ export default function NavigationBar() {
                     onBlur={() => setTimeout(() => setExploreOpen(false), 200)}
                     className="flex items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
-                    Explore
+                    EXPLORE
                     <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${exploreOpen ? 'rotate-180' : ''}`} />
                   </button>
                   
@@ -104,7 +103,7 @@ export default function NavigationBar() {
                     onBlur={() => setTimeout(() => setCategoriesOpen(false), 200)}
                     className="flex items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
-                    Categories
+                    CATEGORIES
                     <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
                   </button>
                   
@@ -129,7 +128,7 @@ export default function NavigationBar() {
                   to="/host-partner"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Host & Partner
+                  HOST & PARTNER
                 </Link>
 
                 {/* About */}
@@ -137,7 +136,7 @@ export default function NavigationBar() {
                   to="/about"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  About
+                  ABOUT
                 </Link>
               </>
             ) : (
@@ -147,13 +146,13 @@ export default function NavigationBar() {
                   to={getDashboardRoute()}
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Dashboard
+                  DASHBOARD
                 </Link>
                 <Link
                   to="/explore"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Explore
+                  EXPLORE
                 </Link>
                 
                 {/* Browse Venues and Sponsors - Only for Community Organizers and Brands */}
@@ -164,14 +163,14 @@ export default function NavigationBar() {
                       className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       <Building2 className="h-4 w-4" />
-                      <span>Venues</span>
+                      <span>VENUES</span>
                     </Link>
                     <Link
                       to="/browse/sponsors"
                       className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       <Sparkles className="h-4 w-4" />
-                      <span>Sponsors</span>
+                      <span>SPONSORS</span>
                     </Link>
                   </>
                 )}
@@ -181,18 +180,13 @@ export default function NavigationBar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Hide dark mode toggle on mobile */}
-            <div className="hidden sm:block">
-              <DarkModeToggle />
-            </div>
-            
             {!user ? (
               // Logged OUT Actions
               <>
                 <Link
                   to="/login"
-                  className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(180deg, #7878E9 0%, #7878E9 75%, #3D3DD4 100%)' }}
+                  className="hidden sm:block text-black px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                 >
                   LOG IN /SIGN UP
                 </Link>
@@ -246,7 +240,7 @@ export default function NavigationBar() {
                       onClick={() => setExploreOpen(!exploreOpen)}
                       className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                     >
-                      Explore
+                      EXPLORE
                       <ChevronDown className={`h-4 w-4 transition-transform ${exploreOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {exploreOpen && (
@@ -282,7 +276,7 @@ export default function NavigationBar() {
                       onClick={() => setCategoriesOpen(!categoriesOpen)}
                       className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                     >
-                      Categories
+                      CATEGORIES
                       <ChevronDown className={`h-4 w-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {categoriesOpen && (
@@ -303,14 +297,14 @@ export default function NavigationBar() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                   >
-                    Host & Partner
+                    HOST & PARTNER
                   </Link>
                   <Link
                     to="/about"
                     onClick={() => setMobileMenuOpen(false)}
                     className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                   >
-                    About
+                    ABOUT
                   </Link>
 
                   {/* Mobile Auth Buttons */}
@@ -320,14 +314,15 @@ export default function NavigationBar() {
                       onClick={() => setMobileMenuOpen(false)}
                       className="block w-full text-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                     >
-                      Sign In
+                      SIGN IN
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block w-full text-center bg-primary-600 hover:bg-primary-700 text-white px-3 py-2 rounded-md text-base font-medium"
+                      className="block w-full text-center text-white px-3 py-2 rounded-md text-base font-semibold transition-all hover:opacity-90"
+                      style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                     >
-                      Get Started
+                      GET STARTED
                     </Link>
                   </div>
                 </>
@@ -339,14 +334,14 @@ export default function NavigationBar() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                   >
-                    Dashboard
+                    DASHBOARD
                   </Link>
                   <Link
                     to="/explore"
                     onClick={() => setMobileMenuOpen(false)}
                     className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                   >
-                    Explore
+                    EXPLORE
                   </Link>
                   
                   {/* Browse Venues and Sponsors - Only for Community Organizers and Brands */}
