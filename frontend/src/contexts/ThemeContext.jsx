@@ -11,7 +11,7 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -19,9 +19,8 @@ export const ThemeProvider = ({ children }) => {
     if (savedTheme) {
       setIsDarkMode(savedTheme === 'dark');
     } else {
-      // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDarkMode(prefersDark);
+      // Default to dark mode
+      setIsDarkMode(true);
     }
   }, []);
 
