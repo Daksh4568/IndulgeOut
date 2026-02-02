@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { 
   User, Mail, Phone, MapPin, Calendar, Edit2, Save, X, 
   Building2, Users, Sparkles, Globe, Instagram, Facebook,
   Heart, Clock, TrendingUp, CheckCircle, AlertCircle, Camera,
-  Home, Settings, LogOut
+  Home, Settings, LogOut, CreditCard, Lock
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import NavigationBar from '../components/NavigationBar'
@@ -12,6 +12,7 @@ import { api } from '../config/api.js'
 
 const Profile = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout, isAuthenticated, isHostPartner, isCommunityOrganizer, isVenue, isBrandSponsor } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState(null)
@@ -37,10 +38,19 @@ const Profile = () => {
     companyName: '',
     brandDescription: '',
     industry: '',
-    targetAudience: ''
+    targetAudience: '',
+    // Payout fields
+    accountNumber: '',
+    ifscCode: '',
+    accountHolderName: '',
+    bankName: '',
+    accountType: 'savings',
+    panNumber: '',
+    gstNumber: ''
   })
   const [saving, setSaving] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const payoutSectionRef = React.useRef(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -49,6 +59,30 @@ const Profile = () => {
     }
     fetchProfileData()
   }, [isAuthenticated, navigate])
+
+  useEffect(() => {
+    // Check if navigated from notification to add payout details
+    const params = new URLSearchParams(location.search)
+    const section = params.get('section')
+    
+    console.log('📍 Profile page loaded with query params:', location.search)
+    console.log('🎯 Section parameter:', section)
+    console.log('📦 Profile data loaded:', !!profileData)
+    console.log('📦 Payout section ref exists:', !!payoutSectionRef.current)
+    
+    if (section === 'payout' && profileData && !loading) {
+      console.log('✅ Opening edit mode and scrolling to payout section...')
+      setIsEditing(true)
+      setTimeout(() => {
+        if (payoutSectionRef.current) {
+          payoutSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          console.log('📜 Scrolled to payout section')
+        } else {
+          console.log('⚠️ Payout section ref not found')
+        }
+      }, 1000) // Increased timeout to ensure render
+    }
+  }, [location, profileData, loading])
 
   const fetchProfileData = async () => {
     try {
@@ -75,7 +109,15 @@ const Profile = () => {
         name: profileData.name || '',
         phoneNumber: profileData.phoneNumber || '',
         bio: profileData.bio || '',
-        city: profileData.location?.city || ''
+        city: profileData.location?.city || '',
+        // Payout details
+        accountNumber: profileData.payoutInfo?.accountNumber || '',
+        ifscCode: profileData.payoutInfo?.ifscCode || '',
+        accountHolderName: profileData.payoutInfo?.accountHolderName || '',
+        bankName: profileData.payoutInfo?.bankName || '',
+        accountType: profileData.payoutInfo?.accountType || 'savings',
+        panNumber: profileData.payoutInfo?.panNumber || '',
+        gstNumber: profileData.payoutInfo?.gstNumber || ''
       }
 
       if (isCommunityOrganizer && profileData.communityProfile) {
@@ -120,6 +162,19 @@ const Profile = () => {
         bio: editForm.bio,
         location: {
           city: editForm.city
+        }
+      }
+
+      // Add payout info if host partner and any payout field is filled
+      if (isHostPartner && (editForm.accountNumber || editForm.ifscCode || editForm.accountHolderName)) {
+        updateData.payoutInfo = {
+          accountNumber: editForm.accountNumber,
+          ifscCode: editForm.ifscCode,
+          accountHolderName: editForm.accountHolderName,
+          bankName: editForm.bankName,
+          accountType: editForm.accountType,
+          panNumber: editForm.panNumber,
+          gstNumber: editForm.gstNumber
         }
       }
 
@@ -1088,6 +1143,131 @@ const Profile = () => {
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Describe your target audience"
                     />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payout Details Section - For all Host Partners */}
+            {isHostPartner && (
+              <div ref={payoutSectionRef} className="mb-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-green-600" />
+                  Payout Details (KYC)
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Add your bank account details to receive earnings from events. This information is securely stored and used only for payments.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Account Holder Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="accountHolderName"
+                      value={editForm.accountHolderName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Enter account holder name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Account Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="accountNumber"
+                      value={editForm.accountNumber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Enter account number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      IFSC Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="ifscCode"
+                      value={editForm.ifscCode}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="e.g., SBIN0001234"
+                      maxLength="11"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Bank Name
+                    </label>
+                    <input
+                      type="text"
+                      name="bankName"
+                      value={editForm.bankName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="e.g., State Bank of India"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Account Type
+                    </label>
+                    <select
+                      name="accountType"
+                      value={editForm.accountType}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="savings">Savings</option>
+                      <option value="current">Current</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      PAN Number
+                    </label>
+                    <input
+                      type="text"
+                      name="panNumber"
+                      value={editForm.panNumber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="e.g., ABCDE1234F"
+                      maxLength="10"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      GST Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="gstNumber"
+                      value={editForm.gstNumber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="e.g., 22AAAAA0000A1Z5"
+                      maxLength="15"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                      <strong>Secure & Confidential:</strong> Your banking details are encrypted and stored securely. 
+                      This information will only be used for payment processing and is never shared with third parties.
+                    </div>
                   </div>
                 </div>
               </div>

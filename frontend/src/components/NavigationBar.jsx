@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Menu, User, Building2, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 import { useState } from 'react';
 
 export default function NavigationBar() {
@@ -183,17 +184,27 @@ export default function NavigationBar() {
             {!user ? (
               // Logged OUT Actions
               <>
-                <Link
-                  to="/login"
-                  className="hidden sm:block text-black px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                <button
+                  onClick={() => navigate('/login')}
+                  className="hidden sm:block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-4 py-2 text-sm font-semibold uppercase transition-colors"
                 >
-                  LOG IN /SIGN UP
-                </Link>
+                  LOG IN
+                </button>
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide transition-all hover:opacity-90"
+                  style={{ 
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    fontFamily: 'Oswald, sans-serif'
+                  }}
+                >
+                  SIGN UP
+                </button>
               </>
             ) : (
               // Logged IN Actions
               <>
+                <NotificationBell />
                 <Link
                   to="/profile"
                   className="hidden sm:block relative group"
@@ -309,21 +320,28 @@ export default function NavigationBar() {
 
                   {/* Mobile Auth Buttons */}
                   <div className="pt-4 space-y-2">
-                    <Link
-                      to="/login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block w-full text-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
+                    <button
+                      onClick={() => {
+                        navigate('/login');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-center text-gray-700 dark:text-gray-300 border border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                     >
-                      SIGN IN
-                    </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block w-full text-center text-white px-3 py-2 rounded-md text-base font-semibold transition-all hover:opacity-90"
-                      style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      LOG IN
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/signup');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-center text-white px-3 py-2 rounded-md text-base font-bold uppercase transition-all hover:opacity-90"
+                      style={{ 
+                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                        fontFamily: 'Oswald, sans-serif'
+                      }}
                     >
-                      GET STARTED
-                    </Link>
+                      SIGN UP
+                    </button>
                   </div>
                 </>
               ) : (

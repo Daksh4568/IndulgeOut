@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
@@ -15,6 +15,7 @@ import {
 const UserDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // State management
   const [activeTab, setActiveTab] = useState('upcoming'); // upcoming, past, saved
@@ -35,6 +36,17 @@ const UserDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Auto-open ticket viewer if eventId is in URL (from notification)
+  useEffect(() => {
+    const eventId = searchParams.get('eventId');
+    if (eventId && !loading) {
+      setSelectedTicket(eventId);
+      setShowTicketViewer(true);
+      // Remove the query parameter after opening
+      setSearchParams({});
+    }
+  }, [searchParams, loading]);
 
   const fetchDashboardData = async () => {
     try {

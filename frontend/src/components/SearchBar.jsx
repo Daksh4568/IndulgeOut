@@ -121,12 +121,12 @@ const SearchBar = ({ onSearch, placeholder = "Search events, communities, people
             }
           }}
           placeholder={placeholder}
-          className="w-full pl-12 pr-12 py-4 rounded-full border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all text-lg"
+          className="w-full pl-12 pr-12 py-4 rounded-md border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-[#7878E9] transition-all text-base"
         />
         {query && (
           <button
             onClick={handleClear}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <X className="h-5 w-5" />
           </button>

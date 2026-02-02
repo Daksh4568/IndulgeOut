@@ -34,7 +34,7 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
   const CardContent = () => (
     <>
       {/* Image */}
-      <div className={`relative aspect-video overflow-hidden bg-gray-200 dark:bg-gray-700 ${isLocked ? 'filter blur-sm' : ''}`}>
+      <div className={`relative h-48 overflow-hidden bg-gray-700 flex-shrink-0 ${isLocked ? 'filter blur-sm' : ''}`}>
         {(community.coverImage || (community.images && community.images.length > 0)) ? (
           <img
             src={community.coverImage || community.images[0]}
@@ -42,17 +42,18 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <Users className="h-16 w-16" />
-          </div>
+          <img
+            src="/images/postercard5.jpg"
+            alt={community.name || "Community poster"}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
         )}
         
         {/* Lock Overlay */}
         {isLocked && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
             <div className="text-center">
               <Lock className="h-12 w-12 text-white mx-auto mb-2" />
-              <p className="text-white font-semibold text-sm">Download App to View</p>
             </div>
           </div>
         )}
@@ -61,11 +62,11 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
         {!isLocked && (
           <button
             onClick={handleFavorite}
-            className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors"
+            className="absolute top-3 right-3 p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors z-10"
           >
             <Heart
               className={`h-5 w-5 ${
-                isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'
+                isFavorited ? 'fill-red-500 text-red-500' : 'text-white'
               }`}
             />
           </button>
@@ -73,24 +74,32 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
       </div>
 
       {/* Content */}
-      <div className={`p-4 ${isLocked ? 'filter blur-sm' : ''}`}>
+      <div className={`p-4 bg-[#1E1E2E] flex-grow ${isLocked ? 'filter blur-sm' : ''}`}>
         {/* Title */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-orange-500 transition-colors">
+        <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-[#7878E9] transition-colors" style={{ fontFamily: 'Oswald, sans-serif' }}>
           {community.name}
         </h3>
 
         {/* Description */}
         {community.description && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+          <p className="text-sm text-gray-300 mb-3 line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
             {community.description}
           </p>
         )}
 
+        {/* Members */}
+        <div className="flex items-center gap-2 text-gray-300 mb-3">
+          <Users className="h-4 w-4 text-[#7878E9]" />
+          <span className="text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            {community.memberCount || 0} members
+          </span>
+        </div>
+
         {/* Location */}
         {community.location?.city && (
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-3">
-            <MapPin className="h-4 w-4" />
-            <span className="text-sm">
+          <div className="flex items-center gap-2 text-gray-300 mb-3">
+            <MapPin className="h-4 w-4 text-[#7878E9]" />
+            <span className="text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               {community.location.city}
               {community.location.state && `, ${community.location.state}`}
             </span>
@@ -99,37 +108,31 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
 
         {/* Category Badge */}
         {community.category && (
-          <div className="mb-3">
-            <span className="inline-block bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-xs font-medium">
-              {getCategoryEmoji(community.category)} {community.category}
+          <div className="mb-4">
+            <span className="inline-flex items-center gap-1 bg-[#2A2A3E] text-gray-300 px-3 py-1 rounded-full text-xs font-medium">
+              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+              {community.category}
             </span>
           </div>
         )}
 
-        {/* Footer - Members & Creator */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-            <Users className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {community.memberCount || 0} members
-            </span>
-          </div>
-
-          {community.creator && (
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                {community.creator.name ? community.creator.name.charAt(0).toUpperCase() : 'C'}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Join Button */}
+        <button
+          className="w-full text-white px-4 py-2.5 rounded-md text-sm font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-auto"
+          style={{ 
+            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+            fontFamily: 'Oswald, sans-serif'
+          }}
+        >
+          Join Now
+        </button>
       </div>
     </>
   );
 
   if (isLocked) {
     return (
-      <div className="relative group block bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md">
+      <div className="relative group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg">
         <CardContent />
       </div>
     );
@@ -138,7 +141,7 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
   return (
     <Link
       to={`/communities/${community._id}`}
-      className="group block bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+      className="group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]"
     >
       <CardContent />
     </Link>
