@@ -274,6 +274,23 @@ const userSchema = new mongoose.Schema({
     established: Date,
     memberCount: { type: Number, default: 0 }
   },
+  
+  // Payout Information (for host_partner roles - community_organizer, venue, brand_sponsor)
+  payoutInfo: {
+    accountNumber: String,
+    ifscCode: String,
+    accountHolderName: String,
+    bankName: String,
+    accountType: {
+      type: String,
+      enum: ['savings', 'current']
+    },
+    panNumber: String,
+    gstNumber: String,
+    isVerified: { type: Boolean, default: false },
+    verifiedAt: Date,
+    addedAt: { type: Date, default: Date.now }
+  },
   interests: [{
     type: String,
     enum: [

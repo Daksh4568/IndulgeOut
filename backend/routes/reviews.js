@@ -3,6 +3,7 @@ const router = express.Router();
 const Review = require('../models/Review');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const notificationService = require('../services/notificationService');
 const { authMiddleware } = require('../utils/authUtils');
 
 // @route   POST /api/events/:eventId/review
@@ -82,6 +83,19 @@ router.post('/:eventId/review', authMiddleware, async (req, res) => {
 
     // Populate user info for response
     await review.populate('user', 'name profilePicture');
+
+    // Notify host to respond to feedback
+    setImmediate(async () => {
+      try {
+        await notificationService.notifyRespondToFeedback(
+          event.host,
+          event._id,
+          event.title
+        );
+      } catch (error) {
+        console.error('Failed to send feedback notification:', error);
+      }
+    });
 
     res.status(201).json({
       message: 'Review submitted successfully',

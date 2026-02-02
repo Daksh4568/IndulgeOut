@@ -236,8 +236,135 @@ const sendEventNotificationToHost = async (hostEmail, hostName, user, event) => 
   }
 };
 
+// Send generic notification email
+const sendNotificationEmail = async (userEmail, userName, notification) => {
+  try {
+    const { title, message, actionButton } = notification;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: title,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #7878E9 0%, #3D3DD4 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">${title}</h1>
+          </div>
+          
+          <div style="padding: 30px; background: #f9fafb;">
+            <h2 style="color: #333; margin-bottom: 20px;">Hi ${userName}! 👋</h2>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+              ${message}
+            </p>
+            
+            ${actionButton ? `
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'https://indulgeout.com'}${actionButton.link}" 
+                   style="background: linear-gradient(135deg, #7878E9 0%, #3D3DD4 100%); 
+                          color: white; 
+                          padding: 12px 30px; 
+                          text-decoration: none; 
+                          border-radius: 6px; 
+                          display: inline-block;
+                          font-weight: bold;">
+                  ${actionButton.text}
+                </a>
+              </div>
+            ` : ''}
+            
+            <p style="color: #666; line-height: 1.6; margin-top: 30px;">
+              Best regards,<br>
+              The IndulgeOut Team
+            </p>
+          </div>
+          
+          <div style="background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; font-size: 14px;">
+            <p style="margin: 0;">
+              © 2025 IndulgeOut. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Notification email sent successfully to:', userEmail);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending notification email:', error);
+    throw error;
+  }
+};
+
+// Send OTP email
+const sendOTPEmail = async (userEmail, userName, otp) => {
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: 'Your IndulgeOut Login OTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #7878E9 0%, #3D3DD4 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">IndulgeOut</h1>
+          </div>
+          
+          <div style="padding: 40px; background: #f9fafb;">
+            <h2 style="color: #333; margin-bottom: 20px;">Hi ${userName}! 👋</h2>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 30px;">
+              Your One-Time Password (OTP) for logging into IndulgeOut is:
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-size: 36px; font-weight: bold; color: #7878E9; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                ${otp}
+              </div>
+            </div>
+            
+            <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin-bottom: 30px; border-radius: 4px;">
+              <p style="color: #92400E; margin: 0; font-size: 14px;">
+                <strong>⚠️ Important:</strong> This OTP is valid for <strong>10 minutes</strong> only. Do not share this code with anyone.
+              </p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+              If you didn't request this OTP, please ignore this email or contact our support team.
+            </p>
+            
+            <div style="text-align: center; margin-top: 40px;">
+              <a href="${process.env.FRONTEND_URL || 'https://indulgeout.com'}" 
+                 style="background: linear-gradient(135deg, #7878E9 0%, #3D3DD4 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                Go to IndulgeOut
+              </a>
+            </div>
+          </div>
+          
+          <div style="padding: 20px; background: #1f2937; text-align: center;">
+            <p style="color: #9ca3af; margin: 0; font-size: 12px;">
+              © ${new Date().getFullYear()} IndulgeOut. All rights reserved.
+            </p>
+            <p style="color: #9ca3af; margin: 10px 0 0 0; font-size: 12px;">
+              Need help? Contact us at support@indulgeout.com
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP email sent successfully to: ${userEmail}`);
+  } catch (error) {
+    console.error('❌ Error sending OTP email:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendEventRegistrationEmail,
-  sendEventNotificationToHost
+  sendEventNotificationToHost,
+  sendNotificationEmail,
+  sendOTPEmail
 };

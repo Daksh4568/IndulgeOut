@@ -5,6 +5,7 @@ const compression = require('compression');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth.js');
+const authOTPRoutes = require('./routes/authOTP.js');
 const eventRoutes = require('./routes/events.js');
 const userRoutes = require('./routes/users.js');
 const communityRoutes = require('./routes/communities.js');
@@ -21,6 +22,8 @@ const adminRoutes = require('./routes/admin.js');
 const userDashboardRoutes = require('./routes/userDashboard.js');
 const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
+const notificationRoutes = require('./routes/notifications.js');
+const { startAllJobs } = require('./jobs/scheduledJobs.js');
 
 const app = express();
 
@@ -41,6 +44,9 @@ const connectDB = async () => {
       heartbeatFrequencyMS: 10000, // Check server health every 10 seconds
     });
     console.log('✅ MongoDB connected successfully with connection pool', mongoURI);
+    
+    // Start scheduled jobs for notifications
+    startAllJobs();
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     console.log('📝 Note: If you haven\'t set up MongoDB yet, add MONGODB_URI to your .env file');
@@ -103,6 +109,7 @@ app.use(async (req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', authOTPRoutes); // OTP-based authentication
 app.use('/api/events', eventRoutes);
 app.use('/api/events', reviewRoutes); // Review routes under /api/events
 app.use('/api/reviews', reviewRoutes); // Also accessible under /api/reviews
@@ -120,6 +127,7 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
@@ -134,6 +142,7 @@ console.log('✅ All routes registered:', [
   '/api/venues',
   '/api/brands',
   '/api/collaborations',
+  '/api/notifications',
   '/api/admin'
 ]);
 

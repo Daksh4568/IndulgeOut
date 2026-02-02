@@ -4,6 +4,7 @@ const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const User = require('../models/User.js');
 const { sendWelcomeEmail } = require('../utils/emailService.js');
+const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 
 const router = express.Router();
 
@@ -163,6 +164,11 @@ router.post('/login', loginLimiter, [
       { expiresIn: '7d' }
     );
 
+    // Generate action required notifications in background (don't await)
+    checkAndGenerateActionRequiredNotifications(user._id).catch(err => {
+      console.error('Error generating action required notifications on login:', err);
+    });
+
     res.json({
       message: 'Login successful',
       token,
@@ -200,6 +206,157 @@ router.get('/profile', async (req, res) => {
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(401).json({ message: 'Invalid token' });
+  }
+});
+
+// Register Venue
+router.post('/register-venue', registrationLimiter, async (req, res) => {
+  try {
+    const { name, email, phoneNumber, venueName, city, locality, capacityRange, instagramLink } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email or phone number already exists' });
+    }
+
+    // Create user
+    const user = new User({
+      name,
+      email,
+      phoneNumber,
+      role: 'host_partner',
+      hostPartnerType: 'venue',
+      venueName,
+      city,
+      locality,
+      capacityRange,
+      instagramLink,
+    });
+
+    await user.save();
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'Venue registered successfully',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        hostPartnerType: user.hostPartnerType,
+      }
+    });
+  } catch (error) {
+    console.error('Venue registration error:', error);
+    res.status(500).json({ message: 'Registration failed' });
+  }
+});
+
+// Register Brand
+router.post('/register-brand', registrationLimiter, async (req, res) => {
+  try {
+    const { name, email, phoneNumber, brandName, brandCategory, city, instagramLink } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email or phone number already exists' });
+    }
+
+    // Create user
+    const user = new User({
+      name,
+      email,
+      phoneNumber,
+      role: 'host_partner',
+      hostPartnerType: 'brand_sponsor',
+      brandName,
+      brandCategory,
+      city,
+      instagramLink,
+    });
+
+    await user.save();
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'Brand registered successfully',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        hostPartnerType: user.hostPartnerType,
+      }
+    });
+  } catch (error) {
+    console.error('Brand registration error:', error);
+    res.status(500).json({ message: 'Registration failed' });
+  }
+});
+
+// Register Host
+router.post('/register-host', registrationLimiter, async (req, res) => {
+  try {
+    const { name, email, phoneNumber, communityName, category, city, instagramLink } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email or phone number already exists' });
+    }
+
+    // Create user
+    const user = new User({
+      name,
+      email,
+      phoneNumber,
+      role: 'host_partner',
+      hostPartnerType: 'community_organizer',
+      communityName,
+      category,
+      city,
+      instagramLink,
+    });
+
+    await user.save();
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'Host registered successfully',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        hostPartnerType: user.hostPartnerType,
+      }
+    });
+  } catch (error) {
+    console.error('Host registration error:', error);
+    res.status(500).json({ message: 'Registration failed' });
   }
 });
 

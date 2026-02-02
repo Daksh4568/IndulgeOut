@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Collaboration = require('../models/Collaboration');
 const { authMiddleware } = require('../utils/authUtils');
+const notificationService = require('../services/notificationService');
 
 // @route   GET /api/collaborations/received
 // @desc    Get all collaboration requests received by the user
@@ -71,7 +72,38 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
     // Accept the collaboration
     await collaboration.accept(responseMessage);
 
-    // TODO: Send notification email to initiator
+    // Send notification to initiator
+    setImmediate(async () => {
+      try {
+        const initiatorType = collaboration.initiator.type; // 'community', 'venue', 'brand'
+        const recipientType = collaboration.recipient.type;
+        
+        if (recipientType === 'venue' && initiatorType === 'community') {
+          // Venue responded to community's hosting request
+          await notificationService.notifyVenueResponseReceived(
+            collaboration.initiator.user,
+            collaboration.recipient.name,
+            collaborationId
+          );
+        } else if (recipientType === 'brand' && initiatorType === 'community') {
+          // Brand responded to community's proposal
+          await notificationService.notifyBrandProposalReceived(
+            collaboration.initiator.user,
+            collaboration.recipient.name,
+            collaborationId
+          );
+        } else if (recipientType === 'community' && initiatorType === 'brand') {
+          // Community responded to brand's proposal
+          await notificationService.notifyCommunityProposalReceived(
+            collaboration.initiator.user,
+            collaboration.recipient.name,
+            collaborationId
+          );
+        }
+      } catch (error) {
+        console.error('Failed to send collaboration notification:', error);
+      }
+    });
 
     res.json({
       message: 'Collaboration request accepted successfully',

@@ -8,6 +8,7 @@ const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../
 const { authMiddleware } = require('../utils/authUtils.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
+const notificationService = require('../services/notificationService.js');
 
 const router = express.Router();
 
@@ -179,6 +180,17 @@ router.post('/', authMiddleware, [
     const populatedEvent = await Event.findById(event._id)
       .populate('host', 'name email');
 
+    // Send notification if event is published
+    if (populatedEvent.status === 'published') {
+      setImmediate(async () => {
+        try {
+          await notificationService.notifyEventPublished(req.user.id, populatedEvent);
+        } catch (error) {
+          console.error('Failed to send event published notification:', error);
+        }
+      });
+    }
+
     res.status(201).json({
       message: 'Event created successfully',
       event: populatedEvent
@@ -347,6 +359,62 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
       } catch (emailError) {
         console.error('Failed to send host notification:', emailError);
+      }
+    });
+
+    // Send in-app notifications
+    setImmediate(async () => {
+      try {
+        // Notify user of booking confirmation
+        await notificationService.notifyBookingConfirmed(userId, event, ticket);
+        
+        // Notify user that QR code is ready
+        if (ticket) {
+          await notificationService.notifyCheckinQRReady(userId, event, ticket);
+        }
+
+        // Check if this is the first booking for the host
+        if (event.currentParticipants === ticketQuantity) {
+          await notificationService.notifyFirstBookingReceived(
+            event.host._id,
+            event,
+            user.name
+          );
+        }
+
+        // Check for milestone notifications
+        const milestones = [10, 25, 50, 100, 200, 500];
+        if (milestones.includes(event.currentParticipants)) {
+          await notificationService.notifyMilestoneReached(
+            event.host._id,
+            event,
+            event.currentParticipants
+          );
+        }
+
+        // Check capacity alerts
+        const percentageFull = (event.currentParticipants / event.maxParticipants) * 100;
+        
+        if (percentageFull >= 80 && percentageFull < 100) {
+          // Check if we haven't sent this notification before
+          const previousParticipants = event.currentParticipants - ticketQuantity;
+          const previousPercentage = (previousParticipants / event.maxParticipants) * 100;
+          
+          if (previousPercentage < 80) {
+            await notificationService.notifyEventNearingFull(
+              event.host._id,
+              event,
+              Math.round(percentageFull)
+            );
+          }
+        }
+
+        // Check if sold out
+        if (event.currentParticipants >= event.maxParticipants) {
+          await notificationService.notifyCapacityReached(event.host._id, event);
+        }
+      } catch (notificationError) {
+        console.error('Failed to send notifications:', notificationError);
       }
     });
 
