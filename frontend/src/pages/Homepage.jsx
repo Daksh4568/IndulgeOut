@@ -55,28 +55,28 @@ function Homepage() {
     {
       title: "Start Something You Love",
       description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally.",
-      buttonText: "Explore the event",
+      buttonText: "EXPLORE THE EVENT",
       buttonAction: () => navigate('/explore'),
       image: "/images/Media (5).jpg"
     },
     {
       title: "Start Something You Love",
       description: "If you're a community host who loves bringing people together, we help you list your community & events, access relevant brand and venue partners to enhance your experiences for your attendees.",
-      buttonText: "Create Now",
+      buttonText: "CREATE NOW",
       buttonAction: () => navigate('/register?role=community_organizer'),
       image: "/images/Media (5).jpg"
     },
     {
       title: "Collaborate as a Brand",
       description: "If you’re a brand owner with a product or service offering, we help you with experiential marketing, sales and trials through community led events and meetups.",
-      buttonText: "Collaborate Now",
+      buttonText: "COLLABORATE NOW",
       buttonAction: () => navigate('/register?role=brand'),
       image: "/images/brand.jpg"
     },
     {
       title: "Partner as a Venue",
       description: "If you have a restaurant, cafe or a space that is open for community led events, we’ll help you with access these curated experiences hosted by communities to bring newer audience and additional revenue.",
-      buttonText: "Partner Now",
+      buttonText: "PARTNER NOW",
       buttonAction: () => navigate('/register?role=venue'),
       image: "/images/venue.jpg"
     }
@@ -825,21 +825,23 @@ function Homepage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {/* Vox Pop 1 */}
             <div 
-              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer"
+              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black flex items-center justify-center p-4"
               onClick={() => {
                 setCurrentVideoUrl('https://www.youtube.com/embed/uT3Quuy_5-o?autoplay=1&rel=1');
                 setVideoModalOpen(true);
               }}
             >
-              <img 
-                src="https://img.youtube.com/vi/uT3Quuy_5-o/maxresdefault.jpg"
-                alt="Vox Pop 1"
-                className="w-full h-full object-cover"
-              />
-              {/* Play Button */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
-                  <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+              <div className="relative w-full aspect-[9/16] rounded-xl overflow-hidden shadow-2xl">
+                <img 
+                  src="https://img.youtube.com/vi/uT3Quuy_5-o/maxresdefault.jpg"
+                  alt="Vox Pop 1"
+                  className="w-full h-full object-cover"
+                />
+                {/* Play Button */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
+                    <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -877,7 +879,7 @@ function Homepage() {
                 {/* VIEW ALL Button at Bottom */}
                 <button
                   onClick={() => navigate('/explore')}
-                  className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
+                  className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide transition-all hover:opacity-90"
                   style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                 >
                   VIEW ALL
@@ -887,21 +889,23 @@ function Homepage() {
 
             {/* Vox Pop 2 */}
             <div 
-              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer"
+              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black flex items-center justify-center p-4"
               onClick={() => {
                 setCurrentVideoUrl('https://www.youtube.com/embed/t62ExT2n4a0?autoplay=1&rel=1');
                 setVideoModalOpen(true);
               }}
             >
-              <img 
-                src="https://img.youtube.com/vi/t62ExT2n4a0/maxresdefault.jpg"
-                alt="Vox Pop 2"
-                className="w-full h-full object-cover"
-              />
-              {/* Play Button */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
-                  <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+              <div className="relative w-full aspect-[9/16] rounded-xl overflow-hidden shadow-2xl">
+                <img 
+                  src="https://img.youtube.com/vi/t62ExT2n4a0/maxresdefault.jpg"
+                  alt="Vox Pop 2"
+                  className="w-full h-full object-cover"
+                />
+                {/* Play Button */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
+                    <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -938,45 +942,45 @@ function Homepage() {
                   // Front card - fully visible, largest
                   zIndex = 40;
                   scale = isMobile ? 0.7 : (isTablet ? 0.8 : 0.9);
-                  translateX = isMobile ? -100 : (isTablet ? -180 : -280);
+                  translateX = isMobile ? -150 : (isTablet ? -250 : -350);
                   translateY = 0;
-                  rotate = -12;
+                  rotate = -6;
                   opacity = 1;
                 } else if (position === 1) {
                   zIndex = 35;
-                  scale = isMobile ? 0.65 : (isTablet ? 0.75 : 0.85);
-                  translateX = isMobile ? -60 : (isTablet ? -110 : -170);
-                  translateY = isMobile ? 10 : (isTablet ? 15 : 20);
-                  rotate = -9;
+                  scale = isMobile ? 0.68 : (isTablet ? 0.78 : 0.88);
+                  translateX = isMobile ? -90 : (isTablet ? -150 : -210);
+                  translateY = isMobile ? 3 : (isTablet ? 5 : 8);
+                  rotate = -5;
                   opacity = 1;
                 } else if (position === 2) {
                   zIndex = 30;
-                  scale = isMobile ? 0.6 : (isTablet ? 0.7 : 0.8);
-                  translateX = isMobile ? -20 : (isTablet ? -40 : -60);
-                  translateY = isMobile ? 20 : (isTablet ? 30 : 40);
-                  rotate = -6;
+                  scale = isMobile ? 0.66 : (isTablet ? 0.76 : 0.86);
+                  translateX = isMobile ? -30 : (isTablet ? -50 : -70);
+                  translateY = isMobile ? 6 : (isTablet ? 10 : 16);
+                  rotate = -4;
                   opacity = 1;
                 } else if (position === 3) {
                   zIndex = 25;
-                  scale = isMobile ? 0.55 : (isTablet ? 0.65 : 0.75);
-                  translateX = isMobile ? 20 : (isTablet ? 40 : 60);
-                  translateY = isMobile ? 30 : (isTablet ? 45 : 60);
+                  scale = isMobile ? 0.64 : (isTablet ? 0.74 : 0.84);
+                  translateX = isMobile ? 30 : (isTablet ? 50 : 70);
+                  translateY = isMobile ? 9 : (isTablet ? 15 : 24);
                   rotate = -3;
                   opacity = 1;
                 } else if (position === 4) {
                   zIndex = 20;
-                  scale = isMobile ? 0.5 : (isTablet ? 0.6 : 0.7);
-                  translateX = isMobile ? 60 : (isTablet ? 110 : 170);
-                  translateY = isMobile ? 40 : (isTablet ? 60 : 80);
-                  rotate = -1;
+                  scale = isMobile ? 0.62 : (isTablet ? 0.72 : 0.82);
+                  translateX = isMobile ? 90 : (isTablet ? 150 : 210);
+                  translateY = isMobile ? 12 : (isTablet ? 20 : 32);
+                  rotate = -2;
                   opacity = 1;
                 } else {
                   // Last card - moving to back
                   zIndex = 15;
-                  scale = isMobile ? 0.45 : (isTablet ? 0.55 : 0.65);
-                  translateX = isMobile ? 100 : (isTablet ? 180 : 280);
-                  translateY = isMobile ? 50 : (isTablet ? 75 : 100);
-                  rotate = 0;
+                  scale = isMobile ? 0.6 : (isTablet ? 0.7 : 0.8);
+                  translateX = isMobile ? 150 : (isTablet ? 250 : 350);
+                  translateY = isMobile ? 15 : (isTablet ? 25 : 40);
+                  rotate = -1;
                   opacity = 1;
                 }
                 
@@ -1012,7 +1016,7 @@ function Homepage() {
             <button
               onClick={() => navigate('/explore')}
        //       className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-semibold uppercase tracking-wide transition-all hover:opacity-90"
-              className="text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+              className="text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-bold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl uppercase"
                   style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
               EXPLORE NOW
@@ -1110,7 +1114,7 @@ function Homepage() {
                   </p>
                   <button
                     onClick={partnerCards[currentPartnerCard].buttonAction}
-                    className="w-full text-white px-6 py-3.5 rounded-md text-base font-semibold transition-all duration-300 transform hover:scale-105 hover:opacity-90 shadow-lg"
+                    className="w-full text-white px-6 py-3.5 rounded-md text-base font-bold transition-all duration-300 transform hover:scale-105 hover:opacity-90 shadow-lg uppercase"
                     style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                   >
                     {partnerCards[currentPartnerCard].buttonText}

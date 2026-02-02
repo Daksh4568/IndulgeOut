@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, MapPin, Calendar, Lock } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import SearchBar from '../components/SearchBar';
 import FilterBar from '../components/FilterBar';
@@ -36,6 +36,17 @@ export default function ExplorePage() {
   // Modal state
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const carouselRef = useRef(null);
+
+  const scrollCarousel = (direction) => {
+    if (carouselRef.current) {
+      const scrollAmount = 400;
+      const newScrollLeft = direction === 'left' 
+        ? carouselRef.current.scrollLeft - scrollAmount
+        : carouselRef.current.scrollLeft + scrollAmount;
+      carouselRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -82,7 +93,15 @@ export default function ExplorePage() {
       });
       const topData = await topResponse.json();
       console.log('✅ Top events received:', topData.events?.length || 0, 'events');
-      setTopEvents(topData.events || []);
+      
+      // Filter to only show upcoming events (future dates)
+      const now = new Date();
+      const upcomingEvents = (topData.events || []).filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate >= now;
+      });
+      console.log('✅ Upcoming events (future only):', upcomingEvents.length, 'events');
+      setTopEvents(upcomingEvents);
 
       // Fetch main events with filters
       let eventsEndpoint = `${API_URL}/api/explore/events/popular?limit=15&page=${eventsPage}`;
@@ -269,83 +288,67 @@ export default function ExplorePage() {
       <NavigationBar />
       
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-white py-16">
+      <div className="bg-black text-white py-12">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="h-8 w-8" />
-              <h1 className="text-4xl md:text-5xl font-bold">
-                Discover Your Next Adventure
-              </h1>
-            </div>
-            <p className="text-xl text-white/90">
-              Find events, join communities, and connect with amazing people
+            <h1 className="text-4xl md:text-5xl font-bold mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+              {tab === 'communities' ? 'Discover Communities' : tab === 'people' ? 'Discover Connections' : 'Discover Events'}
+            </h1>
+            <p className="text-gray-300 text-lg" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              {tab === 'communities' ? 'Join communities and circles for your interests and hobbies' : tab === 'people' ? 'Connect with like-minded people around you' : 'Explore and join curated experiences in your city'}
             </p>
           </div>
 
           {/* Search Bar */}
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-2xl mx-auto mb-8">
             <SearchBar
               onSearch={handleSearch}
-              placeholder="Search events, communities, people..."
+              placeholder={tab === 'people' ? 'Search people...' : 'Search events, communities, people...'}
               searchType={tab === 'communities' ? 'communities' : 'events'}
             />
           </div>
-        </div>
-      </div>
 
-      {/* Filter Bar */}
-      {tab === 'events' && (
-        <FilterBar
-          onFilterChange={handleFilterChange}
-          activeFilters={filters}
-        />
-      )}
-
-      {/* Tab Selector */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4">
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+          {/* Tab Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md sm:max-w-none mx-auto">
             <button
               onClick={() => handleTabChange('events')}
-              className={`px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold transition-all border-b-2 whitespace-nowrap ${
+              className={`w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 ${
                 tab === 'events'
-                  ? 'border-orange-500 text-orange-500'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-white shadow-2xl'
+                  : 'bg-[#3A3A52] text-gray-300 hover:bg-[#4A4A62]'
               }`}
+              style={tab === 'events' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
             >
               Events
             </button>
             <button
               onClick={() => handleTabChange('communities')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+              className={`w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 ${
                 tab === 'communities'
-                  ? 'border-orange-500 text-orange-500'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-white shadow-2xl'
+                  : 'bg-[#3A3A52] text-gray-300 hover:bg-[#4A4A62]'
               }`}
+              style={tab === 'communities' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
             >
               Communities
             </button>
             <button
               onClick={() => handleTabChange('people')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 relative ${
+              className={`w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 relative ${
                 tab === 'people'
-                  ? 'border-orange-500 text-orange-500'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-white shadow-2xl'
+                  : 'bg-[#3A3A52] text-gray-300 hover:bg-[#4A4A62]'
               }`}
+              style={tab === 'people' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
             >
               People
-              <span className="ml-2 px-2 py-1 bg-orange-500 text-white text-xs rounded-full">
-                App Only
-              </span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        {loading ? (
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">\n        {loading ? (
           <div className="text-center py-20">
             <div className="animate-spin h-12 w-12 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">Loading...</p>
@@ -355,38 +358,203 @@ export default function ExplorePage() {
             {/* Events Tab */}
             {tab === 'events' && (
               <div className="space-y-12">
-                {/* Top Events Section - Only show if NOT searching */}
+                {/* Upcoming Events Section - Horizontal Carousel */}
                 {!searchQuery && topEvents.length > 0 && (
-                  <section>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
-                      {user ? '✨ Recommended For You' : '🔥 Popular Events'}
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                      {topEvents.map(event => (
-                        <EventCard
-                          key={event._id}
-                          event={event}
-                          onFavorite={handleFavorite}
-                          isSaved={savedEventIds.includes(event._id)}
-                        />
-                      ))}
+                  <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden rounded-2xl p-6 sm:p-8">
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        Upcoming Events
+                      </h2>
+                      <p className="text-gray-400 text-base" style={{ fontFamily: 'Source Serif Pro, serif' }}>Don't miss these popular experiences</p>
                     </div>
+                    <div className="relative">
+                      {/* Left Arrow */}
+                      <button
+                        onClick={() => scrollCarousel('left')}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hidden sm:block"
+                      >
+                        <ChevronLeft className="h-6 w-6 text-gray-800" />
+                      </button>
+
+                      {/* Carousel */}
+                      <div 
+                        ref={carouselRef}
+                        className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth px-4 sm:px-0"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                      >
+                        {topEvents.map((event, index) => (
+                          <div 
+                            key={event._id} 
+                            className="flex-none w-full sm:w-[600px] lg:w-[650px] snap-center"
+                            style={{
+                              animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
+                            }}
+                          >
+                            {/* Horizontal Event Card */}
+                            <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all h-full">
+                              <div className="flex flex-col sm:flex-row h-full min-h-[400px]">
+                                {/* Left Side - Content */}
+                                <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
+                                  <div>
+                                    <div className="flex items-center gap-2 text-gray-700 mb-3">
+                                      <Calendar className="h-4 w-4" />
+                                      <span className="text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {event.time}
+                                      </span>
+                                    </div>
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 line-clamp-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                      {event.title}
+                                    </h3>
+                                    <div className="flex items-start gap-2 text-gray-700 mb-4">
+                                      <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
+                                      <span className="text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                        {event.location?.venue || event.location?.city}, {event.location?.state}
+                                      </span>
+                                    </div>
+                                    <div className="mb-4">
+                                      <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                        ₹{event.price?.amount || 499} onwards
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => window.location.href = `/events/${event._id}`}
+                                    className="w-full sm:w-auto text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+                                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                                  >
+                                    Get your Ticket
+                                  </button>
+                                </div>
+
+                                {/* Right Side - Framed Image */}
+                                <div className="w-full sm:w-1/2 h-64 sm:h-auto p-4 flex items-center justify-center">
+                                  <div className="relative w-full h-full max-w-[280px] mx-auto">
+                                    {/* Frame/Shadow effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-2xl"></div>
+                                    
+                                    {/* Image container */}
+                                    <div className="relative bg-white rounded-lg overflow-hidden shadow-xl h-full">
+                                      {event.images && event.images.length > 0 ? (
+                                        <img
+                                          src={event.images[0]}
+                                          alt={event.title}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <img
+                                          src="/images/postercard1.jpg"
+                                          alt="Event placeholder"
+                                          className="w-full h-full object-cover"
+                                        />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Right Arrow */}
+                      <button
+                        onClick={() => scrollCarousel('right')}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hidden sm:block"
+                      >
+                        <ChevronRight className="h-6 w-6 text-gray-800" />
+                      </button>
+                    </div>
+                    <style jsx>{`
+                      @keyframes slideIn {
+                        from {
+                          opacity: 0;
+                          transform: translateX(30px);
+                        }
+                        to {
+                          opacity: 1;
+                          transform: translateX(0);
+                        }
+                      }
+                      div::-webkit-scrollbar {
+                        display: none;
+                      }
+                    `}</style>
                   </section>
                 )}
 
-                {/* Main Events Grid */}
+                {/* All Events Grid */}
                 <section>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
-                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Events'}
-                  </h2>
+                  <div className="mb-6">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      {searchQuery ? `Search Results for "${searchQuery}"` : 'All Events'}
+                    </h2>
+                  
+                  </div>
+                  
+                  {/* Filter Pills for All Events */}
+                  <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide">
+                    <button
+                      onClick={() => handleFilterChange({ ...filters, showToday: !filters.showToday })}
+                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                        filters.showToday
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                      Tonight
+                    </button>
+                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                      Tomorrow
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange({ ...filters, showWeekend: !filters.showWeekend })}
+                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                        filters.showWeekend
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      This Weekend
+                    </button>
+                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                      Online
+                    </button>
+                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                      Open
+                    </button>
+                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                      more
+                    </button>
+                  </div>
                   {events.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      {/* Mobile: Horizontal Carousel */}
+                      <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div className="flex gap-4 px-2">
+                          {events.map(event => (
+                            <div key={event._id} className="flex-none w-[85vw] snap-center">
+                              <EventCard
+                                event={event}
+                                onFavorite={handleFavorite}
+                                isSaved={savedEventIds.includes(event._id)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Desktop: Grid Layout */}
+                      <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                         {events.map(event => (
                           <EventCard
                             key={event._id}
                             event={event}
-                            onFavorite={handleFavorite}                              isSaved={savedEventIds.includes(event._id)}                          />
+                            onFavorite={handleFavorite}
+                            isSaved={savedEventIds.includes(event._id)}
+                          />
                         ))}
                       </div>
                       
@@ -457,10 +625,10 @@ export default function ExplorePage() {
                   )}
                 </section>
 
-                {/* CTA Section */}
+                {/* CTA Section
                 <section className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-8 text-center text-white">
-                  <h3 className="text-3xl font-bold mb-3">Want to host your own event?</h3>
-                  <p className="text-lg mb-6 text-white/90">
+                  <h3 className="text-3xl font-bold mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>Want to host your own event?</h3>
+                  <p className="text-lg mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                     Share your passion and bring people together
                   </p>
                   <div className="flex gap-4 justify-center">
@@ -477,22 +645,42 @@ export default function ExplorePage() {
                       Learn More
                     </button>
                   </div>
-                </section>
+                </section> */}
               </div>
             )}
 
             {/* Communities Tab */}
             {tab === 'communities' && (
               <div className="space-y-12">
-                {/* Featured Communities (Unlocked) */}
+                {/* Community Picks Section */}
                 <section>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                    ✨ Featured Communities
-                  </h2>
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      Community Picks
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 text-base" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Be a part of the most buzzing communities
+                    </p>
+                  </div>
                   {featuredCommunities.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {featuredCommunities.map(community => (
+                      {/* Mobile: Horizontal Carousel */}
+                      <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div className="flex gap-4 px-2">
+                          {featuredCommunities.slice(0, 4).map(community => (
+                            <div key={community._id} className="flex-none w-[85vw] snap-center">
+                              <CommunityCard
+                                community={community}
+                                onFavorite={handleFavorite}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Desktop: Grid Layout */}
+                      <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {featuredCommunities.slice(0, 4).map(community => (
                           <CommunityCard
                             key={community._id}
                             community={community}
@@ -500,58 +688,6 @@ export default function ExplorePage() {
                           />
                         ))}
                       </div>
-                      
-                      {/* Pagination Controls */}
-                      {communitiesPagination && communitiesPagination.totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-8">
-                          <button
-                            onClick={() => setCommunitiesPage(Math.max(1, communitiesPage - 1))}
-                            disabled={communitiesPage === 1}
-                            className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white"
-                          >
-                            <ChevronLeft className="h-5 w-5" />
-                          </button>
-                          
-                          {[...Array(communitiesPagination.totalPages)].map((_, i) => {
-                            const page = i + 1;
-                            // Show first, last, current, and adjacent pages
-                            if (
-                              page === 1 ||
-                              page === communitiesPagination.totalPages ||
-                              (page >= communitiesPage - 1 && page <= communitiesPage + 1)
-                            ) {
-                              return (
-                                <button
-                                  key={page}
-                                  onClick={() => setCommunitiesPage(page)}
-                                  className={`px-4 py-2 rounded-lg font-medium ${
-                                    page === communitiesPage
-                                      ? 'bg-orange-500 text-white'
-                                      : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                                  }`}
-                                >
-                                  {page}
-                                </button>
-                              );
-                            } else if (page === communitiesPage - 2 || page === communitiesPage + 2) {
-                              return <span key={page} className="px-2 text-gray-500">...</span>;
-                            }
-                            return null;
-                          })}
-                          
-                          <button
-                            onClick={() => setCommunitiesPage(Math.min(communitiesPagination.totalPages, communitiesPage + 1))}
-                            disabled={communitiesPage === communitiesPagination.totalPages}
-                            className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white"
-                          >
-                            <ChevronRight className="h-5 w-5" />
-                          </button>
-                          
-                          <span className="ml-4 text-sm text-gray-600 dark:text-gray-400">
-                            Page {communitiesPage} of {communitiesPagination.totalPages}
-                          </span>
-                        </div>
-                      )}
                     </>
                   ) : (
                     <div className="text-center py-10">
@@ -562,81 +698,232 @@ export default function ExplorePage() {
                   )}
                 </section>
 
-                {/* Locked Communities */}
-                <section>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      🔒 More Communities
+                {/* All Communities Section with Lock Overlay */}
+                <section className="relative">
+                  <div className="mb-6">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      All Communities
                     </h2>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Download app to view all
-                    </span>
+                    <p className="text-gray-600 dark:text-gray-400 text-base" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Explore more communities
+                    </p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {lockedCommunities.map(community => (
-                      <CommunityCard
-                        key={community._id}
-                        community={community}
-                        isLocked={true}
-                      />
-                    ))}
-                  </div>
-                </section>
-
-                {/* App Download CTA */}
-                <section className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-8 text-center text-white">
-                  <h3 className="text-3xl font-bold mb-3">Download IndulgeOut App</h3>
-                  <p className="text-lg mb-6 text-white/90">
-                    Join 50+ communities and connect with like-minded people
-                  </p>
-                  <div className="flex gap-4 justify-center flex-wrap">
-                    <a
-                      href="#"
-                      className="bg-white text-purple-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-full transition-all transform hover:scale-105 flex items-center gap-2"
-                    >
-                      <span>📱</span>
-                      <span>App Store</span>
-                    </a>
-                    <a
-                      href="#"
-                      className="bg-white text-purple-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-full transition-all transform hover:scale-105 flex items-center gap-2"
-                    >
-                      <span>🤖</span>
-                      <span>Google Play</span>
-                    </a>
+                  
+                  <div className="relative">
+                    {/* Mobile: Horizontal Carousel */}
+                    <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      <div className="flex gap-4 px-2">
+                        {lockedCommunities.slice(0, 13).map(community => (
+                          <div key={community._id} className="flex-none w-[85vw] snap-center">
+                            <CommunityCard
+                              community={community}
+                              isLocked={true}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Desktop: Grid Layout */}
+                    <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {/* Show all communities as locked/blurred */}
+                      {lockedCommunities.slice(0, 13).map(community => (
+                        <CommunityCard
+                          key={community._id}
+                          community={community}
+                          isLocked={true}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Unlock Overlay - positioned higher in the grid */}
+                    {lockedCommunities.length > 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '0%' }}>
+                        <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-8 text-center text-white max-w-md pointer-events-auto">
+                          <div className="h-16 w-16 bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Lock className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                            Unlock More Communities
+                          </h3>
+                          <p className="text-base mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                           Viewing 5 of many communities. <br /> Download the app to join more communities                          </p>
+                          <a
+                            href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+                            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                          >
+                            Download the App
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
               </div>
             )}
 
-            {/* People Tab (Locked) */}
+            {/* People Tab */}
             {tab === 'people' && (
-              <div className="text-center py-20">
-                <div className="h-24 w-24 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-5xl">🔒</span>
-                </div>
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                  Download the App to Find People
-                </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-                  Connect with amazing people who share your interests. Browse profiles, send messages, and build meaningful connections.
-                </p>
-                <div className="flex gap-4 justify-center flex-wrap">
-                  <a
-                    href="#"
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600 font-semibold py-3 px-8 rounded-full transition-all transform hover:scale-105 flex items-center gap-2"
-                  >
-                    <span>📱</span>
-                    <span>Download for iOS</span>
-                  </a>
-                  <a
-                    href="#"
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600 font-semibold py-3 px-8 rounded-full transition-all transform hover:scale-105 flex items-center gap-2"
-                  >
-                    <span>🤖</span>
-                    <span>Download for Android</span>
-                  </a>
-                </div>
+              <div className="mt-8">
+                {/* All Connections Section */}
+                <section>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      All Connections
+                    </h2>
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
+                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      ☰ Filters
+                    </button>
+                    <button className="px-4 sm:px-5 py-2 rounded-full text-white text-sm sm:text-base font-medium hover:opacity-90 transition-all shadow-lg whitespace-nowrap" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' }}>
+                      Recommended
+                    </button>
+                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Nearby
+                    </button>
+                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      New
+                    </button>
+                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Active Now
+                    </button>
+                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Under 10km
+                    </button>
+                  </div>
+
+                  {/* Connections Grid with Blur Effect */}
+                  <div className="relative">
+                    {/* Mobile: Horizontal Carousel */}
+                    <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      <div className="flex gap-4 px-2">
+                        {[
+                          { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: '2.5 km away', emoji: '👤', bgColor: 'from-purple-500 to-purple-700' },
+                          { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: '3.8 km away', emoji: '👤', bgColor: 'from-pink-500 to-pink-700' },
+                          { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: '1.2 km away', emoji: '👤', bgColor: 'from-blue-500 to-blue-700' },
+                          { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: '4.5 km away', emoji: '👤', bgColor: 'from-indigo-500 to-indigo-700' },
+                          { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: '5.0 km away', emoji: '👤', bgColor: 'from-violet-500 to-violet-700' },
+                          { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: '2.1 km away', emoji: '👤', bgColor: 'from-fuchsia-500 to-fuchsia-700' },
+                          { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: '3.3 km away', emoji: '👤', bgColor: 'from-cyan-500 to-cyan-700' },
+                          { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: '1.8 km away', emoji: '👤', bgColor: 'from-rose-500 to-rose-700' },
+                        ].map((person, index) => (
+                          <div key={index} className="flex-none w-[85vw] snap-center">
+                            <div className="bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 cursor-pointer flex flex-col blur-sm">
+                              <div className="relative h-64">
+                                <div className={`w-full h-full bg-gradient-to-br ${person.bgColor} flex items-center justify-center`}>
+                                  <span className="text-8xl opacity-80">{person.emoji}</span>
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                  <h3 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                    {person.name}
+                                  </h3>
+                                  <p className="text-sm text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                    {person.interests}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="p-4 flex-grow flex flex-col">
+                                <div className="flex items-center text-gray-400 text-sm mb-4" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                  <MapPin className="h-4 w-4 mr-1 text-[#7878E9]" />
+                                  {person.distance}
+                                </div>
+                                <button
+                                  className="w-full text-white py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-auto"
+                                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                                >
+                                  Connect Now
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Desktop: Grid Layout */}
+                    <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                      {/* Fake Connection Cards */}
+                      {[
+                        { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: '2.5 km away', emoji: '👤', bgColor: 'from-purple-500 to-purple-700' },
+                        { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: '3.8 km away', emoji: '👤', bgColor: 'from-pink-500 to-pink-700' },
+                        { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: '1.2 km away', emoji: '👤', bgColor: 'from-blue-500 to-blue-700' },
+                        { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: '4.5 km away', emoji: '👤', bgColor: 'from-indigo-500 to-indigo-700' },
+                        { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: '5.0 km away', emoji: '👤', bgColor: 'from-violet-500 to-violet-700' },
+                        { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: '2.1 km away', emoji: '👤', bgColor: 'from-fuchsia-500 to-fuchsia-700' },
+                        { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: '3.3 km away', emoji: '👤', bgColor: 'from-cyan-500 to-cyan-700' },
+                        { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: '1.8 km away', emoji: '👤', bgColor: 'from-rose-500 to-rose-700' },
+                      ].map((person, index) => (
+                        <div key={index} className="bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 cursor-pointer flex flex-col blur-sm">
+                          <div className="relative h-64">
+                            <div className={`w-full h-full bg-gradient-to-br ${person.bgColor} flex items-center justify-center`}>
+                              <span className="text-8xl opacity-80">{person.emoji}</span>
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                              <h3 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                {person.name}
+                              </h3>
+                              <p className="text-sm text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                {person.interests}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-4 flex-grow flex flex-col">
+                            <div className="flex items-center text-gray-400 text-sm mb-4" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              <MapPin className="h-4 w-4 mr-1 text-[#7878E9]" />
+                              {person.distance}
+                            </div>
+                            <button
+                              className="w-full text-white py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-auto"
+                              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                            >
+                              Connect Now
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Unlock Overlay */}
+                    <div
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(2px)',
+                        top: '0%',
+                      }}
+                    >
+                      <div className="text-center px-4 max-w-md">
+                        <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                          <Lock className="h-10 w-10 text-white" />
+                        </div>
+                        <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                          Unlock More Connections
+                        </h3>
+                        <p className="text-base mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                          Viewing 5 of many people. Download the app to connect with more like-minded people.
+                        </p>
+                        <a
+                          href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl mb-2"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          Download the App
+                        </a>
+                        <p className="text-sm text-white/70" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                          Available on iOS & Android
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
             )}
           </>

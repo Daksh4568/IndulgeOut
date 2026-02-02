@@ -1,173 +1,375 @@
-import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Home } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
-import DarkModeToggle from '../components/DarkModeToggle'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import API_URL from '../config/api';
 
 const Login = () => {
-  const navigate = useNavigate()
-  const { login } = useAuth()
-  
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  })
-  
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1); // 1 = identifier input, 2 = OTP verification
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
+  const [identifier, setIdentifier] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+  // Countdown timer for resend OTP
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+  const handleOtpChange = (index, value) => {
+    if (value.length <= 1 && /^\d*$/.test(value)) {
+      const newOtp = [...otp];
+      newOtp[index] = value;
+      setOtp(newOtp);
+
+      // Auto-focus next input
+      if (value && index < 5) {
+        document.getElementById(`otp-${index + 1}`)?.focus();
+      }
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`)?.focus();
+    }
+  };
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!identifier.trim()) {
+      setError(`Please enter your ${loginMethod === 'email' ? 'email' : 'phone number'}`);
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const result = await login({
-        email: formData.email,
-        password: formData.password
-      })
-      
-      if (result.success) {
-        // Route based on user role
-        const { user } = result
-        if (user.role === 'admin') {
-          navigate('/admin/dashboard')
-        } else if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
-          navigate('/organizer/dashboard')
-        } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
-          navigate('/venue/dashboard')
-        } else if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
-          navigate('/brand/dashboard')
-        } else {
-          navigate('/dashboard')
-        }
-      } else {
-        setError(result.error)
-      }
-    } catch (error) {
-      setError('Invalid email or password')
+      await axios.post(`${API_URL}/auth/otp/send`, {
+        identifier,
+        method: loginMethod === 'email' ? 'email' : 'sms',
+      });
+
+      setStep(2);
+      setResendTimer(60);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send OTP');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const otpCode = otp.join('');
+    if (otpCode.length !== 6) {
+      setError('Please enter complete OTP');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/auth/otp/verify`, {
+        identifier,
+        otp: otpCode,
+        method: loginMethod === 'email' ? 'email' : 'sms',
+      });
+
+      // Store token and user
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+
+      // Redirect based on role
+      const user = response.data.user;
+      if (user.role === 'host_partner') {
+        if (user.hostPartnerType === 'community_organizer') {
+          navigate('/organizer/dashboard');
+        } else if (user.hostPartnerType === 'venue') {
+          navigate('/venue/dashboard');
+        } else if (user.hostPartnerType === 'brand_sponsor') {
+          navigate('/brand/dashboard');
+        } else {
+          navigate('/organizer/dashboard');
+        }
+      } else if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/user/dashboard');
+      }
+
+      // Reload page to update auth context
+      window.location.reload();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return;
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await axios.post(`${API_URL}/auth/otp/resend`, {
+        identifier,
+        method: loginMethod === 'email' ? 'email' : 'sms',
+      });
+
+      setResendTimer(60);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-300">
-      <div className="absolute top-4 left-4">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          <Home className="h-5 w-5" />
-          <span className="hidden sm:inline">Home</span>
-        </button>
+    <div className="h-screen bg-black flex items-center justify-center relative overflow-hidden">
+      {/* Background with mirror effect */}
+      <div className="absolute inset-0 flex">
+        <div 
+          className="w-1/2 h-full bg-cover bg-center"
+          style={{
+            backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          }}
+        />
+        <div 
+          className="w-1/2 h-full bg-cover bg-center"
+          style={{
+            backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+            transform: 'scaleX(-1)',
+          }}
+        />
       </div>
-      <div className="absolute top-4 right-4">
-        <DarkModeToggle />
-      </div>
-      
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="text-center">
-          <Link to="/" className="text-2xl font-bold text-gray-900 dark:text-white">
-            IndulgeOut
-          </Link>
+
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/85" />
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-lg px-4">
+        {/* Black Background Section - Logo */}
+        <div className="flex justify-center mb-8 -mx-4 px-4 py-8 bg-black">
+          <img 
+            src="/images/LogoFinal2.jpg" 
+            alt="IndulgeOut" 
+            className="h-16 w-auto object-contain" 
+          />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
-          Welcome Back
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-          Sign in to continue your journey
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10 transition-colors duration-300">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                placeholder="Enter your email address"
-              />
-            </div>
+        {/* Form Card */}
+        <div 
+          className="rounded-2xl p-8"
+          style={{
+            background: 'linear-gradient(180deg, rgba(217,217,217,0.01) 0%, rgba(115,115,115,0.02) 100%)',
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          {step === 1 ? (
+            /* Step 1: Enter Email/Phone */
+            <>
+              <h1 
+                className="text-3xl md:text-4xl font-bold text-white text-center mb-2"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                Welcome Back
+              </h1>
+              <p className="text-gray-300 text-center mb-6 text-sm">
+                Sign in to your account to continue
+              </p>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                  placeholder="Enter your password"
-                />
+              {/* Toggle Email/Phone */}
+              <div className="flex gap-2 mb-6">
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setLoginMethod('email')}
+                  className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${
+                    loginMethod === 'email'
+                      ? 'bg-[#6366F1] text-white'
+                      : 'bg-[#2A2A2A] text-gray-400 border border-gray-700'
+                  }`}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginMethod('phone')}
+                  className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${
+                    loginMethod === 'phone'
+                      ? 'bg-[#6366F1] text-white'
+                      : 'bg-[#2A2A2A] text-gray-400 border border-gray-700'
+                  }`}
+                >
+                  Phone
                 </button>
               </div>
-            </div>
 
-            {error && (
-              <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-                <div className="text-sm text-red-800 dark:text-red-400">
-                  {error}
+              <form onSubmit={handleSendOTP} className="space-y-4">
+                {/* Email or Phone Input */}
+                {loginMethod === 'email' ? (
+                  <div>
+                    <label className="block text-white text-sm font-medium mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-white text-sm font-medium mb-2">
+                      Phone Number
+                    </label>
+                    <div className="flex gap-2">
+                      <select 
+                        className="px-3 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1]"
+                      >
+                        <option value="+91">🇮🇳 +91</option>
+                      </select>
+                      <input
+                        type="tel"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        placeholder="Enter mobile number"
+                        className="flex-1 px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Send OTP Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  {isLoading ? 'SENDING...' : 'SEND OTP'}
+                </button>
+
+                {/* Signup Link */}
+                <div className="text-center pt-4 border-t border-gray-700">
+                  <p className="text-gray-400 text-sm">
+                    Don't have an account?{' '}
+                    <span 
+                      onClick={() => navigate('/signup')}
+                      className="text-[#6366F1] hover:underline cursor-pointer font-semibold"
+                    >
+                      Sign Up
+                    </span>
+                  </p>
                 </div>
-              </div>
-            )}
-
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              </form>
+            </>
+          ) : (
+            /* Step 2: OTP Verification */
+            <>
+              <h1 
+                className="text-3xl md:text-4xl font-bold text-white text-center mb-2"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
               >
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </button>
-            </div>
-          </form>
+                Enter Your OTP
+              </h1>
+              <p className="text-gray-300 text-center mb-8 text-sm">
+                We have sent an OTP to your {loginMethod === 'email' ? 'email' : 'phone number'}
+              </p>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-                Sign up
-              </Link>
-            </p>
-          </div>
+              <form onSubmit={handleVerifyOTP} className="space-y-6">
+                {/* OTP Input Boxes */}
+                <div className="flex justify-center gap-2 md:gap-3">
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      id={`otp-${index}`}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      className="w-12 h-12 md:w-14 md:h-14 text-center text-2xl font-bold bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1] transition-colors"
+                    />
+                  ))}
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm text-center">
+                    {error}
+                  </div>
+                )}
+
+                {/* Sign In Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  {isLoading ? 'VERIFYING...' : 'SIGN IN'}
+                </button>
+
+                {/* Resend OTP */}
+                <div className="text-center pt-4 border-t border-gray-700">
+                  <p className="text-gray-400 text-sm">
+                    Didn't receive code?{' '}
+                    {resendTimer > 0 ? (
+                      <span className="text-gray-500">
+                        Resend in {resendTimer}s
+                      </span>
+                    ) : (
+                      <span 
+                        onClick={handleResendOTP}
+                        className="text-[#6366F1] hover:underline cursor-pointer font-semibold"
+                      >
+                        Resend OTP
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Back Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep(1);
+                    setOtp(['', '', '', '', '', '']);
+                    setError('');
+                  }}
+                  className="w-full text-gray-400 hover:text-white text-sm transition-colors"
+                >
+                  ← Back to login
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
 

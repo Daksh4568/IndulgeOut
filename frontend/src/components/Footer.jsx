@@ -99,11 +99,11 @@ const Footer = () => {
           {/* Right Column - Logo + Get the App */}
           <div className="col-span-6 flex flex-col items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center mb-4">
               <img 
                 src="/images/LogoFinal2.jpg" 
                 alt="IndulgeOut" 
-                className="h-34 w-40 object-contain" 
+                className="h-24 w-auto object-contain" 
               />
             </div>
 
@@ -156,7 +156,7 @@ const Footer = () => {
             <img 
               src="/images/LogoFinal2.jpg" 
               alt="IndulgeOut" 
-              className="h-20 w-24 object-contain" 
+              className="h-18 w-auto object-contain" 
             />
           </div>
 
