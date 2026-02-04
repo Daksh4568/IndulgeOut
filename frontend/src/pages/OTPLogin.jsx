@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Home, Mail, Phone, ArrowRight, RefreshCw } from 'lucide-react'
+import { Home, Mail, Phone, ArrowRight, RefreshCw, Copy, Check } from 'lucide-react'
 import DarkModeToggle from '../components/DarkModeToggle'
 import { api } from '../config/api'
+import { useAuth } from '../contexts/AuthContext'
 
 const OTPLogin = () => {
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
   
   const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'
   const [step, setStep] = useState(1) // 1: Enter identifier, 2: Enter OTP
@@ -15,6 +17,8 @@ const OTPLogin = () => {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [resendTimer, setResendTimer] = useState(0)
+  const [testAccountOTP, setTestAccountOTP] = useState(null) // Store OTP for test accounts
+  const [copied, setCopied] = useState(false) // Track if OTP was copied
 
   // Countdown timer for resend OTP
   useEffect(() => {
@@ -40,6 +44,14 @@ const OTPLogin = () => {
         setSuccessMessage(response.data.message)
         setStep(2)
         setResendTimer(60) // 60 seconds cooldown
+        
+        // If OTP is returned (test account), store it for display
+        if (response.data.otp && response.data.isDummyAccount) {
+          setTestAccountOTP(response.data.otp)
+          console.log('🧪 Test Account OTP:', response.data.otp)
+        } else {
+          setTestAccountOTP(null)
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.')
@@ -68,7 +80,10 @@ const OTPLogin = () => {
         // Save token to localStorage
         localStorage.setItem('token', response.data.token)
 
-        console.log('✅ Token saved, navigating...')
+        console.log('✅ Token saved, refreshing user context...')
+
+        // Refresh auth context to get user data
+        await refreshUser()
 
         // Route based on user role
         const { user } = response.data
@@ -79,16 +94,15 @@ const OTPLogin = () => {
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
           targetRoute = '/organizer/dashboard'
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
-          targetRoute = '/venue/dashboard'
+          targetRoute = '/venues-dashboard'
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
           targetRoute = '/brand/dashboard'
         }
         
         console.log('🚀 Navigating to:', targetRoute)
         
-        // Navigate and reload to trigger auth context refresh
-        navigate(targetRoute)
-        window.location.reload()
+        // Navigate to dashboard
+        navigate(targetRoute, { replace: true })
       } else {
         console.error('❌ No token in response')
         setError('Login failed. Please try again.')
@@ -119,6 +133,14 @@ const OTPLogin = () => {
         setSuccessMessage(response.data.message)
         setResendTimer(60)
         setOTP('') // Clear previous OTP
+        
+        // If OTP is returned (test account), store it for display
+        if (response.data.otp && response.data.isDummyAccount) {
+          setTestAccountOTP(response.data.otp)
+          console.log('🧪 Test Account OTP:', response.data.otp)
+        } else {
+          setTestAccountOTP(null)
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend OTP.')
@@ -141,6 +163,16 @@ const OTPLogin = () => {
     setOTP('')
     setError('')
     setSuccessMessage('')
+    setTestAccountOTP(null) // Clear test OTP
+    setCopied(false) // Reset copy state
+  }
+
+  const handleCopyOTP = () => {
+    if (testAccountOTP) {
+      navigator.clipboard.writeText(testAccountOTP)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000) // Reset after 2 seconds
+    }
   }
 
   return (
@@ -296,6 +328,43 @@ const OTPLogin = () => {
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
                   OTP sent to {identifier}
                 </p>
+                
+                {/* Display OTP for Test/Dummy Accounts */}
+                {testAccountOTP && (
+                  <div className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 uppercase tracking-wide">
+                        🧪 Test Account
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleCopyOTP}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-300 hover:text-yellow-900 dark:hover:text-yellow-100 transition-colors"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="h-3 w-3" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-md p-3 border border-yellow-300 dark:border-yellow-700">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Your OTP:</p>
+                      <p className="text-3xl font-bold text-center text-gray-900 dark:text-white font-mono tracking-widest">
+                        {testAccountOTP}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-xs text-yellow-700 dark:text-yellow-300 text-center">
+                      This OTP is shown because you're using a test email address
+                    </p>
+                  </div>
+                )}
               </div>
 
               <button

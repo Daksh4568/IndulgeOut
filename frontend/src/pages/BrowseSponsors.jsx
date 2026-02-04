@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import {
   Search, Filter, Building2, Target, TrendingUp,
-  ArrowRight, X, Sparkles, Users, MapPin, Globe
+  ArrowRight, X, Sparkles, Users, MapPin, Globe, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
@@ -26,6 +26,8 @@ const BrowseSponsors = () => {
   const { user } = useAuth();
   const [brands, setBrands] = useState([]);
   const [filteredBrands, setFilteredBrands] = useState([]);
+  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,7 +92,7 @@ const BrowseSponsors = () => {
       setBrands(response.data);
       setFilteredBrands(response.data);
     } catch (error) {
-      console.error('Error fetching brands:', error);
+      console.error('❌ Error fetching brands:', error);
     } finally {
       setLoading(false);
     }
@@ -225,6 +227,37 @@ const BrowseSponsors = () => {
     if (targetCity.length === 1) return 'City-specific';
     if (targetCity.length <= 3) return 'Multi-city';
     return 'Pan-India';
+  };
+
+  const getBrandCategoryLabel = (category) => {
+    const cat = brandCategories.find(c => c.value === category);
+    return cat ? cat.label : category;
+  };
+
+  const openBrandModal = (brand) => {
+    setSelectedBrand(brand);
+    setCurrentImageIndex(0);
+  };
+
+  const closeBrandModal = () => {
+    setSelectedBrand(null);
+    setCurrentImageIndex(0);
+  };
+
+  const nextImage = () => {
+    if (selectedBrand && selectedBrand.images) {
+      setCurrentImageIndex((prev) => 
+        (prev + 1) % selectedBrand.images.length
+      );
+    }
+  };
+
+  const prevImage = () => {
+    if (selectedBrand && selectedBrand.images) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? selectedBrand.images.length - 1 : prev - 1
+      );
+    }
   };
 
   return (
@@ -412,7 +445,7 @@ const BrowseSponsors = () => {
         {/* Brands Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
           </div>
         ) : filteredBrands.length === 0 ? (
           <div className="text-center py-12">
@@ -425,114 +458,294 @@ const BrowseSponsors = () => {
             </p>
             <button
               onClick={clearFilters}
-              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+              className="px-6 py-2 text-white rounded-lg transition-colors"
+              style={{
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+              }}
             >
               Clear filters
             </button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredBrands.map((brand) => {
-              return (
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+            {filteredBrands.map((brand) => (
               <div
                 key={brand._id}
-                onClick={() => navigate(`/brand/${brand._id}`)}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-shadow overflow-hidden group cursor-pointer"
+                onClick={() => openBrandModal(brand)}
+                className="bg-zinc-900 rounded-xl overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex flex-col h-full"
               >
-                {/* Brand Logo/Header */}
-                <div className="relative h-32 bg-gradient-to-br from-primary-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 p-6 flex items-center justify-center">
-                  {brand.logo && !imageErrors[brand._id] ? (
+                {/* Brand Image with Gradient Overlay */}
+                <div className="relative h-48 overflow-hidden">
+                  <div 
+                    className="absolute inset-0"
+                    style={{
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    }}
+                  />
+                  {brand.images && brand.images.length > 0 ? (
                     <img
-                      src={brand.logo}
+                      src={brand.images[0]}
                       alt={brand.brandName}
-                      className="h-full w-auto object-contain mx-auto"
-                      onError={() => setImageErrors(prev => ({ ...prev, [brand._id]: true }))}
+                      className="w-full h-full object-cover mix-blend-overlay"
                     />
                   ) : (
-                    <span className="text-6xl">{getBrandCategoryIcon(brand.brandCategory)}</span>
+                    <div className="flex items-center justify-center h-full text-6xl relative z-10">
+                      {getBrandCategoryIcon(brand.brandCategory)}
+                    </div>
                   )}
-                  <div className="absolute top-3 right-3 bg-white dark:bg-gray-800 px-2 py-1 rounded-full">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                      {brandCategories.find(c => c.value === brand.brandCategory)?.icon || '🏢'}
-                    </span>
-                  </div>
+                  {/* Brand Logo Overlay */}
+                  {brand.logo && (
+                    <div className="absolute bottom-3 left-3 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg z-10">
+                      <img src={brand.logo} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    </div>
+                  )}
                 </div>
 
-                {/* Brand Details */}
-                <div className="p-5">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {brand.brandName}
-                  </h3>
-
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                    {brand.brandDescription || 'No description available'}
+                {/* Brand Info */}
+                <div className="p-4 flex flex-col flex-grow">
+                  <h3 className="text-white font-bold text-lg mb-2">{brand.brandName}</h3>
+                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                    {brand.brandDescription || 'Discover collaboration opportunities'}
                   </p>
-
-                  {/* Category & Scale */}
-                  <div className="flex items-center space-x-4 mb-3 text-xs">
-                    <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                      <Target className="h-3 w-3" />
-                      <span className="capitalize">{brand.brandCategory?.replace('_', ' ')}</span>
-                    </div>
-                    <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                      <Globe className="h-3 w-3" />
-                      <span>{getActivationScale(brand.targetCity)}</span>
-                    </div>
-                  </div>
 
                   {/* Collaboration Formats */}
                   {brand.collaborationIntent && brand.collaborationIntent.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {brand.collaborationIntent.slice(0, 3).map((intent, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full"
-                        >
-                          {intent.replace('_', ' ')}
-                        </span>
-                      ))}
-                      {brand.collaborationIntent.length > 3 && (
-                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">
-                          +{brand.collaborationIntent.length - 3}
-                        </span>
-                      )}
+                    <div className="mb-3">
+                      <div className="flex items-center gap-1 mb-2">
+                        <Sparkles className="h-4 w-4 text-purple-400" />
+                        <span className="text-xs text-gray-400">Collaboration Formats</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {brand.collaborationIntent.slice(0, 3).map((intent, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-gray-800 text-white rounded-full text-xs"
+                          >
+                            {intent.replace('_', ' ')}
+                          </span>
+                        ))}
+                        {brand.collaborationIntent.length > 3 && (
+                          <span className="px-3 py-1 bg-gray-800 text-white rounded-full text-xs">
+                            +{brand.collaborationIntent.length - 3}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {/* Budget Info */}
-                  <div className="flex items-center text-sm text-green-600 dark:text-green-400 mb-4">
-                    <TrendingUp className="h-4 w-4 mr-1" />
-                    <span>{getBudgetDisplay(brand.budget)}</span>
-                  </div>
-
-                  {/* Past Activations Count */}
-                  {brand.pastActivations > 0 && (
-                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-4">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      <span>{brand.pastActivations} past collaborations</span>
+                  {/* Cities Present */}
+                  {brand.targetCity && brand.targetCity.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1 mb-2">
+                        <MapPin className="h-4 w-4 text-purple-400" />
+                        <span className="text-xs text-gray-400">Cities present in</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {brand.targetCity.slice(0, 4).map((city, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-gray-800 text-white rounded-full text-xs"
+                          >
+                            {city}
+                          </span>
+                        ))}
+                        {brand.targetCity.length > 4 && (
+                          <span className="px-3 py-1 bg-gray-800 text-white rounded-full text-xs">
+                            +{brand.targetCity.length - 4}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {/* CTAs */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/brand/${brand._id}`);
-                      }}
-                      className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center space-x-1"
-                    >
-                      <span>View Profile</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {/* Propose Collaboration Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleProposeCollaboration(brand._id);
+                    }}
+                    className="w-full py-2.5 rounded-lg font-medium text-white transition-all mt-auto"
+                    style={{
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    }}
+                  >
+                    Propose Collaboration
+                  </button>
                 </div>
               </div>
-            );
-            })}
+            ))}
           </div>
         )}
       </div>
+
+      {/* Brand Detail Modal */}
+      {selectedBrand && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={closeBrandModal}>
+          <div className="bg-black rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-800">
+              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>Brand Overview</h2>
+              <button
+                onClick={closeBrandModal}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-6 w-6 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+              <div className="grid md:grid-cols-2 gap-8 p-6">
+                {/* Left Column - Image Carousel */}
+                <div className="space-y-4">
+                  {/* Main Image */}
+                  <div className="relative h-80 rounded-xl overflow-hidden">
+                    {selectedBrand.images && selectedBrand.images.length > 0 ? (
+                      <>
+                        <img
+                          src={selectedBrand.images[currentImageIndex]}
+                          alt={selectedBrand.brandName}
+                          className="w-full h-full object-cover"
+                        />
+                        {selectedBrand.images.length > 1 && (
+                          <>
+                            <button
+                              onClick={prevImage}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+                            >
+                              <ChevronLeft className="h-6 w-6 text-white" />
+                            </button>
+                            <button
+                              onClick={nextImage}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+                            >
+                              <ChevronRight className="h-6 w-6 text-white" />
+                            </button>
+                            {/* Image Counter */}
+                            <div className="absolute top-3 right-3 px-3 py-1 bg-black/70 rounded-full text-white text-sm">
+                              {currentImageIndex + 1} / {selectedBrand.images.length}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div 
+                        className="w-full h-full flex items-center justify-center text-6xl"
+                        style={{
+                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                        }}
+                      >
+                        {getBrandCategoryIcon(selectedBrand.brandCategory)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Images */}
+                  {selectedBrand.images && selectedBrand.images.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto">
+                      {selectedBrand.images.map((image, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentImageIndex(idx)}
+                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                            idx === currentImageIndex ? 'border-purple-500' : 'border-transparent'
+                          }`}
+                        >
+                          <img src={image} alt="" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column - Brand Details */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>{selectedBrand.brandName}</h3>
+                    <p className="text-gray-400">{selectedBrand.brandDescription || 'Discover collaboration opportunities'}</p>
+                  </div>
+
+                  {/* Brand Category */}
+                  {selectedBrand.brandCategory && (
+                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Brand Category</h4>
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white" style={{
+                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                      }}>
+                        <span className="text-lg">{getBrandCategoryIcon(selectedBrand.brandCategory)}</span>
+                        <span className="font-medium">{getBrandCategoryLabel(selectedBrand.brandCategory)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Target Cities */}
+                  {selectedBrand.targetCity && selectedBrand.targetCity.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Target Cities</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBrand.targetCity.map((city, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium"
+                          >
+                            {city}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sponsorship Type */}
+                  {selectedBrand.sponsorshipType && selectedBrand.sponsorshipType.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Sponsorship Type</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBrand.sponsorshipType.map((type, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 bg-gray-800 text-purple-400 rounded-lg flex items-center gap-2 font-medium"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            {type.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Collaboration Intent */}
+                  {selectedBrand.collaborationIntent && selectedBrand.collaborationIntent.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Collaboration Intent</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBrand.collaborationIntent.map((intent, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium"
+                          >
+                            {intent.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Propose Campaign Button */}
+                  <button
+                    onClick={() => handleProposeCollaboration(selectedBrand._id)}
+                    className="w-full py-3 rounded-lg font-semibold text-white transition-all text-lg"
+                    style={{
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    }}
+                  >
+                    Propose Campaign
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

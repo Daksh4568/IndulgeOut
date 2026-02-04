@@ -104,12 +104,12 @@ export default function ExplorePage() {
       setTopEvents(upcomingEvents);
 
       // Fetch main events with filters
-      let eventsEndpoint = `${API_URL}/api/explore/events/popular?limit=15&page=${eventsPage}`;
+      let eventsEndpoint = `${API_URL}/api/explore/events/popular?limit=12&page=${eventsPage}`;
       
       if (searchQuery) {
-        eventsEndpoint = `${API_URL}/api/explore/events/search?q=${encodeURIComponent(searchQuery)}&limit=15&page=${eventsPage}`;
+        eventsEndpoint = `${API_URL}/api/explore/events/search?q=${encodeURIComponent(searchQuery)}&limit=12&page=${eventsPage}`;
       } else if (filters.useGeolocation && filters.userLocation) {
-        eventsEndpoint = `${API_URL}/api/explore/events/nearby?lat=${filters.userLocation.lat}&lng=${filters.userLocation.lng}&radius=50&limit=15&page=${eventsPage}`;
+        eventsEndpoint = `${API_URL}/api/explore/events/nearby?lat=${filters.userLocation.lat}&lng=${filters.userLocation.lng}&radius=50&limit=12&page=${eventsPage}`;
       }
 
       const eventsResponse = await fetch(eventsEndpoint);

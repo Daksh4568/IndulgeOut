@@ -83,7 +83,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
   return (
     <Link
       to={`/events/${event._id}`}
-      className={`group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''}`}
+      className={`group flex flex-col h-full bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''}`}
     >
       {/* Image */}
       <div className="relative h-48 overflow-hidden bg-gray-700 flex-shrink-0">

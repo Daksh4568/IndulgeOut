@@ -36,17 +36,20 @@ const About = () => {
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
       <NavigationBar />
       {/* Hero Section with Polaroids and Envelope */}
-      <section className="relative min-h-screen flex items-center justify-center px-4 py-16 md:py-8">
+      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
         <div className="relative w-full max-w-6xl mx-auto">
           {/* Mobile Layout - Top Polaroids */}
-          <div className="md:hidden absolute top-0 left-1/2 transform -translate-x-1/2 flex gap-4 z-10">
+          <div className="md:hidden flex gap-4 justify-center mb-8 z-30 relative">
             {/* Polaroid 1 - Top Left on Mobile */}
             <div className="transform -rotate-12 w-32">
               <div className="bg-white p-2 shadow-2xl">
                 <img
-                  src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400"
+                  src="/images/Media (10).jpg"
                   alt="Friends gathering"
                   className="w-full aspect-square object-cover"
+                  onError={(e) => {
+                    e.target.src = '/images/postercard1.jpg';
+                  }}
                 />
                 <div className="h-6"></div>
               </div>
@@ -55,76 +58,106 @@ const About = () => {
             <div className="transform rotate-12 w-32">
               <div className="bg-white p-2 shadow-2xl">
                 <img
-                  src="https://images.unsplash.com/photo-1543007631-283050bb3e8c?w=400"
+                  src="/images/Media (11).jpg"
                   alt="Event celebration"
                   className="w-full aspect-square object-cover"
+                  onError={(e) => {
+                    e.target.src = '/images/postercard2.jpg';
+                  }}
                 />
                 <div className="h-6"></div>
               </div>
             </div>
           </div>
 
-          {/* Desktop Layout - Left Polaroids */}
-          <div className="hidden md:block">
-            {/* Polaroid 1 - Top Left */}
-            <div className="absolute top-0 left-[10%] transform -rotate-12 w-56 z-10">
-              <div className="bg-white p-3 shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400"
-                  alt="Friends gathering"
-                  className="w-full aspect-square object-cover"
-                />
-                <div className="h-12"></div>
-              </div>
-            </div>
+          {/* Desktop Layout - Polaroids: 2 Left, 2 Right (No Overlap) */}
+          <div className="hidden md:block absolute inset-0 z-10">
+            <div className="h-full w-full flex justify-between px-6 lg:px-10 pt-4 pb-6 -mt-12">
+              {/* Left Column */}
+              <div className="flex flex-col justify-between items-start">
+                {/* Polaroid 1 - Top Left */}
+                <div className="transform -rotate-12 w-36 lg:w-40 xl:w-44">
+                  <div className="bg-white p-3 shadow-2xl">
+                    <img
+                      src="/images/Media (10).jpg"
+                      alt="Friends gathering"
+                      className="w-full aspect-square object-cover"
+                      onError={(e) => {
+                        e.target.src = '/images/postercard1.jpg';
+                      }}
+                    />
+                    <div className="h-10"></div>
+                  </div>
+                </div>
 
-            {/* Polaroid 2 - Bottom Left */}
-            <div className="absolute top-[45%] left-[8%] transform rotate-6 w-56 z-10">
-              <div className="bg-white p-3 shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400"
-                  alt="Community event"
-                  className="w-full aspect-square object-cover"
-                />
-                <div className="h-12"></div>
+                {/* Polaroid 2 - Bottom Left */}
+                <div className="transform rotate-6 w-36 lg:w-40 xl:w-44">
+                  <div className="bg-white p-3 shadow-2xl">
+                    <img
+                      src="/images/Media (11).jpg"
+                      alt="Community event"
+                      className="w-full aspect-square object-cover"
+                      onError={(e) => {
+                        e.target.src = '/images/postercard2.jpg';
+                      }}
+                    />
+                    <div className="h-10"></div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Polaroid 3 - Top Right */}
-            <div className="absolute top-0 right-[10%] transform rotate-12 w-56 z-10">
-              <div className="bg-white p-3 shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1543007631-283050bb3e8c?w=400"
-                  alt="Event celebration"
-                  className="w-full aspect-square object-cover"
-                />
-                <div className="h-12"></div>
-              </div>
-            </div>
+              {/* Right Column */}
+              <div className="flex flex-col justify-between items-end">
+                {/* Polaroid 3 - Top Right */}
+                <div className="transform rotate-12 w-36 lg:w-40 xl:w-44">
+                  <div className="bg-white p-3 shadow-2xl">
+                    <img
+                      src="/images/Media (12).jpg"
+                      alt="Event celebration"
+                      className="w-full aspect-square object-cover"
+                      onError={(e) => {
+                        e.target.src = '/images/postercard3.jpg';
+                      }}
+                    />
+                    <div className="h-10"></div>
+                  </div>
+                </div>
 
-            {/* Polaroid 4 - Bottom Right */}
-            <div className="absolute top-[45%] right-[8%] transform -rotate-6 w-56 z-10">
-              <div className="bg-white p-3 shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400"
-                  alt="Happy attendees"
-                  className="w-full aspect-square object-cover"
-                />
-                <div className="h-12"></div>
+                {/* Polaroid 4 - Bottom Right */}
+                <div className="transform -rotate-6 w-36 lg:w-40 xl:w-44">
+                  <div className="bg-white p-3 shadow-2xl">
+                    <img
+                      src="/images/Media (13).jpg"
+                      alt="Happy attendees"
+                      className="w-full aspect-square object-cover"
+                      onError={(e) => {
+                        e.target.src = '/images/postercard4.jpg';
+                      }}
+                    />
+                    <div className="h-10"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Envelope in Center */}
-          <div className="relative z-20 flex flex-col items-center justify-center mt-48 md:mt-0">
-            <div className="relative mb-6 md:block hidden">
-              <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-700 px-6 py-2 rounded-full text-sm font-medium border-2 border-gray-600">
-                tap here !
+          <div className="relative z-20 flex flex-col items-center justify-center md:mt-0">
+            {/* Tap here bubble with arrow - Figma style */}
+            <div className="relative mb-8 md:block hidden">
+              <div className="relative">
+                {/* Speech bubble */}
+                <div className="bg-gray-800 px-6 py-3 rounded-full text-sm font-medium border-2 border-gray-600 relative">
+                  <span className="italic">tap here !</span>
+                  {/* Bubble tail pointing down-left */}
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gray-800 border-b-2 border-l-2 border-gray-600 rotate-45"></div>
+                </div>
+                {/* Curved arrow pointing to envelope */}
+                <svg className="absolute top-full left-1/2 transform translate-x-8 translate-y-1 w-20 h-20" viewBox="0 0 100 100">
+                  <path d="M20,10 Q40,20 50,40 T60,70" stroke="white" strokeWidth="2" fill="none" opacity="0.8" />
+                  <path d="M60,70 L55,65 M60,70 L65,68" stroke="white" strokeWidth="2" fill="none" opacity="0.8" />
+                </svg>
               </div>
-              <svg className="absolute -top-8 left-1/2 transform -translate-x-1/2 translate-x-12 w-16 h-16" viewBox="0 0 100 100">
-                <path d="M10,50 Q30,30 50,50" stroke="white" strokeWidth="2" fill="none" />
-                <path d="M50,50 L55,45 M50,50 L45,45" stroke="white" strokeWidth="2" fill="none" />
-              </svg>
             </div>
 
             <div
@@ -140,9 +173,10 @@ const About = () => {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-xl md:text-2xl font-handwriting text-gray-800 italic">For you, from us!</p>
-                    <div className="mt-2 md:mt-4">
-                      <svg className="w-12 h-8 md:w-16 md:h-12 mx-auto" viewBox="0 0 100 50">
-                        <path d="M10,10 Q30,30 50,15 Q70,30 90,10" stroke="#4b5563" strokeWidth="2" fill="none" />
+                    {/* Smile */}
+                    <div className="mt-3 md:mt-4">
+                      <svg className="w-16 h-10 md:w-20 md:h-12 mx-auto" viewBox="0 0 100 60">
+                        <path d="M20,20 Q50,50 80,20" stroke="#4b5563" strokeWidth="3" fill="none" strokeLinecap="round" />
                       </svg>
                     </div>
                   </div>
@@ -151,14 +185,17 @@ const About = () => {
             </div>
 
             {/* Mobile Bottom Polaroids */}
-            <div className="md:hidden mt-12 flex gap-4 justify-center">
+            <div className="md:hidden mt-12 flex gap-4 justify-center z-30 relative">
               {/* Polaroid 3 - Bottom Left on Mobile */}
               <div className="transform rotate-6 w-32">
                 <div className="bg-white p-2 shadow-2xl">
                   <img
-                    src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400"
+                    src="/images/Media (12).jpg"
                     alt="Community event"
                     className="w-full aspect-square object-cover"
+                    onError={(e) => {
+                      e.target.src = '/images/postercard3.jpg';
+                    }}
                   />
                   <div className="h-6"></div>
                 </div>
@@ -167,9 +204,12 @@ const About = () => {
               <div className="transform -rotate-6 w-32">
                 <div className="bg-white p-2 shadow-2xl">
                   <img
-                    src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400"
+                    src="/images/Media (13).jpg"
                     alt="Happy attendees"
                     className="w-full aspect-square object-cover"
+                    onError={(e) => {
+                      e.target.src = '/images/postercard4.jpg';
+                    }}
                   />
                   <div className="h-6"></div>
                 </div>
@@ -200,9 +240,12 @@ const About = () => {
                 </button>
                 <div className="mt-6">
                   <img
-                    src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600"
+                    src="/images/Media (10).jpg"
                     alt="Curated experiences"
                     className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.target.src = '/images/postercard1.jpg';
+                    }}
                   />
                 </div>
               </div>
@@ -218,22 +261,15 @@ const About = () => {
                 <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
                   Explore Now
                 </button>
-                <div className="mt-6 relative">
+                <div className="mt-6">
                   <img
-                    src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600"
+                    src="/images/Media (11).jpg"
                     alt="Collaboration"
                     className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.target.src = '/images/postercard2.jpg';
+                    }}
                   />
-                  {/* Profile Badges Overlay */}
-                  <div className="absolute -top-4 -right-4 flex items-center gap-2">
-                    <div className="w-16 h-16 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg">
-                      <span className="text-2xl font-bold">A</span>
-                    </div>
-                    <div className="flex -space-x-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-4 border-white shadow-lg"></div>
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 border-4 border-white shadow-lg"></div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -360,11 +396,6 @@ const About = () => {
             <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 rounded-xl p-6 md:p-16 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
               {/* Paper Texture Overlay */}
               <div className="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cGF0aCBkPSJNLTEwIDMwaDYwdjJoLTYweiIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIuMDUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=')]"></div>
-
-              {/* Yellow Badge */}
-              <div className="absolute top-4 right-4 md:-top-6 md:-right-6 md:top-8 md:right-8 w-12 h-12 md:w-16 md:h-16 bg-yellow-400 rounded-full flex items-center justify-center shadow-xl border-4 border-white">
-                <span className="text-xl md:text-2xl font-bold">A</span>
-              </div>
 
               <div className="relative space-y-4 md:space-y-6 text-gray-800">
                 <p className="text-sm md:text-lg leading-relaxed italic">
