@@ -13,6 +13,7 @@ const eventSchema = new mongoose.Schema({
   categories: [{
     type: String,
     required: true,
+    enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'],
     trim: true
   }],
   date: {
@@ -224,41 +225,15 @@ eventSchema.virtual('ticketPrice').get(function() {
 eventSchema.set('toJSON', { virtuals: true });
 eventSchema.set('toObject', { virtuals: true });
 
-// Validate categories exist in Category collection
+// Categories are now hardcoded enums - no validation needed
 eventSchema.pre('save', async function(next) {
-  if (this.isModified('categories') && this.categories.length > 0) {
-    try {
-      const Category = mongoose.model('Category');
-      const validCategories = await Category.find({ name: { $in: this.categories } }).select('name');
-      const validNames = validCategories.map(cat => cat.name);
-      
-      const invalidCategories = this.categories.filter(cat => !validNames.includes(cat));
-      if (invalidCategories.length > 0) {
-        throw new Error(`Invalid categories: ${invalidCategories.join(', ')}. Please use valid category names from the Category collection.`);
-      }
-    } catch (error) {
-      return next(error);
-    }
-  }
   next();
 });
 
-// Update category analytics after event is created
+// Categories are hardcoded - analytics calculated from events on-demand
 eventSchema.post('save', async function(doc) {
-  if (doc.categories && doc.categories.length > 0) {
-    try {
-      const Category = mongoose.model('Category');
-      // Update event count for all categories
-      await Promise.all(doc.categories.map(categoryName => 
-        Category.findOneAndUpdate(
-          { name: categoryName },
-          { $inc: { 'analytics.eventCount': 1 } }
-        )
-      ));
-    } catch (error) {
-      console.error('Failed to update category analytics:', error);
-    }
-  }
+  // No separate category collection to update
+  // Category analytics are now aggregated from events in real-time
 });
 
 // Update current participants count

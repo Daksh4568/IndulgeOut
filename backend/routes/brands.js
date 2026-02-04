@@ -79,8 +79,25 @@ router.get('/browse', async (req, res) => {
       sponsorshipType: brand.brandProfile?.sponsorshipType || [],
       collaborationIntent: brand.brandProfile?.collaborationIntent || [],
       budget: brand.brandProfile?.budget || {},
-      pastActivations: brand.brandProfile?.pastActivations || 0
+      pastActivations: brand.brandProfile?.pastActivations || 0,
+      // Add missing fields
+      images: brand.brandProfile?.brandAssets || [],
+      brandAssets: brand.brandProfile?.brandAssets || [],
+      website: brand.brandProfile?.website,
+      instagram: brand.brandProfile?.instagram,
+      facebook: brand.brandProfile?.facebook,
+      linkedin: brand.brandProfile?.linkedin,
+      contactPerson: brand.brandProfile?.contactPerson || {}
     }));
+
+    console.log('🏷️ Brands fetched:', transformedBrands.length);
+    transformedBrands.forEach((brand, index) => {
+      console.log(`\n🏢 Brand ${index + 1}: ${brand.brandName}`);
+      console.log('  Target Cities:', brand.targetCity);
+      console.log('  Budget:', brand.budget);
+      console.log('  Contact Person:', brand.contactPerson);
+      console.log('  Images:', brand.images?.length || 0);
+    });
 
     res.json(transformedBrands);
   } catch (error) {

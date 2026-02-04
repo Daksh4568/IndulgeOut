@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.js');
 const Community = require('../models/Community.js');
+const cloudinary = require('../config/cloudinary.js');
 
 const router = express.Router();
 
@@ -192,6 +193,74 @@ router.get('/registered-events', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching registered events:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Upload profile picture
+router.post('/upload-profile-picture', authenticateToken, async (req, res) => {
+  try {
+    const { imageData } = req.body;
+
+    if (!imageData) {
+      return res.status(400).json({ message: 'No image data provided' });
+    }
+
+    // Upload to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(imageData, {
+      folder: 'indulgeout/profile-pictures',
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+        { quality: 'auto', fetch_format: 'auto' }
+      ]
+    });
+
+    // Update user profile picture
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { profilePicture: uploadResult.secure_url },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      profilePicture: uploadResult.secure_url,
+      user
+    });
+  } catch (error) {
+    console.error('Profile picture upload error:', error);
+    res.status(500).json({ 
+      message: 'Failed to upload profile picture',
+      error: error.message 
+    });
+  }
+});
+
+// Delete profile picture
+router.delete('/profile-picture', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { profilePicture: null },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile picture removed successfully',
+      user
+    });
+  } catch (error) {
+    console.error('Delete profile picture error:', error);
+    res.status(500).json({ message: 'Failed to remove profile picture' });
   }
 });
 

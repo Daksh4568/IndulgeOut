@@ -73,10 +73,27 @@ router.get('/browse', async (req, res) => {
       amenities: venue.venueProfile?.amenities || [],
       eventSuitabilityTags: venue.venueProfile?.eventSuitabilityTags || [],
       photos: venue.venueProfile?.photos || [],
+      images: venue.venueProfile?.photos || [], // Alias for consistency
       availability: venue.venueProfile?.availability,
       eventsHosted: venue.venueProfile?.eventsHosted || 0,
-      description: venue.venueProfile?.description
+      description: venue.venueProfile?.description,
+      // Add missing fields
+      rules: venue.venueProfile?.rules || {},
+      pricing: venue.venueProfile?.pricing || {},
+      targetCity: venue.venueProfile?.targetCity || [],
+      contactPerson: venue.venueProfile?.contactPerson || {},
+      location: venue.venueProfile?.location || {},
+      venueScale: venue.venueProfile?.venueScale || [],
+      eventSuitability: venue.venueProfile?.eventSuitability || []
     }));
+
+    console.log('📍 Venues fetched:', transformedVenues.length);
+    transformedVenues.forEach((venue, index) => {
+      console.log(`\n🏢 Venue ${index + 1}: ${venue.venueName}`);
+      console.log('  Rules:', venue.rules);
+      console.log('  Pricing:', venue.pricing);
+      console.log('  Target Cities:', venue.targetCity);
+    });
 
     res.json(transformedVenues);
   } catch (error) {

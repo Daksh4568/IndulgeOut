@@ -99,11 +99,32 @@ router.post('/otp/send', async (req, res) => {
 
     console.log(`✅ OTP sent to ${identifier} via ${method}. Mock: ${result.mock || false}`);
 
-    res.json({
+    // Check if this is a test/dummy email (common patterns for test accounts)
+    const isDummyEmail = method === 'email' && (
+      identifier.includes('test@') ||
+      identifier.includes('dummy@') ||
+      identifier.includes('@test.com') ||
+      identifier.includes('@dummy.com') ||
+      identifier.includes('@example.com') ||
+      identifier.includes('@indulgeout.com') || // Development domain for test accounts
+      identifier.endsWith('.test') ||
+      result.mock // Also include mock mode
+    );
+
+    const response = {
       message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
       mock: result.mock || false,
       expiresIn: 600 // 10 minutes in seconds
-    });
+    };
+
+    // Include OTP in response for test accounts (development only)
+    if (isDummyEmail || result.mock) {
+      response.otp = otp;
+      response.isDummyAccount = true;
+      console.log(`⚠️ TEST ACCOUNT: OTP ${otp} returned in response for ${identifier}`);
+    }
+
+    res.json(response);
 
   } catch (error) {
     console.error('Error sending OTP:', error);

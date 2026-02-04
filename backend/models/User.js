@@ -171,6 +171,7 @@ const userSchema = new mongoose.Schema({
   // Venue Profile (for hostPartnerType: 'venue')
   venueProfile: {
     venueName: String,
+    city: String,
     locality: String,
     venueType: {
       type: String,
@@ -186,6 +187,7 @@ const userSchema = new mongoose.Schema({
       email: String
     },
     photos: [String],
+    instagram: String,
     amenities: [{
       type: String,
       enum: ['wifi', 'parking', 'ac', 'sound_system', 'projector', 'kitchen', 'bar', 'outdoor_seating', 'stage', 'dance_floor', 'green_room', 'security']
@@ -247,6 +249,7 @@ const userSchema = new mongoose.Schema({
   // Enhanced Community Profile (for hostPartnerType: 'community_organizer')
   communityProfile: {
     communityName: String,
+    city: String,
     primaryCategory: String,
     communityType: {
       type: String,
