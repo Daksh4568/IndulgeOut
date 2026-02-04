@@ -19,13 +19,13 @@ import VenueSignup from './pages/VenueSignup'
 import InterestSelection from './pages/InterestSelection'
 import { Navigate } from 'react-router-dom'
 import EventCreation from './pages/EventCreation'
-import EventDetail from './pages/EventDetail'
+import EventDetail from './pages/EventDetailNew'
 import CommunityCreation from './pages/CommunityCreation'
 import CommunityDetail from './pages/CommunityDetail'
 import AnalyticsPage from './pages/AnalyticsPage'
 import About from './pages/About'
 import ExplorePage from './pages/ExplorePage'
-import CategoriesPage from './pages/CategoriesPage'
+import Categories from './pages/Categories'
 import CategoryDetail from './pages/CategoryDetail'
 import HostPartnerPage from './pages/HostPartnerPage'
 import PaymentCallback from './pages/PaymentCallback'
@@ -69,7 +69,7 @@ function ScrollToTop() {
 
 function AppContent() {
   const location = useLocation();
-  const hideFooterPaths = ['/signup', '/signup/b2c', '/signup/b2b-type', '/signup/host', '/signup/brand', '/signup/venue', '/login'];
+  const hideFooterPaths = ['/signup', '/signup/b2c', '/signup/b2b-type', '/signup/host', '/signup/brand', '/signup/venue', '/login', '/community-organizer-dashboard'];
   const shouldHideFooter = hideFooterPaths.includes(location.pathname);
 
   return (
@@ -82,8 +82,8 @@ function AppContent() {
         <Route path="/notifications" element={<ErrorBoundary><NotificationCenter /></ErrorBoundary>} />
         <Route path="/refunds-cancellations" element={<RefundsCancellations />} />
         <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/category/:slug" element={<CategoryDetail />} />
+        <Route path="/categories" element={<Categories />} />
+        <Route path="/categories/:slug" element={<CategoryDetail />} />
         <Route path="/host-partner" element={<HostPartnerPage />} />
         
         {/* New Signup Flow */}

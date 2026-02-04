@@ -1,155 +1,113 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Users, Sparkles, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import EventCard from '../components/EventCard';
-import CommunityCard from '../components/CommunityCard';
-import FilterBar from '../components/FilterBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import { useAuth } from '../contexts/AuthContext';
 import { getCategoryBySlug } from '../constants/categories';
-import { API_URL } from '../config/api';
+import { api } from '../config/api';
 
 const CategoryDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const fallbackCategory = getCategoryBySlug(slug);
+  const carouselRef = useRef(null);
+  
+  // Get category from hardcoded constants (no API fetch needed)
+  const category = getCategoryBySlug(slug);
 
-  const [category, setCategory] = useState(fallbackCategory);
   const [events, setEvents] = useState([]);
-  const [communities, setCommunities] = useState([]);
-  const [filters, setFilters] = useState({});
   const [loading, setLoading] = useState(true);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [openFAQ, setOpenFAQ] = useState(null);
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    upcomingEvents: 0,
+    totalParticipants: 0
+  });
 
-  // Fetch category from API
-  useEffect(() => {
-    if (slug) {
-      fetchCategory();
+  // FAQ data
+  const faqs = [
+    {
+      question: "Who Can Get Subscribed?",
+      answer: "Anyone looking to attend events in this category can subscribe. We regularly post about new events tailored to your interests."
+    },
+    {
+      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
+      answer: "IndulgeOut focuses on curated experiences that match your unique interests. We connect you with like-minded people and authentic local experiences."
+    },
+    {
+      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
+      answer: "We emphasize community building and meaningful connections over just ticket sales. Every event is handpicked for quality and authenticity."
+    },
+    {
+      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
+      answer: "Our platform offers personalized recommendations, interest-based discovery, and a vibrant community of experience seekers."
     }
-  }, [slug]);
-
-  const fetchCategory = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/categories/${slug}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch category');
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.category) {
-        setCategory(data.category);
-        setUsingFallback(false);
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      console.error('Error fetching category, using fallback:', error);
-      // Fallback to frontend constants
-      if (fallbackCategory) {
-        setCategory(fallbackCategory);
-        setUsingFallback(true);
-      } else {
-        navigate('/categories');
-      }
-    }
-  };
+  ];
 
   // If category not found, redirect to categories page
   useEffect(() => {
-    if (!category && !fallbackCategory) {
+    if (!category) {
       navigate('/categories');
     }
-  }, [category, fallbackCategory, navigate]);
+  }, [category, navigate]);
 
-  // Fetch events and communities for this category
+  // Fetch events for this category
   useEffect(() => {
     if (category) {
       fetchCategoryData();
     }
-  }, [category, filters]);
+  }, [category]);
 
   const fetchCategoryData = async () => {
     setLoading(true);
     try {
-      // Fetch events for this category
-      const eventsResponse = await fetch(`${API_URL}/api/explore/events/popular?limit=12`);
+      // Fetch events for this category using category name
+      const eventsResponse = await api.get(`/events?category=${category.name}&status=published`);
       
-      if (!eventsResponse.ok) {
-        console.error('Events API returned error:', eventsResponse.status);
-        setEvents([]);
-      } else {
-        const eventsData = await eventsResponse.json();
-        
-        // Safely filter by category name
-        let filteredEvents = [];
-        if (eventsData && eventsData.events && Array.isArray(eventsData.events)) {
-          filteredEvents = eventsData.events.filter(event =>
-            event.categories?.includes(category.name)
-          );
-
-          // Apply additional filters
-          if (filters.price && filters.price !== 'all') {
-            filteredEvents = filteredEvents.filter(event => {
-              const price = event.price?.amount || 0;
-              if (filters.price === 'free') return price === 0;
-              if (filters.price === 'under500') return price > 0 && price < 500;
-              if (filters.price === '500-2000') return price >= 500 && price <= 2000;
-              if (filters.price === 'over2000') return price > 2000;
-              return true;
-            });
-          }
-
-          if (filters.city && filters.city !== 'all') {
-            filteredEvents = filteredEvents.filter(event =>
-              event.location?.city === filters.city
-            );
-          }
-
-          if (filters.mood && filters.mood !== 'all') {
-            filteredEvents = filteredEvents.filter(event =>
-              event.mood === filters.mood
-            );
-          }
-        }
-        
-        setEvents(filteredEvents);
-      }
-
-      // Fetch communities for this category
-      const communitiesResponse = await fetch(`${API_URL}/api/explore/communities/featured?limit=6`);
+      // Handle response - could be array or object with data property
+      let filteredEvents = Array.isArray(eventsResponse.data) 
+        ? eventsResponse.data 
+        : (eventsResponse.data?.events || []);
       
-      if (!communitiesResponse.ok) {
-        console.error('Communities API returned error:', communitiesResponse.status);
-        setCommunities([]);
-      } else {
-        const communitiesData = await communitiesResponse.json();
-        
-        // Safely filter by category
-        let filteredCommunities = [];
-        if (communitiesData && communitiesData.communities && Array.isArray(communitiesData.communities)) {
-          filteredCommunities = communitiesData.communities.filter(community =>
-            community.category === category.name
-          );
-        }
-        
-        setCommunities(filteredCommunities);
-      }
+      setEvents(filteredEvents);
+
+      // Calculate stats
+      const now = new Date();
+      const upcoming = filteredEvents.filter(event => new Date(event.date) >= now);
+      const totalParticipants = filteredEvents.reduce((sum, event) => sum + (event.currentParticipants || 0), 0);
+
+      setStats({
+        totalEvents: filteredEvents.length,
+        upcomingEvents: upcoming.length,
+        totalParticipants
+      });
+      
     } catch (error) {
       console.error('Error fetching category data:', error);
       setEvents([]);
-      setCommunities([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
+  const scrollCarousel = (direction) => {
+    if (carouselRef.current) {
+      const scrollAmount = 300;
+      if (direction === 'left') {
+        carouselRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      } else {
+        carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
   };
 
   const handleFavorite = (itemId) => {
@@ -166,213 +124,310 @@ const CategoryDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
+    <div className="min-h-screen bg-black text-white">
       <NavigationBar />
 
-      {/* Fallback Mode Indicator */}
-      {usingFallback && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <p className="text-yellow-800 dark:text-yellow-200 text-sm text-center">
-              ℹ️ Viewing cached category data (API unavailable)
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Hero Section */}
-      <section className={`relative bg-gradient-to-br ${category.color} pt-24 pb-16 overflow-hidden`}>
-        {/* Pattern Overlay */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle, white 2px, transparent 2px)`,
-            backgroundSize: '30px 30px'
-          }} />
+      {/* Hero Image Section */}
+      <section className="relative h-[300px] sm:h-[400px] lg:h-[500px] overflow-hidden">
+        <div className="absolute inset-0">
+          <img 
+            src={`/images/${category.slug}.jpg`}
+            alt={category.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.src = '/images/postercard1.jpg';
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/70 to-black"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Back Button */}
+        {/* Back Button - Overlaid on image */}
+        <div className="absolute top-4 sm:top-6 left-0 right-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <button
             onClick={() => navigate('/categories')}
-            className="flex items-center gap-2 text-white/90 hover:text-white mb-8 group"
+            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors group bg-black/30 hover:bg-black/50 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
           >
-            <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-            <span>Back to Categories</span>
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 group-hover:-translate-x-1 transition-transform" />
+            <span style={{ fontFamily: 'Source Serif Pro, serif' }}>Back to Categories</span>
           </button>
+        </div>
 
-          {/* Category Info */}
-          <div className="text-center mb-12">
-            <div className="text-7xl mb-4">{category.emoji}</div>
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-              {category.name}
-            </h1>
-            <p className="text-2xl text-white/90 mb-8">
-              {category.descriptor}
-            </p>
-          </div>
+        {/* Content Overlay */}
+        <div className="relative h-full flex flex-col justify-center items-center text-center px-4">
+          <h1 
+            className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 uppercase"
+            style={{ fontFamily: 'Oswald, sans-serif' }}
+          >
+            {(() => {
+              // Handle different category name formats
+              if (category.name.includes(',')) {
+                // For "Art, Music & Dance" -> "ART, MUSIC & DANCE" (keep as is)
+                const parts = category.name.split(', ');
+                return (
+                  <>
+                    {parts[0]} <span className="text-purple-400">&</span>{' '}
+                    <span 
+                      className="bg-gradient-to-r from-[#7878E9] to-[#B794F6] bg-clip-text text-transparent"
+                    >
+                      {parts[1]}
+                    </span>
+                  </>
+                );
+              } else if (category.name.includes('&')) {
+                // For "Food & Beverage" -> "FOOD & BEVERAGE" (keep the &)
+                const parts = category.name.split(' & ');
+                return (
+                  <>
+                    {parts[0]} <span className="text-purple-400">&</span>{' '}
+                    <span 
+                      className="bg-gradient-to-r from-[#7878E9] to-[#B794F6] bg-clip-text text-transparent"
+                    >
+                      {parts[1]}
+                    </span>
+                  </>
+                );
+              } else if (category.name.includes(' ')) {
+                // For "Social Mixers" -> "SOCIAL" + gradient "MIXERS"
+                const parts = category.name.split(' ');
+                return (
+                  <>
+                    {parts[0]}{' '}
+                    <span 
+                      className="bg-gradient-to-r from-[#7878E9] to-[#B794F6] bg-clip-text text-transparent"
+                    >
+                      {parts.slice(1).join(' ')}
+                    </span>
+                  </>
+                );
+              } else {
+                // For single word categories like "Games" or "Immersive"
+                return category.name;
+              }
+            })()}
+          </h1>
+        </div>
+      </section>
 
-          {/* Who is this for? & What you'll find */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Who is this for */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
-              <h3 className="text-xl font-bold mb-4">WHO IS THIS FOR?</h3>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-white/70 mt-1">→</span>
-                  <span>People passionate about {category.name.toLowerCase()}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-white/70 mt-1">→</span>
-                  <span>Anyone looking to explore {category.subtext.toLowerCase()}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-white/70 mt-1">→</span>
-                  <span>Community members who love to connect and share</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* What you'll find */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
-              <h3 className="text-xl font-bold mb-4">WHAT YOU'LL FIND HERE?</h3>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Curated events matching your interests</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Active communities to join</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Like-minded people to connect with</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Opportunities to host your own events</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="flex justify-center gap-8 mt-8 text-white">
-            <div className="text-center">
-              <div className="text-3xl font-bold">{category.analytics?.eventCount || events.length}+</div>
-              <div className="text-white/75">Events</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">{category.analytics?.communityCount || communities.length}+</div>
-              <div className="text-white/75">Communities</div>
-            </div>
-            {category.analytics?.views > 0 && (
-              <div className="text-center">
-                <div className="text-3xl font-bold">{category.analytics.views}</div>
-                <div className="text-white/75">Views</div>
+      {/* Category Info Bar */}
+      <section className="bg-gray-900 py-4 sm:py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="flex items-start gap-3 p-4 bg-gray-800/50 rounded-lg sm:bg-transparent sm:p-0">
+              <Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-gray-400 font-bold mb-1">Category</p>
+                <p className="font-bold text-sm sm:text-base" style={{ fontFamily: 'Oswald, sans-serif' }}>{category.name}</p>
               </div>
-            )}
+            </div>
+            
+            <div className="flex items-start gap-3 p-4 bg-gray-800/50 rounded-lg sm:bg-transparent sm:p-0">
+              <Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-gray-400 font-bold mb-1">Who it's for</p>
+                <p className="font-bold text-sm sm:text-base" style={{ fontFamily: 'Oswald, sans-serif' }}>Everyone</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 p-4 bg-gray-800/50 rounded-lg sm:bg-transparent sm:p-0">
+              <Sparkles className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-gray-400 font-bold mb-1">What you'll find here</p>
+                <p className="font-bold text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>{category.description}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 p-4 bg-gray-800/50 rounded-lg sm:bg-transparent sm:p-0">
+              <Calendar className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-gray-400 font-bold mb-1">Age Restriction</p>
+                <p className="font-bold text-sm sm:text-base" style={{ fontFamily: 'Oswald, sans-serif' }}>18 yrs & above</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Filter Bar */}
-      <FilterBar onFilterChange={handleFilterChange} activeFilters={filters} />
-
-      {/* Upcoming Events Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-          Upcoming Events
-        </h2>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-xl h-96 animate-pulse" />
-            ))}
-          </div>
-        ) : events.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events.map((event) => (
-                <EventCard
-                  key={event._id}
-                  event={event}
-                  onFavorite={handleFavorite}
-                />
-              ))}
+      {/* Must Attend Events - Horizontal Carousel */}
+      <section className="py-8 sm:py-12 lg:py-16 bg-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-start sm:items-center justify-between mb-6 sm:mb-8">
+            <div>
+              <h2 
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                Events Under this category
+              </h2>
+              <p 
+                className="text-gray-400 font-bold text-sm sm:text-base"
+                style={{ fontFamily: 'Source Serif Pro, serif' }}
+              >
+                Don't miss these popular experiences
+              </p>
             </div>
             
-            {events.length >= 12 && (
-              <div className="text-center mt-8">
-                <Link
-                  to={`/explore?tab=events&category=${category.name}`}
-                  className="inline-block bg-orange-500 text-white font-semibold py-3 px-8 rounded-full hover:bg-orange-600 transition-all"
-                >
-                  View All Events
-                </Link>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl">
-            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              No events found
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Be the first to host an event in this category!
-            </p>
-            <button
-              onClick={() => navigate('/host-partner')}
-              className="bg-orange-500 text-white font-semibold py-3 px-8 rounded-full hover:bg-orange-600 transition-all"
-            >
-              Host an Event
-            </button>
+            <div className="hidden sm:flex gap-2">
+              <button
+                onClick={() => scrollCarousel('left')}
+                className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={() => scrollCarousel('right')}
+                className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </div>
           </div>
-        )}
+
+          {loading ? (
+            <div className="flex gap-6 overflow-hidden">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex-none w-[280px] h-[450px] bg-gray-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div 
+              ref={carouselRef}
+              className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {events.map((event) => (
+                <div 
+                  key={event._id}
+                  className="flex-none w-[280px] h-[450px] snap-start"
+                  style={{ minHeight: '450px', maxHeight: '450px' }}
+                >
+                  <EventCard event={event} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* Popular Communities Section */}
-      {communities.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-            Popular Communities
-          </h2>
+      {/* Highlights Section */}
+      <section className="py-8 sm:py-12 lg:py-16 bg-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <h2 
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              Highlights
+            </h2>
+            
+            <div className="hidden sm:flex gap-2">
+              <button className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors">
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors">
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {communities.map((community) => (
-              <CommunityCard
-                key={community._id}
-                community={community}
-                onFavorite={handleFavorite}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="relative h-[250px] sm:h-[300px] md:h-[400px] rounded-xl overflow-hidden">
+              <img 
+                src="/images/Media (10).jpg" 
+                alt="Highlight 1" 
+                className="w-full h-full object-cover"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="relative h-[120px] sm:h-[145px] md:h-[196px] rounded-xl overflow-hidden">
+                <img 
+                  src="/images/Media (11).jpg" 
+                  alt="Highlight 2" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="relative h-[120px] sm:h-[145px] md:h-[196px] rounded-xl overflow-hidden">
+                <img 
+                  src="/images/Media (12).jpg" 
+                  alt="Highlight 3" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="relative h-[120px] sm:h-[145px] md:h-[196px] rounded-xl overflow-hidden col-span-2">
+                <img 
+                  src="/images/Media (13).jpg" 
+                  alt="Highlight 4" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-8 sm:py-12 lg:py-16 bg-black">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 
+            className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-center"
+            style={{ fontFamily: 'Oswald, sans-serif' }}
+          >
+            Frequently Asked <span className="text-[#6366F1]" style={{ fontStyle: 'italic' }}>Questions</span>
+          </h2>
+          <p 
+            className="text-gray-400 text-center mb-8 sm:mb-12 font-bold text-sm sm:text-base"
+            style={{ fontFamily: 'Source Serif Pro, serif' }}
+          >
+            In the Popup: Create your own event and bring people together around your unique passion.
+          </p>
+
+          <div className="space-y-3 sm:space-y-4">
+            {faqs.map((faq, index) => (
+              <div
+                key={index}
+                className={`rounded-xl overflow-hidden transition-all ${
+                  openFAQ === index
+                    ? 'bg-gradient-to-br from-[#6366F1] to-[#4F46E5] border-0'
+                    : 'bg-transparent border-2 border-white/20'
+                }`}
+              >
+                <button
+                  onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                  className="w-full px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between text-left transition-colors"
+                >
+                  <span 
+                    className="font-semibold text-base sm:text-lg pr-4"
+                    style={{ fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    {faq.question}
+                  </span>
+                  <ChevronDown 
+                    className={`h-5 w-5 text-white flex-shrink-0 transition-transform ${
+                      openFAQ === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                
+                {openFAQ === index && (
+                  <div 
+                    className="px-4 pb-4 sm:px-6 sm:pb-5"
+                    style={{ fontFamily: 'Source Serif Pro, serif' }}
+                  >
+                    <p className="text-white leading-relaxed text-sm sm:text-base">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-        </section>
-      )}
 
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-orange-500 to-pink-500 py-16 mt-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-4">
-            Want to host events in this category?
-          </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Share your passion and bring people together
-          </p>
-          <div className="flex gap-4 justify-center">
+          <div className="text-center mt-8 sm:mt-12">
             <button
-              onClick={() => navigate('/host-partner')}
-              className="bg-white text-orange-500 hover:bg-gray-100 font-semibold py-3 px-8 rounded-full transition-all transform hover:scale-105"
+              className="text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-md text-sm sm:text-base font-bold transition-all duration-300 shadow-2xl w-full sm:w-auto"
+              style={{ 
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                fontFamily: 'Oswald, sans-serif'
+              }}
             >
-              Become a Host
-            </button>
-            <button
-              onClick={() => navigate('/host-partner')}
-              className="bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-8 rounded-full transition-all"
-            >
-              Partner With Us
+              Host Your Event
             </button>
           </div>
         </div>

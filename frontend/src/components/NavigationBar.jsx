@@ -16,6 +16,17 @@ export default function NavigationBar() {
     navigate('/');
   };
 
+  // Get user initials for fallback avatar
+  const getUserInitials = () => {
+    if (!user?.name) return '?';
+    return user.name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   // Get appropriate dashboard route based on user role
   const getDashboardRoute = () => {
     if (!user) return '/dashboard';
@@ -29,10 +40,20 @@ export default function NavigationBar() {
     return '/dashboard'; // Regular users
   };
 
-  // Check if user should see Browse Venues/Sponsors buttons
-  const canBrowseVenuesSponsors = () => {
+  // Check which browse options each B2B user type can see
+  const canBrowseVenues = () => {
     if (!user || user.role !== 'host_partner') return false;
     return user.hostPartnerType === 'community_organizer' || user.hostPartnerType === 'brand_sponsor';
+  };
+
+  const canBrowseCommunities = () => {
+    if (!user || user.role !== 'host_partner') return false;
+    return user.hostPartnerType === 'venue' || user.hostPartnerType === 'brand_sponsor';
+  };
+
+  const canBrowseSponsors = () => {
+    if (!user || user.role !== 'host_partner') return false;
+    return user.hostPartnerType === 'community_organizer' || user.hostPartnerType === 'venue';
   };
 
   return (
@@ -156,24 +177,37 @@ export default function NavigationBar() {
                   EXPLORE
                 </Link>
                 
-                {/* Browse Venues and Sponsors - Only for Community Organizers and Brands */}
-                {canBrowseVenuesSponsors() && (
-                  <>
-                    <Link
-                      to="/browse/venues"
-                      className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      <Building2 className="h-4 w-4" />
-                      <span>VENUES</span>
-                    </Link>
-                    <Link
-                      to="/browse/sponsors"
-                      className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      <span>SPONSORS</span>
-                    </Link>
-                  </>
+                {/* Browse Communities - For Venues and Brands */}
+                {canBrowseCommunities() && (
+                  <Link
+                    to="/browse/communities"
+                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>COMMUNITIES</span>
+                  </Link>
+                )}
+                
+                {/* Browse Venues - For Community Organizers and Brands */}
+                {canBrowseVenues() && (
+                  <Link
+                    to="/browse/venues"
+                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    <span>VENUES</span>
+                  </Link>
+                )}
+                
+                {/* Browse Sponsors - For Community Organizers and Venues */}
+                {canBrowseSponsors() && (
+                  <Link
+                    to="/browse/sponsors"
+                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span>SPONSORS</span>
+                  </Link>
                 )}
               </>
             )}
@@ -186,13 +220,13 @@ export default function NavigationBar() {
               <>
                 <button
                   onClick={() => navigate('/login')}
-                  className="hidden sm:block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-4 py-2 text-sm font-semibold uppercase transition-colors"
+                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-4 py-2 text-sm font-semibold uppercase transition-colors"
                 >
                   LOG IN
                 </button>
                 <button
                   onClick={() => navigate('/signup')}
-                  className="text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide transition-all hover:opacity-90"
+                  className="text-white px-6 py-2 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
                   style={{ 
                     background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                     fontFamily: 'Oswald, sans-serif'
@@ -208,19 +242,20 @@ export default function NavigationBar() {
                 <Link
                   to="/profile"
                   className="hidden sm:block relative group"
-                  title="Profile"
+                  title="Profile Settings"
                 >
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-2xl hover:scale-110 transition-transform duration-200 shadow-lg">
-                    👤
-                  </div>
-                  <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  {user.profilePicture ? (
+                    <img
+                      src={user.profilePicture}
+                      alt={user.name}
+                      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all duration-200 shadow-md hover:shadow-lg"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg">
+                      {getUserInitials()}
+                    </div>
+                  )}
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="hidden sm:block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Logout
-                </button>
               </>
             )}
           </div>
@@ -317,32 +352,6 @@ export default function NavigationBar() {
                   >
                     ABOUT
                   </Link>
-
-                  {/* Mobile Auth Buttons */}
-                  <div className="pt-4 space-y-2">
-                    <button
-                      onClick={() => {
-                        navigate('/login');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-center text-gray-700 dark:text-gray-300 border border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                    >
-                      LOG IN
-                    </button>
-                    <button
-                      onClick={() => {
-                        navigate('/signup');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-center text-white px-3 py-2 rounded-md text-base font-bold uppercase transition-all hover:opacity-90"
-                      style={{ 
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                        fontFamily: 'Oswald, sans-serif'
-                      }}
-                    >
-                      SIGN UP
-                    </button>
-                  </div>
                 </>
               ) : (
                 // Logged IN Mobile Menu
@@ -388,20 +397,19 @@ export default function NavigationBar() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
                   >
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-xl">
-                      👤
-                    </div>
-                    Profile
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user.name}
+                        className="h-8 w-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                        {getUserInitials()}
+                      </div>
+                    )}
+                    Profile Settings
                   </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="block w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                  >
-                    Logout
-                  </button>
                 </>
               )}
             </div>

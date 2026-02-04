@@ -825,7 +825,7 @@ function Homepage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {/* Vox Pop 1 */}
             <div 
-              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black flex items-center justify-center p-4"
+              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black flex items-center justify-center p-4 order-1"
               onClick={() => {
                 setCurrentVideoUrl('https://www.youtube.com/embed/uT3Quuy_5-o?autoplay=1&rel=1');
                 setVideoModalOpen(true);
@@ -846,8 +846,31 @@ function Homepage() {
               </div>
             </div>
 
+            {/* Vox Pop 2 */}
+            <div 
+              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black flex items-center justify-center p-4 order-2 md:order-3 lg:order-3"
+              onClick={() => {
+                setCurrentVideoUrl('https://www.youtube.com/embed/t62ExT2n4a0?autoplay=1&rel=1');
+                setVideoModalOpen(true);
+              }}
+            >
+              <div className="relative w-full aspect-[9/16] rounded-xl overflow-hidden shadow-2xl">
+                <img 
+                  src="https://img.youtube.com/vi/t62ExT2n4a0/maxresdefault.jpg"
+                  alt="Vox Pop 2"
+                  className="w-full h-full object-cover"
+                />
+                {/* Play Button */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
+                    <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Text Card - Moved to Middle with Animation */}
-            <div className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl">
+            <div className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl order-3 md:order-2 lg:order-2">
               {/* Background Image */}
               <img 
                 src="/images/Media (5).jpg"
@@ -886,29 +909,6 @@ function Homepage() {
                 </button>
               </div>
             </div>
-
-            {/* Vox Pop 2 */}
-            <div 
-              className="group relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl cursor-pointer bg-black flex items-center justify-center p-4"
-              onClick={() => {
-                setCurrentVideoUrl('https://www.youtube.com/embed/t62ExT2n4a0?autoplay=1&rel=1');
-                setVideoModalOpen(true);
-              }}
-            >
-              <div className="relative w-full aspect-[9/16] rounded-xl overflow-hidden shadow-2xl">
-                <img 
-                  src="https://img.youtube.com/vi/t62ExT2n4a0/maxresdefault.jpg"
-                  alt="Vox Pop 2"
-                  className="w-full h-full object-cover"
-                />
-                {/* Play Button */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
-                    <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -941,44 +941,44 @@ function Homepage() {
                 if (position === 0) {
                   // Front card - fully visible, largest
                   zIndex = 40;
-                  scale = isMobile ? 0.7 : (isTablet ? 0.8 : 0.9);
-                  translateX = isMobile ? -150 : (isTablet ? -250 : -350);
+                  scale = isMobile ? 0.65 : (isTablet ? 0.8 : 0.9);
+                  translateX = isMobile ? -100 : (isTablet ? -250 : -350);
                   translateY = 0;
                   rotate = -6;
                   opacity = 1;
                 } else if (position === 1) {
                   zIndex = 35;
-                  scale = isMobile ? 0.68 : (isTablet ? 0.78 : 0.88);
-                  translateX = isMobile ? -90 : (isTablet ? -150 : -210);
+                  scale = isMobile ? 0.63 : (isTablet ? 0.78 : 0.88);
+                  translateX = isMobile ? -60 : (isTablet ? -150 : -210);
                   translateY = isMobile ? 3 : (isTablet ? 5 : 8);
                   rotate = -5;
                   opacity = 1;
                 } else if (position === 2) {
                   zIndex = 30;
-                  scale = isMobile ? 0.66 : (isTablet ? 0.76 : 0.86);
-                  translateX = isMobile ? -30 : (isTablet ? -50 : -70);
+                  scale = isMobile ? 0.61 : (isTablet ? 0.76 : 0.86);
+                  translateX = isMobile ? -20 : (isTablet ? -50 : -70);
                   translateY = isMobile ? 6 : (isTablet ? 10 : 16);
                   rotate = -4;
                   opacity = 1;
                 } else if (position === 3) {
                   zIndex = 25;
-                  scale = isMobile ? 0.64 : (isTablet ? 0.74 : 0.84);
-                  translateX = isMobile ? 30 : (isTablet ? 50 : 70);
+                  scale = isMobile ? 0.59 : (isTablet ? 0.74 : 0.84);
+                  translateX = isMobile ? 20 : (isTablet ? 50 : 70);
                   translateY = isMobile ? 9 : (isTablet ? 15 : 24);
                   rotate = -3;
                   opacity = 1;
                 } else if (position === 4) {
                   zIndex = 20;
-                  scale = isMobile ? 0.62 : (isTablet ? 0.72 : 0.82);
-                  translateX = isMobile ? 90 : (isTablet ? 150 : 210);
+                  scale = isMobile ? 0.57 : (isTablet ? 0.72 : 0.82);
+                  translateX = isMobile ? 60 : (isTablet ? 150 : 210);
                   translateY = isMobile ? 12 : (isTablet ? 20 : 32);
                   rotate = -2;
                   opacity = 1;
                 } else {
                   // Last card - moving to back
                   zIndex = 15;
-                  scale = isMobile ? 0.6 : (isTablet ? 0.7 : 0.8);
-                  translateX = isMobile ? 150 : (isTablet ? 250 : 350);
+                  scale = isMobile ? 0.55 : (isTablet ? 0.7 : 0.8);
+                  translateX = isMobile ? 100 : (isTablet ? 250 : 350);
                   translateY = isMobile ? 15 : (isTablet ? 25 : 40);
                   rotate = -1;
                   opacity = 1;

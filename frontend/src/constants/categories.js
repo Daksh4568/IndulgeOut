@@ -1,52 +1,89 @@
-// Category data organized into 5 clusters
-export const CATEGORY_CLUSTERS = [
+/**
+ * Hardcoded Event Categories for IndulgeOut
+ * These 6 categories are the foundation of event organization
+ */
+
+export const CATEGORIES = [
+  {
+    id: 'social-mixers',
+    name: 'Social Mixers',
+    slug: 'social-mixers',
+    description: 'Networking, Socializing, Ice-Breaker Events',
+    color: '#7878E9', // Purple
+    gradientFrom: 'from-purple-400',
+    gradientTo: 'to-indigo-600',
+    image: '/images/categories/social-mixers.jpg',
+    icon: '🎭',
+    tags: ['networking', 'socializing', 'ice-breaker', 'meet-new-people']
+  },
+  {
+    id: 'wellness-fitness-sports',
+    name: 'Wellness, Fitness & Sports',
+    slug: 'wellness-fitness-sports',
+    description: 'Pillar, Energy, Adventurous, Internal Peace Sessions',
+    color: '#FF6B35', // Orange
+    gradientFrom: 'from-orange-400',
+    gradientTo: 'to-red-500',
+    image: '/images/categories/wellness-fitness.jpg',
+    icon: '💪',
+    tags: ['wellness', 'fitness', 'sports', 'yoga', 'meditation', 'adventure']
+  },
+  {
+    id: 'art-music-dance',
+    name: 'Art, Music & Dance',
+    slug: 'art-music-dance',
+    description: 'Pop-Ups, Workshops, Jams',
+    color: '#EC4899', // Pink
+    gradientFrom: 'from-pink-400',
+    gradientTo: 'to-purple-500',
+    image: '/images/categories/art-music.jpg',
+    icon: '🎨',
+    tags: ['art', 'music', 'dance', 'workshops', 'creative', 'pop-ups']
+  },
+  {
+    id: 'immersive',
+    name: 'Immersive',
+    slug: 'immersive',
+    description: 'Festivals, Carnivals, Screenings & Expansive Experiential Events',
+    color: '#8B5CF6', // Violet
+    gradientFrom: 'from-violet-400',
+    gradientTo: 'to-purple-600',
+    image: '/images/categories/immersive.jpg',
+    icon: '🎪',
+    tags: ['festival', 'carnival', 'screening', 'experiential', 'immersive']
+  },
+  {
+    id: 'food-beverage',
+    name: 'Food & Beverage',
+    slug: 'food-beverage',
+    description: 'Cook Outs, Workshops, Food Tastings, Culinary Pop-Ups',
+    color: '#10B981', // Green
+    gradientFrom: 'from-green-400',
+    gradientTo: 'to-emerald-600',
+    image: '/images/categories/food-beverage.jpg',
+    icon: '🍽️',
+    tags: ['food', 'beverage', 'cooking', 'tasting', 'culinary', 'workshops']
+  },
+  {
+    id: 'games',
+    name: 'Games',
+    slug: 'games',
+    description: 'Board Games, Trivia, Quiz, Murder Mysteries, E-Sports, Indoor Sports',
+    color: '#F59E0B', // Amber
+    gradientFrom: 'from-amber-400',
+    gradientTo: 'to-orange-600',
+    image: '/images/categories/games.jpg',
+    icon: '🎮',
+    tags: ['games', 'trivia', 'quiz', 'board-games', 'e-sports', 'indoor']
+  }
+];
+
+// OLD STRUCTURE - Kept for backward compatibility if needed
+export const CATEGORY_CLUSTERS_OLD = [
   {
     id: 'social-fun',
     name: 'Social & Fun',
     color: 'from-pink-500 to-orange-500',
-    categories: [
-      {
-        id: 'meet-mingle',
-        slug: 'meet-mingle',
-        name: 'Meet & Mingle',
-        emoji: '🎉',
-        descriptor: 'Chat. Laugh. Connect.',
-        subtext: 'Social mixers, speed friending & hangouts',
-        color: 'from-pink-500 to-rose-500'
-      },
-      {
-        id: 'epic-screenings',
-        slug: 'epic-screenings',
-        name: 'Epic Screenings',
-        emoji: '🎬',
-        descriptor: 'Movies. Together. Unforgettable.',
-        subtext: 'Film screenings, watch parties & cinephiles',
-        color: 'from-purple-500 to-pink-500'
-      },
-      {
-        id: 'indoor-board-games',
-        slug: 'indoor-board-games',
-        name: 'Indoor & Board Games',
-        emoji: '🎲',
-        descriptor: 'Roll. Play. Win.',
-        subtext: 'Board games, card nights & game cafés',
-        color: 'from-orange-500 to-amber-500'
-      },
-      {
-        id: 'battle-beats',
-        slug: 'battle-beats',
-        name: 'Battle of the Beats',
-        emoji: '🎵',
-        descriptor: 'DJ battles, music contests & showdowns',
-        subtext: 'Music battles, rap cyphers & DJ clashes',
-        color: 'from-red-500 to-pink-500'
-      }
-    ]
-  },
-  {
-    id: 'creative-culture',
-    name: 'Creative & Culture',
-    color: 'from-purple-500 to-blue-500',
     categories: [
       {
         id: 'make-create',
@@ -233,17 +270,75 @@ export const CATEGORY_CLUSTERS = [
   }
 ];
 
-// Flatten all categories for easy lookup
-export const ALL_CATEGORIES = CATEGORY_CLUSTERS.flatMap(cluster => cluster.categories);
+/**
+ * Helper Functions for Category Management
+ */
 
-// Get category by slug
+/**
+ * Get category by slug
+ * @param {string} slug - Category slug (e.g., 'social-mixers')
+ * @returns {Object|null} Category object or null if not found
+ */
 export const getCategoryBySlug = (slug) => {
-  return ALL_CATEGORIES.find(cat => cat.slug === slug);
+  return CATEGORIES.find(cat => cat.slug === slug) || null;
 };
+
+/**
+ * Get category by name
+ * @param {string} name - Category name (e.g., 'Social Mixers')
+ * @returns {Object|null} Category object or null if not found
+ */
+export const getCategoryByName = (name) => {
+  return CATEGORIES.find(cat => cat.name === name) || null;
+};
+
+/**
+ * Get all category names (for dropdowns, validation)
+ * @returns {string[]} Array of category names
+ */
+export const getCategoryNames = () => {
+  return CATEGORIES.map(cat => cat.name);
+};
+
+/**
+ * Get category color by name
+ * @param {string} name - Category name
+ * @returns {string} Hex color code
+ */
+export const getCategoryColor = (name) => {
+  const category = getCategoryByName(name);
+  return category ? category.color : '#7878E9'; // Default purple
+};
+
+/**
+ * Get category icon by name
+ * @param {string} name - Category name
+ * @returns {string} Emoji icon
+ */
+export const getCategoryIcon = (name) => {
+  const category = getCategoryByName(name);
+  return category ? category.icon : '🎉'; // Default party icon
+};
+
+/**
+ * Get category gradient classes
+ * @param {string} name - Category name
+ * @returns {Object} Object with from and to gradient classes
+ */
+export const getCategoryGradient = (name) => {
+  const category = getCategoryByName(name);
+  return category 
+    ? { from: category.gradientFrom, to: category.gradientTo }
+    : { from: 'from-purple-400', to: 'to-indigo-600' };
+};
+
+// OLD STRUCTURE - Kept for backward compatibility
+// Flatten all categories for easy lookup
+export const ALL_CATEGORIES = CATEGORY_CLUSTERS_OLD?.flatMap(cluster => cluster.categories) || [];
 
 // Get cluster for a category
 export const getClusterForCategory = (categorySlug) => {
-  return CATEGORY_CLUSTERS.find(cluster => 
+  return CATEGORY_CLUSTERS_OLD?.find(cluster => 
     cluster.categories.some(cat => cat.slug === categorySlug)
   );
 };
