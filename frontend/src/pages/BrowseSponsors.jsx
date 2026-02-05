@@ -33,6 +33,10 @@ const BrowseSponsors = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const brandsPerPage = 8;
+  
   // Filters
   const [filters, setFilters] = useState({
     brandCategory: '',
@@ -170,6 +174,7 @@ const BrowseSponsors = () => {
     }
 
     setFilteredBrands(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleFilterChange = (key, value) => {
@@ -265,56 +270,84 @@ const BrowseSponsors = () => {
       <NavigationBar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Browse Brands & Sponsors
+        {/* Header - Browse Sponsors */}
+        <div className="text-center mb-6">
+          <h1 className="text-5xl font-bold text-white mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            Browse Sponsors
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Find partners to collaborate with for your events
+          <p className="text-gray-400 text-base">
+            Join communities and circles for your interests and hobbies
           </p>
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search brands by name, category, or interests..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Filter Button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
-            >
-              <Filter className="h-5 w-5" />
-              <span>Filters</span>
-              {(filters.brandCategory || filters.targetCity || filters.sponsorshipType.length > 0 || filters.collaborationIntent.length > 0 || filters.budgetScale) && (
-                <span className="bg-primary-600 text-white text-xs rounded-full px-2 py-1">
-                  {[filters.brandCategory, filters.targetCity, filters.budgetScale, ...filters.sponsorshipType, ...filters.collaborationIntent].filter(Boolean).length}
-                </span>
-              )}
-            </button>
+        {/* White Search Bar - Centered, not full width */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search an event, a festival, an interest, a mood, a city"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3.5 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+            />
           </div>
+        </div>
 
-          {/* Filter Panel */}
-          {showFilters && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-6">
-              {/* Brand Category Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Industry Category
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {brandCategories.map(category => (
+        {/* All Sponsors Title */}
+        <div className="mb-4">
+          <h2 className="text-3xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            All Sponsors
+          </h2>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
+          {/* Filters Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Filter className="h-4 w-4" />
+            <span className="text-sm font-medium">Filters</span>
+            {(filters.brandCategory || filters.targetCity || filters.sponsorshipType.length > 0 || filters.collaborationIntent.length > 0 || filters.budgetScale) && (
+              <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5">
+                {[filters.brandCategory, filters.targetCity, filters.budgetScale, ...filters.sponsorshipType, ...filters.collaborationIntent].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+
+          {/* Quick Filter Buttons */}
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Today
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Tomorrow
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Workshops
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            This Weekend
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Under 10km
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Live Gigs
+          </button>
+        </div>
+
+        {/* Filter Panel - Collapsible */}
+        {showFilters && (
+          <div className="bg-zinc-900 rounded-lg border border-gray-800 p-6 mb-8">
+            {/* Brand Category Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Industry Category
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {brandCategories.map(category => (
                     <button
                       key={category.value}
                       onClick={() => handleFilterChange('brandCategory', filters.brandCategory === category.value ? '' : category.value)}
@@ -331,13 +364,13 @@ const BrowseSponsors = () => {
                 </div>
               </div>
 
-              {/* Target City Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Target City
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {cities.map(city => (
+            {/* Target City Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Target City
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {cities.map(city => (
                     <button
                       key={city}
                       onClick={() => handleFilterChange('targetCity', filters.targetCity === city ? '' : city)}
@@ -355,11 +388,11 @@ const BrowseSponsors = () => {
 
               {/* Sponsorship Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Sponsorship Type
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {sponsorshipTypes.map(type => (
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Sponsorship Type
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {sponsorshipTypes.map(type => (
                     <button
                       key={type.value}
                       onClick={() => toggleArrayFilter('sponsorshipType', type.value)}
@@ -378,11 +411,11 @@ const BrowseSponsors = () => {
 
               {/* Collaboration Intent Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Collaboration Format
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {collaborationIntents.map(intent => (
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Collaboration Format
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {collaborationIntents.map(intent => (
                     <button
                       key={intent.value}
                       onClick={() => toggleArrayFilter('collaborationIntent', intent.value)}
@@ -401,11 +434,11 @@ const BrowseSponsors = () => {
 
               {/* Budget Scale Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Budget Scale
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {budgetScales.map(scale => (
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Budget Scale
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {budgetScales.map(scale => (
                     <button
                       key={scale.value}
                       onClick={() => handleFilterChange('budgetScale', filters.budgetScale === scale.value ? '' : scale.value)}
@@ -417,23 +450,23 @@ const BrowseSponsors = () => {
                     >
                       {scale.label}
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              <div className="flex justify-end">
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                  <span>Clear all filters</span>
-                </button>
+                  ))
+                }
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Clear Filters */}
+            <div className="flex justify-end">
+              <button
+                onClick={clearFilters}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+                <span>Clear all filters</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Results Count */}
         <div className="mb-4">
@@ -467,8 +500,11 @@ const BrowseSponsors = () => {
             </button>
           </div>
         ) : (
+          <>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-            {filteredBrands.map((brand) => (
+            {filteredBrands
+              .slice((currentPage - 1) * brandsPerPage, currentPage * brandsPerPage)
+              .map((brand) => (
               <div
                 key={brand._id}
                 onClick={() => openBrandModal(brand)}
@@ -575,6 +611,74 @@ const BrowseSponsors = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredBrands.length > brandsPerPage && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              {/* Previous Button */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 1
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-800 text-white hover:bg-gray-700'
+                }`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-2">
+                {[...Array(Math.ceil(filteredBrands.length / brandsPerPage))].map((_, index) => {
+                  const pageNumber = index + 1;
+                  const totalPages = Math.ceil(filteredBrands.length / brandsPerPage);
+                  
+                  if (
+                    pageNumber === 1 ||
+                    pageNumber === totalPages ||
+                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          currentPage === pageNumber
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-800 text-white hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  } else if (
+                    pageNumber === currentPage - 2 ||
+                    pageNumber === currentPage + 2
+                  ) {
+                    return <span key={pageNumber} className="text-gray-500">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredBrands.length / brandsPerPage)))}
+                disabled={currentPage === Math.ceil(filteredBrands.length / brandsPerPage)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === Math.ceil(filteredBrands.length / brandsPerPage)
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-800 text-white hover:bg-gray-700'
+                }`}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
 
@@ -667,7 +771,7 @@ const BrowseSponsors = () => {
 
                   {/* Brand Category */}
                   {selectedBrand.brandCategory && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Brand Category</h4>
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white" style={{
                         background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
@@ -680,7 +784,7 @@ const BrowseSponsors = () => {
 
                   {/* Target Cities */}
                   {selectedBrand.targetCity && selectedBrand.targetCity.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Target Cities</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedBrand.targetCity.map((city, idx) => (
@@ -697,7 +801,7 @@ const BrowseSponsors = () => {
 
                   {/* Sponsorship Type */}
                   {selectedBrand.sponsorshipType && selectedBrand.sponsorshipType.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Sponsorship Type</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedBrand.sponsorshipType.map((type, idx) => (
@@ -715,7 +819,7 @@ const BrowseSponsors = () => {
 
                   {/* Collaboration Intent */}
                   {selectedBrand.collaborationIntent && selectedBrand.collaborationIntent.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Collaboration Intent</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedBrand.collaborationIntent.map((intent, idx) => (

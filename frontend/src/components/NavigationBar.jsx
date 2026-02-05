@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, X, Menu, User, Building2, Sparkles } from 'lucide-react';
+import { ChevronDown, X, Menu, User, Building2, Sparkles, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
 import { useState } from 'react';

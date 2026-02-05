@@ -94,7 +94,7 @@ const OTPLogin = () => {
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
           targetRoute = '/organizer/dashboard'
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
-          targetRoute = '/venues-dashboard'
+          targetRoute = '/venue/dashboard'
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
           targetRoute = '/brand/dashboard'
         }

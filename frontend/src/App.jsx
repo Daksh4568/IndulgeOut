@@ -37,6 +37,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import BrowseVenues from './pages/BrowseVenues'
 import BrowseSponsors from './pages/BrowseSponsors'
+import BrowseCommunities from './pages/BrowseCommunities'
 import VenueProfile from './pages/VenueProfile'
 import BrandProfile from './pages/BrandProfile'
 import RequestCollaboration from './pages/RequestCollaboration'
@@ -121,6 +122,7 @@ function AppContent() {
         <Route path="/payment-callback" element={<ErrorBoundary><PaymentCallback /></ErrorBoundary>} />
         <Route path="/browse/venues" element={<ErrorBoundary><BrowseVenues /></ErrorBoundary>} />
         <Route path="/browse/sponsors" element={<ErrorBoundary><BrowseSponsors /></ErrorBoundary>} />
+        <Route path="/browse/communities" element={<ErrorBoundary><BrowseCommunities /></ErrorBoundary>} />
         <Route path="/venue/:id" element={<ErrorBoundary><VenueProfile /></ErrorBoundary>} />
         <Route path="/venue/:id/request-collaboration" element={<ErrorBoundary><RequestCollaboration /></ErrorBoundary>} />
         <Route path="/brand/:id" element={<ErrorBoundary><BrandProfile /></ErrorBoundary>} />
