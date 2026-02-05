@@ -2,7 +2,70 @@ const express = require('express');
 const router = express.Router();
 const Community = require('../models/Community');
 const Event = require('../models/Event');
+const User = require('../models/User');
 const { authMiddleware } = require('../utils/authUtils');
+
+// @route   GET /api/communities/browse
+// @desc    Get all community organizers for browsing (B2B)
+// @access  Public
+router.get('/browse', async (req, res) => {
+  try {
+    const {
+      city,
+      communityType,
+      primaryCategory,
+      audienceSize,
+      eventExperience,
+      search
+    } = req.query;
+
+    // Build query for users with hostPartnerType: 'community_organizer'
+    let query = { hostPartnerType: 'community_organizer' };
+
+    // City filter
+    if (city) {
+      query['communityProfile.city'] = city;
+    }
+
+    // Community type filter
+    if (communityType) {
+      query['communityProfile.communityType'] = communityType;
+    }
+
+    // Primary category filter
+    if (primaryCategory) {
+      query['communityProfile.primaryCategory'] = new RegExp(primaryCategory, 'i');
+    }
+
+    // Audience size filter
+    if (audienceSize) {
+      query['communityProfile.typicalAudienceSize'] = audienceSize;
+    }
+
+    // Event experience filter
+    if (eventExperience) {
+      query['communityProfile.pastEventExperience'] = eventExperience;
+    }
+
+    // Search filter (search in community name, description)
+    if (search) {
+      query.$or = [
+        { 'communityProfile.communityName': new RegExp(search, 'i') },
+        { 'communityProfile.communityDescription': new RegExp(search, 'i') },
+        { 'communityProfile.primaryCategory': new RegExp(search, 'i') }
+      ];
+    }
+
+    const communities = await User.find(query)
+      .select('name email communityProfile profilePicture createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json(communities);
+  } catch (error) {
+    console.error('Error fetching communities for browse:', error);
+    res.status(500).json({ message: 'Error fetching communities' });
+  }
+});
 
 // Get all communities with optional filtering
 router.get('/', async (req, res) => {

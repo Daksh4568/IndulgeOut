@@ -46,8 +46,8 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
     // Check 2: Profile Incomplete (Host/Organizer)
     if (user.role === 'host_partner' || user.role === 'community_organizer') {
       const isProfileIncomplete = 
-        !user.communityProfile?.organizationName ||
-        !user.communityProfile?.description ||
+        !user.communityProfile?.communityName ||
+        !user.communityProfile?.communityDescription ||
         !user.phoneNumber;
 
       if (isProfileIncomplete && !existingTypes.has('profile_incomplete_host')) {
@@ -78,9 +78,10 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
     // Check 4: Brand Profile Incomplete
     if (user.role === 'brand_sponsor') {
       const isBrandProfileIncomplete =
-        !user.brandProfile?.companyName ||
-        !user.brandProfile?.industry ||
-        !user.brandProfile?.description;
+        !user.brandProfile?.brandName ||
+        !user.brandProfile?.brandCategory ||
+        !user.brandProfile?.brandDescription ||
+        !user.phoneNumber;
 
       if (isBrandProfileIncomplete && !existingTypes.has('profile_incomplete_brand')) {
         const notification = await notificationService.notifyProfileIncompleteBrand(
@@ -96,7 +97,8 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
       const isVenueProfileIncomplete =
         !user.venueProfile?.venueName ||
         !user.venueProfile?.venueType ||
-        !user.venueProfile?.capacity;
+        !user.venueProfile?.capacityRange ||
+        !user.phoneNumber;
 
       if (isVenueProfileIncomplete && !existingTypes.has('profile_incomplete_venue')) {
         const notification = await notificationService.notifyProfileIncompleteVenue(
