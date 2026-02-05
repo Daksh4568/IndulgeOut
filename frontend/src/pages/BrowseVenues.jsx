@@ -34,6 +34,10 @@ const BrowseVenues = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const venuesPerPage = 8;
+  
   // Filters
   const [filters, setFilters] = useState({
     city: '',
@@ -161,6 +165,7 @@ const BrowseVenues = () => {
     }
 
     setFilteredVenues(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleFilterChange = (key, value) => {
@@ -243,56 +248,84 @@ const BrowseVenues = () => {
       <NavigationBar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        {/* Header - Browse Venues */}
+        <div className="text-center mb-6">
+          <h1 className="text-5xl font-bold text-white mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
             Browse Venues
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Find the perfect space for your next event
+          <p className="text-gray-400 text-base">
+            Join communities and circles for your interests and hobbies
           </p>
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search venues by name, location, or type..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Filter Button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
-            >
-              <Filter className="h-5 w-5" />
-              <span>Filters</span>
-              {(filters.city || filters.venueType || filters.capacityRange || filters.amenities.length > 0) && (
-                <span className="bg-primary-600 text-white text-xs rounded-full px-2 py-1">
-                  {[filters.city, filters.venueType, filters.capacityRange, ...filters.amenities].filter(Boolean).length}
-                </span>
-              )}
-            </button>
+        {/* White Search Bar - Centered, not full width */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search an event, a festival, an interest, a mood, a city"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3.5 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+            />
           </div>
+        </div>
 
-          {/* Filter Panel */}
-          {showFilters && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-6">
-              {/* City Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  City
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {cities.map(city => (
+        {/* All Venues Title */}
+        <div className="mb-4">
+          <h2 className="text-3xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            All Venues
+          </h2>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
+          {/* Filters Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Filter className="h-4 w-4" />
+            <span className="text-sm font-medium">Filters</span>
+            {(filters.city || filters.venueType || filters.capacityRange || filters.amenities.length > 0) && (
+              <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5">
+                {[filters.city, filters.venueType, filters.capacityRange, ...filters.amenities].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+
+          {/* Quick Filter Buttons */}
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Today
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Tomorrow
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Workshops
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            This Weekend
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Under 10km
+          </button>
+          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            Live Gigs
+          </button>
+        </div>
+
+        {/* Filter Panel - Collapsible */}
+        {showFilters && (
+          <div className="bg-zinc-900 rounded-lg border border-gray-800 p-6 mb-8">
+            {/* City Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                City
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {cities.map(city => (
                     <button
                       key={city}
                       onClick={() => handleFilterChange('city', filters.city === city ? '' : city)}
@@ -305,93 +338,92 @@ const BrowseVenues = () => {
                       {city}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              {/* Venue Type Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Venue Type
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {venueTypes.map(type => {
-                    const Icon = type.icon;
-                    return (
-                      <button
-                        key={type.value}
-                        onClick={() => handleFilterChange('venueType', filters.venueType === type.value ? '' : type.value)}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          filters.venueType === type.value
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{type.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Capacity Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Capacity
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {capacityRanges.map(range => (
-                    <button
-                      key={range.value}
-                      onClick={() => handleFilterChange('capacityRange', filters.capacityRange === range.value ? '' : range.value)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.capacityRange === range.value
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {range.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Amenities Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Amenities
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  {amenitiesList.map(amenity => (
-                    <button
-                      key={amenity.value}
-                      onClick={() => toggleAmenity(amenity.value)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.amenities.includes(amenity.value)
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <span>{amenity.icon}</span>
-                      <span>{amenity.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              <div className="flex justify-end">
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                  <span>Clear all filters</span>
-                </button>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Venue Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Venue Type
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {venueTypes.map(type => {
+                  const Icon = type.icon;
+                  return (
+                    <button
+                      key={type.value}
+                      onClick={() => handleFilterChange('venueType', filters.venueType === type.value ? '' : type.value)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filters.venueType === type.value
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{type.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Capacity Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Capacity
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {capacityRanges.map(range => (
+                  <button
+                    key={range.value}
+                    onClick={() => handleFilterChange('capacityRange', filters.capacityRange === range.value ? '' : range.value)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filters.capacityRange === range.value
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Amenities Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Amenities
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {amenitiesList.map(amenity => (
+                  <button
+                    key={amenity.value}
+                    onClick={() => toggleAmenity(amenity.value)}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filters.amenities.includes(amenity.value)
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <span>{amenity.icon}</span>
+                    <span>{amenity.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="flex justify-end">
+              <button
+                onClick={clearFilters}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+                <span>Clear all filters</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Results Count */}
         <div className="mb-4">
@@ -425,8 +457,11 @@ const BrowseVenues = () => {
             </button>
           </div>
         ) : (
+          <>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-            {filteredVenues.map((venue) => (
+            {filteredVenues
+              .slice((currentPage - 1) * venuesPerPage, currentPage * venuesPerPage)
+              .map((venue) => (
               <div
                 key={venue._id}
                 onClick={() => openVenueModal(venue)}
@@ -544,6 +579,74 @@ const BrowseVenues = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredVenues.length > venuesPerPage && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              {/* Previous Button */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 1
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-800 text-white hover:bg-gray-700'
+                }`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-2">
+                {[...Array(Math.ceil(filteredVenues.length / venuesPerPage))].map((_, index) => {
+                  const pageNumber = index + 1;
+                  const totalPages = Math.ceil(filteredVenues.length / venuesPerPage);
+                  
+                  if (
+                    pageNumber === 1 ||
+                    pageNumber === totalPages ||
+                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          currentPage === pageNumber
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-800 text-white hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  } else if (
+                    pageNumber === currentPage - 2 ||
+                    pageNumber === currentPage + 2
+                  ) {
+                    return <span key={pageNumber} className="text-gray-500">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredVenues.length / venuesPerPage)))}
+                disabled={currentPage === Math.ceil(filteredVenues.length / venuesPerPage)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === Math.ceil(filteredVenues.length / venuesPerPage)
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-800 text-white hover:bg-gray-700'
+                }`}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
 
@@ -640,7 +743,7 @@ const BrowseVenues = () => {
 
                   {/* Venue Type */}
                   {selectedVenue.venueType && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Venue Type</h4>
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white" style={{
                         background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
@@ -653,7 +756,7 @@ const BrowseVenues = () => {
 
                   {/* Target Cities */}
                   {selectedVenue.city && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Target Cities</h4>
                       <div className="flex flex-wrap gap-2">
                         <span className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium">
@@ -665,7 +768,7 @@ const BrowseVenues = () => {
 
                   {/* Capacity Range */}
                   {selectedVenue.capacityRange && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Capacity Range</h4>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg">
                         <Users className="h-5 w-5 text-purple-400" />
@@ -676,7 +779,7 @@ const BrowseVenues = () => {
 
                   {/* Amenities */}
                   {selectedVenue.amenities && selectedVenue.amenities.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Amenities</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedVenue.amenities.map((amenity, idx) => {
@@ -697,7 +800,7 @@ const BrowseVenues = () => {
 
                   {/* Venue Rules */}
                   {selectedVenue.rules && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Venue Rules</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
@@ -742,7 +845,7 @@ const BrowseVenues = () => {
 
                   {/* Event Suitability */}
                   {selectedVenue.eventSuitability && selectedVenue.eventSuitability.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Suitable For</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedVenue.eventSuitability.map((type, idx) => (
@@ -759,7 +862,7 @@ const BrowseVenues = () => {
 
                   {/* Venue Scales */}
                   {selectedVenue.venueScales && selectedVenue.venueScales.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-indigo-500/10 transition-all duration-300 cursor-pointer">
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Venue Scales</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedVenue.venueScales.map((scale, idx) => (
