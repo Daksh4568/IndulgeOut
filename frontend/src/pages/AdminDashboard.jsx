@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [pendingCollaborations, setPendingCollaborations] = useState([]);
@@ -19,10 +19,12 @@ const AdminDashboard = () => {
 
   // Check if user is admin
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user || user.role !== 'admin') {
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   // Fetch dashboard data
   useEffect(() => {

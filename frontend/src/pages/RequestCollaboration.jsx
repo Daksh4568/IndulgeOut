@@ -10,7 +10,7 @@ const RequestCollaboration = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   // Determine if this is a venue or brand request from URL
   const isVenueRequest = location.pathname.includes('/venue/');
@@ -41,12 +41,14 @@ const RequestCollaboration = () => {
   });
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user) {
       navigate('/login');
       return;
     }
     fetchPartnerDetail();
-  }, [id, user]);
+  }, [id, user, authLoading]);
 
   const fetchPartnerDetail = async () => {
     try {
@@ -178,8 +180,8 @@ const RequestCollaboration = () => {
         }
       });
 
-      // Success - navigate back with success message
-      navigate(isVenueRequest ? `/venue/${id}` : `/brand/${id}`, {
+      // Success - navigate back to browse page with success message
+      navigate(isVenueRequest ? '/browse/venues' : '/browse/sponsors', {
         state: { message: 'Collaboration request sent successfully!' }
       });
     } catch (error) {

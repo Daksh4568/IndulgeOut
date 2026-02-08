@@ -31,8 +31,8 @@ const B2BTypeSelection = () => {
 
           {/* Step Indicator */}
           <div className="flex justify-center mb-3">
-            <div className="px-4 py-1.5 rounded-full border border-[#6366F1] bg-[#6366F1]/10">
-              <span className="text-[#6366F1] text-xs font-medium tracking-wider">STEP 2 OF 2</span>
+            <div className="px-4 py-1.5 rounded-full border bg-purple-500/10" style={{ borderColor: '#7878E9' }}>
+              <span className="text-xs font-medium tracking-wider" style={{ color: '#7878E9' }}>STEP 2 OF 2</span>
             </div>
           </div>
 
@@ -72,10 +72,11 @@ const B2BTypeSelection = () => {
           {/* Main Card - Centered */}
           <div className="max-w-4xl mx-auto px-4">
           <div 
-            className="rounded-2xl p-4 md:p-6"
+            className="rounded-3xl p-6 md:p-8 border"
             style={{
-              background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+              background: 'rgba(255, 255, 255, 0.03)',
               backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
             }}
           >
           {/* Business Type Cards */}
@@ -83,11 +84,14 @@ const B2BTypeSelection = () => {
             {/* Host Card */}
             <button
               onClick={() => navigate('/signup/host')}
-              className="group rounded-xl p-4 transition-all duration-300 border border-gray-700 hover:border-[#6366F1]"
+              className="group rounded-2xl p-5 transition-all duration-300 border"
               style={{
-                background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+                background: 'rgba(255, 255, 255, 0.03)',
                 backdropFilter: 'blur(10px)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#7878E9')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)')}
             >
               {/* Icon */}
               <div className="flex justify-center mb-3">
@@ -112,15 +116,15 @@ const B2BTypeSelection = () => {
               {/* Features */}
               <div className="space-y-1.5 text-left">
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">List, monetise and manage events</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Partner with brands & venues</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Analyse & get insights on event performance</p>
                 </div>
               </div>
@@ -129,11 +133,14 @@ const B2BTypeSelection = () => {
             {/* Brand Card */}
             <button
               onClick={() => navigate('/signup/brand')}
-              className="group rounded-xl p-4 transition-all duration-300 border border-gray-700 hover:border-[#6366F1]"
+              className="group rounded-2xl p-5 transition-all duration-300 border"
               style={{
-                background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+                background: 'rgba(255, 255, 255, 0.03)',
                 backdropFilter: 'blur(10px)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#7878E9')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)')}
             >
               {/* Icon */}
               <div className="flex justify-center mb-3">
@@ -158,15 +165,15 @@ const B2BTypeSelection = () => {
               {/* Features */}
               <div className="space-y-1.5 text-left">
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Access offline event partnerships</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Partner with interest-led communities</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Engage with high-intent audience</p>
                 </div>
               </div>
@@ -175,11 +182,14 @@ const B2BTypeSelection = () => {
             {/* Venue Card */}
             <button
               onClick={() => navigate('/signup/venue')}
-              className="group rounded-xl p-4 transition-all duration-300 border border-gray-700 hover:border-[#6366F1]"
+              className="group rounded-2xl p-5 transition-all duration-300 border"
               style={{
-                background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+                background: 'rgba(255, 255, 255, 0.03)',
                 backdropFilter: 'blur(10px)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#7878E9')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)')}
             >
               {/* Icon */}
               <div className="flex justify-center mb-3">
@@ -204,15 +214,15 @@ const B2BTypeSelection = () => {
               {/* Features */}
               <div className="space-y-1.5 text-left">
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Host community-led events</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Access newer and increased footfall</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: '#7878E9' }} />
                   <p className="text-gray-300 text-xs">Get increased revenue opportunities</p>
                 </div>
               </div>
@@ -222,8 +232,11 @@ const B2BTypeSelection = () => {
           {/* Continue Button */}
           <button
             onClick={() => navigate('/signup/host')}
-            className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase"
-            style={{ fontFamily: 'Oswald, sans-serif' }}
+            className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300"
+            style={{ 
+              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+              fontFamily: 'Oswald, sans-serif',
+            }}
           >
             Continue
           </button>

@@ -108,51 +108,35 @@ const HostSignup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
-      {/* Top Section - Pure Black */}
-      <div className="w-full bg-black relative z-10">
-        {/* Logo */}
-        <div className="flex justify-center pt-6 pb-4">
-          <img 
-            src="/images/LogoFinal2.jpg" 
-            alt="IndulgeOut" 
-            className="h-12 w-auto object-contain" 
-          />
-        </div>
-      </div>
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden p-4">
+      {/* Background Image with Opacity and Blur */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-20 blur-sm"
+        style={{
+          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          zIndex: 0,
+        }}
+      />
 
-      {/* Bottom Section - With Mirror Background */}
-      <div className="flex-1 relative flex items-center justify-center py-8">
-        {/* Background with mirror effect */}
-        <div className="absolute inset-0 flex">
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-            }}
-          />
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-              transform: 'scaleX(-1)',
-            }}
-          />
-        </div>
-
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/85" />
-
-        {/* Content */}
-        <div className="relative z-10 w-full max-w-2xl px-4">
-          {/* Form Card */}
-          <div 
-          className="rounded-2xl p-8 max-h-[85vh] overflow-y-auto"
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-2xl">
+        {/* Glass Morphism Card */}
+        <div 
+          className="rounded-3xl p-8 border max-h-[90vh] overflow-y-auto"
           style={{
-            background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+            background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(10px)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
           }}
         >
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/images/LogoFinal2.jpg" 
+              alt="IndulgeOut" 
+              className="h-16 w-auto object-contain" 
+            />
+          </div>
           {/* Back Button */}
           <button
             onClick={() => navigate('/signup/b2b-type')}
@@ -184,7 +168,8 @@ const HostSignup = () => {
                 value={formData.communityName}
                 onChange={handleChange}
                 placeholder="e.g. The Blue Note Jazz Club"
-                className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ '--tw-ring-color': '#7878E9' }}
               />
             </div>
 
@@ -197,7 +182,8 @@ const HostSignup = () => {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ '--tw-ring-color': '#7878E9' }}
               >
                 <option value="">Choose your category</option>
                 <option value="Music">Music</option>
@@ -222,7 +208,8 @@ const HostSignup = () => {
                 value={formData.contactPersonName}
                 onChange={handleChange}
                 placeholder="e.g. Maneet Gambhir"
-                className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ '--tw-ring-color': '#7878E9' }}
               />
             </div>
 
@@ -233,7 +220,8 @@ const HostSignup = () => {
               </label>
               <div className="flex gap-2">
                 <select 
-                  className="px-3 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1]"
+                  className="px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#7878E9' }}
                 >
                   <option value="+91">🇮🇳 +91</option>
                 </select>
@@ -243,7 +231,8 @@ const HostSignup = () => {
                   value={formData.phoneNumber}
                   onChange={handleChange}
                   placeholder="e.g. Enter ISD / STD / Mobile Number"
-                  className="flex-1 px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                  className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                  style={{ '--tw-ring-color': '#7878E9' }}
                 />
               </div>
             </div>
@@ -259,7 +248,8 @@ const HostSignup = () => {
                 value={formData.workEmail}
                 onChange={handleChange}
                 placeholder="e.g. sample@xyz.abc"
-                className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ '--tw-ring-color': '#7878E9' }}
               />
             </div>
 
@@ -272,7 +262,8 @@ const HostSignup = () => {
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ '--tw-ring-color': '#7878E9' }}
               >
                 <option value="">Select city</option>
                 <option value="Mumbai">Mumbai</option>
@@ -299,7 +290,8 @@ const HostSignup = () => {
                 value={formData.instagramLink}
                 onChange={handleChange}
                 placeholder="e.g. https://www.instagram.com/your_community"
-                className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ '--tw-ring-color': '#7878E9' }}
               />
             </div>
 
@@ -318,7 +310,9 @@ const HostSignup = () => {
                 />
                 <label
                   htmlFor="photo"
-                  className="flex flex-col items-center justify-center w-full h-32 bg-[#2A2A2A] border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-[#6366F1] transition-colors"
+                  className="flex flex-col items-center justify-center w-full h-32 bg-white/5 border-2 border-dashed border-white/10 rounded-lg cursor-pointer transition-colors"
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#7878E9'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = ''}
                 >
                   <Upload className="w-8 h-8 text-gray-500 mb-2" />
                   <p className="text-gray-400 text-sm">
@@ -333,7 +327,7 @@ const HostSignup = () => {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2.5 rounded-lg text-sm">
                 {error}
               </div>
             )}
@@ -342,13 +336,15 @@ const HostSignup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontFamily: 'Oswald, sans-serif' }}
+              className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                fontFamily: 'Oswald, sans-serif',
+              }}
             >
               {isLoading ? 'SUBMITTING...' : 'CONTINUE'}
             </button>
           </form>
-        </div>
         </div>
       </div>
     </div>

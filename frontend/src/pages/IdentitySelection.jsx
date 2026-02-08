@@ -177,11 +177,24 @@ const IdentitySelection = () => {
           {/* Continue Button */}
           <button
             onClick={() => navigate('/signup/b2c')}
-            className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase"
+            className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase mb-4"
             style={{ fontFamily: 'Oswald, sans-serif' }}
           >
             Continue
           </button>
+
+          {/* Login Link */}
+          <div className="text-center">
+            <p className="text-gray-400 text-sm">
+              Already have an account?{' '}
+              <button
+                onClick={() => navigate('/login')}
+                className="text-[#6366F1] hover:text-[#5558E3] font-semibold transition-colors"
+              >
+                Log In
+              </button>
+            </p>
+          </div>
           </div>
           </div>
         </div>

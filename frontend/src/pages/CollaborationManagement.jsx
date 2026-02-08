@@ -11,7 +11,7 @@ import API_URL from '../config/api';
 
 const CollaborationManagement = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [collaborations, setCollaborations] = useState([]);
   const [activeTab, setActiveTab] = useState('received'); // 'received' or 'sent'
@@ -23,12 +23,14 @@ const CollaborationManagement = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user) {
       navigate('/login');
       return;
     }
     fetchCollaborations();
-  }, [user, activeTab]);
+  }, [user, authLoading, activeTab]);
 
   const fetchCollaborations = async () => {
     try {

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
+import FilterBar from '../components/FilterBar';
 import API_URL from '../config/api';
 
 // Venue type icon mapping for fallback images
@@ -280,150 +281,10 @@ const BrowseVenues = () => {
         </div>
 
         {/* Filter Bar */}
-        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
-          {/* Filters Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors whitespace-nowrap"
-          >
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filters</span>
-            {(filters.city || filters.venueType || filters.capacityRange || filters.amenities.length > 0) && (
-              <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5">
-                {[filters.city, filters.venueType, filters.capacityRange, ...filters.amenities].filter(Boolean).length}
-              </span>
-            )}
-          </button>
-
-          {/* Quick Filter Buttons */}
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Today
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Tomorrow
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Workshops
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            This Weekend
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Under 10km
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Live Gigs
-          </button>
-        </div>
-
-        {/* Filter Panel - Collapsible */}
-        {showFilters && (
-          <div className="bg-zinc-900 rounded-lg border border-gray-800 p-6 mb-8">
-            {/* City Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                City
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {cities.map(city => (
-                    <button
-                      key={city}
-                      onClick={() => handleFilterChange('city', filters.city === city ? '' : city)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.city === city
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {city}
-                    </button>
-                  ))}
-              </div>
-            </div>
-
-            {/* Venue Type Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Venue Type
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {venueTypes.map(type => {
-                  const Icon = type.icon;
-                  return (
-                    <button
-                      key={type.value}
-                      onClick={() => handleFilterChange('venueType', filters.venueType === type.value ? '' : type.value)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.venueType === type.value
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{type.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Capacity Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Capacity
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {capacityRanges.map(range => (
-                  <button
-                    key={range.value}
-                    onClick={() => handleFilterChange('capacityRange', filters.capacityRange === range.value ? '' : range.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filters.capacityRange === range.value
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {range.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Amenities Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Amenities
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                {amenitiesList.map(amenity => (
-                  <button
-                    key={amenity.value}
-                    onClick={() => toggleAmenity(amenity.value)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filters.amenities.includes(amenity.value)
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    <span>{amenity.icon}</span>
-                    <span>{amenity.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Clear Filters */}
-            <div className="flex justify-end">
-              <button
-                onClick={clearFilters}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-                <span>Clear all filters</span>
-              </button>
-            </div>
-          </div>
-        )}
+        <FilterBar
+          onFilterChange={handleFilterChange}
+          activeFilters={filters}
+        />
 
         {/* Results Count */}
         <div className="mb-4">

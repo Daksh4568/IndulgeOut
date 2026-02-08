@@ -219,12 +219,6 @@ export default function NavigationBar() {
               // Logged OUT Actions
               <>
                 <button
-                  onClick={() => navigate('/login')}
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-4 py-2 text-sm font-semibold uppercase transition-colors"
-                >
-                  LOG IN
-                </button>
-                <button
                   onClick={() => navigate('/signup')}
                   className="text-white px-6 py-2 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
                   style={{ 
@@ -232,7 +226,7 @@ export default function NavigationBar() {
                     fontFamily: 'Oswald, sans-serif'
                   }}
                 >
-                  SIGN UP
+                  LOG IN/SIGN UP
                 </button>
               </>
             ) : (

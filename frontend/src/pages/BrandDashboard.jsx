@@ -12,7 +12,7 @@ import { api } from '../config/api';
 
 const BrandDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
@@ -20,12 +20,14 @@ const BrandDashboard = () => {
   const [collaborationFilter, setCollaborationFilter] = useState('all'); // all, upcoming, live, completed
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user || user.role !== 'host_partner' || user.hostPartnerType !== 'brand_sponsor') {
       navigate('/login');
       return;
     }
     fetchDashboardData();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchDashboardData = async () => {
     try {
