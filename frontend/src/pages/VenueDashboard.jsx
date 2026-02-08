@@ -13,19 +13,21 @@ import { api } from '../config/api';
 
 const VenueDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
   const [activeSidebarItem, setActiveSidebarItem] = useState('all');
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user || user.role !== 'host_partner' || user.hostPartnerType !== 'venue') {
       navigate('/login');
       return;
     }
     fetchDashboardData();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchDashboardData = async () => {
     try {

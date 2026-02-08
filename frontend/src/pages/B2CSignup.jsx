@@ -136,52 +136,40 @@ const B2CSignup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
-      {/* Top Section - Pure Black */}
-      <div className="w-full bg-black relative z-10">
-        {/* Logo */}
-        <div className="flex justify-center pt-6 pb-4">
-          <img 
-            src="/images/LogoFinal2.jpg" 
-            alt="IndulgeOut" 
-            className="h-12 w-auto object-contain" 
-          />
-        </div>
-      </div>
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden p-4">
+      {/* Background Image with Opacity and Blur */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-20 blur-sm"
+        style={{
+          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          zIndex: 0,
+        }}
+      />
 
-      {/* Bottom Section - With Mirror Background */}
-      <div className="flex-1 relative flex items-center justify-center py-8">
-        {/* Background with mirror effect */}
-        <div className="absolute inset-0 flex">
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-            }}
-          />
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-              transform: 'scaleX(-1)',
-            }}
-          />
-        </div>
-
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/85" />
-
-        {/* Content */}
-        <div className="relative z-10 w-full max-w-lg px-4">
-
-        {/* Form Card */}
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md">
+        {/* Glass Morphism Card */}
         <div 
-          className="rounded-2xl p-6"
+          className="rounded-3xl p-8 border"
           style={{
-            background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+            background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(10px)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
           }}
         >
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/images/LogoFinal2.jpg" 
+              alt="IndulgeOut" 
+              className="h-20 w-auto object-contain" 
+            />
+          </div>
+
+          {/* Tagline */}
+          <p className="text-gray-300 text-center mb-8 text-sm">
+            Find offline experiences, join communities and connect with people
+          </p>
           {step === 1 ? (
             /* Step 1: Details Form */
             <>
@@ -207,7 +195,7 @@ const B2CSignup = () => {
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="Enter your full name"
-                    className="w-full px-4 py-2.5 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                    className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
                 </div>
 
@@ -222,7 +210,7 @@ const B2CSignup = () => {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Enter your email"
-                    className="w-full px-4 py-2.5 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                    className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
                 </div>
 
@@ -233,7 +221,8 @@ const B2CSignup = () => {
                   </label>
                   <div className="flex gap-2">
                     <select 
-                      className="px-3 py-2.5 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1]"
+                      className="px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent"
+                      style={{ '--tw-ring-color': '#7878E9' }}
                     >
                       <option value="+91">🇮🇳 +91</option>
                     </select>
@@ -243,7 +232,8 @@ const B2CSignup = () => {
                       value={formData.phoneNumber}
                       onChange={handleChange}
                       placeholder="Enter mobile number"
-                      className="flex-1 px-4 py-2.5 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                      className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      style={{ '--tw-ring-color': '#7878E9' }}
                     />
                   </div>
                 </div>
@@ -254,15 +244,16 @@ const B2CSignup = () => {
                     type="checkbox" 
                     id="terms" 
                     required
-                    className="mt-1 w-4 h-4 rounded border-gray-700 bg-[#2A2A2A] checked:bg-[#6366F1] focus:ring-[#6366F1]"
+                    className="mt-1 w-4 h-4 rounded border-white/10 bg-white/5"
+                    style={{ accentColor: '#7878E9' }}
                   />
                   <label htmlFor="terms" className="text-sm text-gray-300">
                     I agree to the{' '}
-                    <span className="text-[#6366F1] hover:underline cursor-pointer">
+                    <span className="hover:underline cursor-pointer" style={{ color: '#7878E9' }}>
                       Terms & Conditions
                     </span>{' '}
                     and{' '}
-                    <span className="text-[#6366F1] hover:underline cursor-pointer">
+                    <span className="hover:underline cursor-pointer" style={{ color: '#7878E9' }}>
                       Privacy Policy
                     </span>
                   </label>
@@ -279,19 +270,23 @@ const B2CSignup = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                  className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    fontFamily: 'Oswald, sans-serif',
+                  }}
                 >
                   {isLoading ? 'SENDING...' : 'SEND OTP'}
                 </button>
 
                 {/* Login Link */}
-                <div className="text-center pt-3 border-t border-gray-700">
+                <div className="text-center pt-4 border-t border-white/10">
                   <p className="text-gray-400 text-sm">
                     Already have an Account?{' '}
                     <span 
                       onClick={() => navigate('/login')}
-                      className="text-[#6366F1] hover:underline cursor-pointer font-semibold"
+                      className="cursor-pointer font-bold transition-colors"
+                      style={{ color: '#7878E9' }}
                     >
                       Log In
                     </span>
@@ -324,7 +319,8 @@ const B2CSignup = () => {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-11 h-11 md:w-12 md:h-12 text-center text-xl font-bold bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1] transition-colors"
+                      className="w-12 h-12 text-center text-2xl font-bold bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                        style={{ '--tw-ring-color': '#7878E9' }}
                     />
                   ))}
                 </div>
@@ -340,19 +336,23 @@ const B2CSignup = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                  className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    fontFamily: 'Oswald, sans-serif',
+                  }}
                 >
                   {isLoading ? 'VERIFYING...' : 'SIGN UP'}
                 </button>
 
                 {/* Resend OTP */}
-                <div className="text-center pt-3 border-t border-gray-700">
+                <div className="text-center pt-4">
                   <p className="text-gray-400 text-sm">
                     Didn't receive code?{' '}
                     <span 
                       onClick={handleResendOTP}
-                      className="text-[#6366F1] hover:underline cursor-pointer font-semibold"
+                      className="cursor-pointer font-semibold transition-colors"
+                      style={{ color: '#7878E9' }}
                     >
                       Resend OTP
                     </span>
@@ -361,7 +361,6 @@ const B2CSignup = () => {
               </form>
             </>
           )}
-          </div>
         </div>
       </div>
     </div>

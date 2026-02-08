@@ -137,108 +137,76 @@ const Login = () => {
   };
 
   return (
-    <div className="h-screen bg-black flex items-center justify-center relative overflow-hidden">
-      {/* Background with mirror effect */}
-      <div className="absolute inset-0 flex">
-        <div 
-          className="w-1/2 h-full bg-cover bg-center"
-          style={{
-            backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-          }}
-        />
-        <div 
-          className="w-1/2 h-full bg-cover bg-center"
-          style={{
-            backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-            transform: 'scaleX(-1)',
-          }}
-        />
-      </div>
-
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/85" />
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden p-4">
+      {/* Background Image with Opacity and Blur */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-20 blur-sm"
+        style={{
+          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          zIndex: 0,
+        }}
+      />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-lg px-4">
-        {/* Black Background Section - Logo */}
-        <div className="flex justify-center mb-8 -mx-4 px-4 py-8 bg-black">
-          <img 
-            src="/images/LogoFinal2.jpg" 
-            alt="IndulgeOut" 
-            className="h-16 w-auto object-contain" 
-          />
-        </div>
-
-        {/* Form Card */}
+      <div className="relative z-10 w-full max-w-md">
+        {/* Glass Morphism Card */}
         <div 
-          className="rounded-2xl p-8"
+          className="rounded-3xl p-8 border"
           style={{
-            background: 'linear-gradient(180deg, rgba(217,217,217,0.01) 0%, rgba(115,115,115,0.02) 100%)',
+            background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(10px)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
           }}
         >
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/images/LogoFinal2.jpg" 
+              alt="IndulgeOut" 
+              className="h-20 w-auto object-contain" 
+            />
+          </div>
+
+          {/* Tagline */}
+          <p className="text-gray-300 text-center mb-8 text-sm">
+            Find offline experiences, join communities and connect with people
+          </p>
+
           {step === 1 ? (
             /* Step 1: Enter Email/Phone */
             <>
-              <h1 
-                className="text-3xl md:text-4xl font-bold text-white text-center mb-2"
+              {/* Method Heading */}
+              <h2 
+                className="text-xl font-bold text-white text-center mb-6"
                 style={{ fontFamily: 'Oswald, sans-serif' }}
               >
-                Welcome Back
-              </h1>
-              <p className="text-gray-300 text-center mb-6 text-sm">
-                Sign in to your account to continue
-              </p>
+                {loginMethod === 'email' ? 'Enter Your Email' : 'Enter Your Mobile Number'}
+              </h2>
 
-              {/* Toggle Email/Phone */}
-              <div className="flex gap-2 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setLoginMethod('email')}
-                  className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${
-                    loginMethod === 'email'
-                      ? 'bg-[#6366F1] text-white'
-                      : 'bg-[#2A2A2A] text-gray-400 border border-gray-700'
-                  }`}
-                >
-                  Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginMethod('phone')}
-                  className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${
-                    loginMethod === 'phone'
-                      ? 'bg-[#6366F1] text-white'
-                      : 'bg-[#2A2A2A] text-gray-400 border border-gray-700'
-                  }`}
-                >
-                  Phone
-                </button>
-              </div>
+              {/* Subtext for phone */}
+              {loginMethod === 'phone' && (
+                <p className="text-gray-400 text-center mb-6 text-xs">
+                  (If you already have an account, log in here)
+                </p>
+              )}
 
               <form onSubmit={handleSendOTP} className="space-y-4">
                 {/* Email or Phone Input */}
                 {loginMethod === 'email' ? (
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
-                      Email Address
-                    </label>
                     <input
                       type="email"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                      className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     />
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
-                      Phone Number
-                    </label>
                     <div className="flex gap-2">
                       <select 
-                        className="px-3 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1]"
+                        className="px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
                         <option value="+91">🇮🇳 +91</option>
                       </select>
@@ -247,7 +215,7 @@ const Login = () => {
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
                         placeholder="Enter mobile number"
-                        className="flex-1 px-4 py-3 bg-[#2A2A2A] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                        className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                       />
                     </div>
                   </div>
@@ -255,30 +223,53 @@ const Login = () => {
 
                 {/* Error Message */}
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm">
+                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2.5 rounded-lg text-sm">
                     {error}
                   </div>
                 )}
 
-                {/* Send OTP Button */}
+                {/* Send OTP Button with Purple Gradient */}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                  className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    fontFamily: 'Oswald, sans-serif',
+                  }}
                 >
                   {isLoading ? 'SENDING...' : 'SEND OTP'}
                 </button>
 
+                {/* Terms Text */}
+                <p className="text-gray-500 text-xs text-center mt-4">
+                  By continuing, you agree to our Terms of Service Privacy Policy
+                </p>
+
+                {/* Toggle between Email and Phone */}
+                <div className="text-center pt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMethod(loginMethod === 'email' ? 'phone' : 'email');
+                      setIdentifier('');
+                      setError('');
+                    }}
+                    className="text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors"
+                  >
+                    {loginMethod === 'email' ? 'Sign in with Phone Number' : 'Sign in with Email'}
+                  </button>
+                </div>
+
                 {/* Signup Link */}
-                <div className="text-center pt-4 border-t border-gray-700">
+                <div className="text-center pt-4 border-t border-white/10">
                   <p className="text-gray-400 text-sm">
-                    Don't have an account?{' '}
+                    Don't have an accounts?{' '}
                     <span 
                       onClick={() => navigate('/signup')}
-                      className="text-[#6366F1] hover:underline cursor-pointer font-semibold"
+                      className="text-purple-400 hover:text-purple-300 cursor-pointer font-semibold transition-colors"
                     >
-                      Sign Up
+                      Create Accounts
                     </span>
                   </p>
                 </div>
@@ -287,19 +278,19 @@ const Login = () => {
           ) : (
             /* Step 2: OTP Verification */
             <>
-              <h1 
-                className="text-3xl md:text-4xl font-bold text-white text-center mb-2"
+              <h2 
+                className="text-xl font-bold text-white text-center mb-4"
                 style={{ fontFamily: 'Oswald, sans-serif' }}
               >
                 Enter Your OTP
-              </h1>
-              <p className="text-gray-300 text-center mb-8 text-sm">
-                We have sent an OTP to your {loginMethod === 'email' ? 'email' : 'phone number'}
+              </h2>
+              <p className="text-gray-400 text-center mb-8 text-sm">
+                We have sent the OTP to your {loginMethod === 'email' ? 'email' : 'mobile'} number
               </p>
 
               <form onSubmit={handleVerifyOTP} className="space-y-6">
                 {/* OTP Input Boxes */}
-                <div className="flex justify-center gap-2 md:gap-3">
+                <div className="flex justify-center gap-2">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -309,30 +300,33 @@ const Login = () => {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-12 h-12 md:w-14 md:h-14 text-center text-2xl font-bold bg-[#2A2A2A] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#6366F1] transition-colors"
+                      className="w-12 h-12 text-center text-2xl font-bold bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     />
                   ))}
                 </div>
 
                 {/* Error Message */}
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm text-center">
+                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2.5 rounded-lg text-sm text-center">
                     {error}
                   </div>
                 )}
 
-                {/* Sign In Button */}
+                {/* Verify Button with Purple Gradient */}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white font-bold py-3.5 rounded-lg transition-colors duration-300 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                  className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    fontFamily: 'Oswald, sans-serif',
+                  }}
                 >
-                  {isLoading ? 'VERIFYING...' : 'SIGN IN'}
+                  {isLoading ? 'VERIFYING...' : 'VERIFY'}
                 </button>
 
                 {/* Resend OTP */}
-                <div className="text-center pt-4 border-t border-gray-700">
+                <div className="text-center pt-4">
                   <p className="text-gray-400 text-sm">
                     Didn't receive code?{' '}
                     {resendTimer > 0 ? (
@@ -342,7 +336,7 @@ const Login = () => {
                     ) : (
                       <span 
                         onClick={handleResendOTP}
-                        className="text-[#6366F1] hover:underline cursor-pointer font-semibold"
+                        className="text-purple-400 hover:text-purple-300 cursor-pointer font-semibold transition-colors"
                       >
                         Resend OTP
                       </span>
@@ -358,9 +352,9 @@ const Login = () => {
                     setOtp(['', '', '', '', '', '']);
                     setError('');
                   }}
-                  className="w-full text-gray-400 hover:text-white text-sm transition-colors"
+                  className="w-full text-gray-400 hover:text-white text-sm transition-colors pt-2"
                 >
-                  ← Back to login
+                  ← Back to {loginMethod === 'email' ? 'email' : 'phone number'} entry
                 </button>
               </form>
             </>

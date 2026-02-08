@@ -488,46 +488,14 @@ export default function ExplorePage() {
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
                       {searchQuery ? `Search Results for "${searchQuery}"` : 'All Events'}
                     </h2>
-                  
                   </div>
                   
-                  {/* Filter Pills for All Events */}
-                  <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide">
-                    <button
-                      onClick={() => handleFilterChange({ ...filters, showToday: !filters.showToday })}
-                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                        filters.showToday
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      Today
-                    </button>
-                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                      Tonight
-                    </button>
-                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                      Tomorrow
-                    </button>
-                    <button
-                      onClick={() => handleFilterChange({ ...filters, showWeekend: !filters.showWeekend })}
-                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                        filters.showWeekend
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      This Weekend
-                    </button>
-                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                      Online
-                    </button>
-                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                      Open
-                    </button>
-                    <button className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                      more
-                    </button>
+                  {/* FilterBar Component */}
+                  <div className="mb-6">
+                    <FilterBar
+                      onFilterChange={handleFilterChange}
+                      activeFilters={filters}
+                    />
                   </div>
                   {events.length > 0 ? (
                     <>

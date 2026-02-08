@@ -31,7 +31,12 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user); // Extract user from response.data.user
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      localStorage.removeItem('token');
+      // Only remove token if it's an authentication error (401)
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        setUser(null);
+      }
+      // For other errors (network issues, 500, etc), keep the user logged in
     } finally {
       setLoading(false);
     }

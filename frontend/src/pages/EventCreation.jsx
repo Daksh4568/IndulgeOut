@@ -755,643 +755,385 @@ const EventCreation = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
-      {/* Navigation Bar with Logo */}
-      <NavigationBar />
+    <div 
+      className="min-h-screen relative"
+      style={{
+        backgroundColor: '#000000'
+      }}
+    >
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+        style={{
+          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          filter: 'blur(2px)'
+        }}
+      />
       
-      {/* Page Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/organizer/dashboard')}
-                className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                <span>{isEditMode ? 'Back to Dashboard' : 'Back to Dashboard'}</span>
-              </button>
-            </div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {isEditMode ? 'Edit Event' : 'Create New Event'}
-            </h1>
-            <div className="w-32"></div>
-          </div>
-        </div>
+      {/* Navigation Bar */}
+      <div className="relative z-10">
+        <NavigationBar />
       </div>
 
-      {/* Form */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Event Title */}
-          <div>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              placeholder="Event Title"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-lg font-medium placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              required
-            />
+      {/* Form Container */}
+      <div className="relative z-10 flex items-center justify-center px-4 py-8 min-h-[calc(100vh-80px)]">
+        {/* Glass Morphism Card */}
+        <div 
+          className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+          }}
+        >
+          {/* Header inside card */}
+          <div className="p-6 text-center border-b border-white/10">
+            <h1 
+              className="text-3xl font-bold text-white tracking-wide"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              {isEditMode ? 'EDIT EVENT' : 'CREATE EVENT'}
+            </h1>
           </div>
 
-          {/* Event Description */}
-          <div>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Event Description"
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-colors"
-              required
-            />
-          </div>
+          {/* Form */}
+          <div className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Event Title */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Event Title <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter event title"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                />
+              </div>
 
-          {/* Event Images */}
-          <div>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 transition-colors">
-              <div className="text-center">
-                <Image className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Upload Event Images
+              {/* Event Description */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Event Description <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Describe your event..."
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  required
+                />
+              </div>
+
+              {/* Categories */}
+              <div className="relative">
+                <label className="block text-white text-sm font-medium mb-2">
+                  Event Category <span className="text-red-400">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent flex items-center justify-between"
+                >
+                  <span className={formData.categories.length > 0 ? 'text-white' : 'text-gray-400'}>
+                    {formData.categories.length > 0 
+                      ? `${formData.categories.length} selected`
+                      : 'Select'
+                    }
+                  </span>
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                </button>
+                
+                {showCategoryDropdown && (
+                  <div className="absolute z-50 mt-2 w-full bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                    <div className="p-4 space-y-2">
+                      {categories.map((category) => (
+                        <label key={category.id || category.name} className="flex items-center cursor-pointer hover:bg-white/5 p-2 rounded">
+                          <input
+                            type="checkbox"
+                            checked={formData.categories.includes(category.name)}
+                            onChange={() => handleCategoryToggle(category)}
+                            disabled={formData.categories.length >= 3 && !formData.categories.includes(category.name)}
+                            className="h-4 w-4 text-purple-600 rounded focus:ring-purple-500 border-gray-600 bg-white/5 accent-purple-600"
+                          />
+                          <span className="ml-3 text-sm text-white">
+                            {category.emoji} {category.name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {formData.categories.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.categories.map((category) => (
+                      <span
+                        key={category}
+                        className="px-3 py-1 bg-purple-600/20 text-purple-300 rounded-full text-xs border border-purple-500/30"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Date and Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Date <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Time <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="space-y-4">
+                <label className="block text-white text-sm font-medium">
+                  Location
+                </label>
+                <div className="relative" ref={locationSearchRef}>
+                  <input
+                    type="text"
+                    value={locationQuery || formData.location.address || ''}
+                    onChange={handleLocationSearch}
+                    placeholder="Search for location..."
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={useCurrentLocation}
+                    disabled={isSearchingLocation}
+                    className="absolute right-3 top-3 text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {isSearchingLocation ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Locating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-3 w-3" />
+                        <span>Use Current</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {showLocationSuggestions && locationSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-2 bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                      {locationSuggestions.map((suggestion, index) => (
+                        <button
+                          key={suggestion.place_id || index}
+                          type="button"
+                          onClick={() => selectLocation(suggestion)}
+                          className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+                        >
+                          <div className="flex items-start gap-3">
+                            <MapPin className="h-4 w-4 text-purple-400 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-white">
+                                {suggestion.address?.road || suggestion.address?.name || 'Unknown Location'}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {suggestion.display_name}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <input
+                  type="text"
+                  name="location.address"
+                  value={formData.location.address}
+                  onChange={handleInputChange}
+                  placeholder="Complete address (Street, Area, Landmark)"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    name="location.city"
+                    value={formData.location.city}
+                    onChange={handleInputChange}
+                    placeholder="City *"
+                    required
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  <input
+                    type="text"
+                    name="location.state"
+                    value={formData.location.state}
+                    onChange={handleInputChange}
+                    placeholder="State *"
+                    required
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <input
+                  type="text"
+                  name="location.zipCode"
+                  value={formData.location.zipCode}
+                  onChange={handleInputChange}
+                  placeholder="Zip/Postal Code (Optional)"
+                  maxLength="10"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Participants and Price */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Participants <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="maxParticipants"
+                    value={formData.maxParticipants}
+                    onChange={handleInputChange}
+                    placeholder="10"
+                    min="1"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    name="price.amount"
+                    value={formData.price.amount}
+                    onChange={handleInputChange}
+                    placeholder="₹0"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Co-host */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Co-host (Optional)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCoHostDropdown(!showCoHostDropdown)}
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent flex items-center justify-between"
+                >
+                  <span>Select Co-host</span>
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Upload Photo - Moved to last */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Upload photo <span className="text-red-400">*</span>
+                </label>
+                <div className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-white text-sm font-medium mb-2">
+                    Choose a file or drag & drop it here
                   </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Upload up to 5 images to showcase your event
+                  <p className="text-gray-400 text-xs mb-4">
+                    JPEG, PNG, JPEG and MP4 formats, up to 50MB
                   </p>
                   <button
                     type="button"
                     onClick={openCloudinaryWidget}
                     disabled={isUploading || uploadedImages.length >= 5}
-                    className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 rounded-lg text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                   >
-                    <Upload className="h-4 w-4" />
-                    {isUploading ? 'Uploading...' : 'Choose Images'}
+                    {isUploading ? 'Uploading...' : 'Browse File'}
                   </button>
                 </div>
-              </div>
-              
-              {/* Image Previews */}
-              {uploadedImages.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                    Uploaded Images ({uploadedImages.length}/5)
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                
+                {uploadedImages.length > 0 && (
+                  <div className="mt-4 grid grid-cols-3 gap-2">
                     {uploadedImages.map((image) => (
                       <div key={image.public_id} className="relative group">
                         <img
                           src={image.url}
                           alt="Event preview"
-                          className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                          className="w-full h-20 object-cover rounded-lg border border-white/10"
                         />
                         <button
                           type="button"
                           onClick={() => removeImage(image.public_id)}
                           className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-left bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex items-center justify-between transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center mr-3">
-                  <span className="text-white text-sm">🏷️</span>
-                </div>
-                <span className={formData.categories.length > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
-                  {formData.categories.length > 0 
-                    ? `Categories (${formData.categories.length}/3)`
-                    : 'Categories (up to 3)'
-                  }
-                </span>
+                )}
               </div>
-              <ChevronDown className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-            </button>
-            
-            {showCategoryDropdown && (
-              <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg transition-colors">
-                <div className="p-4">
-                  {/* Category Analytics - Trending Categories */}
-                  {!loadingAnalytics && categoryAnalytics.length > 0 && (
-                    <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-600">
-                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 flex items-center">
-                        🔥 Popular Categories
-                      </h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {categoryAnalytics.slice(0, 6).map((cat) => (
-                          <button
-                            key={cat.name}
-                            type="button"
-                            onClick={() => handleCategoryToggle(cat)}
-                            disabled={formData.categories.length >= 3 && !formData.categories.includes(cat.name)}
-                            className={`p-2 rounded-lg text-left text-xs border transition-all ${
-                              formData.categories.includes(cat.name)
-                                ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-300'
-                                : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-750'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            <div className="font-medium">{cat.emoji} {cat.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {cat.eventCount} events · {cat.totalParticipants} attendees
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
-                  {/* All Categories */}
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                    All Categories
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    {categories.map((category) => (
-                      <label key={category.id || category.name} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.categories.includes(category.name)}
-                          onChange={() => handleCategoryToggle(category)}
-                          disabled={formData.categories.length >= 3 && !formData.categories.includes(category.name)}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                        />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                          {category.emoji} {category.name}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {formData.categories.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {formData.categories.map((category) => (
-                  <span
-                    key={category}
-                    className="px-3 py-1 bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-full text-sm"
-                  >
-                    {category}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Date and Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="relative">
-              <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-            <div className="relative">
-              <Clock className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="space-y-4">
-            <div className="relative" ref={locationSearchRef}>
-              <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                value={locationQuery || formData.location.address || ''}
-                onChange={handleLocationSearch}
-                placeholder="Search for location..."
-                className="w-full pl-10 pr-24 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              />
+              {/* Submit Button */}
               <button
-                type="button"
-                onClick={useCurrentLocation}
-                disabled={isSearchingLocation}
-                className="absolute right-3 top-3 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 flex items-center gap-1 font-medium transition-colors"
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 rounded-lg text-white font-bold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
               >
-                {isSearchingLocation ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Locating...</span>
-                  </>
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    {isEditMode ? 'Updating Event...' : 'Creating Event...'}
+                  </div>
                 ) : (
-                  <>
-                    <MapPin className="h-3 w-3" />
-                    <span>Use Current</span>
-                  </>
+                  isEditMode ? 'Update Event' : 'Create Event'
                 )}
               </button>
-              
-              {/* Location Suggestions Dropdown */}
-              {showLocationSuggestions && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-                  {isSearchingLocation ? (
-                    <div className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span>Searching...</span>
-                      </div>
-                    </div>
-                  ) : locationSuggestions.length > 0 ? (
-                    locationSuggestions.map((suggestion, index) => (
-                      <button
-                        key={suggestion.place_id || index}
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          selectLocation(suggestion)
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          selectLocation(suggestion)
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 cursor-pointer"
-                      >
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                              {suggestion.address?.road || suggestion.address?.name || 'Unknown Location'}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                              {suggestion.display_name}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-                      <MapPin className="h-5 w-5 mx-auto mb-1 opacity-50" />
-                      <p className="text-sm">No locations found</p>
-                      <p className="text-xs mt-1">Try a different search term</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Current Location Display */}
-            {currentUserLocation && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="text-green-800 dark:text-green-200 font-medium">Current Location</span>
-                  <button
-                    type="button"
-                    onClick={useCurrentLocation}
-                    className="ml-auto text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                  >
-                    Use Current
-                  </button>
-                </div>
-                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Location coordinates: {currentUserLocation.latitude.toFixed(6)}, {currentUserLocation.longitude.toFixed(6)}
-                </div>
-              </div>
-            )}
-            
-            {/* Show coordinates if available */}
-            {formData.location.coordinates.latitude && formData.location.coordinates.longitude && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                Location coordinates: {formData.location.coordinates.latitude.toFixed(6)}, {formData.location.coordinates.longitude.toFixed(6)}
-              </div>
-            )}
-            
-            {/* Full Address Field - Editable */}
-            <div className="relative">
-              <input
-                type="text"
-                name="location.address"
-                value={formData.location.address}
-                onChange={handleInputChange}
-                placeholder="Complete address (Street, Area, Landmark)"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {/* City Dropdown */}
-              <div className="relative">
-                <input
-                  type="text"
-                  name="location.city"
-                  value={formData.location.city}
-                  onChange={(e) => {
-                    handleInputChange(e)
-                    searchCities(e.target.value)
-                    setShowCityDropdown(true)
-                  }}
-                  onFocus={() => {
-                    if (formData.location.city) {
-                      searchCities(formData.location.city)
-                    }
-                    setShowCityDropdown(true)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && filteredCities.length > 0) {
-                      e.preventDefault()
-                      selectCity(filteredCities[0])
-                    } else if (e.key === 'Escape') {
-                      setShowCityDropdown(false)
-                    }
-                  }}
-                  placeholder="City * (Start typing...)"
-                  required
-                  autoComplete="off"
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                />
-                {formData.location.city && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        location: { ...prev.location, city: '' }
-                      }))
-                      setShowCityDropdown(false)
-                      setFilteredCities([])
-                    }}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                )}
-                
-                {/* City Suggestions Dropdown */}
-                {showCityDropdown && filteredCities.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                    <div className="sticky top-0 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
-                      {filteredCities.length} cit{filteredCities.length > 1 ? 'ies' : 'y'} found • Click to select or press Enter
-                    </div>
-                    {filteredCities.map((city, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          selectCity(city)
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          selectCity(city)
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 cursor-pointer"
-                      >
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {city.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {city.full_name}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              {/* State Dropdown */}
-              <div className="relative">
-                <input
-                  type="text"
-                  name="location.state"
-                  value={formData.location.state}
-                  onChange={(e) => {
-                    handleInputChange(e)
-                    searchStates(e.target.value)
-                    setShowStateDropdown(true)
-                  }}
-                  onFocus={() => {
-                    if (formData.location.state) {
-                      searchStates(formData.location.state)
-                    }
-                    setShowStateDropdown(true)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && filteredStates.length > 0) {
-                      e.preventDefault()
-                      selectState(filteredStates[0])
-                    } else if (e.key === 'Escape') {
-                      setShowStateDropdown(false)
-                    }
-                  }}
-                  placeholder="State * (Start typing...)"
-                  required
-                  autoComplete="off"
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                />
-                {formData.location.state && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        location: { ...prev.location, state: '' }
-                      }))
-                      setShowStateDropdown(false)
-                      setFilteredStates([])
-                    }}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                )}
-                
-                {/* State Suggestions Dropdown */}
-                {showStateDropdown && filteredStates.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                    <div className="sticky top-0 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
-                      {filteredStates.length} state{filteredStates.length > 1 ? 's' : ''} found • Click to select or press Enter
-                    </div>
-                    {filteredStates.map((state, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          selectState(state)
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          selectState(state)
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors border-b border-gray-200 dark:border-gray-600 last:border-b-0 cursor-pointer"
-                      >
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {state.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {state.full_name}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Zip Code Field */}
-            <div className="relative">
-              <input
-                type="text"
-                name="location.zipCode"
-                value={formData.location.zipCode}
-                onChange={handleInputChange}
-                placeholder="Zip/Postal Code (Optional)"
-                maxLength="10"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              />
-            </div>
+            </form>
           </div>
-
-          {/* Community (Optional) */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowCommunityDropdown(!showCommunityDropdown)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-left bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex items-center justify-between transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mr-3">
-                  <Users className="h-4 w-4 text-white" />
-                </div>
-                <span className={formData.community ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
-                  {formData.community || 'Community (Optional)'}
-                </span>
-              </div>
-              <ChevronDown className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-            </button>
-          </div>
-
-          {/* Participants and Price */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="relative">
-              <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="number"
-                name="maxParticipants"
-                value={formData.maxParticipants}
-                onChange={handleInputChange}
-                placeholder="Participants"
-                min="1"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="number"
-                name="price.amount"
-                value={formData.price.amount}
-                onChange={handleInputChange}
-                placeholder="Price"
-                min="0"
-                step="0.01"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Co-host */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowCoHostDropdown(!showCoHostDropdown)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-left bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex items-center justify-between transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center mr-3">
-                  <UserPlus className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-gray-500 dark:text-gray-400">Co-host (Optional)</span>
-              </div>
-              <ChevronDown className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-            </button>
-          </div>
-
-          {/* Bottom Navigation */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 transition-colors">
-            <div className="flex justify-center space-x-8 mb-6">
-              <button
-                type="button"
-                className="flex flex-col items-center text-primary-600"
-              >
-                <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center mb-1">
-                  <Calendar className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-sm font-medium">EVENT</span>
-              </button>
-              <button
-                type="button"
-                className="flex flex-col items-center text-gray-400 dark:text-gray-500"
-              >
-                <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center mb-1">
-                  <Users className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-sm">COMMUNITY</span>
-              </button>
-              <button
-                type="button"
-                className="flex flex-col items-center text-gray-400 dark:text-gray-500"
-              >
-                <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center mb-1">
-                  <span className="text-white text-xs">📝</span>
-                </div>
-                <span className="text-sm">POST</span>
-              </button>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  {isEditMode ? 'Updating Event...' : 'Creating Event...'}
-                </div>
-              ) : (
-                isEditMode ? 'Update Event' : 'Create Event'
-              )}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   )
 }
-
 export default EventCreation
+ 
+

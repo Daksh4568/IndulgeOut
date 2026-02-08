@@ -9,7 +9,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Footer from './components/Footer'
 import Homepage from './pages/Homepage'
 import OTPLogin from './pages/OTPLogin'
-import Register from './pages/Register'
 import IdentitySelection from './pages/IdentitySelection'
 import B2CSignup from './pages/B2CSignup'
 import B2BTypeSelection from './pages/B2BTypeSelection'
@@ -20,7 +19,6 @@ import InterestSelection from './pages/InterestSelection'
 import { Navigate } from 'react-router-dom'
 import EventCreation from './pages/EventCreation'
 import EventDetail from './pages/EventDetailNew'
-import CommunityCreation from './pages/CommunityCreation'
 import CommunityDetail from './pages/CommunityDetail'
 import AnalyticsPage from './pages/AnalyticsPage'
 import About from './pages/About'
@@ -34,12 +32,10 @@ import BrandOnboarding from './pages/BrandOnboarding'
 import CommunityOnboarding from './pages/CommunityOnboarding'
 import CommunityOrganizerDashboard from './pages/CommunityOrganizerDashboard'
 import Dashboard from './pages/Dashboard'
-import Profile from './pages/Profile'
+import Profile from './pages/ProfileNew'
 import BrowseVenues from './pages/BrowseVenues'
 import BrowseSponsors from './pages/BrowseSponsors'
 import BrowseCommunities from './pages/BrowseCommunities'
-import VenueProfile from './pages/VenueProfile'
-import BrandProfile from './pages/BrandProfile'
 import RequestCollaboration from './pages/RequestCollaboration'
 import CollaborationManagement from './pages/CollaborationManagement'
 import AdminDashboard from './pages/AdminDashboard'
@@ -70,8 +66,24 @@ function ScrollToTop() {
 
 function AppContent() {
   const location = useLocation();
-  const hideFooterPaths = ['/signup', '/signup/b2c', '/signup/b2b-type', '/signup/host', '/signup/brand', '/signup/venue', '/login', '/community-organizer-dashboard'];
-  const shouldHideFooter = hideFooterPaths.includes(location.pathname);
+  
+  // Define paths where footer SHOULD be shown (pre-login pages only)
+  const showFooterPaths = [
+    '/',
+    '/about',
+    '/contact-us',
+    '/terms-conditions',
+    '/refunds-cancellations',
+    '/explore',
+    '/categories',
+    '/host-partner',
+    '/login',
+    '/register'
+  ];
+  
+  // Check if current path starts with any category path or if it's in the showFooterPaths
+  const shouldShowFooter = showFooterPaths.includes(location.pathname) || 
+                          location.pathname.startsWith('/categories/');
 
   return (
     <>
@@ -95,9 +107,8 @@ function AppContent() {
         <Route path="/signup/brand" element={<BrandSignup />} />
         <Route path="/signup/venue" element={<VenueSignup />} />
         
-        {/* Legacy Login/Register */}
+        {/* Legacy Login */}
         <Route path="/login" element={<OTPLogin />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/interests" element={<InterestSelection />} />
         <Route path="/onboarding/venue" element={<ErrorBoundary><VenueOnboarding /></ErrorBoundary>} />
         <Route path="/onboarding/brand" element={<ErrorBoundary><BrandOnboarding /></ErrorBoundary>} />
@@ -116,21 +127,18 @@ function AppContent() {
         <Route path="/events/:eventId/review" element={<ErrorBoundary><EventReviewPage /></ErrorBoundary>} />
         <Route path="/event/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
         <Route path="/communities/:id" element={<ErrorBoundary><CommunityDetail /></ErrorBoundary>} />
-        <Route path="/community/create" element={<ErrorBoundary><CommunityCreation /></ErrorBoundary>} />
         <Route path="/community/:id" element={<ErrorBoundary><CommunityDetail /></ErrorBoundary>} />
         <Route path="/analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
         <Route path="/payment-callback" element={<ErrorBoundary><PaymentCallback /></ErrorBoundary>} />
         <Route path="/browse/venues" element={<ErrorBoundary><BrowseVenues /></ErrorBoundary>} />
         <Route path="/browse/sponsors" element={<ErrorBoundary><BrowseSponsors /></ErrorBoundary>} />
         <Route path="/browse/communities" element={<ErrorBoundary><BrowseCommunities /></ErrorBoundary>} />
-        <Route path="/venue/:id" element={<ErrorBoundary><VenueProfile /></ErrorBoundary>} />
         <Route path="/venue/:id/request-collaboration" element={<ErrorBoundary><RequestCollaboration /></ErrorBoundary>} />
-        <Route path="/brand/:id" element={<ErrorBoundary><BrandProfile /></ErrorBoundary>} />
         <Route path="/brand/:id/propose-collaboration" element={<ErrorBoundary><RequestCollaboration /></ErrorBoundary>} />
         <Route path="/organizer/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
         <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
       </Routes>
-      {!shouldHideFooter && (
+      {shouldShowFooter && (
         <>
           {/* Black Gap Before Footer */}
           <div className="bg-black py-8"></div>

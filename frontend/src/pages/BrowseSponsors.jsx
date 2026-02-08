@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
+import FilterBar from '../components/FilterBar';
 import API_URL from '../config/api';
 
 // Brand category icon mapping for fallback images
@@ -302,171 +303,10 @@ const BrowseSponsors = () => {
         </div>
 
         {/* Filter Bar */}
-        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
-          {/* Filters Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors whitespace-nowrap"
-          >
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filters</span>
-            {(filters.brandCategory || filters.targetCity || filters.sponsorshipType.length > 0 || filters.collaborationIntent.length > 0 || filters.budgetScale) && (
-              <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5">
-                {[filters.brandCategory, filters.targetCity, filters.budgetScale, ...filters.sponsorshipType, ...filters.collaborationIntent].filter(Boolean).length}
-              </span>
-            )}
-          </button>
-
-          {/* Quick Filter Buttons */}
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Today
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Tomorrow
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Workshops
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            This Weekend
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Under 10km
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Live Gigs
-          </button>
-        </div>
-
-        {/* Filter Panel - Collapsible */}
-        {showFilters && (
-          <div className="bg-zinc-900 rounded-lg border border-gray-800 p-6 mb-8">
-            {/* Brand Category Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Industry Category
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {brandCategories.map(category => (
-                    <button
-                      key={category.value}
-                      onClick={() => handleFilterChange('brandCategory', filters.brandCategory === category.value ? '' : category.value)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.brandCategory === category.value
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <span>{category.icon}</span>
-                      <span>{category.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-            {/* Target City Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Target City
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {cities.map(city => (
-                    <button
-                      key={city}
-                      onClick={() => handleFilterChange('targetCity', filters.targetCity === city ? '' : city)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.targetCity === city
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {city}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sponsorship Type Filter */}
-              <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sponsorship Type
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {sponsorshipTypes.map(type => (
-                    <button
-                      key={type.value}
-                      onClick={() => toggleArrayFilter('sponsorshipType', type.value)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.sponsorshipType.includes(type.value)
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <div>{type.label}</div>
-                      <div className="text-xs opacity-75">{type.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Collaboration Intent Filter */}
-              <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Collaboration Format
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {collaborationIntents.map(intent => (
-                    <button
-                      key={intent.value}
-                      onClick={() => toggleArrayFilter('collaborationIntent', intent.value)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.collaborationIntent.includes(intent.value)
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <span>{intent.icon}</span>
-                      <span>{intent.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Budget Scale Filter */}
-              <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Budget Scale
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {budgetScales.map(scale => (
-                    <button
-                      key={scale.value}
-                      onClick={() => handleFilterChange('budgetScale', filters.budgetScale === scale.value ? '' : scale.value)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.budgetScale === scale.value
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {scale.label}
-                    </button>
-                  ))
-                }
-              </div>
-            </div>
-
-            {/* Clear Filters */}
-            <div className="flex justify-end">
-              <button
-                onClick={clearFilters}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-                <span>Clear all filters</span>
-              </button>
-            </div>
-          </div>
-        )}
+        <FilterBar
+          onFilterChange={handleFilterChange}
+          activeFilters={filters}
+        />
 
         {/* Results Count */}
         <div className="mb-4">

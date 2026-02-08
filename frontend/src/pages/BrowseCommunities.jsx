@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
+import FilterBar from '../components/FilterBar';
 
 // Community type icon mapping for fallback images
 const COMMUNITY_TYPE_ICONS = {
@@ -242,116 +243,10 @@ const BrowseCommunities = () => {
         </div>
 
         {/* Filter Bar */}
-        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
-          {/* Filters Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors whitespace-nowrap"
-          >
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filters</span>
-            {(filters.city || filters.communityType || filters.primaryCategory || filters.audienceSize || filters.eventExperience) && (
-              <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5">
-                {[filters.city, filters.communityType, filters.primaryCategory, filters.audienceSize, filters.eventExperience].filter(Boolean).length}
-              </span>
-            )}
-          </button>
-
-          {/* Quick Filter Buttons */}
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Today
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Tomorrow
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Workshops
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            This Weekend
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Under 10km
-          </button>
-          <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-            Live Gigs
-          </button>
-        </div>
-
-        {/* Filter Panel - Collapsible */}
-        {showFilters && (
-          <div className="bg-zinc-900 rounded-lg border border-gray-800 p-6 mb-8">
-            <div className="space-y-6">
-              {/* City Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  City
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {cities.map(city => (
-                    <button
-                      key={city}
-                      onClick={() => handleFilterChange('city', filters.city === city ? '' : city)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.city === city
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-white hover:bg-gray-700'
-                      }`}
-                    >
-                      {city}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Community Type Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Community Type
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {communityTypes.map(type => (
-                    <button
-                      key={type.value}
-                      onClick={() => handleFilterChange('communityType', filters.communityType === type.value ? '' : type.value)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.communityType === type.value
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-white hover:bg-gray-700'
-                      }`}
-                    >
-                      <span>{type.icon}</span>
-                      <span>{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Category Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Category
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {categories.map(category => (
-                    <button
-                      key={category.value}
-                      onClick={() => handleFilterChange('primaryCategory', filters.primaryCategory === category.value ? '' : category.value)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filters.primaryCategory === category.value
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-white hover:bg-gray-700'
-                      }`}
-                    >
-                      <span>{category.icon}</span>
-                      <span>{category.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <FilterBar
+          onFilterChange={handleFilterChange}
+          activeFilters={filters}
+        />
 
         {/* Communities Grid */}
         {loading ? (

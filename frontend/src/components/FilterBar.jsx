@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, MapPin, Calendar, Sparkles, Navigation, X } from 'lucide-react';
+import { DollarSign, MapPin, Calendar, Sparkles, Navigation, X, SlidersHorizontal } from 'lucide-react';
 
 const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
   const [filters, setFilters] = useState({
@@ -9,13 +9,21 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
     showWeekend: activeFilters.showWeekend || false,
     mood: activeFilters.mood || 'all',
     useGeolocation: activeFilters.useGeolocation || false,
-    userLocation: activeFilters.userLocation || null
+    userLocation: activeFilters.userLocation || null,
+    sortBy: activeFilters.sortBy || 'popularity',
+    genres: activeFilters.genres || []
   });
 
   const [showPriceDropdown, setShowPriceDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showMoodDropdown, setShowMoodDropdown] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('sortBy');
+  const [tempFilters, setTempFilters] = useState({
+    sortBy: filters.sortBy,
+    genres: [...filters.genres]
+  });
 
   const priceOptions = [
     { value: 'all', label: 'All Prices' },
@@ -48,20 +56,42 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
     { value: 'adventure', label: 'Adventure', icon: '🏔️' }
   ];
 
-  // Update parent component when filters change
-  useEffect(() => {
-    onFilterChange(filters);
-  }, [filters]);
+  const sortByOptions = [
+    { value: 'popularity', label: 'Popularity' },
+    { value: 'price-low-high', label: 'Price : Low to High' },
+    { value: 'price-high-low', label: 'Price : High to Low' },
+    { value: 'date', label: 'Date' },
+    { value: 'distance', label: 'Distance : Near to Far' }
+  ];
+
+  const genreOptions = [
+    'Acoustic', 'Art & Craft Workshops', 'Art Exhibitions', 'Artist Showcase',
+    'Attractions', 'Beverage Tastings', 'Bollywood Films', 'Bollywood Music',
+    'Bollywood Night', 'Book Readings', 'Brewery Experiences', 'Brunch',
+    'Cafe Hopping', 'Charity & Social Cause', 'Cocktail Masterclass',
+    'Comedy Nights', 'Cooking Workshop', 'Dance Workshops', 'Design & Architecture',
+    'EDM', 'Film Festivals', 'Food Festivals', 'Gaming Tournaments',
+    'Hiking & Trekking', 'Hip Hop', 'Historical Tours', 'Indie Music',
+    'Jazz', 'Live Performances', 'Music Festivals', 'Nature Walks',
+    'Networking Events', 'Open Mic', 'Painting & Drawing', 'Photography Walks',
+    'Pottery', 'Pub Crawls', 'Restaurant Experiences', 'Rock Music',
+    'Rooftop Parties', 'Sailing', 'Speed Dating', 'Spiritual & Wellness',
+    'Stand-up Comedy', 'Storytelling Sessions', 'Street Food Tours',
+    'Tech & Innovation', 'Theater & Drama', 'Trivia Nights', 'Wine Tasting',
+    'Yoga & Meditation'
+  ];
 
   // Get user's location
   const handleNearMe = () => {
     if (filters.useGeolocation && filters.userLocation) {
       // Turn off geolocation
-      setFilters(prev => ({
-        ...prev,
+      const newFilters = {
+        ...filters,
         useGeolocation: false,
         userLocation: null
-      }));
+      };
+      setFilters(newFilters);
+      onFilterChange(newFilters);
       return;
     }
 
@@ -69,14 +99,16 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setFilters(prev => ({
-            ...prev,
+          const newFilters = {
+            ...filters,
             useGeolocation: true,
             userLocation: {
               lat: position.coords.latitude,
               lng: position.coords.longitude
             }
-          }));
+          };
+          setFilters(newFilters);
+          onFilterChange(newFilters);
           setIsGettingLocation(false);
         },
         (error) => {
@@ -93,22 +125,67 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
 
   // Update filter
   const updateFilter = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [key]: value
-    }));
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
   };
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({
+    const newFilters = {
       price: 'all',
       city: 'all',
       showToday: false,
       showWeekend: false,
       mood: 'all',
       useGeolocation: false,
-      userLocation: null
+      userLocation: null,
+      sortBy: 'popularity',
+      genres: []
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
+  // Open filter modal
+  const openFilterModal = () => {
+    setTempFilters({
+      sortBy: filters.sortBy,
+      genres: [...filters.genres]
+    });
+    setShowFilterModal(true);
+  };
+
+  // Apply filters from modal
+  const applyModalFilters = () => {
+    const newFilters = {
+      ...filters,
+      sortBy: tempFilters.sortBy,
+      genres: tempFilters.genres
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+    setShowFilterModal(false);
+  };
+
+  // Clear modal filters
+  const clearModalFilters = () => {
+    setTempFilters({
+      sortBy: 'popularity',
+      genres: []
+    });
+  };
+
+  // Toggle genre selection
+  const toggleGenre = (genre) => {
+    setTempFilters(prev => {
+      const genres = prev.genres.includes(genre)
+        ? prev.genres.filter(g => g !== genre)
+        : [...prev.genres, genre];
+      return { ...prev, genres };
     });
   };
 
@@ -116,168 +193,234 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
     if (key === 'userLocation') return false;
     if (typeof value === 'boolean') return value === true;
-    return value !== 'all' && value !== null;
+    return value !== 'all' && value !== null && (Array.isArray(value) ? value.length > 0 : true);
   }).length;
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 border-y border-gray-200 dark:border-gray-700 py-4">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-wrap gap-3 items-center">
-          {/* Price Filter */}
-          <div className="relative">
+    <>
+      {/* Filter Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-black rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-white">Filter by</h2>
+                <button
+                  onClick={() => setShowFilterModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content - Split Layout */}
+            <div className="flex" style={{ height: '400px' }}>
+              {/* Left Sidebar */}
+              <div className="w-32 bg-black border-r border-zinc-800 p-4">
+                <button
+                  onClick={() => setActiveTab('sortBy')}
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-all mb-2 ${
+                    activeTab === 'sortBy'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Sort By
+                </button>
+                <button
+                  onClick={() => setActiveTab('genre')}
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === 'genre'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Genre
+                </button>
+              </div>
+
+              {/* Right Content Area */}
+              <div className="flex-1 px-6 py-4 overflow-y-auto">
+                {activeTab === 'sortBy' && (
+                  <div className="space-y-3">
+                    {sortByOptions.map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
+                        <div className="relative flex items-center">
+                          <input
+                            type="radio"
+                            name="sortBy"
+                            value={option.value}
+                            checked={tempFilters.sortBy === option.value}
+                            onChange={(e) => setTempFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                            className="w-5 h-5 text-purple-600 bg-zinc-800 border-gray-600 focus:ring-purple-500 focus:ring-2"
+                          />
+                        </div>
+                        <span className="text-white group-hover:text-purple-400 transition-colors">
+                          {option.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === 'genre' && (
+                  <div className="space-y-3">
+                    {genreOptions.map((genre) => (
+                      <label
+                        key={genre}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={tempFilters.genres.includes(genre)}
+                          onChange={() => toggleGenre(genre)}
+                          className="w-5 h-5 text-purple-600 bg-zinc-800 border-gray-600 rounded focus:ring-purple-500 focus:ring-2 accent-purple-600"
+                        />
+                        <span className="text-white group-hover:text-purple-400 transition-colors">
+                          {genre}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 pt-4 border-t border-zinc-800">
+              <button
+                onClick={clearModalFilters}
+                className="text-gray-400 hover:text-white text-sm font-medium transition-colors"
+              >
+                Clear filters
+              </button>
+              <button
+                onClick={applyModalFilters}
+                className="px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all"
+                style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full bg-black py-4">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Filters Button */}
             <button
-              onClick={() => setShowPriceDropdown(!showPriceDropdown)}
+              onClick={openFilterModal}
               className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.price !== 'all'
-                  ? 'bg-orange-500 text-white border-orange-500'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-orange-500 text-gray-900 dark:text-white'
+                filters.sortBy !== 'popularity' || filters.genres.length > 0
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
+                  : 'border-gray-700 hover:border-purple-600 text-white'
               }`}
             >
-              <DollarSign className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {priceOptions.find(o => o.value === filters.price)?.label}
-              </span>
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="text-sm font-medium">Filters</span>
+              {(filters.sortBy !== 'popularity' || filters.genres.length > 0) && (
+                <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
+                  {(filters.sortBy !== 'popularity' ? 1 : 0) + filters.genres.length}
+                </span>
+              )}
             </button>
-            {showPriceDropdown && (
-              <div className="absolute z-10 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
-                {priceOptions.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      updateFilter('price', option.value);
-                      setShowPriceDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-sm text-gray-900 dark:text-white"
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* City Filter */}
-          <div className="relative">
+            {/* Today Toggle */}
             <button
-              onClick={() => setShowCityDropdown(!showCityDropdown)}
+              onClick={() => updateFilter('showToday', !filters.showToday)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.city !== 'all'
-                  ? 'bg-orange-500 text-white border-orange-500'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-orange-500 text-gray-900 dark:text-white'
+                filters.showToday
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
+                  : 'border-gray-700 hover:border-purple-600 text-white'
               }`}
             >
-              <MapPin className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {cityOptions.find(o => o.value === filters.city)?.label}
-              </span>
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm font-medium">Today</span>
             </button>
-            {showCityDropdown && (
-              <div className="absolute z-10 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto">
-                {cityOptions.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      updateFilter('city', option.value);
-                      setShowCityDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-sm text-gray-900 dark:text-white"
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Today Toggle */}
-          <button
-            onClick={() => updateFilter('showToday', !filters.showToday)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-              filters.showToday
-                ? 'bg-orange-500 text-white border-orange-500'
-                : 'border-gray-300 dark:border-gray-600 hover:border-orange-500 text-gray-900 dark:text-white'
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            <span className="text-sm font-medium">Today</span>
-          </button>
-
-          {/* Weekend Toggle */}
-          <button
-            onClick={() => updateFilter('showWeekend', !filters.showWeekend)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-              filters.showWeekend
-                ? 'bg-orange-500 text-white border-orange-500'
-                : 'border-gray-300 dark:border-gray-600 hover:border-orange-500 text-gray-900 dark:text-white'
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            <span className="text-sm font-medium">This Weekend</span>
-          </button>
-
-          {/* Mood Filter */}
-          <div className="relative">
+            {/* Weekend Toggle */}
             <button
-              onClick={() => setShowMoodDropdown(!showMoodDropdown)}
+              onClick={() => updateFilter('showWeekend', !filters.showWeekend)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.mood !== 'all'
-                  ? 'bg-orange-500 text-white border-orange-500'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-orange-500 text-gray-900 dark:text-white'
+                filters.showWeekend
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
+                  : 'border-gray-700 hover:border-purple-600 text-white'
               }`}
             >
-              <Sparkles className="h-4 w-4" />
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm font-medium">This Weekend</span>
+            </button>
+
+            {/* Under 10km */}
+            <button
+              onClick={handleNearMe}
+              disabled={isGettingLocation}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+                filters.useGeolocation
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
+                  : 'border-gray-700 hover:border-purple-600 text-white'
+              } ${isGettingLocation ? 'opacity-50 cursor-wait' : ''}`}
+            >
+              <Navigation className="h-4 w-4" />
               <span className="text-sm font-medium">
-                {moodOptions.find(o => o.value === filters.mood)?.label}
+                {isGettingLocation ? 'Getting location...' : 'Under 10km'}
               </span>
             </button>
-            {showMoodDropdown && (
-              <div className="absolute z-10 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
-                {moodOptions.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      updateFilter('mood', option.value);
-                      setShowMoodDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-sm flex items-center gap-2 text-gray-900 dark:text-white"
-                  >
-                    <span>{option.icon}</span>
-                    <span>{option.label}</span>
-                  </button>
-                ))}
-              </div>
+
+            {/* City Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCityDropdown(!showCityDropdown)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+                  filters.city !== 'all'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
+                    : 'border-gray-700 hover:border-purple-600 text-white'
+                }`}
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {cityOptions.find(o => o.value === filters.city)?.label}
+                </span>
+              </button>
+              {showCityDropdown && (
+                <div className="absolute z-10 mt-2 w-48 bg-zinc-800 rounded-lg shadow-xl border border-gray-700 max-h-64 overflow-y-auto">
+                  {cityOptions.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        updateFilter('city', option.value);
+                        setShowCityDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-sm text-white"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Clear Filters */}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700 hover:border-red-500 hover:text-red-500 transition-all text-sm font-medium text-white"
+              >
+                <X className="h-4 w-4" />
+                Clear ({activeFilterCount})
+              </button>
             )}
           </div>
-
-          {/* Near Me Button */}
-          <button
-            onClick={handleNearMe}
-            disabled={isGettingLocation}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-              filters.useGeolocation
-                ? 'bg-orange-500 text-white border-orange-500'
-                : 'border-gray-300 dark:border-gray-600 hover:border-orange-500 text-gray-900 dark:text-white'
-            } ${isGettingLocation ? 'opacity-50 cursor-wait' : ''}`}
-          >
-            <Navigation className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {isGettingLocation ? 'Getting location...' : 'Near Me'}
-            </span>
-          </button>
-
-          {/* Clear Filters */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 hover:border-red-500 hover:text-red-500 transition-all text-sm font-medium text-gray-900 dark:text-white"
-            >
-              <X className="h-4 w-4" />
-              Clear ({activeFilterCount})
-            </button>
-          )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

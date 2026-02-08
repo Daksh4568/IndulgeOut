@@ -4,9 +4,12 @@ import { useAuth } from '../contexts/AuthContext'
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { user, isAuthenticated, isCommunityOrganizer, isVenue, isBrandSponsor } = useAuth()
+  const { user, isAuthenticated, loading: authLoading, isCommunityOrganizer, isVenue, isBrandSponsor } = useAuth()
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking authentication
+    if (authLoading) return;
+    
     if (!isAuthenticated) {
       navigate('/login', { replace: true })
       return
@@ -23,7 +26,7 @@ const Dashboard = () => {
       // Regular users - redirect to user dashboard
       navigate('/user/dashboard', { replace: true })
     }
-  }, [isAuthenticated, user, navigate, isCommunityOrganizer, isVenue, isBrandSponsor])
+  }, [isAuthenticated, authLoading, user, navigate, isCommunityOrganizer, isVenue, isBrandSponsor])
 
   // Show loading state while redirecting
   return (
