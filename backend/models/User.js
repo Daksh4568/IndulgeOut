@@ -186,8 +186,18 @@ const userSchema = new mongoose.Schema({
       phone: String,
       email: String
     },
-    photos: [String],
+    photos: {
+      type: [String],
+      validate: {
+        validator: function(v) {
+          return v.length <= 5;
+        },
+        message: 'You can upload a maximum of 5 photos'
+      }
+    },
     instagram: String,
+    facebook: String,
+    website: String,
     amenities: [{
       type: String,
       enum: ['wifi', 'parking', 'ac', 'sound_system', 'projector', 'kitchen', 'bar', 'outdoor_seating', 'stage', 'dance_floor', 'green_room', 'security']
@@ -196,8 +206,14 @@ const userSchema = new mongoose.Schema({
       alcoholAllowed: { type: Boolean, default: false },
       smokingAllowed: { type: Boolean, default: false },
       minimumAge: { type: Number, default: 18 },
+      ageLimit: {
+        type: String,
+        enum: ['18+', '21+', 'All Ages'],
+        default: '18+'
+      },
       soundRestrictions: String,
-      additionalRules: String
+      additionalRules: String,
+      entryCutoffTime: String
     },
     pricing: {
       hourlyRate: Number,
@@ -207,7 +223,26 @@ const userSchema = new mongoose.Schema({
     availability: {
       daysAvailable: [{ type: String, enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] }],
       timeSlots: String
-    }
+    },
+    // Hosting Preferences
+    preferredCities: [String],
+    preferredCategories: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    preferredEventFormats: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    preferredCollaborationTypes: [{
+      type: String,
+      enum: ['venue_partnership', 'brand_sponsorship', 'co-hosting', 'content_collaboration', 'cross_promotion']
+    }],
+    preferredAudienceTypes: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    nicheCommunityDescription: String
   },
   
   // Brand Profile (for hostPartnerType: 'brand_sponsor')
@@ -243,7 +278,26 @@ const userSchema = new mongoose.Schema({
       min: Number,
       max: Number,
       currency: { type: String, default: 'INR' }
-    }
+    },
+    // Hosting Preferences
+    preferredCities: [String],
+    preferredCategories: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    preferredEventFormats: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    preferredCollaborationTypes: [{
+      type: String,
+      enum: ['venue_partnership', 'brand_sponsorship', 'co-hosting', 'content_collaboration', 'cross_promotion']
+    }],
+    preferredAudienceTypes: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    nicheCommunityDescription: String
   },
   
   // Enhanced Community Profile (for hostPartnerType: 'community_organizer')
@@ -265,7 +319,15 @@ const userSchema = new mongoose.Schema({
     instagram: String,
     facebook: String,
     website: String,
-    pastEventPhotos: [String],
+    pastEventPhotos: {
+      type: [String],
+      validate: {
+        validator: function(v) {
+          return v.length <= 5;
+        },
+        message: 'You can upload a maximum of 5 photos'
+      }
+    },
     pastEventExperience: {
       type: String,
       enum: ['0-5', '5-10', '10-30', '30-50', '50-100', '100+']
@@ -275,7 +337,26 @@ const userSchema = new mongoose.Schema({
       enum: ['0-20', '20-50', '50-100', '100-200', '200-500', '500+']
     },
     established: Date,
-    memberCount: { type: Number, default: 0 }
+    memberCount: { type: Number, default: 0 },
+    // Hosting Preferences
+    preferredCities: [String],
+    preferredCategories: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    preferredEventFormats: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    preferredCollaborationTypes: [{
+      type: String,
+      enum: ['venue_partnership', 'brand_sponsorship', 'co-hosting', 'content_collaboration', 'cross_promotion']
+    }],
+    preferredAudienceTypes: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
+    nicheCommunityDescription: String
   },
   
   // Payout Information (for host_partner roles - community_organizer, venue, brand_sponsor)
@@ -320,6 +401,14 @@ const userSchema = new mongoose.Schema({
   },
   profilePicture: String,
   bio: String,
+  
+  // Social Links (for all users)
+  socialLinks: {
+    instagram: String,
+    facebook: String,
+    website: String
+  },
+  
   isVerified: {
     type: Boolean,
     default: false
