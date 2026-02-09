@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Calendar, MapPin, Heart, Star, ArrowRight, ChevronLeft, ChevronRight, Play, Sparkles, TrendingUp, Zap } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
@@ -21,6 +21,8 @@ function Homepage() {
   const [currentMiddleTestimonial, setCurrentMiddleTestimonial] = useState(0);
   const [currentPartnerCard, setCurrentPartnerCard] = useState(0);
   const [currentPosterIndex, setCurrentPosterIndex] = useState(0);
+  const [instagramScrollIndex, setInstagramScrollIndex] = useState(0);
+  const instagramScrollRef = useRef(null);
   
   const typewriterWords = ['Find Your Tribe,'];
   const secondLineWords = 'Live Your Passions';
@@ -221,6 +223,27 @@ function Homepage() {
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Handle Instagram carousel scroll
+  const handleInstagramScroll = () => {
+    if (instagramScrollRef.current) {
+      const scrollLeft = instagramScrollRef.current.scrollLeft;
+      const cardWidth = 256 + 16; // w-64 (256px) + gap-4 (16px)
+      const index = Math.round(scrollLeft / (cardWidth * 2)); // 2 items per page
+      setInstagramScrollIndex(index);
+    }
+  };
+
+  // Scroll to specific Instagram carousel position
+  const scrollToInstagramIndex = (index) => {
+    if (instagramScrollRef.current) {
+      const cardWidth = 256 + 16; // w-64 (256px) + gap-4 (16px)
+      instagramScrollRef.current.scrollTo({
+        left: index * cardWidth * 2, // 2 items per page
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // Function to render animated letters
   const renderAnimatedText = (text, baseDelay = 0) => {
@@ -1095,17 +1118,17 @@ function Homepage() {
 
             {/* Right Side - Single Auto-Rotating Card */}
             <div className="relative flex items-center justify-center mt-8 lg:mt-0">
-              <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl transition-all duration-700 h-[580px] flex flex-col">
+              <div className="w-full max-w-md bg-white shadow-2xl transition-all duration-700 h-[640px] flex flex-col p-6">
                 {/* Fixed height image container */}
-                <div className="w-full h-[280px] bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden flex-shrink-0">
+                <div className="w-full h-[280px] flex-shrink-0 mb-4">
                   <img 
                     src={partnerCards[currentPartnerCard].image} 
                     alt={partnerCards[currentPartnerCard].title}
-                    className="w-full h-full object-cover transition-opacity duration-700"
+                    className="w-full h-full object-cover rounded-2xl transition-opacity duration-700"
                   />
                 </div>
                 {/* Content area with flex-1 to fill remaining space */}
-                <div className="flex-1 flex flex-col p-8">
+                <div className="flex-1 flex flex-col px-2">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4 transition-opacity duration-700" style={{ fontFamily: 'Oswald, sans-serif' }}>
                     {partnerCards[currentPartnerCard].title}
                   </h3>
@@ -1142,7 +1165,11 @@ function Homepage() {
 
           {/* Mobile Carousel */}
           <div className="md:hidden relative">
-            <div className="overflow-x-auto scrollbar-hide">
+            <div 
+              ref={instagramScrollRef}
+              onScroll={handleInstagramScroll}
+              className="overflow-x-auto scrollbar-hide"
+            >
               <div className="flex gap-4 pb-4">
                 {instagramPosts.map((post, index) => (
                   <a
@@ -1173,7 +1200,21 @@ function Homepage() {
             {/* Scroll indicator dots */}
             <div className="flex justify-center gap-2 mt-6">
               {Array.from({ length: Math.ceil(instagramPosts.length / 2) }).map((_, i) => (
-                <div key={i} className="w-2 h-2 rounded-full bg-gray-600"></div>
+                <button
+                  key={i}
+                  onClick={() => scrollToInstagramIndex(i)}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    minWidth: '8px',
+                    minHeight: '8px',
+                    padding: 0
+                  }}
+                  className={`rounded-full transition-all duration-300 ${
+                    instagramScrollIndex === i ? 'bg-indigo-500' : 'bg-gray-600'
+                  }`}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
               ))}
             </div>
           </div>

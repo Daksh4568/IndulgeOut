@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import NavigationBar from '../components/NavigationBar'
+import SupportModal from '../components/SupportModal'
 import { api } from '../config/api.js'
 
 const ProfileNew = () => {
@@ -25,6 +26,7 @@ const ProfileNew = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [supportModalOpen, setSupportModalOpen] = useState(false)
   
   // Section-based editing
   const [editingSection, setEditingSection] = useState(null)
@@ -545,7 +547,7 @@ const ProfileNew = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {profileData.bio && (
                       <p className="text-gray-300">{profileData.bio}</p>
                     )}
@@ -557,8 +559,50 @@ const ProfileNew = () => {
                       <Phone className="h-4 w-4 mr-2" />
                       {profileData.phoneNumber || 'Not specified'}
                     </div>
+                    
+                    {/* Logout Button */}
+                    <div className="pt-4 border-t border-gray-800">
+                      <button
+                        onClick={() => {
+                          logout();
+                          navigate('/login');
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
+              </div>
+
+              {/* Help & Support Section */}
+              <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                <div className="flex items-center gap-2 mb-4">
+                  <HelpCircle className="h-5 w-5 text-purple-500" />
+                  <h3 className="text-white font-semibold">Help & Support</h3>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Help Center
+                  </button>
+                  <button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Contact Support
+                  </button>
+                  <button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Terms & Privacy
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -935,6 +979,48 @@ const ProfileNew = () => {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Logout Section */}
+              <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <LogOut className="h-5 w-5" />
+                  Logout
+                </button>
+              </div>
+
+              {/* Help & Support Section */}
+              <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                <div className="flex items-center gap-2 mb-4">
+                  <HelpCircle className="h-5 w-5 text-purple-500" />
+                  <h3 className="text-white font-semibold">Help & Support</h3>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Help Center
+                  </button>
+                  <button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Contact Support
+                  </button>
+                  <button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Terms & Privacy
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1354,13 +1440,22 @@ const ProfileNew = () => {
                   <h3 className="text-white font-semibold">Help & Support</h3>
                 </div>
                 <div className="space-y-3">
-                  <button className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300">
+                  <button 
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300"
+                  >
                     Help Center
                   </button>
-                  <button className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300">
+                  <button 
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300"
+                  >
                     Contact Support
                   </button>
-                  <button className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300 flex items-center gap-2">
+                  <button 
+                    onClick={() => setSupportModalOpen(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300 flex items-center gap-2"
+                  >
                     <Shield className="h-4 w-4" />
                     Terms & Privacy
                   </button>
@@ -1382,6 +1477,18 @@ const ProfileNew = () => {
           </div>
         )}
       </div>
+
+      {/* Support Modal */}
+      <SupportModal 
+        isOpen={supportModalOpen} 
+        onClose={() => setSupportModalOpen(false)}
+        userRole={
+          isCommunityOrganizer ? 'Community Organizer' :
+          isVenue ? 'Venue Partner' :
+          isBrandSponsor ? 'Brand Sponsor' :
+          'Regular User'
+        }
+      />
     </div>
   )
 }

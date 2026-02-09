@@ -1,11 +1,34 @@
 import { useNotifications } from '../contexts/NotificationContext';
 import { X, Check, CheckCheck, Trash2, ExternalLink, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isToday, isThisWeek, isAfter, subWeeks } from 'date-fns';
 
 export default function NotificationDropdown({ onClose }) {
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
+
+  // Group notifications by time period
+  const groupedNotifications = () => {
+    const today = [];
+    const thisWeek = [];
+    const lastWeek = [];
+
+    notifications.forEach(notification => {
+      const date = new Date(notification.createdAt);
+      
+      if (isToday(date)) {
+        today.push(notification);
+      } else if (isThisWeek(date, { weekStartsOn: 0 })) {
+        thisWeek.push(notification);
+      } else if (isAfter(date, subWeeks(new Date(), 2))) {
+        lastWeek.push(notification);
+      }
+    });
+
+    return { today, thisWeek, lastWeek };
+  };
+
+  const groups = groupedNotifications();
 
   const handleNotificationClick = async (notification) => {
     console.log('🔔 Notification clicked:', notification);
@@ -76,140 +99,194 @@ export default function NotificationDropdown({ onClose }) {
   };
 
   return (
-    <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50">
+    <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-black rounded-lg shadow-2xl border border-gray-800 z-50">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-            Notifications
+      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <div>
+          <h3 className="text-lg font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            NOTIFICATIONS
           </h3>
           {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
-              {unreadCount}
-            </span>
+            <p className="text-sm text-gray-400 mt-1">
+              You have <span className="text-blue-400 font-semibold">{unreadCount} unread</span> notifications today
+            </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"
-              title="Mark all as read"
-            >
-              <CheckCheck className="h-4 w-4" />
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Notifications List */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className="max-h-[500px] overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            <div className="animate-spin h-8 w-8 border-4 border-purple-500 border-t-transparent rounded-full"></div>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-gray-400">
             <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p style={{ fontFamily: 'Source Serif Pro, serif' }}>No notifications yet</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {notifications.map((notification) => (
-              <div
-                key={notification._id}
-                className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${
-                  !notification.isRead ? 'bg-blue-50 dark:bg-blue-900/10' : ''
-                }`}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Icon */}
-                  <div className="text-2xl flex-shrink-0">
-                    {getNotificationIcon(notification)}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                        {notification.title}
-                      </h4>
-                      {!notification.isRead && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
-                      )}
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      {notification.message}
-                    </p>
-
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-500">
-                        {getTimeAgo(notification.createdAt)}
-                      </span>
-
-                      {notification.actionButton && (
-                        <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                          {notification.actionButton.text}
-                          <ExternalLink className="h-3 w-3" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {!notification.isRead && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markAsRead(notification._id);
-                        }}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                        title="Mark as read"
-                      >
-                        <Check className="h-4 w-4 text-gray-500" />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notification._id);
-                      }}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4 text-gray-500" />
-                    </button>
-                  </div>
+          <div>
+            {/* TODAY Section */}
+            {groups.today.length > 0 && (
+              <div className="mb-4">
+                <div className="px-4 py-2">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">TODAY</h4>
+                </div>
+                <div className="space-y-2 px-3">
+                  {groups.today.map((notification) => (
+                    <NotificationItem
+                      key={notification._id}
+                      notification={notification}
+                      onNotificationClick={handleNotificationClick}
+                      markAsRead={markAsRead}
+                      deleteNotification={deleteNotification}
+                      getNotificationIcon={getNotificationIcon}
+                      getTimeAgo={getTimeAgo}
+                    />
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* THIS WEEK Section */}
+            {groups.thisWeek.length > 0 && (
+              <div className="mb-4">
+                <div className="px-4 py-2">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">THIS WEEK</h4>
+                </div>
+                <div className="space-y-2 px-3">
+                  {groups.thisWeek.map((notification) => (
+                    <NotificationItem
+                      key={notification._id}
+                      notification={notification}
+                      onNotificationClick={handleNotificationClick}
+                      markAsRead={markAsRead}
+                      deleteNotification={deleteNotification}
+                      getNotificationIcon={getNotificationIcon}
+                      getTimeAgo={getTimeAgo}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* LAST WEEK Section */}
+            {groups.lastWeek.length > 0 && (
+              <div className="mb-4">
+                <div className="px-4 py-2">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">LAST WEEK</h4>
+                </div>
+                <div className="space-y-2 px-3">
+                  {groups.lastWeek.map((notification) => (
+                    <NotificationItem
+                      key={notification._id}
+                      notification={notification}
+                      onNotificationClick={handleNotificationClick}
+                      markAsRead={markAsRead}
+                      deleteNotification={deleteNotification}
+                      getNotificationIcon={getNotificationIcon}
+                      getTimeAgo={getTimeAgo}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-center">
+        <div className="p-3 border-t border-gray-800">
           <button
             onClick={() => {
               navigate('/notifications');
               onClose();
             }}
-            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
+            className="w-full bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white py-2 rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
           >
             View All Notifications
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// Notification Item Component
+function NotificationItem({ notification, onNotificationClick, markAsRead, deleteNotification, getNotificationIcon, getTimeAgo }) {
+  return (
+    <div
+      className={`rounded-lg p-3 cursor-pointer transition-all group relative ${
+        !notification.isRead 
+          ? 'bg-gradient-to-r from-[#4A4A8F]/40 to-[#3D3DD4]/40 hover:from-[#4A4A8F]/50 hover:to-[#3D3DD4]/50 border border-purple-500/30' 
+          : 'bg-gray-900/50 hover:bg-gray-900 border border-transparent'
+      }`}
+      onClick={() => onNotificationClick(notification)}
+    >
+      <div className="flex items-start gap-3">
+        {/* Icon */}
+        <div className="text-2xl flex-shrink-0 mt-1">
+          {getNotificationIcon(notification)}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            {notification.title}
+          </h4>
+          
+          <p className="text-xs text-gray-400 line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            {notification.message}
+          </p>
+
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs text-gray-500">
+              {getTimeAgo(notification.createdAt)}
+            </span>
+
+            {notification.actionButton && (
+              <span className="text-xs text-purple-400 flex items-center gap-1">
+                {notification.actionButton.text}
+                <ExternalLink className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions - Show on hover */}
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {!notification.isRead && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                markAsRead(notification._id);
+              }}
+              className="p-1.5 hover:bg-gray-700 rounded transition-colors"
+              title="Mark as read"
+            >
+              <Check className="h-4 w-4 text-gray-400 hover:text-white" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteNotification(notification._id);
+            }}
+            className="p-1.5 hover:bg-gray-700 rounded transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-400" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

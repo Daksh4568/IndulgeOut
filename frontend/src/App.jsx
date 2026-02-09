@@ -31,13 +31,13 @@ import VenueOnboarding from './pages/VenueOnboarding'
 import BrandOnboarding from './pages/BrandOnboarding'
 import CommunityOnboarding from './pages/CommunityOnboarding'
 import CommunityOrganizerDashboard from './pages/CommunityOrganizerDashboard'
-import Dashboard from './pages/Dashboard'
 import Profile from './pages/ProfileNew'
 import BrowseVenues from './pages/BrowseVenues'
 import BrowseSponsors from './pages/BrowseSponsors'
 import BrowseCommunities from './pages/BrowseCommunities'
 import RequestCollaboration from './pages/RequestCollaboration'
 import CollaborationManagement from './pages/CollaborationManagement'
+import ProposalForm from './pages/ProposalForm'
 import AdminDashboard from './pages/AdminDashboard'
 import VenueDashboard from './pages/VenueDashboard'
 import BrandDashboard from './pages/BrandDashboard'
@@ -49,6 +49,15 @@ import ContactUs from './pages/ContactUs'
 import TermsConditions from './pages/TermsConditions'
 import RefundsCancellations from './pages/RefundsCancellations'
 import NotificationCenter from './pages/NotificationCenter'
+import KYCSetupPage from './pages/KYCSetupPage'
+
+// Counter Forms
+import VenueCounterForm from './pages/counter/VenueCounterForm'
+import BrandCounterForm from './pages/counter/BrandCounterForm'
+import CommunityCounterToBrandForm from './pages/counter/CommunityCounterToBrandForm'
+import CommunityCounterToVenueForm from './pages/counter/CommunityCounterToVenueForm'
+import CounterDetailsView from './pages/CounterDetailsView'
+import FinalTermsView from './pages/FinalTermsView'
 
 // Create a toast context
 export const ToastContext = React.createContext(null)
@@ -110,6 +119,7 @@ function AppContent() {
         {/* Legacy Login */}
         <Route path="/login" element={<OTPLogin />} />
         <Route path="/interests" element={<InterestSelection />} />
+        <Route path="/kyc-setup" element={<ErrorBoundary><KYCSetupPage /></ErrorBoundary>} />
         <Route path="/onboarding/venue" element={<ErrorBoundary><VenueOnboarding /></ErrorBoundary>} />
         <Route path="/onboarding/brand" element={<ErrorBoundary><BrandOnboarding /></ErrorBoundary>} />
         <Route path="/onboarding/community" element={<ErrorBoundary><CommunityOnboarding /></ErrorBoundary>} />
@@ -119,7 +129,6 @@ function AppContent() {
         <Route path="/venue/dashboard" element={<ErrorBoundary><VenueDashboard /></ErrorBoundary>} />
         <Route path="/brand/dashboard" element={<ErrorBoundary><BrandDashboard /></ErrorBoundary>} />
         <Route path="/user/dashboard" element={<ErrorBoundary><UserDashboard /></ErrorBoundary>} />
-        <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
         <Route path="/profile" element={<ErrorBoundary><Profile /></ErrorBoundary>} />
         <Route path="/create-event" element={<ErrorBoundary><EventCreation /></ErrorBoundary>} />
         <Route path="/edit-event/:id" element={<ErrorBoundary><EventCreation /></ErrorBoundary>} />
@@ -134,8 +143,18 @@ function AppContent() {
         <Route path="/browse/sponsors" element={<ErrorBoundary><BrowseSponsors /></ErrorBoundary>} />
         <Route path="/browse/communities" element={<ErrorBoundary><BrowseCommunities /></ErrorBoundary>} />
         <Route path="/venue/:id/request-collaboration" element={<ErrorBoundary><RequestCollaboration /></ErrorBoundary>} />
+        <Route path="/collaboration/proposal" element={<ErrorBoundary><ProposalForm /></ErrorBoundary>} />
         <Route path="/brand/:id/propose-collaboration" element={<ErrorBoundary><RequestCollaboration /></ErrorBoundary>} />
         <Route path="/organizer/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
+        
+        {/* Counter Forms */}
+        <Route path="/collaborations/:id/counter/venue" element={<ErrorBoundary><VenueCounterForm /></ErrorBoundary>} />
+        <Route path="/collaborations/:id/counter/brand" element={<ErrorBoundary><BrandCounterForm /></ErrorBoundary>} />
+        <Route path="/collaborations/:id/counter/community-to-brand" element={<ErrorBoundary><CommunityCounterToBrandForm /></ErrorBoundary>} />
+        <Route path="/collaborations/:id/counter/community-to-venue" element={<ErrorBoundary><CommunityCounterToVenueForm /></ErrorBoundary>} />
+        <Route path="/collaborations/:id/counter-review" element={<ErrorBoundary><CounterDetailsView /></ErrorBoundary>} />
+        <Route path="/collaborations/:id/final-terms" element={<ErrorBoundary><FinalTermsView /></ErrorBoundary>} />
+        
         <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
       </Routes>
       {shouldShowFooter && (

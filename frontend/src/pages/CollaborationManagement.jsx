@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import {
   ArrowLeft, MessageCircle, Check, X, Clock, AlertCircle,
-  User, Calendar, Users, DollarSign, Send, Building2, Sparkles
+  User, Calendar, Users, DollarSign, Send, Building2, Sparkles, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
@@ -92,22 +92,66 @@ const CollaborationManagement = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusLabel = (status) => {
+    const labels = {
+      pending_admin_review: 'Pending',
+      approved_delivered: 'Awaiting Response',
+      counter_delivered: 'Counter Received',
+      confirmed: 'Confirmed',
+      declined: 'Declined',
+      rejected: 'Not Approved'
+    };
+    return labels[status] || status.replace(/_/g, ' ');
+  };
+
+  const getStatusBadge = (status, isReceived) => {
+    // Hide admin review states from users - they shouldn't know about admin layer
     const badges = {
-      submitted: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Awaiting Admin Review' },
-      admin_approved: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300', label: 'Admin Approved' },
-      admin_rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Admin Rejected' },
+      // Proposal states
+      draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Draft' },
+      pending_admin_review: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Pending' },
+      approved_delivered: { 
+        bg: 'bg-purple-100 dark:bg-purple-900/30', 
+        text: 'text-purple-700 dark:text-purple-300', 
+        label: isReceived ? 'Awaiting Your Response' : 'Delivered'
+      },
+      rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Not Approved' },
+      
+      // Counter states
+      counter_pending_review: { 
+        bg: 'bg-yellow-100 dark:bg-yellow-900/30', 
+        text: 'text-yellow-700 dark:text-yellow-300', 
+        label: 'Counter Pending'
+      },
+      counter_delivered: { 
+        bg: 'bg-orange-100 dark:bg-orange-900/30', 
+        text: 'text-orange-700 dark:text-orange-300', 
+        label: 'Counter Received - Review Required'
+      },
+      
+      // Final states
+      confirmed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: '✓ Confirmed' },
+      declined: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Declined' },
+      flagged: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Under Review' },
+      
+      // Legacy support
+      submitted: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Pending' },
+      admin_approved: { 
+        bg: 'bg-purple-100 dark:bg-purple-900/30', 
+        text: 'text-purple-700 dark:text-purple-300', 
+        label: isReceived ? 'Awaiting Your Response' : 'Delivered'
+      },
+      admin_rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Not Approved' },
       vendor_accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Accepted' },
       vendor_rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Rejected' },
       completed: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', label: 'Completed' },
       cancelled: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Cancelled' },
       expired: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Expired' },
-      // Legacy support
       pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300', label: 'Pending' },
       accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Accepted' },
       rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Rejected' }
     };
-    const badge = badges[status] || badges.submitted;
+    const badge = badges[status] || badges.pending;
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
         {badge.label}
@@ -202,17 +246,25 @@ const CollaborationManagement = () => {
             <div className="flex items-center space-x-2 overflow-x-auto">
               <span className="text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">Filter by:</span>
               <div className="flex space-x-2">
-                {['all', 'submitted', 'admin_approved', 'admin_rejected', 'vendor_accepted', 'vendor_rejected'].map(status => (
+                {[
+                  { value: 'all', label: 'All' },
+                  { value: 'pending_admin_review', label: 'Pending' },
+                  { value: 'approved_delivered', label: 'Awaiting Response' },
+                  { value: 'counter_delivered', label: 'Counter Received' },
+                  { value: 'confirmed', label: 'Confirmed' },
+                  { value: 'declined', label: 'Declined' },
+                  { value: 'rejected', label: 'Not Approved' }
+                ].map(({ value, label }) => (
                   <button
-                    key={status}
-                    onClick={() => setFilterStatus(status)}
+                    key={value}
+                    onClick={() => setFilterStatus(value)}
                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                      filterStatus === status
+                      filterStatus === value
                         ? 'bg-primary-600 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
-                    {status === 'all' ? 'All' : status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -234,7 +286,7 @@ const CollaborationManagement = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               {filterStatus === 'all' 
                 ? `You haven't ${activeTab === 'received' ? 'received' : 'sent'} any collaboration requests yet.`
-                : `No ${filterStatus.replace(/_/g, ' ')} requests to show.`}
+                : `No requests with status "${getStatusLabel(filterStatus)}" to show.`}
             </p>
             {activeTab === 'sent' && (
               <div className="flex items-center justify-center space-x-3">
@@ -377,37 +429,91 @@ const CollaborationManagement = () => {
                       </div>
                     </div>
 
-                    {/* Actions - Only show for vendors when admin has approved */}
-                    {isReceived && collab.status === 'admin_approved' && (
+                    {/* Actions for RECEIVED proposals */}
+                    {isReceived && (collab.status === 'admin_approved' || collab.status === 'approved_delivered') && (
                       <div className="flex items-center space-x-2 ml-4">
+                        <button
+                          onClick={() => {
+                            // Navigate to counter form based on collaboration type and user role
+                            const collabType = collab.collaborationType;
+                            let counterPath = '';
+                            
+                            // Determine counter form path based on recipient type and collaboration type
+                            if (collabType === 'community_to_venue') {
+                              counterPath = `/collaborations/${collab._id}/counter/venue`;
+                            } else if (collabType === 'community_to_brand') {
+                              counterPath = `/collaborations/${collab._id}/counter/brand`;
+                            } else if (collabType === 'brand_to_community') {
+                              counterPath = `/collaborations/${collab._id}/counter/community-to-brand`;
+                            } else if (collabType === 'venue_to_community') {
+                              counterPath = `/collaborations/${collab._id}/counter/community-to-venue`;
+                            }
+                            
+                            navigate(counterPath);
+                          }}
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"
+                          title="Respond to proposal"
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Respond
+                        </button>
                         <button
                           onClick={() => handleOpenResponse(collab, 'reject')}
                           className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors"
-                          title="Reject"
+                          title="Decline proposal"
                         >
                           <X className="h-5 w-5" />
                         </button>
+                      </div>
+                    )}
+
+                    {/* Actions for SENT proposals - Review Counter */}
+                    {!isReceived && collab.status === 'counter_delivered' && (
+                      <div className="flex items-center space-x-2 ml-4">
                         <button
-                          onClick={() => handleOpenResponse(collab, 'accept')}
-                          className="p-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg transition-colors"
-                          title="Accept"
+                          onClick={() => navigate(`/collaborations/${collab._id}/counter-review`)}
+                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center font-medium"
+                          title="Review counter-proposal"
                         >
-                          <Check className="h-5 w-5" />
+                          <FileText className="h-4 w-4 mr-2" />
+                          Review Counter
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Actions for CONFIRMED collaborations */}
+                    {collab.status === 'confirmed' && (
+                      <div className="flex items-center space-x-2 ml-4">
+                        <button
+                          onClick={() => navigate(`/collaborations/${collab._id}/final-terms`)}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center"
+                          title="View final confirmed terms"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Final Terms
                         </button>
                       </div>
                     )}
                     
-                    {/* Show info message for submitted/rejected requests */}
-                    {isReceived && collab.status === 'submitted' && (
+                    {/* Show info message for pending states - hide admin review mention */}
+                    {(collab.status === 'pending_admin_review' || collab.status === 'submitted') && (
                       <div className="ml-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs flex items-center">
                         <Clock className="h-4 w-4 mr-1" />
-                        <span>Awaiting admin review</span>
+                        <span>{isReceived ? 'Processing' : 'Pending'}</span>
+                      </div>
+                    )}
+
+                    {/* Show info for counter pending */}
+                    {collab.status === 'counter_pending_review' && (
+                      <div className="ml-4 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-lg text-xs flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>Processing counter</span>
                       </div>
                     )}
                     
                     {collab.status === 'admin_rejected' && collab.adminReview?.notes && (
                       <div className="ml-4 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-xs max-w-xs">
-                        <p className="font-medium mb-1">Admin: Request not approved</p>
+                        <p className="font-medium mb-1">Request not approved</p>
                         <p className="text-xs">{collab.adminReview.notes}</p>
                       </div>
                     )}
