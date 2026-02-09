@@ -220,7 +220,7 @@ export default function NavigationBar() {
               <>
                 <button
                   onClick={() => navigate('/signup')}
-                  className="text-white px-6 py-2 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
+                  className="hidden md:block text-white px-6 py-2 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
                   style={{ 
                     background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                     fontFamily: 'Oswald, sans-serif'
@@ -346,6 +346,23 @@ export default function NavigationBar() {
                   >
                     ABOUT
                   </Link>
+                  
+                  {/* Login/Signup Button - Mobile Only */}
+                  <div className="px-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigate('/signup');
+                      }}
+                      className="w-full text-white px-6 py-3 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
+                      style={{ 
+                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                        fontFamily: 'Oswald, sans-serif'
+                      }}
+                    >
+                      LOG IN/SIGN UP
+                    </button>
+                  </div>
                 </>
               ) : (
                 // Logged IN Mobile Menu

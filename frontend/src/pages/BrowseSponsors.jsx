@@ -210,7 +210,13 @@ const BrowseSponsors = () => {
       navigate('/login');
       return;
     }
-    navigate(`/brand/${brandId}/propose-collaboration`);
+    navigate('/collaboration/proposal?type=communityToBrand', {
+      state: { 
+        proposalType: 'communityToBrand',
+        recipientId: brandId,
+        recipientType: 'brand'
+      }
+    });
   };
 
   const getBrandCategoryIcon = (category) => {

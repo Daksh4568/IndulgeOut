@@ -166,21 +166,6 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
     });
   };
 
-  const getStatusBadge = () => {
-    const statusColors = {
-      active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      checked_in: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      refunded: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-    };
-
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[ticket.status]}`}>
-        {ticket.status === 'checked_in' ? '✅ Checked In' : ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
-      </span>
-    );
-  };
-
   const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleString('en-IN', {
       day: 'numeric',
@@ -194,12 +179,12 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
+        <div className="bg-black border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
           </div>
-          <p className="text-center text-gray-600 dark:text-gray-400 mt-4">Loading ticket...</p>
+          <p className="text-center text-gray-400 mt-4">Loading ticket...</p>
         </div>
       </div>
     );
@@ -207,21 +192,21 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
+        <div className="bg-black border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Error</h3>
+            <h3 className="text-xl font-bold text-white">Error</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              className="text-gray-400 hover:text-white"
             >
               <X className="h-6 w-6" />
             </button>
           </div>
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-red-400">{error}</p>
           <button
             onClick={onClose}
-            className="mt-4 w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className="mt-4 w-full bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white py-2 rounded-lg hover:opacity-90 transition-opacity"
           >
             Close
           </button>
@@ -233,124 +218,117 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
   if (!ticket) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full my-8">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <TicketIcon className="h-6 w-6 text-green-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Event Ticket</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
+      <div className="bg-black rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto my-8 relative border border-gray-800 shadow-2xl">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"
+        >
+          <X className="h-6 w-6" />
+        </button>
 
         {/* Ticket Content */}
         <div className="p-6">
-          {/* Ticket Number & Status */}
-          <div className="flex items-center justify-between mb-6 pb-6 border-b-2 border-dashed border-gray-300 dark:border-gray-600">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Ticket Number</p>
-              <p className="text-2xl font-bold text-green-600">{ticket.ticketNumber}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                {ticket.metadata?.ticketType || 'General'} Admission
-                {ticket.quantity > 1 && (
-                  <span className="ml-2 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold">
-                    × {ticket.quantity} Spots
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="text-right">
-              {getStatusBadge()}
-              {ticket.status === 'checked_in' && ticket.checkInTime && (
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  <p className="font-medium">Checked in at</p>
-                  <p className="text-xs">{formatDateTime(ticket.checkInTime)}</p>
+          {/* Status Badge */}
+          {ticket.status === 'checked_in' && (
+            <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 text-green-400">
+                <div className="w-5 h-5 rounded-full border-2 border-green-400 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                 </div>
+                <span className="text-sm font-medium">Checked In</span>
+              </div>
+              {ticket.checkInTime && (
+                <span className="text-xs text-gray-500 ml-auto">
+                  {formatDateTime(ticket.checkInTime)}
+                </span>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Event Title */}
+          <h2 className="text-2xl font-bold text-white mb-2">{ticket.event.title}</h2>
+          <p className="text-xs text-gray-400 uppercase tracking-wider mb-6">
+            {ticket.metadata?.ticketType || 'General'} Admission
+            {ticket.quantity > 1 && ` × ${ticket.quantity} Spots`}
+          </p>
 
           {/* Event Details */}
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{ticket.event.title}</h3>
-            
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                <Calendar className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Date</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(ticket.event.date)}</p>
-                </div>
+          <div className="space-y-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Date</p>
               </div>
+              <p className="text-white text-sm ml-6">{formatDate(ticket.event.date)}</p>
+            </div>
 
-              <div className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                <Clock className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Time</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{ticket.event.time}</p>
-                </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="h-4 w-4 text-gray-500" />
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Time</p>
               </div>
+              <p className="text-white text-sm ml-6">{ticket.event.time}</p>
+            </div>
 
-              <div className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                <MapPin className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Location</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {ticket.event.location.address}<br />
-                    {ticket.event.location.city}
-                  </p>
-                </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Location</p>
               </div>
+              <p className="text-white text-sm ml-6">
+                {ticket.event.location.address}
+              </p>
+              <p className="text-gray-400 text-sm ml-6">{ticket.event.location.city}</p>
             </div>
           </div>
 
-          {/* QR Code */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <QrCode className="h-5 w-5 text-green-600" />
-              <h4 className="font-semibold text-gray-900 dark:text-white">Entry QR Code</h4>
+          {/* Divider */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex-1 border-t border-dashed border-gray-700"></div>
+            <div className="flex-1 border-t border-dashed border-gray-700"></div>
+            <div className="flex-1 border-t border-dashed border-gray-700"></div>
+            <div className="flex-1 border-t border-dashed border-gray-700"></div>
+            <div className="flex-1 border-t border-dashed border-gray-700"></div>
+          </div>
+
+          {/* QR Code Section */}
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <QrCode className="h-4 w-4 text-gray-500" />
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Entry QR Code</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 flex justify-center">
+            <div className="bg-white rounded-lg p-4 inline-block">
               <img
                 src={ticket.qrCode}
                 alt="Ticket QR Code"
-                className="w-64 h-64 object-contain"
+                className="w-48 h-48 object-contain"
               />
             </div>
-            <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-              Show this QR code at the event entrance
-            </p>
           </div>
 
-          {/* Purchase Info */}
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-6">
-            <span>Price Paid: ₹{ticket.price.amount.toLocaleString('en-IN')}</span>
-            <span>Purchased: {new Date(ticket.purchaseDate).toLocaleDateString('en-IN')}</span>
+          {/* Ticket ID */}
+          <div className="mb-6">
+            <div className="border border-gray-700 rounded-lg px-4 py-3 text-center">
+              <p className="text-xs text-gray-500 mb-1">Ticket ID</p>
+              <p className="text-white font-mono text-sm tracking-wider">{ticket.ticketNumber}</p>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={handleDownload}
-              className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <Download className="h-5 w-5" />
-              Download / Print Ticket
-            </button>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
-            >
-              Close
-            </button>
-          </div>
+          {/* Download Button */}
+          <button
+            onClick={handleDownload}
+            className="w-full bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white py-3 rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center justify-center gap-2"
+          >
+            <Download className="h-5 w-5" />
+            DOWNLOAD TICKET
+          </button>
         </div>
+
+        {/* Decorative semicircle cuts on sides - positioned at divider */}
+        <div className="absolute left-0 top-[52%] -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full border-2 border-gray-800" style={{ background: 'rgba(0, 0, 0, 0.85)' }}></div>
+        <div className="absolute right-0 top-[52%] -translate-y-1/2 translate-x-1/2 w-10 h-10 rounded-full border-2 border-gray-800" style={{ background: 'rgba(0, 0, 0, 0.85)' }}></div>
       </div>
     </div>
   );

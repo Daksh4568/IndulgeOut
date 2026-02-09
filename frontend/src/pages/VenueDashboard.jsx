@@ -45,6 +45,11 @@ const VenueDashboard = () => {
 
   const handleActionClick = (actionType, itemId) => {
     switch (actionType) {
+      case 'missing_kyc':
+      case 'complete_kyc':
+      case 'kyc_required':
+        navigate('/kyc-setup');
+        break;
       case 'collaboration_request':
         navigate(`/organizer/collaborations?id=${itemId}`);
         break;
@@ -220,11 +225,11 @@ const VenueDashboard = () => {
               </div>
 
               {actionsRequired && actionsRequired.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
                   {actionsRequired.map((action, index) => (
                     <div
                       key={index}
-                      className={`bg-zinc-900 rounded-xl p-5 border transition-all ${
+                      className={`flex-shrink-0 w-80 bg-zinc-900 rounded-xl p-5 border transition-all ${
                         action.priority === 'high' 
                           ? 'border-red-500/50 hover:border-red-500' 
                           : 'border-yellow-500/50 hover:border-yellow-500'
@@ -249,7 +254,7 @@ const VenueDashboard = () => {
                       <h3 className="text-lg font-semibold text-white mb-2">
                         {action.title}
                       </h3>
-                      <p className="text-sm text-gray-400 mb-4">
+                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">
                         {action.description}
                       </p>
                       <button

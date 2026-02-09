@@ -335,7 +335,7 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
             {/* Today Toggle */}
             <button
               onClick={() => updateFilter('showToday', !filters.showToday)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
                 filters.showToday
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
                   : 'border-gray-700 hover:border-purple-600 text-white'
@@ -348,7 +348,7 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
             {/* Weekend Toggle */}
             <button
               onClick={() => updateFilter('showWeekend', !filters.showWeekend)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
                 filters.showWeekend
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
                   : 'border-gray-700 hover:border-purple-600 text-white'
@@ -362,7 +362,7 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
             <button
               onClick={handleNearMe}
               disabled={isGettingLocation}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
                 filters.useGeolocation
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
                   : 'border-gray-700 hover:border-purple-600 text-white'
@@ -375,7 +375,7 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
             </button>
 
             {/* City Filter */}
-            <div className="relative">
+            <div className="hidden sm:block relative">
               <button
                 onClick={() => setShowCityDropdown(!showCityDropdown)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
@@ -411,7 +411,7 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
             {activeFilterCount > 0 && (
               <button
                 onClick={clearFilters}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700 hover:border-red-500 hover:text-red-500 transition-all text-sm font-medium text-white"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700 hover:border-red-500 hover:text-red-500 transition-all text-sm font-medium text-white"
               >
                 <X className="h-4 w-4" />
                 Clear ({activeFilterCount})

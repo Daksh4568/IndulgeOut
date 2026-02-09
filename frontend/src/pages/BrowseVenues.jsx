@@ -206,7 +206,13 @@ const BrowseVenues = () => {
       navigate('/login');
       return;
     }
-    navigate(`/venue/${venueId}/request-collaboration`);
+    navigate('/collaboration/proposal?type=communityToVenue', {
+      state: { 
+        proposalType: 'communityToVenue',
+        recipientId: venueId,
+        recipientType: 'venue'
+      }
+    });
   };
 
   const getVenueTypeIcon = (venueType) => {

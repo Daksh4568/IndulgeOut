@@ -126,55 +126,54 @@ const CommunityOrganizerDashboard = () => {
     };
 
     return (
-      <div className="max-h-[500px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+      <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
         {actionItems.map((item) => (
           <div
             key={item.id}
-            className={`border rounded-lg p-4 ${getActionColor(item.priority)}`}
+            className={`flex-shrink-0 w-80 border rounded-xl p-5 ${getActionColor(item.priority)}`}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3 flex-1">
-                <div className={`p-2 rounded-lg ${
-                  item.priority === 'high' ? 'text-red-600 bg-red-100 dark:bg-red-900/40' :
-                  item.priority === 'medium' ? 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/40' :
-                  'text-blue-600 bg-blue-100 dark:bg-blue-900/40'
-                }`}>
-                  {getActionIcon(item.type)}
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    {item.title}
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                    {item.description}
-                  </p>
-                  {item.metadata && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                      {item.metadata.eventName && (
-                        <div>Event: <span className="font-medium">{item.metadata.eventName}</span></div>
-                      )}
-                      {item.metadata.daysUntil && (
-                        <div>Time left: <span className="font-medium">{item.metadata.daysUntil} days</span></div>
-                      )}
-                    </div>
-                  )}
-                </div>
+            <div className="flex items-start justify-between mb-3">
+              <div className={`p-2 rounded-lg ${
+                item.priority === 'high' ? 'text-red-600 bg-red-100 dark:bg-red-900/40' :
+                item.priority === 'medium' ? 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/40' :
+                'text-blue-600 bg-blue-100 dark:bg-blue-900/40'
+              }`}>
+                {getActionIcon(item.type)}
               </div>
-              <div className="flex items-center space-x-2 ml-4">
-                <button
-                  onClick={() => handleActionClick(item)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    item.priority === 'high' 
-                      ? 'bg-red-600 hover:bg-red-700 text-white' 
-                      : item.priority === 'medium'
-                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  {item.ctaText || 'Fix Now'}
-                </button>
-              </div>
+              {item.priority === 'high' && (
+                <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
+                  High Priority
+                </span>
+              )}
             </div>
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+              {item.title}
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+              {item.description}
+            </p>
+            {item.metadata && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-4">
+                {item.metadata.eventName && (
+                  <div>Event: <span className="font-medium">{item.metadata.eventName}</span></div>
+                )}
+                {item.metadata.daysUntil && (
+                  <div>Time left: <span className="font-medium">{item.metadata.daysUntil} days</span></div>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => handleActionClick(item)}
+              className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                item.priority === 'high' 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : item.priority === 'medium'
+                  ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {item.ctaText || 'Fix Now'}
+            </button>
           </div>
         ))}
       </div>
@@ -190,7 +189,8 @@ const CommunityOrganizerDashboard = () => {
         navigate(`/organizer/events/${action.eventId}/edit`);
         break;
       case 'missing_kyc':
-        navigate('/organizer/settings/payout');
+      case 'complete_kyc':
+        navigate('/kyc-setup');
         break;
       case 'low_fill':
         navigate(`/organizer/events/${action.eventId}/promote`);

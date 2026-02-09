@@ -168,7 +168,30 @@ const BrowseCommunities = () => {
       navigate('/login');
       return;
     }
-    navigate(`/community/${communityId}/propose-collaboration`);
+    
+    // Determine proposal type based on user role
+    let proposalType;
+    let proposerType;
+    
+    if (user.role === 'brand') {
+      proposalType = 'brandToCommunity';
+      proposerType = 'brand';
+    } else if (user.role === 'venue') {
+      proposalType = 'venueToCommunity';
+      proposerType = 'venue';
+    } else {
+      alert('Only Brands and Venues can propose collaborations to Communities');
+      return;
+    }
+    
+    navigate(`/collaboration/proposal?type=${proposalType}`, {
+      state: { 
+        proposalType,
+        recipientId: communityId,
+        recipientType: 'community',
+        proposerType
+      }
+    });
   };
 
   const getCommunityTypeIcon = (type) => {
