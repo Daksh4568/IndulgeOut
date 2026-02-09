@@ -23,6 +23,7 @@ const userDashboardRoutes = require('./routes/userDashboard.js');
 const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
 const notificationRoutes = require('./routes/notifications.js');
+const supportRoutes = require('./routes/support.js');
 const { startAllJobs } = require('./jobs/scheduledJobs.js');
 
 const app = express();
@@ -128,6 +129,7 @@ app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/support', supportRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
@@ -143,6 +145,7 @@ console.log('✅ All routes registered:', [
   '/api/brands',
   '/api/collaborations',
   '/api/notifications',
+  '/api/support',
   '/api/admin'
 ]);
 

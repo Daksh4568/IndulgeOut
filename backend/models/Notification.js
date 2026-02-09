@@ -70,7 +70,14 @@ const notificationSchema = new mongoose.Schema({
       // Venue Notifications - Status Updates
       'event_reminder_venue',
       'venue_rating_updated',
-      'performance_report_ready_venue'
+      'performance_report_ready_venue',
+      
+      // New Collaboration System Notifications
+      'collaboration_proposal_received',   // When admin approves proposal
+      'collaboration_counter_received',    // When admin approves counter
+      'collaboration_rejected',            // When admin rejects submission
+      'collaboration_confirmed',           // Final agreement reached
+      'collaboration_declined'             // Either party declines
     ]
   },
   category: {

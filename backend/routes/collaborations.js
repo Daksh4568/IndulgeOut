@@ -1,232 +1,505 @@
 const express = require('express');
 const router = express.Router();
 const Collaboration = require('../models/Collaboration');
+const CollaborationCounter = require('../models/CollaborationCounter');
+const User = require('../models/User');
+const { createNotification } = require('../services/notificationService');
+const { scanFormData, generateFlags } = require('../services/complianceService');
 const { authMiddleware } = require('../utils/authUtils');
-const notificationService = require('../services/notificationService');
 
-// @route   GET /api/collaborations/received
-// @desc    Get all collaboration requests received by the user
+// @route   POST /api/collaborations/propose
+// @desc    Submit a new collaboration proposal
 // @access  Private
-router.get('/received', authMiddleware, async (req, res) => {
+router.post('/propose', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.userId;
-    
-    const collaborations = await Collaboration.find({
-      'recipient.user': userId
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const {
+      type,
+      recipientId,
+      recipientType,
+      formData,
+    } = req.body;
 
-    res.json(collaborations);
+    // Validation
+    if (!type || !recipientId || !recipientType || !formData) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+      });
+    }
+
+    // Verify recipient exists
+    const recipient = await User.findById(recipientId);
+    if (!recipient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Recipient not found',
+      });
+    }
+
+    // Determine proposer type from user role
+    const proposerType = req.user.role === 'community_organizer' ? 'community'
+      : req.user.role === 'venue' ? 'venue'
+      : req.user.role === 'brand_sponsor' ? 'brand'
+      : null;
+
+    if (!proposerType) {
+      return res.status(403).json({
+        success: false,
+        error: 'Invalid user role for proposing collaborations',
+      });
+    }
+
+    // Scan for compliance violations
+    const complianceScan = scanFormData(formData);
+    const complianceFlags = generateFlags(complianceScan);
+
+    // Create collaboration
+    const collaboration = new Collaboration({
+      type,
+      proposerId: req.user.userId,
+      proposerType,
+      recipientId,
+      recipientType,
+      formData,
+      status: 'pending_admin_review',
+      complianceFlags,
+      isDraft: false,
+    });
+
+    await collaboration.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Your request has been sent successfully',
+      data: {
+        id: collaboration._id,
+        status: 'under_review',
+        type: collaboration.type,
+      },
+    });
   } catch (error) {
-    console.error('Error fetching received collaborations:', error);
-    res.status(500).json({ message: 'Server error while fetching collaborations' });
+    console.error('Error submitting proposal:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit proposal',
+    });
+  }
+});
+
+// @route   POST /api/collaborations/draft
+// @desc    Save proposal as draft
+// @access  Private
+router.post('/draft', authMiddleware, async (req, res) => {
+  try {
+    const { type, recipientId, recipientType, formData } = req.body;
+
+    const proposerType = req.user.role === 'community_organizer' ? 'community'
+      : req.user.role === 'venue' ? 'venue'
+      : req.user.role === 'brand_sponsor' ? 'brand'
+      : null;
+
+    const collaboration = new Collaboration({
+      type,
+      proposerId: req.user.userId,
+      proposerType,
+      recipientId,
+      recipientType,
+      formData,
+      status: 'draft',
+      isDraft: true,
+    });
+
+    await collaboration.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Draft saved successfully',
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error saving draft:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save draft',
+    });
+  }
+});
+
+// @route   GET /api/collaborations
+// @desc    Get all user's collaborations (sent + received)
+// @access  Private
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const collaborations = await Collaboration.getUserCollaborations(req.user.userId);
+
+    res.json({
+      success: true,
+      data: collaborations,
+    });
+  } catch (error) {
+    console.error('Error fetching collaborations:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch collaborations',
+    });
   }
 });
 
 // @route   GET /api/collaborations/sent
-// @desc    Get all collaboration requests sent by the user
+// @desc    Get proposals sent by user
 // @access  Private
 router.get('/sent', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.userId;
-    
-    const collaborations = await Collaboration.find({
-      'initiator.user': userId
+    const { status } = req.query;
+
+    const query = {
+      proposerId: req.user.userId,
+      isDraft: false,
+    };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const proposals = await Collaboration.find(query)
+      .populate('recipientId', 'username email role profilePicture')
+      .sort({ createdAt: -1 });
+
+    const mapped = proposals.map(p => ({
+      ...p.toObject(),
+      userFacingStatus: mapStatusToUserFacing(p.status, 'proposer'),
+    }));
+
+    res.json({
+      success: true,
+      data: mapped,
+    });
+  } catch (error) {
+    console.error('Error fetching sent proposals:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch sent proposals',
+    });
+  }
+});
+
+
+// @route   GET /api/collaborations/received
+// @desc    Get proposals received by user (only admin-approved ones)
+// @access  Private
+router.get('/received', authMiddleware, async (req, res) => {
+  try {
+    const proposals = await Collaboration.find({
+      recipientId: req.user.userId,
+      status: { $in: ['approved_delivered', 'counter_pending_review', 'counter_delivered', 'confirmed', 'declined'] },
+      isDraft: false,
     })
-      .sort({ createdAt: -1 })
-      .lean();
+      .populate('proposerId', 'username email role profilePicture')
+      .sort({ createdAt: -1 });
 
-    res.json(collaborations);
-  } catch (error) {
-    console.error('Error fetching sent collaborations:', error);
-    res.status(500).json({ message: 'Server error while fetching collaborations' });
-  }
-});
-
-// @route   POST /api/collaborations/:id/accept
-// @desc    Accept a collaboration request
-// @access  Private
-router.post('/:id/accept', authMiddleware, async (req, res) => {
-  try {
-    const collaborationId = req.params.id;
-    const userId = req.user.userId;
-    const { responseMessage } = req.body;
-
-    const collaboration = await Collaboration.findById(collaborationId);
-
-    if (!collaboration) {
-      return res.status(404).json({ message: 'Collaboration request not found' });
-    }
-
-    // Verify user is the recipient
-    if (collaboration.recipient.user.toString() !== userId.toString()) {
-      return res.status(403).json({ message: 'You are not authorized to respond to this request' });
-    }
-
-    // Check if already responded
-    if (collaboration.status !== 'pending') {
-      return res.status(400).json({ message: 'This request has already been responded to' });
-    }
-
-    // Accept the collaboration
-    await collaboration.accept(responseMessage);
-
-    // Send notification to initiator
-    setImmediate(async () => {
-      try {
-        const initiatorType = collaboration.initiator.type; // 'community', 'venue', 'brand'
-        const recipientType = collaboration.recipient.type;
-        
-        if (recipientType === 'venue' && initiatorType === 'community') {
-          // Venue responded to community's hosting request
-          await notificationService.notifyVenueResponseReceived(
-            collaboration.initiator.user,
-            collaboration.recipient.name,
-            collaborationId
-          );
-        } else if (recipientType === 'brand' && initiatorType === 'community') {
-          // Brand responded to community's proposal
-          await notificationService.notifyBrandProposalReceived(
-            collaboration.initiator.user,
-            collaboration.recipient.name,
-            collaborationId
-          );
-        } else if (recipientType === 'community' && initiatorType === 'brand') {
-          // Community responded to brand's proposal
-          await notificationService.notifyCommunityProposalReceived(
-            collaboration.initiator.user,
-            collaboration.recipient.name,
-            collaborationId
-          );
-        }
-      } catch (error) {
-        console.error('Failed to send collaboration notification:', error);
-      }
-    });
+    const mapped = proposals.map(p => ({
+      ...p.toObject(),
+      userFacingStatus: mapStatusToUserFacing(p.status, 'recipient'),
+    }));
 
     res.json({
-      message: 'Collaboration request accepted successfully',
-      collaboration
+      success: true,
+      data: mapped,
     });
   } catch (error) {
-    console.error('Error accepting collaboration:', error);
-    res.status(500).json({ message: 'Server error while accepting collaboration' });
-  }
-});
-
-// @route   POST /api/collaborations/:id/reject
-// @desc    Reject a collaboration request
-// @access  Private
-router.post('/:id/reject', authMiddleware, async (req, res) => {
-  try {
-    const collaborationId = req.params.id;
-    const userId = req.user.userId;
-    const { responseMessage } = req.body;
-
-    const collaboration = await Collaboration.findById(collaborationId);
-
-    if (!collaboration) {
-      return res.status(404).json({ message: 'Collaboration request not found' });
-    }
-
-    // Verify user is the recipient
-    if (collaboration.recipient.user.toString() !== userId.toString()) {
-      return res.status(403).json({ message: 'You are not authorized to respond to this request' });
-    }
-
-    // Check if already responded
-    if (collaboration.status !== 'pending') {
-      return res.status(400).json({ message: 'This request has already been responded to' });
-    }
-
-    // Reject the collaboration
-    await collaboration.reject(responseMessage);
-
-    // TODO: Send notification email to initiator
-
-    res.json({
-      message: 'Collaboration request rejected',
-      collaboration
+    console.error('Error fetching received proposals:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch received proposals',
     });
-  } catch (error) {
-    console.error('Error rejecting collaboration:', error);
-    res.status(500).json({ message: 'Server error while rejecting collaboration' });
-  }
-});
-
-// @route   POST /api/collaborations/:id/cancel
-// @desc    Cancel a collaboration request (by initiator)
-// @access  Private
-router.post('/:id/cancel', authMiddleware, async (req, res) => {
-  try {
-    const collaborationId = req.params.id;
-    const userId = req.user.userId;
-
-    const collaboration = await Collaboration.findById(collaborationId);
-
-    if (!collaboration) {
-      return res.status(404).json({ message: 'Collaboration request not found' });
-    }
-
-    // Verify user is the initiator
-    if (collaboration.initiator.user.toString() !== userId.toString()) {
-      return res.status(403).json({ message: 'You are not authorized to cancel this request' });
-    }
-
-    // Check if can be cancelled
-    if (collaboration.status !== 'pending') {
-      return res.status(400).json({ message: 'Only pending requests can be cancelled' });
-    }
-
-    // Cancel the collaboration
-    await collaboration.cancel();
-
-    res.json({
-      message: 'Collaboration request cancelled successfully',
-      collaboration
-    });
-  } catch (error) {
-    console.error('Error cancelling collaboration:', error);
-    res.status(500).json({ message: 'Server error while cancelling collaboration' });
   }
 });
 
 // @route   GET /api/collaborations/:id
-// @desc    Get collaboration details
+// @desc    Get single collaboration details
 // @access  Private
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const collaborationId = req.params.id;
-    const userId = req.user.userId;
-
-    const collaboration = await Collaboration.findById(collaborationId).lean();
+    const collaboration = await Collaboration.findById(req.params.id)
+      .populate('proposerId', 'username email role profilePicture')
+      .populate('recipientId', 'username email role profilePicture')
+      .populate('latestCounterId');
 
     if (!collaboration) {
-      return res.status(404).json({ message: 'Collaboration request not found' });
-    }
-
-    // Verify user is either initiator or recipient
-    const isInitiator = collaboration.initiator.user.toString() === userId.toString();
-    const isRecipient = collaboration.recipient.user.toString() === userId.toString();
-
-    if (!isInitiator && !isRecipient) {
-      return res.status(403).json({ message: 'You are not authorized to view this request' });
-    }
-
-    // Mark as viewed if user is recipient and it's unread
-    if (isRecipient && !collaboration.viewed) {
-      await Collaboration.findByIdAndUpdate(collaborationId, {
-        viewed: true,
-        viewedAt: new Date()
+      return res.status(404).json({
+        success: false,
+        error: 'Collaboration not found',
       });
     }
 
-    res.json(collaboration);
+    if (!collaboration.isUserInvolved(req.user.userId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized access',
+      });
+    }
+
+    const userRole = collaboration.getUserRole(req.user.userId);
+
+    res.json({
+      success: true,
+      data: {
+        ...collaboration.toObject(),
+        userRole,
+        userFacingStatus: mapStatusToUserFacing(collaboration.status, userRole),
+      },
+    });
   } catch (error) {
-    console.error('Error fetching collaboration details:', error);
-    res.status(500).json({ message: 'Server error while fetching collaboration details' });
+    console.error('Error fetching collaboration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch collaboration',
+    });
   }
 });
+
+// @route   POST /api/collaborations/:id/counter
+// @desc    Submit counter-proposal
+// @access  Private
+router.post('/:id/counter', authMiddleware, async (req, res) => {
+  try {
+    const { counterData } = req.body;
+
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collaboration not found',
+      });
+    }
+
+    if (!collaboration.recipientId.equals(req.user.userId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only recipient can submit counter-proposal',
+      });
+    }
+
+    if (collaboration.status !== 'approved_delivered') {
+      return res.status(400).json({
+        success: false,
+        error: 'Collaboration is not in correct status for counter submission',
+      });
+    }
+
+    const complianceScan = scanFormData(counterData);
+    const complianceFlags = generateFlags(complianceScan);
+
+    const counter = new CollaborationCounter({
+      collaborationId: collaboration._id,
+      responderId: req.user.userId,
+      responderType: collaboration.recipientType,
+      counterData,
+      status: 'pending_admin_review',
+    });
+
+    await counter.save();
+
+    collaboration.status = 'counter_pending_review';
+    collaboration.hasCounter = true;
+    collaboration.latestCounterId = counter._id;
+    if (complianceFlags.length > 0) {
+      collaboration.complianceFlags = [...collaboration.complianceFlags, ...complianceFlags];
+    }
+    await collaboration.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Your response has been sent successfully',
+      data: {
+        id: counter._id,
+        status: 'processing',
+      },
+    });
+  } catch (error) {
+    console.error('Error submitting counter:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit counter-proposal',
+    });
+  }
+});
+
+// @route   PUT /api/collaborations/:id/accept
+// @desc    Accept final terms
+// @access  Private
+router.put('/:id/accept', authMiddleware, async (req, res) => {
+  try {
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collaboration not found',
+      });
+    }
+
+    if (!collaboration.isUserInvolved(req.user.userId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized',
+      });
+    }
+
+    collaboration.status = 'confirmed';
+    await collaboration.save();
+
+    const otherPartyId = collaboration.proposerId.equals(req.user.userId)
+      ? collaboration.recipientId
+      : collaboration.proposerId;
+
+    await createNotification({
+      recipientId: otherPartyId,
+      type: 'collaboration_confirmed',
+      category: 'status_update',
+      title: 'Collaboration Confirmed!',
+      message: 'The collaboration terms have been accepted.',
+      relatedCollaboration: collaboration._id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Collaboration confirmed!',
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error accepting collaboration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to accept collaboration',
+    });
+  }
+});
+
+// @route   PUT /api/collaborations/:id/decline
+// @desc    Decline collaboration
+// @access  Private
+router.put('/:id/decline', authMiddleware, async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collaboration not found',
+      });
+    }
+
+    if (!collaboration.isUserInvolved(req.user.userId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized',
+      });
+    }
+
+    collaboration.status = 'declined';
+    if (reason) {
+      collaboration.rejectionReason = reason;
+    }
+    await collaboration.save();
+
+    const otherPartyId = collaboration.proposerId.equals(req.user.userId)
+      ? collaboration.recipientId
+      : collaboration.proposerId;
+
+    await createNotification({
+      recipientId: otherPartyId,
+      type: 'collaboration_declined',
+      category: 'status_update',
+      title: 'Collaboration Declined',
+      message: reason || 'The collaboration has been declined.',
+      relatedCollaboration: collaboration._id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Collaboration declined',
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error declining collaboration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to decline collaboration',
+    });
+  }
+});
+
+// @route   DELETE /api/collaborations/:id
+// @desc    Delete draft collaboration
+// @access  Private
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collaboration not found',
+      });
+    }
+
+    if (!collaboration.proposerId.equals(req.user.userId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized',
+      });
+    }
+
+    if (!collaboration.isDraft) {
+      return res.status(400).json({
+        success: false,
+        error: 'Can only delete draft collaborations',
+      });
+    }
+
+    await collaboration.deleteOne();
+
+    res.json({
+      success: true,
+      message: 'Draft deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting draft:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete draft',
+    });
+  }
+});
+
+// Helper function to map internal status to user-facing status
+function mapStatusToUserFacing(status, userRole) {
+  const statusMap = {
+    proposer: {
+      'draft': 'Draft',
+      'pending_admin_review': 'Under Review',
+      'approved_delivered': 'Sent to Recipient',
+      'rejected': 'Needs Revision',
+      'counter_pending_review': 'Processing Response',
+      'counter_delivered': 'Response Received',
+      'confirmed': 'Confirmed',
+      'declined': 'Declined',
+      'flagged': 'Under Review',
+    },
+    recipient: {
+      'approved_delivered': 'New Proposal',
+      'counter_pending_review': 'Processing Response',
+      'counter_delivered': 'Response Sent',
+      'confirmed': 'Confirmed',
+      'declined': 'Declined',
+    },
+  };
+
+  return statusMap[userRole]?.[status] || status;
+}
 
 module.exports = router;

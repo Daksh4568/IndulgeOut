@@ -371,6 +371,7 @@ const userSchema = new mongoose.Schema({
     },
     panNumber: String,
     gstNumber: String,
+    idProofUrl: String, // KYC document (Aadhaar, Passport, etc.)
     isVerified: { type: Boolean, default: false },
     verifiedAt: Date,
     addedAt: { type: Date, default: Date.now }

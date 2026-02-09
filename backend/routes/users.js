@@ -1,10 +1,18 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 const User = require('../models/User.js');
 const Community = require('../models/Community.js');
 const cloudinary = require('../config/cloudinary.js');
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for ID proof documents
+});
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -348,7 +356,7 @@ router.put('/profile/hosting-preferences', authenticateToken, async (req, res) =
 });
 
 // Update payout information
-router.put('/profile/payout', authenticateToken, async (req, res) => {
+router.put('/profile/payout', authenticateToken, upload.single('idProof'), async (req, res) => {
   try {
     const { accountNumber, ifscCode, accountHolderName, bankName, accountType, panNumber, gstNumber } = req.body;
 
@@ -362,6 +370,37 @@ router.put('/profile/payout', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Payout information only available for host partners' });
     }
 
+    // Handle ID proof file upload if present
+    let idProofUrl = user.payoutInfo?.idProofUrl; // Keep existing URL if no new file
+    if (req.file) {
+      try {
+        // Upload to Cloudinary
+        const uploadPromise = new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'kyc_documents',
+              resource_type: 'auto', // Handles images, PDFs, videos
+              allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'mp4']
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+
+        const uploadResult = await uploadPromise;
+        idProofUrl = uploadResult.secure_url;
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({ 
+          message: 'Failed to upload ID proof document', 
+          error: uploadError.message 
+        });
+      }
+    }
+
     // Update only specific fields without replacing the entire object
     if (!user.payoutInfo) user.payoutInfo = {};
     if (accountNumber !== undefined) user.payoutInfo.accountNumber = accountNumber;
@@ -371,6 +410,7 @@ router.put('/profile/payout', authenticateToken, async (req, res) => {
     if (accountType !== undefined) user.payoutInfo.accountType = accountType;
     if (panNumber !== undefined) user.payoutInfo.panNumber = panNumber;
     if (gstNumber !== undefined) user.payoutInfo.gstNumber = gstNumber;
+    if (idProofUrl) user.payoutInfo.idProofUrl = idProofUrl; // Save ID proof URL
     if (!user.payoutInfo.addedAt) user.payoutInfo.addedAt = new Date();
 
     await user.save();

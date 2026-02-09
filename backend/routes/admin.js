@@ -473,4 +473,469 @@ router.get('/revenue', requirePermission('view_analytics'), async (req, res) => 
   }
 });
 
+// ==================== COLLABORATION MANAGEMENT ====================
+
+const CollaborationCounter = require('../models/CollaborationCounter');
+const { createNotification } = require('../services/notificationService');
+
+// @route   GET /api/admin/collaborations/pending
+// @desc    Get pending collaboration proposals for review
+// @access  Admin only
+router.get('/collaborations/pending', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const pending = await Collaboration.getPendingReviews();
+
+    res.json({
+      success: true,
+      data: pending,
+      count: pending.length,
+    });
+  } catch (error) {
+    console.error('Error fetching pending collaborations:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch pending collaborations' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/flagged
+// @desc    Get flagged collaborations
+// @access  Admin only
+router.get('/collaborations/flagged', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const flagged = await Collaboration.find({ 
+      complianceFlags: { $exists: true, $ne: [] } 
+    })
+      .populate('proposerId', 'username email role profilePicture')
+      .populate('recipientId', 'username email role profilePicture')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: flagged,
+      count: flagged.length,
+    });
+  } catch (error) {
+    console.error('Error fetching flagged collaborations:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch flagged collaborations' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/all
+// @desc    Get all collaborations with filters
+// @access  Admin only
+router.get('/collaborations/all', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const { status, type, page = 1, limit = 20 } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (type) query.type = type;
+
+    const collaborations = await Collaboration.find(query)
+      .populate('proposerId', 'username email role profilePicture')
+      .populate('recipientId', 'username email role profilePicture')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await Collaboration.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: collaborations,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching collaborations:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch collaborations' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/:id
+// @desc    Get single collaboration details for review
+// @access  Admin only
+router.get('/collaborations/:id', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const collaboration = await Collaboration.findById(req.params.id)
+      .populate('proposerId', 'username email role profilePicture phone')
+      .populate('recipientId', 'username email role profilePicture phone')
+      .populate('adminReviewedBy', 'username email')
+      .populate('latestCounterId');
+
+    if (!collaboration) {
+      return res.status(404).json({ success: false, error: 'Collaboration not found' });
+    }
+
+    res.json({
+      success: true,
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error fetching collaboration:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch collaboration' });
+  }
+});
+
+// @route   PUT /api/admin/collaborations/:id/approve
+// @desc    Approve collaboration and deliver to recipient
+// @access  Admin only
+router.put('/collaborations/:id/approve', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const { adminNotes } = req.body;
+
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({ success: false, error: 'Collaboration not found' });
+    }
+
+    if (collaboration.status !== 'pending_admin_review') {
+      return res.status(400).json({ success: false, error: 'Collaboration is not pending review' });
+    }
+
+    // Update status
+    collaboration.status = 'approved_delivered';
+    collaboration.adminReviewedBy = req.user.userId;
+    collaboration.adminReviewedAt = new Date();
+    if (adminNotes) {
+      collaboration.adminNotes = adminNotes;
+    }
+
+    await collaboration.save();
+
+    // Notify recipient
+    await createNotification({
+      recipientId: collaboration.recipientId,
+      type: 'collaboration_proposal_received',
+      category: 'action_required',
+      title: 'New Collaboration Proposal',
+      message: 'You have received a new collaboration proposal.',
+      relatedCollaboration: collaboration._id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Collaboration approved and delivered',
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error approving collaboration:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve collaboration' });
+  }
+});
+
+// @route   PUT /api/admin/collaborations/:id/reject
+// @desc    Reject collaboration with reason
+// @access  Admin only
+router.put('/collaborations/:id/reject', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const { rejectionReason, adminNotes } = req.body;
+
+    if (!rejectionReason) {
+      return res.status(400).json({ success: false, error: 'Rejection reason is required' });
+    }
+
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({ success: false, error: 'Collaboration not found' });
+    }
+
+    collaboration.status = 'rejected';
+    collaboration.rejectionReason = rejectionReason;
+    collaboration.adminReviewedBy = req.user.userId;
+    collaboration.adminReviewedAt = new Date();
+    if (adminNotes) {
+      collaboration.adminNotes = adminNotes;
+    }
+
+    await collaboration.save();
+
+    // Notify proposer
+    await createNotification({
+      recipientId: collaboration.proposerId,
+      type: 'collaboration_rejected',
+      category: 'action_required',
+      title: 'Proposal Needs Revision',
+      message: 'Your submission couldn\'t be processed. Please review our guidelines and try again.',
+      relatedCollaboration: collaboration._id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Collaboration rejected',
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error rejecting collaboration:', error);
+    res.status(500).json({ success: false, error: 'Failed to reject collaboration' });
+  }
+});
+
+// @route   PUT /api/admin/collaborations/:id/flag
+// @desc    Flag collaboration for further review
+// @access  Admin only
+router.put('/collaborations/:id/flag', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const { flagReason, adminNotes } = req.body;
+
+    const collaboration = await Collaboration.findById(req.params.id);
+
+    if (!collaboration) {
+      return res.status(404).json({ success: false, error: 'Collaboration not found' });
+    }
+
+    collaboration.status = 'flagged';
+    if (!collaboration.complianceFlags) {
+      collaboration.complianceFlags = [];
+    }
+    if (flagReason && !collaboration.complianceFlags.includes(flagReason)) {
+      collaboration.complianceFlags.push(flagReason);
+    }
+    collaboration.adminReviewedBy = req.user.userId;
+    collaboration.adminReviewedAt = new Date();
+    if (adminNotes) {
+      collaboration.adminNotes = adminNotes;
+    }
+
+    await collaboration.save();
+
+    res.json({
+      success: true,
+      message: 'Collaboration flagged for review',
+      data: collaboration,
+    });
+  } catch (error) {
+    console.error('Error flagging collaboration:', error);
+    res.status(500).json({ success: false, error: 'Failed to flag collaboration' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/counters/pending
+// @desc    Get pending counter-proposals for review
+// @access  Admin only
+router.get('/collaborations/counters/pending', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const pending = await CollaborationCounter.getPendingReviews();
+
+    res.json({
+      success: true,
+      data: pending,
+      count: pending.length,
+    });
+  } catch (error) {
+    console.error('Error fetching pending counters:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch pending counters' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/counters/:id
+// @desc    Get counter-proposal details
+// @access  Admin only
+router.get('/collaborations/counters/:id', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const counter = await CollaborationCounter.findById(req.params.id)
+      .populate('responderId', 'username email role profilePicture')
+      .populate({
+        path: 'collaborationId',
+        populate: {
+          path: 'proposerId recipientId',
+          select: 'username email role profilePicture',
+        },
+      })
+      .populate('adminReviewedBy', 'username email');
+
+    if (!counter) {
+      return res.status(404).json({ success: false, error: 'Counter not found' });
+    }
+
+    res.json({
+      success: true,
+      data: counter,
+    });
+  } catch (error) {
+    console.error('Error fetching counter:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch counter' });
+  }
+});
+
+// @route   PUT /api/admin/collaborations/counters/:id/approve
+// @desc    Approve counter-proposal and deliver to proposer
+// @access  Admin only
+router.put('/collaborations/counters/:id/approve', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const { adminNotes } = req.body;
+
+    const counter = await CollaborationCounter.findById(req.params.id);
+
+    if (!counter) {
+      return res.status(404).json({ success: false, error: 'Counter not found' });
+    }
+
+    if (counter.status !== 'pending_admin_review') {
+      return res.status(400).json({ success: false, error: 'Counter is not pending review' });
+    }
+
+    // Update counter
+    counter.status = 'approved';
+    counter.adminReviewedBy = req.user.userId;
+    counter.adminReviewedAt = new Date();
+    if (adminNotes) {
+      counter.adminNotes = adminNotes;
+    }
+    await counter.save();
+
+    // Update collaboration
+    const collaboration = await Collaboration.findById(counter.collaborationId);
+    if (collaboration) {
+      collaboration.status = 'counter_delivered';
+      await collaboration.save();
+
+      // Notify original proposer
+      await createNotification({
+        recipientId: collaboration.proposerId,
+        type: 'collaboration_counter_received',
+        category: 'action_required',
+        title: 'Response Received',
+        message: 'The recipient has responded to your proposal.',
+        relatedCollaboration: collaboration._id,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Counter approved and delivered',
+      data: counter,
+    });
+  } catch (error) {
+    console.error('Error approving counter:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve counter' });
+  }
+});
+
+// @route   PUT /api/admin/collaborations/counters/:id/reject
+// @desc    Reject counter-proposal
+// @access  Admin only
+router.put('/collaborations/counters/:id/reject', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const { rejectionReason, adminNotes } = req.body;
+
+    if (!rejectionReason) {
+      return res.status(400).json({ success: false, error: 'Rejection reason is required' });
+    }
+
+    const counter = await CollaborationCounter.findById(req.params.id);
+
+    if (!counter) {
+      return res.status(404).json({ success: false, error: 'Counter not found' });
+    }
+
+    counter.status = 'rejected';
+    counter.rejectionReason = rejectionReason;
+    counter.adminReviewedBy = req.user.userId;
+    counter.adminReviewedAt = new Date();
+    if (adminNotes) {
+      counter.adminNotes = adminNotes;
+    }
+    await counter.save();
+
+    // Update collaboration status back
+    await Collaboration.findByIdAndUpdate(counter.collaborationId, {
+      status: 'approved_delivered', // Back to awaiting response
+      hasCounter: false,
+    });
+
+    // Notify responder
+    await createNotification({
+      recipientId: counter.responderId,
+      type: 'collaboration_rejected',
+      category: 'action_required',
+      title: 'Response Needs Revision',
+      message: 'Your response couldn\'t be processed. Please review and try again.',
+      relatedCollaboration: counter.collaborationId,
+    });
+
+    res.json({
+      success: true,
+      message: 'Counter rejected',
+      data: counter,
+    });
+  } catch (error) {
+    console.error('Error rejecting counter:', error);
+    res.status(500).json({ success: false, error: 'Failed to reject counter' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/analytics
+// @desc    Get collaboration analytics
+// @access  Admin only
+router.get('/collaborations/analytics', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const totalProposals = await Collaboration.countDocuments({ isDraft: false });
+    const pendingReview = await Collaboration.countDocuments({ status: 'pending_admin_review' });
+    const approved = await Collaboration.countDocuments({ status: 'approved_delivered' });
+    const rejected = await Collaboration.countDocuments({ status: 'rejected' });
+    const confirmed = await Collaboration.countDocuments({ status: 'confirmed' });
+    const flagged = await Collaboration.countDocuments({ complianceFlags: { $exists: true, $ne: [] } });
+
+    // By type
+    const byType = await Collaboration.aggregate([
+      { $match: { isDraft: false } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ]);
+
+    // Average review time
+    const avgReviewTime = await Collaboration.aggregate([
+      { $match: { status: { $in: ['approved_delivered', 'rejected'] }, adminReviewedAt: { $exists: true } } },
+      { 
+        $project: { 
+          reviewTime: { $subtract: ['$adminReviewedAt', '$createdAt'] } 
+        } 
+      },
+      { $group: { _id: null, avgTime: { $avg: '$reviewTime' } } },
+    ]);
+
+    // Recent activity (last 10)
+    const recentActivity = await Collaboration.find({ 
+      status: { $in: ['approved_delivered', 'rejected', 'confirmed'] } 
+    })
+      .populate('proposerId', 'username')
+      .populate('recipientId', 'username')
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .select('type status createdAt updatedAt proposerId recipientId');
+
+    const approvalRate = totalProposals > 0 
+      ? ((approved + confirmed) / totalProposals * 100).toFixed(1)
+      : 0;
+
+    const avgReviewHours = avgReviewTime[0]?.avgTime 
+      ? (avgReviewTime[0].avgTime / (1000 * 60 * 60)).toFixed(1)
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalProposals,
+        pendingReview,
+        approvalRate: parseFloat(approvalRate),
+        avgReviewTime: `${avgReviewHours} hours`,
+        byType: byType.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {}),
+        flagged,
+        recentActivity,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching collaboration analytics:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch analytics' });
+  }
+});
+
 module.exports = router;
