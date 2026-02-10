@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
-import API_URL from '../config/api';
 
 const CollaborationManagement = () => {
   const navigate = useNavigate();
@@ -15,7 +14,7 @@ const CollaborationManagement = () => {
   const [loading, setLoading] = useState(true);
   const [collaborations, setCollaborations] = useState([]);
   const [activeTab, setActiveTab] = useState('received'); // 'received' or 'sent'
-  const [filterStatus, setFilterStatus] = useState('pending'); // 'all', 'pending', 'accepted', 'rejected'
+  const [filterStatus, setFilterStatus] = useState('all'); // Default to 'all' to show all requests
   const [selectedCollaboration, setSelectedCollaboration] = useState(null);
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
@@ -41,9 +40,26 @@ const CollaborationManagement = () => {
       
       const response = await api.get(endpoint);
       
-      setCollaborations(response.data);
+      console.log('Collaborations response:', response.data);
+      console.log('Collaborations array:', response.data.data);
+      
+      // Log first collaboration in detail to debug structure
+      if (response.data.data && response.data.data.length > 0) {
+        console.log('First collaboration details:', {
+          id: response.data.data[0]._id,
+          proposerId: response.data.data[0].proposerId,
+          recipientId: response.data.data[0].recipientId,
+          formData: response.data.data[0].formData,
+          requestDetails: response.data.data[0].requestDetails,
+          type: response.data.data[0].type,
+          status: response.data.data[0].status
+        });
+      }
+      
+      setCollaborations(response.data.data || []);
     } catch (error) {
       console.error('Error fetching collaborations:', error);
+      setCollaborations([]);
     } finally {
       setLoading(false);
     }
@@ -68,14 +84,9 @@ const CollaborationManagement = () => {
 
     try {
       setSubmitting(true);
-      const endpoint = `${API_URL}/api/collaborations/${selectedCollaboration._id}/${responseAction}`;
       
-      await axios.post(endpoint, {
+      await api.post(`/collaborations/${selectedCollaboration._id}/${responseAction}`, {
         responseMessage: responseMessage
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
       });
 
       // Refresh collaborations
@@ -148,8 +159,7 @@ const CollaborationManagement = () => {
       cancelled: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Cancelled' },
       expired: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Expired' },
       pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300', label: 'Pending' },
-      accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Accepted' },
-      rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Rejected' }
+      accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Accepted' }
     };
     const badge = badges[status] || badges.pending;
     return (
@@ -180,7 +190,14 @@ const CollaborationManagement = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
+    if (!dateString) return 'Date not set';
+    // Handle object format {date, startTime, endTime}
+    if (typeof dateString === 'object' && dateString.date) {
+      dateString = dateString.date;
+    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return date.toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -189,7 +206,14 @@ const CollaborationManagement = () => {
 
   const getDaysUntilEvent = (eventDate) => {
     if (!eventDate) return null;
-    const days = Math.ceil((new Date(eventDate) - new Date()) / (1000 * 60 * 60 * 24));
+    // Handle object format {date, startTime, endTime}
+    let dateValue = eventDate;
+    if (typeof eventDate === 'object' && eventDate.date) {
+      dateValue = eventDate.date;
+    }
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return null;
+    const days = Math.ceil((date - new Date()) / (1000 * 60 * 60 * 24));
     return days;
   };
 
@@ -309,8 +333,18 @@ const CollaborationManagement = () => {
           <div className="space-y-4">
             {filteredCollaborations.map((collab) => {
               const isReceived = activeTab === 'received';
-              const partner = isReceived ? collab.initiator : collab.recipient;
-              const eventDays = getDaysUntilEvent(collab.requestDetails?.eventDate);
+              const partner = isReceived ? collab.proposerId : collab.recipientId;
+              const eventDays = getDaysUntilEvent(collab.formData?.eventDate?.date || collab.formData?.eventDate || collab.requestDetails?.eventDate);
+              
+              // Debug logging
+              if (!partner) {
+                console.warn('Partner is undefined for collaboration:', {
+                  collabId: collab._id,
+                  isReceived,
+                  proposerId: collab.proposerId,
+                  recipientId: collab.recipientId
+                });
+              }
               
               return (
                 <div
@@ -321,10 +355,10 @@ const CollaborationManagement = () => {
                     <div className="flex items-start space-x-4 flex-1">
                       {/* Partner Info */}
                       <div className="flex-shrink-0">
-                        {partner.profileImage ? (
+                        {partner?.profileImage || partner?.profilePicture ? (
                           <img
-                            src={partner.profileImage}
-                            alt={partner.name}
+                            src={partner.profileImage || partner.profilePicture}
+                            alt={partner?.name || partner?.username || 'Partner'}
                             className="w-16 h-16 rounded-lg object-cover"
                           />
                         ) : (
@@ -337,32 +371,32 @@ const CollaborationManagement = () => {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {partner.name}
+                            {partner?.name || partner?.username || 'Unknown Partner'}
                           </h3>
                           {getStatusBadge(collab.status)}
                           {getPriorityBadge(collab.priority)}
                         </div>
 
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 capitalize">
-                          {collab.type.replace('_', ' ')} • {isReceived ? 'From' : 'To'} {partner.name}
+                          {collab.type?.replace('_', ' ') || 'Collaboration'} • {isReceived ? 'From' : 'To'} {partner?.name || partner?.username || 'Unknown'}
                         </p>
 
                         {/* Event Details */}
-                        {collab.requestDetails && (
+                        {(collab.formData || collab.requestDetails) && (
                           <div className="grid grid-cols-2 gap-3 mb-3">
-                            {collab.requestDetails.eventName && (
+                            {(collab.formData?.eventName || collab.requestDetails?.eventName) && (
                               <div className="flex items-center space-x-2 text-sm">
                                 <Calendar className="h-4 w-4 text-gray-400" />
                                 <span className="text-gray-700 dark:text-gray-300">
-                                  {collab.requestDetails.eventName}
+                                  {collab.formData?.eventName || collab.requestDetails?.eventName}
                                 </span>
                               </div>
                             )}
-                            {collab.requestDetails.eventDate && (
+                            {(collab.formData?.eventDate || collab.requestDetails?.eventDate) && (
                               <div className="flex items-center space-x-2 text-sm">
                                 <Clock className="h-4 w-4 text-gray-400" />
                                 <span className="text-gray-700 dark:text-gray-300">
-                                  {formatDate(collab.requestDetails.eventDate)}
+                                  {formatDate(collab.formData?.eventDate || collab.requestDetails?.eventDate)}
                                   {eventDays !== null && eventDays >= 0 && (
                                     <span className={`ml-1 ${eventDays < 7 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
                                       ({eventDays} days)
@@ -376,7 +410,7 @@ const CollaborationManagement = () => {
 
                         {/* Message Preview */}
                         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                          {collab.requestDetails?.message}
+                          {collab.formData?.message || collab.requestDetails?.message}
                         </p>
 
                         {/* Venue/Brand Specific Info */}
@@ -545,10 +579,10 @@ const CollaborationManagement = () => {
               <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">From:</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {selectedCollaboration.initiator.name}
+                  {selectedCollaboration.proposerId?.name || selectedCollaboration.proposerId?.username || 'Unknown Partner'}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  {selectedCollaboration.requestDetails?.message}
+                  {selectedCollaboration.formData?.message || selectedCollaboration.requestDetails?.message}
                 </p>
               </div>
 

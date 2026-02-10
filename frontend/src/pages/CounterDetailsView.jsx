@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../config/api';
+import { api } from '../config/api';
 import { ArrowLeft, Check, X, FileText, AlertCircle } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 
@@ -23,7 +23,7 @@ const CounterDetailsView = () => {
     try {
       setLoading(true);
       const res = await api.get(`/collaborations/${id}`);
-      setCollaboration(res.data);
+      setCollaboration(res.data.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching collaboration:', err);
@@ -140,7 +140,7 @@ const CounterDetailsView = () => {
               <div>
                 <h1 className="text-2xl font-bold mb-2">Counter-Proposal Review</h1>
                 <p className="text-gray-400 text-sm">
-                  From: <span className="text-white">{collaboration.recipientId?.name || 'Unknown'}</span> ({collaboration.recipientType})
+                  From: <span className="text-white">{collaboration.recipientId?.name || collaboration.recipientId?.username || 'Unknown'}</span> ({collaboration.recipientType})
                 </p>
               </div>
               <div className="px-4 py-2 bg-purple-900/30 text-purple-400 rounded-lg text-sm border border-purple-800">
