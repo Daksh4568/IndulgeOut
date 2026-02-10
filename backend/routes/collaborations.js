@@ -36,10 +36,10 @@ router.post('/propose', authMiddleware, async (req, res) => {
       });
     }
 
-    // Determine proposer type from user role
-    const proposerType = req.user.role === 'community_organizer' ? 'community'
-      : req.user.role === 'venue' ? 'venue'
-      : req.user.role === 'brand_sponsor' ? 'brand'
+    // Determine proposer type from user hostPartnerType
+    const proposerType = req.user.hostPartnerType === 'community_organizer' ? 'community'
+      : req.user.hostPartnerType === 'venue' ? 'venue'
+      : req.user.hostPartnerType === 'brand_sponsor' ? 'brand'
       : null;
 
     if (!proposerType) {
@@ -93,9 +93,9 @@ router.post('/draft', authMiddleware, async (req, res) => {
   try {
     const { type, recipientId, recipientType, formData } = req.body;
 
-    const proposerType = req.user.role === 'community_organizer' ? 'community'
-      : req.user.role === 'venue' ? 'venue'
-      : req.user.role === 'brand_sponsor' ? 'brand'
+    const proposerType = req.user.hostPartnerType === 'community_organizer' ? 'community'
+      : req.user.hostPartnerType === 'venue' ? 'venue'
+      : req.user.hostPartnerType === 'brand_sponsor' ? 'brand'
       : null;
 
     const collaboration = new Collaboration({
@@ -162,7 +162,7 @@ router.get('/sent', authMiddleware, async (req, res) => {
     }
 
     const proposals = await Collaboration.find(query)
-      .populate('recipientId', 'username email role profilePicture')
+      .populate('recipientId', 'name email role profilePicture')
       .sort({ createdAt: -1 });
 
     const mapped = proposals.map(p => ({
@@ -194,7 +194,7 @@ router.get('/received', authMiddleware, async (req, res) => {
       status: { $in: ['approved_delivered', 'counter_pending_review', 'counter_delivered', 'confirmed', 'declined'] },
       isDraft: false,
     })
-      .populate('proposerId', 'username email role profilePicture')
+      .populate('proposerId', 'name email role profilePicture')
       .sort({ createdAt: -1 });
 
     const mapped = proposals.map(p => ({
@@ -221,8 +221,8 @@ router.get('/received', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const collaboration = await Collaboration.findById(req.params.id)
-      .populate('proposerId', 'username email role profilePicture')
-      .populate('recipientId', 'username email role profilePicture')
+      .populate('proposerId', 'name email role profilePicture')
+      .populate('recipientId', 'name email role profilePicture')
       .populate('latestCounterId');
 
     if (!collaboration) {

@@ -21,8 +21,9 @@ const authMiddleware = async (req, res, next) => {
     
     console.log('Extracted token:', token ? 'Present' : 'Missing');
     
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+    // Check for invalid token values
+    if (!token || token === 'null' || token === 'undefined') {
+      return res.status(401).json({ message: 'No valid token provided' });
     }
     
     // Verify token
@@ -42,7 +43,8 @@ const authMiddleware = async (req, res, next) => {
       userId: user._id.toString(), // Add userId for consistency
       email: user.email, 
       name: user.name,
-      role: user.role 
+      role: user.role,
+      hostPartnerType: user.hostPartnerType // For B2B users (community_organizer, venue, brand_sponsor)
     };
     next();
   } catch (error) {

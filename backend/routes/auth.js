@@ -238,7 +238,7 @@ router.post('/register-venue', registrationLimiter, async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, hostPartnerType: user.hostPartnerType },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -288,7 +288,7 @@ router.post('/register-brand', registrationLimiter, async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, hostPartnerType: user.hostPartnerType },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -338,7 +338,7 @@ router.post('/register-host', registrationLimiter, async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, hostPartnerType: user.hostPartnerType },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );

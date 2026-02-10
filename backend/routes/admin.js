@@ -4,7 +4,9 @@ const User = require('../models/User');
 const Event = require('../models/Event');
 const Community = require('../models/Community');
 const Collaboration = require('../models/Collaboration');
-const Payout = require('../models/Payout');
+const CollaborationCounter = require('../models/CollaborationCounter');
+const { Payout } = require('../models/Payout');
+const { createNotification } = require('../services/notificationService');
 const { adminAuthMiddleware, requirePermission } = require('../utils/adminAuthMiddleware');
 
 // All admin routes require admin authentication
@@ -34,7 +36,7 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
       User.countDocuments({ role: 'host_partner', hostPartnerType: 'brand_sponsor' }),
       Event.countDocuments(),
       Event.countDocuments({ status: 'live', date: { $gte: new Date() } }),
-      Collaboration.countDocuments({ status: 'submitted' }),
+      Collaboration.countDocuments({ status: 'pending_admin_review' }),
       Payout.aggregate([
         { $match: { status: 'completed' } },
         { $group: { _id: null, total: { $sum: '$breakdown.platformFee' } } }
@@ -116,7 +118,7 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
 router.get('/collaborations/pending', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const collaborations = await Collaboration.find({ 
-      status: 'submitted'
+      status: 'pending_admin_review'
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -179,15 +181,15 @@ router.post('/collaborations/:id/approve', requirePermission('manage_collaborati
       return res.status(404).json({ message: 'Collaboration not found' });
     }
 
-    if (collaboration.status !== 'submitted') {
+    if (collaboration.status !== 'pending_admin_review') {
       return res.status(400).json({ 
-        message: 'Only submitted collaborations can be approved',
+        message: 'Only pending collaborations can be approved',
         currentStatus: collaboration.status
       });
     }
 
     // Update collaboration with admin approval
-    collaboration.status = 'admin_approved';
+    collaboration.status = 'approved_delivered';
     collaboration.adminReview = {
       reviewedBy: adminId,
       reviewedAt: new Date(),
@@ -230,15 +232,15 @@ router.post('/collaborations/:id/reject', requirePermission('manage_collaboratio
       return res.status(404).json({ message: 'Collaboration not found' });
     }
 
-    if (collaboration.status !== 'submitted') {
+    if (collaboration.status !== 'pending_admin_review') {
       return res.status(400).json({ 
-        message: 'Only submitted collaborations can be rejected',
+        message: 'Only pending collaborations can be rejected',
         currentStatus: collaboration.status
       });
     }
 
     // Update collaboration with admin rejection
-    collaboration.status = 'admin_rejected';
+    collaboration.status = 'rejected';
     collaboration.adminReview = {
       reviewedBy: adminId,
       reviewedAt: new Date(),
@@ -475,9 +477,6 @@ router.get('/revenue', requirePermission('view_analytics'), async (req, res) => 
 
 // ==================== COLLABORATION MANAGEMENT ====================
 
-const CollaborationCounter = require('../models/CollaborationCounter');
-const { createNotification } = require('../services/notificationService');
-
 // @route   GET /api/admin/collaborations/pending
 // @desc    Get pending collaboration proposals for review
 // @access  Admin only
@@ -504,8 +503,8 @@ router.get('/collaborations/flagged', requirePermission('manage_collaborations')
     const flagged = await Collaboration.find({ 
       complianceFlags: { $exists: true, $ne: [] } 
     })
-      .populate('proposerId', 'username email role profilePicture')
-      .populate('recipientId', 'username email role profilePicture')
+      .populate('proposerId', 'name email role profilePicture')
+      .populate('recipientId', 'name email role profilePicture')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -531,8 +530,8 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
     if (type) query.type = type;
 
     const collaborations = await Collaboration.find(query)
-      .populate('proposerId', 'username email role profilePicture')
-      .populate('recipientId', 'username email role profilePicture')
+      .populate('proposerId', 'name email role profilePicture')
+      .populate('recipientId', 'name email role profilePicture')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
@@ -555,15 +554,83 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
   }
 });
 
+// @route   GET /api/admin/collaborations/analytics
+// @desc    Get collaboration analytics
+// @access  Admin only
+router.get('/collaborations/analytics', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const totalProposals = await Collaboration.countDocuments({ isDraft: false });
+    const pendingReview = await Collaboration.countDocuments({ status: 'pending_admin_review' });
+    const approved = await Collaboration.countDocuments({ status: 'approved_delivered' });
+    const rejected = await Collaboration.countDocuments({ status: 'rejected' });
+    const confirmed = await Collaboration.countDocuments({ status: 'confirmed' });
+    const flagged = await Collaboration.countDocuments({ complianceFlags: { $exists: true, $ne: [] } });
+
+    // By type
+    const byType = await Collaboration.aggregate([
+      { $match: { isDraft: false } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ]);
+
+    // Average review time
+    const avgReviewTime = await Collaboration.aggregate([
+      { $match: { status: { $in: ['approved_delivered', 'rejected'] }, adminReviewedAt: { $exists: true } } },
+      { 
+        $project: { 
+          reviewTime: { $subtract: ['$adminReviewedAt', '$createdAt'] } 
+        } 
+      },
+      { $group: { _id: null, avgTime: { $avg: '$reviewTime' } } },
+    ]);
+
+    // Recent activity (last 10)
+    const recentActivity = await Collaboration.find({ 
+      status: { $in: ['approved_delivered', 'rejected', 'confirmed'] } 
+    })
+      .populate('proposerId', 'name')
+      .populate('recipientId', 'name')
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .select('type status createdAt updatedAt proposerId recipientId');
+
+    const approvalRate = totalProposals > 0 
+      ? ((approved + confirmed) / totalProposals * 100).toFixed(1)
+      : 0;
+
+    const avgReviewHours = avgReviewTime[0]?.avgTime 
+      ? (avgReviewTime[0].avgTime / (1000 * 60 * 60)).toFixed(1)
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalProposals,
+        pendingReview,
+        approvalRate: parseFloat(approvalRate),
+        avgReviewTime: `${avgReviewHours} hours`,
+        byType: byType.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {}),
+        flagged,
+        recentActivity,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching collaboration analytics:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch analytics' });
+  }
+});
+
 // @route   GET /api/admin/collaborations/:id
 // @desc    Get single collaboration details for review
 // @access  Admin only
 router.get('/collaborations/:id', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const collaboration = await Collaboration.findById(req.params.id)
-      .populate('proposerId', 'username email role profilePicture phone')
-      .populate('recipientId', 'username email role profilePicture phone')
-      .populate('adminReviewedBy', 'username email')
+      .populate('proposerId', 'name email role profilePicture phone')
+      .populate('recipientId', 'name email role profilePicture phone')
+      .populate('adminReviewedBy', 'name email')
       .populate('latestCounterId');
 
     if (!collaboration) {
@@ -739,15 +806,15 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
 router.get('/collaborations/counters/:id', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const counter = await CollaborationCounter.findById(req.params.id)
-      .populate('responderId', 'username email role profilePicture')
+      .populate('responderId', 'name email role profilePicture')
       .populate({
         path: 'collaborationId',
         populate: {
           path: 'proposerId recipientId',
-          select: 'username email role profilePicture',
+          select: 'name email role profilePicture',
         },
       })
-      .populate('adminReviewedBy', 'username email');
+      .populate('adminReviewedBy', 'name email');
 
     if (!counter) {
       return res.status(404).json({ success: false, error: 'Counter not found' });
@@ -867,74 +934,6 @@ router.put('/collaborations/counters/:id/reject', requirePermission('manage_coll
   } catch (error) {
     console.error('Error rejecting counter:', error);
     res.status(500).json({ success: false, error: 'Failed to reject counter' });
-  }
-});
-
-// @route   GET /api/admin/collaborations/analytics
-// @desc    Get collaboration analytics
-// @access  Admin only
-router.get('/collaborations/analytics', requirePermission('view_analytics'), async (req, res) => {
-  try {
-    const totalProposals = await Collaboration.countDocuments({ isDraft: false });
-    const pendingReview = await Collaboration.countDocuments({ status: 'pending_admin_review' });
-    const approved = await Collaboration.countDocuments({ status: 'approved_delivered' });
-    const rejected = await Collaboration.countDocuments({ status: 'rejected' });
-    const confirmed = await Collaboration.countDocuments({ status: 'confirmed' });
-    const flagged = await Collaboration.countDocuments({ complianceFlags: { $exists: true, $ne: [] } });
-
-    // By type
-    const byType = await Collaboration.aggregate([
-      { $match: { isDraft: false } },
-      { $group: { _id: '$type', count: { $sum: 1 } } },
-    ]);
-
-    // Average review time
-    const avgReviewTime = await Collaboration.aggregate([
-      { $match: { status: { $in: ['approved_delivered', 'rejected'] }, adminReviewedAt: { $exists: true } } },
-      { 
-        $project: { 
-          reviewTime: { $subtract: ['$adminReviewedAt', '$createdAt'] } 
-        } 
-      },
-      { $group: { _id: null, avgTime: { $avg: '$reviewTime' } } },
-    ]);
-
-    // Recent activity (last 10)
-    const recentActivity = await Collaboration.find({ 
-      status: { $in: ['approved_delivered', 'rejected', 'confirmed'] } 
-    })
-      .populate('proposerId', 'username')
-      .populate('recipientId', 'username')
-      .sort({ updatedAt: -1 })
-      .limit(10)
-      .select('type status createdAt updatedAt proposerId recipientId');
-
-    const approvalRate = totalProposals > 0 
-      ? ((approved + confirmed) / totalProposals * 100).toFixed(1)
-      : 0;
-
-    const avgReviewHours = avgReviewTime[0]?.avgTime 
-      ? (avgReviewTime[0].avgTime / (1000 * 60 * 60)).toFixed(1)
-      : 0;
-
-    res.json({
-      success: true,
-      data: {
-        totalProposals,
-        pendingReview,
-        approvalRate: parseFloat(approvalRate),
-        avgReviewTime: `${avgReviewHours} hours`,
-        byType: byType.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        flagged,
-        recentActivity,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching collaboration analytics:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch analytics' });
   }
 });
 

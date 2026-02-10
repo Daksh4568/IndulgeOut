@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
   email: String,
   name: String,
   role: String,
+  hostPartnerType: String,
   password: String,
   isVerified: Boolean,
   interests: [String],
@@ -30,7 +31,7 @@ const userSchema = new mongoose.Schema({
 
 const testUsers = [
   {
-    phoneNumber: '+919999999999',
+    phoneNumber: '9999999999',
     email: 'admin@indulgeout.com',
     name: 'Admin User',
     role: 'admin',
@@ -42,24 +43,27 @@ const testUsers = [
     }
   },
   {
-    phoneNumber: '+919999999991',
+    phoneNumber: '9999999991',
     email: 'community@test.com',
     name: 'Test Community',
-    role: 'community_organizer',
+    role: 'host_partner',
+    hostPartnerType: 'community_organizer',
     password: 'test123'
   },
   {
-    phoneNumber: '+919999999992',
+    phoneNumber: '9999999992',
     email: 'venue@test.com',
     name: 'Test Venue',
-    role: 'venue',
+    role: 'host_partner',
+    hostPartnerType: 'venue',
     password: 'test123'
   },
   {
-    phoneNumber: '+919999999993',
+    phoneNumber: '9999999993',
     email: 'brand@test.com',
     name: 'Test Brand',
-    role: 'brand_sponsor',
+    role: 'host_partner',
+    hostPartnerType: 'brand_sponsor',
     password: 'test123'
   }
 ];
@@ -74,36 +78,37 @@ async function setupTestUsers() {
     
     const User = mongoose.model('User', userSchema);
     
+    // Delete existing test users first
+    console.log('\n🗑️  Removing existing test users...');
+    const testEmails = testUsers.map(u => u.email);
+    const testPhones = testUsers.map(u => u.phoneNumber);
+    
+    const deleteResult = await User.deleteMany({
+      $or: [
+        { email: { $in: testEmails } },
+        { phoneNumber: { $in: testPhones } }
+      ]
+    });
+    
+    if (deleteResult.deletedCount > 0) {
+      console.log(`✓ Removed ${deleteResult.deletedCount} existing test user(s)`);
+    } else {
+      console.log('✓ No existing test users found');
+    }
+    
+    console.log('\n📝 Creating fresh test users...\n');
+    
     for (const userData of testUsers) {
       // Hash password
       const hashedPassword = await bcrypt.hash(userData.password, 10);
       
-      // Check if user already exists
-      const existingUser = await User.findOne({ 
-        phoneNumber: userData.phoneNumber
+      // Create new user
+      await User.create({
+        ...userData,
+        password: hashedPassword,
+        isVerified: true
       });
-      
-      if (existingUser) {
-        // Update existing user
-        existingUser.password = hashedPassword;
-        existingUser.name = userData.name;
-        existingUser.role = userData.role;
-        existingUser.isVerified = true;
-        existingUser.email = userData.email;
-        if (userData.adminProfile) {
-          existingUser.adminProfile = userData.adminProfile;
-        }
-        await existingUser.save();
-        console.log(`✓ Updated: ${userData.name} (${userData.role})`);
-      } else {
-        // Create new user
-        await User.create({
-          ...userData,
-          password: hashedPassword,
-          isVerified: true
-        });
-        console.log(`✓ Created: ${userData.name} (${userData.role})`);
-      }
+      console.log(`✓ Created: ${userData.name} (${userData.role}${userData.hostPartnerType ? ' - ' + userData.hostPartnerType : ''})`);
     }
     
     console.log('\n╔═══════════════════════════════════════════════════════════════╗');
@@ -111,22 +116,22 @@ async function setupTestUsers() {
     console.log('╠═══════════════════════════════════════════════════════════════╣');
     console.log('║                                                               ║');
     console.log('║  ADMIN                                                        ║');
-    console.log('║    Phone:    +919999999999                                   ║');
+    console.log('║    Phone:    9999999999                                      ║');
     console.log('║    Email:    admin@indulgeout.com                            ║');
     console.log('║    Password: admin123                                        ║');
     console.log('║                                                               ║');
     console.log('║  COMMUNITY ORGANIZER                                          ║');
-    console.log('║    Phone:    +919999999991                                   ║');
+    console.log('║    Phone:    9999999991                                      ║');
     console.log('║    Email:    community@test.com                              ║');
     console.log('║    Password: test123                                         ║');
     console.log('║                                                               ║');
     console.log('║  VENUE                                                        ║');
-    console.log('║    Phone:    +919999999992                                   ║');
+    console.log('║    Phone:    9999999992                                      ║');
     console.log('║    Email:    venue@test.com                                  ║');
     console.log('║    Password: test123                                         ║');
     console.log('║                                                               ║');
     console.log('║  BRAND                                                        ║');
-    console.log('║    Phone:    +919999999993                                   ║');
+    console.log('║    Phone:    9999999993                                      ║');
     console.log('║    Email:    brand@test.com                                  ║');
     console.log('║    Password: test123                                         ║');
     console.log('║                                                               ║');
