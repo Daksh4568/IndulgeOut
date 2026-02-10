@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../config/api';
+import { api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminDashboard = () => {
@@ -9,13 +9,14 @@ const AdminDashboard = () => {
   
   // State management
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, proposals, counters, flagged, analytics
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, proposals, counters, flagged, analytics, all-collaborations
   const [stats, setStats] = useState(null);
   const [collabAnalytics, setCollabAnalytics] = useState(null);
   
   // Proposals state
   const [pendingProposals, setPendingProposals] = useState([]);
   const [flaggedProposals, setFlaggedProposals] = useState([]);
+  const [allCollaborations, setAllCollaborations] = useState([]);
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [proposalFilters, setProposalFilters] = useState({ type: '', status: '' });
   
@@ -68,6 +69,9 @@ const AdminDashboard = () => {
           break;
         case 'analytics':
           fetchCollabAnalytics();
+          break;
+        case 'all-collaborations':
+          fetchAllCollaborations();
           break;
         default:
           break;
@@ -132,6 +136,27 @@ const AdminDashboard = () => {
       setCollabAnalytics(res.data);
     } catch (err) {
       console.error('Error fetching analytics:', err);
+    }
+  };
+
+  const fetchAllCollaborations = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/admin/collaborations/all', {
+        params: {
+          page: 1,
+          limit: 100,
+          status: proposalFilters.status || undefined,
+          type: proposalFilters.type || undefined
+        }
+      });
+      setAllCollaborations(res.data.data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching all collaborations:', err);
+      setError('Failed to load collaborations');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -439,6 +464,7 @@ const AdminDashboard = () => {
                 { id: 'dashboard', label: 'Overview', badge: null },
                 { id: 'proposals', label: 'Pending Proposals', badge: pendingProposals.length || null },
                 { id: 'counters', label: 'Pending Counters', badge: pendingCounters.length || null },
+                { id: 'all-collaborations', label: 'All Collaborations', badge: null },
                 { id: 'flagged', label: 'Flagged Items', badge: flaggedProposals.length || null },
                 { id: 'analytics', label: 'Analytics', badge: null }
               ].map(tab => (
@@ -478,9 +504,9 @@ const AdminDashboard = () => {
                     <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                       {stats?.overview?.totalUsers || 0}
                     </p>
-                    {stats?.growth?.users !== undefined && (
-                      <p className={`text-sm mt-2 ${stats.growth.users >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stats.growth.users >= 0 ? '+' : ''}{stats.growth.users}% from last month
+                    {stats?.growth?.users?.growthPercentage !== undefined && (
+                      <p className={`text-sm mt-2 ${stats.growth.users.growthPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {stats.growth.users.growthPercentage >= 0 ? '+' : ''}{stats.growth.users.growthPercentage}% from last month
                       </p>
                     )}
                   </div>
@@ -500,9 +526,9 @@ const AdminDashboard = () => {
                     <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                       {stats?.overview?.totalCommunities || 0}
                     </p>
-                    {stats?.growth?.communities !== undefined && (
-                      <p className={`text-sm mt-2 ${stats.growth.communities >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stats.growth.communities >= 0 ? '+' : ''}{stats.growth.communities}% from last month
+                    {stats?.growth?.communities?.growthPercentage !== undefined && (
+                      <p className={`text-sm mt-2 ${stats.growth.communities.growthPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {stats.growth.communities.growthPercentage >= 0 ? '+' : ''}{stats.growth.communities.growthPercentage}% from last month
                       </p>
                     )}
                   </div>

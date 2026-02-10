@@ -4,7 +4,7 @@ import { api } from '../config/api';
 import {
   MapPin, Users, Search, Filter, Building2, Coffee, 
   Music, Dumbbell, Home, Briefcase, Wine, Star,
-  Heart, ArrowRight, CheckCircle, X, ChevronLeft, ChevronRight
+  Heart, ArrowRight, CheckCircle, X, ChevronLeft, ChevronRight, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
@@ -260,9 +260,20 @@ const BrowseVenues = () => {
           <h1 className="text-5xl font-bold text-white mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
             Browse Venues
           </h1>
-          <p className="text-gray-400 text-base">
+          <p className="text-gray-400 text-base mb-4">
             Join communities and circles for your interests and hobbies
           </p>
+          
+          {/* Manage Collaborations Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => navigate('/collaborations')}
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full hover:scale-105 transition-transform flex items-center gap-2 shadow-lg hover:shadow-xl"
+            >
+              <FileText className="h-5 w-5" />
+              Manage Collaborations
+            </button>
+          </div>
         </div>
 
         {/* White Search Bar - Centered, not full width */}

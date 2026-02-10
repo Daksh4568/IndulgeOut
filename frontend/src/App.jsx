@@ -146,6 +146,7 @@ function AppContent() {
         <Route path="/collaboration/proposal" element={<ErrorBoundary><ProposalForm /></ErrorBoundary>} />
         <Route path="/brand/:id/propose-collaboration" element={<ErrorBoundary><RequestCollaboration /></ErrorBoundary>} />
         <Route path="/organizer/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
+        <Route path="/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
         
         {/* Counter Forms */}
         <Route path="/collaborations/:id/counter/venue" element={<ErrorBoundary><VenueCounterForm /></ErrorBoundary>} />

@@ -4,7 +4,6 @@ import { api } from '../config/api';
 import { ArrowLeft, Send, Calendar, Users, DollarSign, MessageCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
-import API_URL from '../config/api';
 
 const RequestCollaboration = () => {
   const { id } = useParams();
@@ -151,8 +150,8 @@ const RequestCollaboration = () => {
       setSubmitting(true);
 
       const endpoint = isVenueRequest 
-        ? `${API_URL}/api/venues/${id}/request-collaboration`
-        : `${API_URL}/api/brands/${id}/propose-collaboration`;
+        ? `/venues/${id}/request-collaboration`
+        : `/brands/${id}/propose-collaboration`;
 
       const payload = {
         eventName: formData.eventName,
@@ -174,11 +173,7 @@ const RequestCollaboration = () => {
         })
       };
 
-      await axios.post(endpoint, payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      await api.post(endpoint, payload);
 
       // Success - navigate back to browse page with success message
       navigate(isVenueRequest ? '/browse/venues' : '/browse/sponsors', {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../config/api';
+import { api } from '../config/api';
 import { ArrowLeft, Check, Download, FileText, Calendar, DollarSign } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 
@@ -20,7 +20,7 @@ const FinalTermsView = () => {
     try {
       setLoading(true);
       const res = await api.get(`/collaborations/${id}`);
-      setCollaboration(res.data);
+      setCollaboration(res.data.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching collaboration:', err);
@@ -158,7 +158,7 @@ const FinalTermsView = () => {
             <div className="space-y-2">
               <div>
                 <p className="text-xs text-gray-500">Name</p>
-                <p className="text-sm text-white">{collaboration.proposerId?.name || 'Unknown'}</p>
+                <p className="text-sm text-white">{collaboration.proposerId?.name || collaboration.proposerId?.username || 'Unknown'}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Type</p>
@@ -176,7 +176,7 @@ const FinalTermsView = () => {
             <div className="space-y-2">
               <div>
                 <p className="text-xs text-gray-500">Name</p>
-                <p className="text-sm text-white">{collaboration.recipientId?.name || 'Unknown'}</p>
+                <p className="text-sm text-white">{collaboration.recipientId?.name || collaboration.recipientId?.username || 'Unknown'}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Type</p>
@@ -195,8 +195,85 @@ const FinalTermsView = () => {
           <h2 className="text-xl font-bold mb-4">Final Agreed Terms</h2>
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <div className="grid grid-cols-2 gap-6">
+              {/* Event Type */}
+              {finalTerms.eventType && (
+                <div className="border-b border-gray-800 pb-3">
+                  <p className="text-xs text-gray-500 mb-1">Event Type</p>
+                  <p className="text-sm text-white">{finalTerms.eventType}</p>
+                </div>
+              )}
+
+              {/* Expected Attendees */}
+              {finalTerms.expectedAttendees && (
+                <div className="border-b border-gray-800 pb-3">
+                  <p className="text-xs text-gray-500 mb-1">Expected Attendees</p>
+                  <p className="text-sm text-white">{finalTerms.expectedAttendees}</p>
+                </div>
+              )}
+
+              {/* Seating Capacity */}
+              {finalTerms.seatingCapacity && (
+                <div className="border-b border-gray-800 pb-3">
+                  <p className="text-xs text-gray-500 mb-1">Seating Capacity</p>
+                  <p className="text-sm text-white">{finalTerms.seatingCapacity}</p>
+                </div>
+              )}
+
+              {/* Event Date */}
+              {finalTerms.eventDate && (
+                <div className="border-b border-gray-800 pb-3 col-span-2">
+                  <p className="text-xs text-gray-500 mb-1">Event Date & Time</p>
+                  <p className="text-sm text-white">
+                    {finalTerms.eventDate.date || finalTerms.eventDate}
+                    {finalTerms.eventDate.startTime && ` | ${finalTerms.eventDate.startTime} - ${finalTerms.eventDate.endTime}`}
+                  </p>
+                </div>
+              )}
+
+              {/* Show Backup Date */}
+              {finalTerms.showBackupDate && (
+                <div className="border-b border-gray-800 pb-3">
+                  <p className="text-xs text-gray-500 mb-1">Show Backup Date</p>
+                  <p className="text-sm text-white">{finalTerms.showBackupDate.toString()}</p>
+                </div>
+              )}
+
+              {/* Backup Date */}
+              {finalTerms.backupDate && (
+                <div className="border-b border-gray-800 pb-3 col-span-2">
+                  <p className="text-xs text-gray-500 mb-1">Backup Date & Time</p>
+                  <p className="text-sm text-white">
+                    {finalTerms.backupDate.date || finalTerms.backupDate}
+                    {finalTerms.backupDate.startTime && ` | ${finalTerms.backupDate.startTime} - ${finalTerms.backupDate.endTime}`}
+                  </p>
+                </div>
+              )}
+
+              {/* Requirements */}
+              {finalTerms.requirements && (
+                <div className="border-b border-gray-800 pb-3 col-span-2">
+                  <p className="text-xs text-gray-500 mb-2">Requirements</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(finalTerms.requirements).map(([key, value]) => 
+                      value ? (
+                        <span key={key} className="px-3 py-1 bg-purple-900/30 text-purple-300 text-xs rounded border border-purple-700">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
+                      ) : null
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Other simple fields */}
               {Object.entries(finalTerms).map(([key, value]) => {
-                if (typeof value === 'object' || key === 'supportingInfo') return null;
+                // Skip already rendered fields and objects
+                if (['eventType', 'expectedAttendees', 'seatingCapacity', 'eventDate', 'showBackupDate', 
+                     'backupDate', 'requirements', 'pricing', 'supportingInfo'].includes(key)) {
+                  return null;
+                }
+                if (typeof value === 'object') return null;
+                
                 return (
                   <div key={key} className="border-b border-gray-800 pb-3">
                     <p className="text-xs text-gray-500 mb-1 capitalize">
@@ -217,7 +294,7 @@ const FinalTermsView = () => {
         </div>
 
         {/* Commercial Terms */}
-        {(counter.commercialCounter || original.pricing) && (
+        {(counter.commercialCounter || original.pricing || finalTerms.pricing) && (
           <div className="mb-6">
             <h2 className="text-xl font-bold mb-4">Commercial Terms</h2>
             <div className="bg-gray-900 border border-green-800 rounded-lg p-6">
@@ -238,9 +315,16 @@ const FinalTermsView = () => {
                     </div>
                   )}
                 </div>
-              ) : original.pricing ? (
-                <div>
-                  <p className="text-sm text-gray-300">{JSON.stringify(original.pricing, null, 2)}</p>
+              ) : (finalTerms.pricing || original.pricing) ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Pricing Model</p>
+                    <p className="text-sm text-white font-semibold">{(finalTerms.pricing || original.pricing).model}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Value</p>
+                    <p className="text-lg text-green-400 font-bold">{(finalTerms.pricing || original.pricing).value}</p>
+                  </div>
                 </div>
               ) : null}
             </div>
