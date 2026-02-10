@@ -156,8 +156,8 @@ collaborationSchema.methods.getUserRole = function(userId) {
 // Static method to get pending admin reviews
 collaborationSchema.statics.getPendingReviews = function() {
   return this.find({ status: 'pending_admin_review' })
-    .populate('proposerId', 'username email role profilePicture')
-    .populate('recipientId', 'username email role profilePicture')
+    .populate('proposerId', 'name email role profilePicture')
+    .populate('recipientId', 'name email role profilePicture')
     .sort({ createdAt: 1 }); // Oldest first
 };
 
@@ -167,8 +167,8 @@ collaborationSchema.statics.getUserCollaborations = function(userId) {
     $or: [{ proposerId: userId }, { recipientId: userId }],
     isDraft: false,
   })
-    .populate('proposerId', 'username email role profilePicture')
-    .populate('recipientId', 'username email role profilePicture')
+    .populate('proposerId', 'name email role profilePicture')
+    .populate('recipientId', 'name email role profilePicture')
     .sort({ createdAt: -1 });
 };
 

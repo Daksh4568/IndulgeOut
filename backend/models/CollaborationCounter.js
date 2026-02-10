@@ -111,12 +111,12 @@ collaborationCounterSchema.methods.isResponder = function(userId) {
 // Static method to get pending counter reviews
 collaborationCounterSchema.statics.getPendingReviews = function() {
   return this.find({ status: 'pending_admin_review' })
-    .populate('responderId', 'username email role profilePicture')
+    .populate('responderId', 'name email role profilePicture')
     .populate({
       path: 'collaborationId',
       populate: {
         path: 'proposerId recipientId',
-        select: 'username email role profilePicture',
+        select: 'name email role profilePicture',
       },
     })
     .sort({ createdAt: 1 }); // Oldest first

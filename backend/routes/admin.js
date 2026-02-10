@@ -111,156 +111,7 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
 });
 
 // ==================== COLLABORATION MANAGEMENT ====================
-
-// @route   GET /api/admin/collaborations/pending
-// @desc    Get all pending collaboration requests (submitted, awaiting admin review)
-// @access  Admin only
-router.get('/collaborations/pending', requirePermission('manage_collaborations'), async (req, res) => {
-  try {
-    const collaborations = await Collaboration.find({ 
-      status: 'pending_admin_review'
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    res.json(collaborations);
-  } catch (error) {
-    console.error('Error fetching pending collaborations:', error);
-    res.status(500).json({ message: 'Server error while fetching collaborations' });
-  }
-});
-
-// @route   GET /api/admin/collaborations/all
-// @desc    Get all collaborations with filters
-// @access  Admin only
-router.get('/collaborations/all', requirePermission('manage_collaborations'), async (req, res) => {
-  try {
-    const { status, type, page = 1, limit = 20 } = req.query;
-    
-    const query = {};
-    if (status) query.status = status;
-    if (type) query.type = type;
-
-    const skip = (page - 1) * limit;
-
-    const [collaborations, total] = await Promise.all([
-      Collaboration.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      Collaboration.countDocuments(query)
-    ]);
-
-    res.json({
-      collaborations,
-      pagination: {
-        total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching all collaborations:', error);
-    res.status(500).json({ message: 'Server error while fetching collaborations' });
-  }
-});
-
-// @route   POST /api/admin/collaborations/:id/approve
-// @desc    Approve a collaboration request and forward to vendor
-// @access  Admin only
-router.post('/collaborations/:id/approve', requirePermission('manage_collaborations'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { adminNotes } = req.body;
-    const adminId = req.user.userId;
-
-    const collaboration = await Collaboration.findById(id);
-
-    if (!collaboration) {
-      return res.status(404).json({ message: 'Collaboration not found' });
-    }
-
-    if (collaboration.status !== 'pending_admin_review') {
-      return res.status(400).json({ 
-        message: 'Only pending collaborations can be approved',
-        currentStatus: collaboration.status
-      });
-    }
-
-    // Update collaboration with admin approval
-    collaboration.status = 'approved_delivered';
-    collaboration.adminReview = {
-      reviewedBy: adminId,
-      reviewedAt: new Date(),
-      decision: 'approved',
-      notes: adminNotes || ''
-    };
-
-    await collaboration.save();
-
-    // TODO: Send notification to vendor
-
-    res.json({
-      message: 'Collaboration approved and forwarded to vendor',
-      collaboration
-    });
-  } catch (error) {
-    console.error('Error approving collaboration:', error);
-    res.status(500).json({ message: 'Server error while approving collaboration' });
-  }
-});
-
-// @route   POST /api/admin/collaborations/:id/reject
-// @desc    Reject a collaboration request
-// @access  Admin only
-router.post('/collaborations/:id/reject', requirePermission('manage_collaborations'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const adminId = req.user.userId;
-
-    if (!reason || reason.trim().length < 10) {
-      return res.status(400).json({ 
-        message: 'Rejection reason is required (minimum 10 characters)' 
-      });
-    }
-
-    const collaboration = await Collaboration.findById(id);
-
-    if (!collaboration) {
-      return res.status(404).json({ message: 'Collaboration not found' });
-    }
-
-    if (collaboration.status !== 'pending_admin_review') {
-      return res.status(400).json({ 
-        message: 'Only pending collaborations can be rejected',
-        currentStatus: collaboration.status
-      });
-    }
-
-    // Update collaboration with admin rejection
-    collaboration.status = 'rejected';
-    collaboration.adminReview = {
-      reviewedBy: adminId,
-      reviewedAt: new Date(),
-      decision: 'rejected',
-      notes: reason
-    };
-
-    await collaboration.save();
-
-    // TODO: Send notification to community (initiator)
-
-    res.json({
-      message: 'Collaboration rejected',
-      collaboration
-    });
-  } catch (error) {
-    console.error('Error rejecting collaboration:', error);
-    res.status(500).json({ message: 'Server error while rejecting collaboration' });
-  }
-});
+// Note: Collaboration routes moved below to avoid duplication
 
 // ==================== USER MANAGEMENT ====================
 
@@ -628,8 +479,8 @@ router.get('/collaborations/analytics', requirePermission('view_analytics'), asy
 router.get('/collaborations/:id', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const collaboration = await Collaboration.findById(req.params.id)
-      .populate('proposerId', 'name email role profilePicture phone')
-      .populate('recipientId', 'name email role profilePicture phone')
+      .populate('proposerId', 'name email role profilePicture phoneNumber hostPartnerType')
+      .populate('recipientId', 'name email role profilePicture phoneNumber hostPartnerType')
       .populate('adminReviewedBy', 'name email')
       .populate('latestCounterId');
 

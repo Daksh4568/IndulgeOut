@@ -66,7 +66,20 @@ router.post('/propose', authMiddleware, async (req, res) => {
       isDraft: false,
     });
 
+    console.log('Creating collaboration with data:', {
+      type,
+      proposerId: req.user.userId,
+      proposerType,
+      recipientId,
+      recipientType,
+      status: 'pending_admin_review',
+      isDraft: false,
+      formDataKeys: Object.keys(formData)
+    });
+
     await collaboration.save();
+    
+    console.log('Collaboration saved successfully:', collaboration._id);
 
     res.status(201).json({
       success: true,
@@ -161,9 +174,25 @@ router.get('/sent', authMiddleware, async (req, res) => {
       query.status = status;
     }
 
+    console.log('Fetching sent collaborations with query:', query);
+    console.log('User ID from token:', req.user.userId);
+
     const proposals = await Collaboration.find(query)
       .populate('recipientId', 'name email role profilePicture')
       .sort({ createdAt: -1 });
+
+    console.log(`Found ${proposals.length} sent collaborations`);
+    if (proposals.length > 0) {
+      console.log('First collaboration:', {
+        id: proposals[0]._id,
+        proposerId: proposals[0].proposerId,
+        type: proposals[0].type,
+        status: proposals[0].status,
+        isDraft: proposals[0].isDraft,
+        hasCounter: proposals[0].hasCounter,
+        latestCounterId: proposals[0].latestCounterId
+      });
+    }
 
     const mapped = proposals.map(p => ({
       ...p.toObject(),
@@ -232,6 +261,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    console.log('Fetched collaboration details:', {
+      id: collaboration._id,
+      type: collaboration.type,
+      status: collaboration.status,
+      hasCounter: collaboration.hasCounter,
+      latestCounterId: collaboration.latestCounterId?._id || collaboration.latestCounterId,
+      counterPopulated: !!collaboration.latestCounterId?.counterData
+    });
+
     if (!collaboration.isUserInvolved(req.user.userId)) {
       return res.status(403).json({
         success: false,
@@ -274,6 +312,15 @@ router.post('/:id/counter', authMiddleware, async (req, res) => {
       });
     }
 
+    console.log('Counter submission for collaboration:', {
+      collaborationId: collaboration._id,
+      collaborationType: collaboration.type,
+      currentStatus: collaboration.status,
+      proposerId: collaboration.proposerId,
+      recipientId: collaboration.recipientId,
+      requestingUserId: req.user.userId
+    });
+
     if (!collaboration.recipientId.equals(req.user.userId)) {
       return res.status(403).json({
         success: false,
@@ -284,7 +331,7 @@ router.post('/:id/counter', authMiddleware, async (req, res) => {
     if (collaboration.status !== 'approved_delivered') {
       return res.status(400).json({
         success: false,
-        error: 'Collaboration is not in correct status for counter submission',
+        error: `Collaboration is not in correct status for counter submission. Current status: ${collaboration.status}`,
       });
     }
 
@@ -301,6 +348,15 @@ router.post('/:id/counter', authMiddleware, async (req, res) => {
 
     await counter.save();
 
+    console.log('Counter created successfully:', {
+      counterId: counter._id,
+      collaborationId: counter.collaborationId,
+      responderId: counter.responderId,
+      responderType: counter.responderType,
+      status: counter.status
+    });
+
+    // Update collaboration to link to counter
     collaboration.status = 'counter_pending_review';
     collaboration.hasCounter = true;
     collaboration.latestCounterId = counter._id;
@@ -309,11 +365,19 @@ router.post('/:id/counter', authMiddleware, async (req, res) => {
     }
     await collaboration.save();
 
+    console.log('Collaboration updated with counter link:', {
+      collaborationId: collaboration._id,
+      hasCounter: collaboration.hasCounter,
+      latestCounterId: collaboration.latestCounterId,
+      newStatus: collaboration.status
+    });
+
     res.status(201).json({
       success: true,
       message: 'Your response has been sent successfully',
       data: {
         id: counter._id,
+        collaborationId: collaboration._id,
         status: 'processing',
       },
     });
