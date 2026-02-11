@@ -29,7 +29,18 @@ const CommunityCounterToVenueForm = () => {
     try {
       setLoading(true);
       const res = await api.get(`/collaborations/${id}`);
-      setProposal(res.data);
+      const collaboration = res.data.data || res.data;
+      console.log('Fetched collaboration for counter form:', {
+        id: collaboration._id,
+        type: collaboration.type,
+        status: collaboration.status,
+        proposerId: collaboration.proposerId,
+        recipientId: collaboration.recipientId,
+        hasCounter: collaboration.hasCounter,
+        latestCounterId: collaboration.latestCounterId,
+        formData: collaboration.formData
+      });
+      setProposal(collaboration);
       setError(null);
     } catch (err) {
       console.error('Error fetching proposal:', err);
@@ -78,9 +89,21 @@ const CommunityCounterToVenueForm = () => {
         generalNotes
       };
 
-      await api.post(`/collaborations/${id}/counter`, { counterData });
+      const response = await api.post(`/collaborations/${id}/counter`, { counterData });
+      
+      console.log('Counter submitted successfully:', {
+        collaborationId: id,
+        counterId: response.data.data?.id,
+        status: response.data.data?.status
+      });
+      
       alert('Counter-proposal submitted successfully! It will be reviewed by admin.');
-      navigate('/collaborations');
+      navigate('/collaborations', {
+        state: { 
+          message: 'Your counter-proposal has been submitted and is under admin review.',
+          tab: 'sent'
+        }
+      });
     } catch (err) {
       console.error('Error submitting counter:', err);
       alert(err.response?.data?.message || 'Failed to submit counter-proposal. Please try again.');
@@ -137,13 +160,192 @@ const CommunityCounterToVenueForm = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Section 1: Venue Services Review */}
+        {/* Section 1: Venue Overview */}
         <div className="mb-8">
           <div className="flex items-center mb-6">
             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold mr-3">1</div>
             <div>
-              <h2 className="text-xl font-bold">VENUE SERVICES REVIEW</h2>
+              <h2 className="text-xl font-bold">VENUE OVERVIEW</h2>
+              <p className="text-sm text-gray-400">Venue type and capacity details</p>
+            </div>
+          </div>
+
+          {formData.venueType && (
+            <FieldReviewCard
+              fieldName="Venue Type"
+              originalValue={formData.venueType}
+              proposedLabel="VENUE PROPOSED"
+              onResponseChange={(response) => handleFieldResponseChange('venueType', response)}
+            />
+          )}
+
+          {formData.capacityRange && (
+            <FieldReviewCard
+              fieldName="Capacity Range"
+              originalValue={formData.capacityRange}
+              proposedLabel="VENUE PROPOSED"
+              onResponseChange={(response) => handleFieldResponseChange('capacityRange', response)}
+            />
+          )}
+        </div>
+
+        {/* Section 2: Venue Services & Offerings */}
+        <div className="mb-8">
+          <div className="flex items-center mb-6">
+            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold mr-3">2</div>
+            <div>
+              <h2 className="text-xl font-bold">VENUE OFFERINGS</h2>
               <p className="text-sm text-gray-400">Review what the venue is offering to provide</p>
+            </div>
+          </div>
+
+          {formData.venueOfferings && Object.keys(formData.venueOfferings).length > 0 ? (
+            <div className="space-y-4">
+              {Object.entries(formData.venueOfferings).map(([offeringId, offeringData]) => {
+                const offeringLabels = {
+                  space: 'Venue Space',
+                  av: 'Audio / Visual Equipment',
+                  furniture: 'Furniture & Seating',
+                  fnb: 'F&B Services',
+                  staff: 'Staff Support',
+                  marketing: 'Marketing Support',
+                  storage: 'Storage / Parking',
+                  ticketing: 'Ticketing Support'
+                };
+                
+                return offeringData.selected && (
+                  <div key={offeringId} className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                    <h4 className="text-gray-300 text-sm font-medium mb-2">{offeringLabels[offeringId] || offeringId}</h4>
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-2">VENUE OFFERED</p>
+                      {offeringData.subOptions && Object.keys(offeringData.subOptions).length > 0 && (
+                        <div className="space-y-1">
+                          {Object.entries(offeringData.subOptions).map(([subId, subData]) => (
+                            subData.selected && (
+                              <p key={subId} className="text-white text-sm flex items-center">
+                                <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                {subId.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              </p>
+                            )
+                          ))}
+                        </div>
+                      )}
+                      {offeringData.comment && (
+                        <p className="text-gray-400 text-sm mt-2 italic">"{offeringData.comment}"</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleFieldResponseChange(`venueOfferings_${offeringId}`, { action: 'accept' })}
+                        className="py-2 px-3 rounded text-sm font-medium transition-all bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-900/50"
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleFieldResponseChange(`venueOfferings_${offeringId}`, { action: 'decline' })}
+                        className="py-2 px-3 rounded text-sm font-medium transition-all bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-900/50"
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No specific offerings mentioned</p>
+            </div>
+          )}
+        </div>
+
+        {/* Section 3: Commercial Terms */}
+        <div className="mb-8">
+          <div className="flex items-center mb-6">
+            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold mr-3">3</div>
+            <div>
+              <h2 className="text-xl font-bold">COMMERCIAL TERMS</h2>
+              <p className="text-sm text-gray-400">Review venue's commercial proposal</p>
+            </div>
+          </div>
+
+          {formData.commercialModels && Object.keys(formData.commercialModels).length > 0 ? (
+            <div className="space-y-4">
+              {Object.entries(formData.commercialModels).map(([modelId, modelData]) => {
+                const modelLabels = {
+                  rental: 'Flat Rental Fee',
+                  cover: 'Cover Charge per Person',
+                  revenueShare: 'Revenue Share',
+                  barter: 'Barter / No Fee'
+                };
+                
+                return modelData.selected && (
+                  <div key={modelId} className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                    <h4 className="text-gray-300 text-sm font-medium mb-2">{modelLabels[modelId] || modelId}</h4>
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-2">VENUE PROPOSED</p>
+                      {modelData.value && (
+                        <p className="text-white text-sm font-semibold">
+                          {modelId === 'rental' || modelId === 'cover' ? `Rs.${modelData.value}` : modelData.value}
+                        </p>
+                      )}
+                      {modelData.comment && (
+                        <p className="text-gray-400 text-sm mt-2 italic">"{modelData.comment}"</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleFieldResponseChange(`commercialModels_${modelId}`, { action: 'accept' })}
+                        className="py-2 px-3 rounded text-sm font-medium transition-all bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-900/50"
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleFieldResponseChange(`commercialModels_${modelId}`, { action: 'decline' })}
+                        className="py-2 px-3 rounded text-sm font-medium transition-all bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-900/50"
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No commercial terms specified</p>
+            </div>
+          )}
+
+          {formData.additionalTerms && (
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mt-4">
+              <h4 className="text-gray-300 text-sm font-medium mb-2">Additional Terms & Conditions</h4>
+              <p className="text-gray-400 text-sm">{formData.additionalTerms}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Section 4: Community Response */}
+        <div className="mb-8">
+          <div className="flex items-center mb-6">
+            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold mr-3">4</div>
+            <div>
+              <h2 className="text-xl font-bold">COMMUNITY RESPONSE</h2>
+              <p className="text-sm text-gray-400">Provide feedback and counter-offer if needed</p>
             </div>
           </div>
 

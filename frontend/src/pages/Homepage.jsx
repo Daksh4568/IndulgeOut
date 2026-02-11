@@ -841,7 +841,8 @@ function Homepage() {
               Hear From Our Community
             </h2>
             <p className="text-xl text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              Hold on, stay and watch this because you'll for sure love it. No bragging, it's honestly super candid, fun and heart-warming!
+                Hold on, watch this because you'll definitely love it. <br />
+                 No bragging, it’s honestly super candid, fun and heart-warming!
             </p>
           </div>
           
@@ -944,7 +945,7 @@ function Homepage() {
               Looking For Events In Your City?
             </h2>
             <p className="text-gray-300 text-base max-w-3xl mx-auto" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              Explore hand-picked, curated offline meetups, experiences and events that will bring you closer to your kind of circle.
+              Explore hand-picked, curated offline meetups, experiences and events that <br />will bring you closer to your kind of circle.
             </p>
           </div>
           

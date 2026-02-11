@@ -27,9 +27,6 @@ import Categories from './pages/Categories'
 import CategoryDetail from './pages/CategoryDetail'
 import HostPartnerPage from './pages/HostPartnerPage'
 import PaymentCallback from './pages/PaymentCallback'
-import VenueOnboarding from './pages/VenueOnboarding'
-import BrandOnboarding from './pages/BrandOnboarding'
-import CommunityOnboarding from './pages/CommunityOnboarding'
 import CommunityOrganizerDashboard from './pages/CommunityOrganizerDashboard'
 import Profile from './pages/ProfileNew'
 import BrowseVenues from './pages/BrowseVenues'
@@ -120,9 +117,6 @@ function AppContent() {
         <Route path="/login" element={<OTPLogin />} />
         <Route path="/interests" element={<InterestSelection />} />
         <Route path="/kyc-setup" element={<ErrorBoundary><KYCSetupPage /></ErrorBoundary>} />
-        <Route path="/onboarding/venue" element={<ErrorBoundary><VenueOnboarding /></ErrorBoundary>} />
-        <Route path="/onboarding/brand" element={<ErrorBoundary><BrandOnboarding /></ErrorBoundary>} />
-        <Route path="/onboarding/community" element={<ErrorBoundary><CommunityOnboarding /></ErrorBoundary>} />
         <Route path="/organizer/dashboard" element={<ErrorBoundary><CommunityOrganizerDashboard /></ErrorBoundary>} />
         <Route path="/scan-tickets" element={<ErrorBoundary><ScanTickets /></ErrorBoundary>} />
         <Route path="/organizer/events/:eventId/analytics" element={<ErrorBoundary><EventAnalytics /></ErrorBoundary>} />

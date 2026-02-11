@@ -30,6 +30,9 @@ export default function NavigationBar() {
   // Get appropriate dashboard route based on user role
   const getDashboardRoute = () => {
     if (!user) return '/dashboard';
+    if (user.role === 'admin') {
+      return '/admin/dashboard';
+    }
     if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
       return '/organizer/dashboard';
     } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {

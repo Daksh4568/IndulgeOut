@@ -25,7 +25,18 @@ const BrandCounterForm = () => {
     try {
       setLoading(true);
       const res = await api.get(`/collaborations/${id}`);
-      setProposal(res.data);
+      const collaboration = res.data.data || res.data;
+      console.log('Fetched collaboration for counter form:', {
+        id: collaboration._id,
+        type: collaboration.type,
+        status: collaboration.status,
+        proposerId: collaboration.proposerId,
+        recipientId: collaboration.recipientId,
+        hasCounter: collaboration.hasCounter,
+        latestCounterId: collaboration.latestCounterId,
+        formData: collaboration.formData
+      });
+      setProposal(collaboration);
       setError(null);
     } catch (err) {
       console.error('Error fetching proposal:', err);
@@ -70,9 +81,21 @@ const BrandCounterForm = () => {
         counterData.commercialCounter = commercialCounter;
       }
 
-      await api.post(`/collaborations/${id}/counter`, { counterData });
+      const response = await api.post(`/collaborations/${id}/counter`, { counterData });
+      
+      console.log('Counter submitted successfully:', {
+        collaborationId: id,
+        counterId: response.data.data?.id,
+        status: response.data.data?.status
+      });
+      
       alert('Counter-proposal submitted successfully! It will be reviewed by admin.');
-      navigate('/collaborations');
+      navigate('/collaborations', {
+        state: { 
+          message: 'Your counter-proposal has been submitted and is under admin review.',
+          tab: 'received'
+        }
+      });
     } catch (err) {
       console.error('Error submitting counter:', err);
       alert(err.response?.data?.message || 'Failed to submit counter-proposal. Please try again.');
@@ -139,28 +162,36 @@ const BrandCounterForm = () => {
             </div>
           </div>
 
-          {formData.eventName && (
-            <FieldReviewCard
-              fieldName="Event Name"
-              originalValue={formData.eventName}
-              onResponseChange={(response) => handleFieldResponseChange('eventName', response)}
-            />
-          )}
+          {formData.eventCategory || formData.targetAudience || formData.expectedReach ? (
+            <>
+              {formData.eventCategory && (
+                <FieldReviewCard
+                  fieldName="Event Category"
+                  originalValue={formData.eventCategory}
+                  onResponseChange={(response) => handleFieldResponseChange('eventCategory', response)}
+                />
+              )}
 
-          {formData.expectedAttendance && (
-            <FieldReviewCard
-              fieldName="Expected Attendance"
-              originalValue={formData.expectedAttendance}
-              onResponseChange={(response) => handleFieldResponseChange('expectedAttendance', response)}
-            />
-          )}
+              {formData.targetAudience && (
+                <FieldReviewCard
+                  fieldName="Target Audience"
+                  originalValue={formData.targetAudience}
+                  onResponseChange={(response) => handleFieldResponseChange('targetAudience', response)}
+                />
+              )}
 
-          {formData.eventDate && (
-            <FieldReviewCard
-              fieldName="Event Date"
-              originalValue={formData.eventDate}
-              onResponseChange={(response) => handleFieldResponseChange('eventDate', response)}
-            />
+              {formData.expectedReach && (
+                <FieldReviewCard
+                  fieldName="Expected Reach"
+                  originalValue={formData.expectedReach}
+                  onResponseChange={(response) => handleFieldResponseChange('expectedReach', response)}
+                />
+              )}
+            </>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No event overview details provided</p>
+            </div>
           )}
         </div>
 
@@ -169,49 +200,56 @@ const BrandCounterForm = () => {
           <div className="flex items-center mb-6">
             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold mr-3">2</div>
             <div>
-              <h2 className="text-xl font-bold">BRAND DELIVERABLES</h2>
+              <h2 className="text-xl font-bold">WHAT COMMUNITY EXPECTS</h2>
               <p className="text-sm text-gray-400">Review and confirm what brand will provide</p>
             </div>
           </div>
 
-          {formData.logoPlacement && (
-            <FieldReviewCard
-              fieldName="Logo Placement"
-              originalValue={formData.logoPlacement}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('logoPlacement', response)}
-            />
-          )}
+          {formData.brandDeliverables ? (
+            <>
+              <FieldReviewCard
+                fieldName="Social Media Coverage"
+                originalValue={formData.brandDeliverables.socialMedia ? 'Brand posts, stories, mentions on social channels' : 'Not requested'}
+                proposedLabel="Requested"
+                allowModify={false}
+                onResponseChange={(response) => handleFieldResponseChange('socialMedia', response)}
+              />
 
-          {formData.socialMediaMentions && (
-            <FieldReviewCard
-              fieldName="Social Media Mentions"
-              originalValue={formData.socialMediaMentions}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('socialMediaMentions', response)}
-            />
-          )}
+              <FieldReviewCard
+                fieldName="Event Sponsorship"
+                originalValue={formData.brandDeliverables.eventSponsorship ? 'Title sponsor, presenting sponsor, or powered-by sponsor' : 'Not requested'}
+                proposedLabel="Requested"
+                allowModify={false}
+                onResponseChange={(response) => handleFieldResponseChange('eventSponsorship', response)}
+              />
 
-          {formData.productSampling && (
-            <FieldReviewCard
-              fieldName="Product Sampling / Distribution"
-              originalValue={formData.productSampling}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('productSampling', response)}
-            />
-          )}
+              <FieldReviewCard
+                fieldName="Product Placement"
+                originalValue={formData.brandDeliverables.productPlacement ? 'Product samples, giveaways, or on-site activation' : 'Not requested'}
+                proposedLabel="Requested"
+                allowModify={false}
+                onResponseChange={(response) => handleFieldResponseChange('productPlacement', response)}
+              />
 
-          {formData.ongroundActivation && (
-            <FieldReviewCard
-              fieldName="On-Ground Activation"
-              originalValue={formData.ongroundActivation}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('ongroundActivation', response)}
-            />
+              <FieldReviewCard
+                fieldName="Content Creation"
+                originalValue={formData.brandDeliverables.contentCreation ? 'Co-create content, reels, stories with community' : 'Not requested'}
+                proposedLabel="Requested"
+                allowModify={false}
+                onResponseChange={(response) => handleFieldResponseChange('contentCreation', response)}
+              />
+
+              {formData.supportingInfo?.note && (
+                <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-4">
+                  <h4 className="text-gray-300 text-sm font-medium mb-2">Additional Deliverables</h4>
+                  <p className="text-gray-400 text-sm">{formData.supportingInfo.note}</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No specific deliverables mentioned in the proposal</p>
+            </div>
           )}
         </div>
 
@@ -225,12 +263,15 @@ const BrandCounterForm = () => {
             </div>
           </div>
 
-          {formData.sponsorshipAmount && (
+          {formData.pricing?.proposedValue ? (
             <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-4">
               <h4 className="text-gray-300 text-sm font-medium mb-2">Sponsorship Amount</h4>
               <div className="mb-3">
                 <p className="text-xs text-gray-500 mb-1">COMMUNITY PROPOSED</p>
-                <p className="text-white text-sm">{formData.sponsorshipAmount}</p>
+                <p className="text-white text-sm">{formData.pricing.proposedValue}</p>
+                {formData.pricing.model && (
+                  <p className="text-gray-400 text-sm mt-1">Model: {formData.pricing.model}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -238,7 +279,7 @@ const BrandCounterForm = () => {
                   onClick={() => setShowCommercialCounter(false)}
                   className={`py-2 px-3 rounded text-sm font-medium transition-all ${
                     !showCommercialCounter
-                      ? 'bg-green-700 text-white border-2 border-green-500'
+                      ? 'bg-green-900/50 text-white border-2 border-green-500'
                       : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-900/50'
                   }`}
                 >
@@ -252,7 +293,7 @@ const BrandCounterForm = () => {
                   onClick={() => setShowCommercialCounter(true)}
                   className={`py-2 px-3 rounded text-sm font-medium transition-all ${
                     showCommercialCounter
-                      ? 'bg-yellow-700 text-white border-2 border-yellow-500'
+                      ? 'bg-yellow-900/50 text-white border-2 border-yellow-500'
                       : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700 hover:bg-yellow-900/50'
                   }`}
                 >
@@ -276,6 +317,10 @@ const BrandCounterForm = () => {
                 </svg>
                 Add note about sponsorship (optional)
               </button>
+            </div>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No sponsorship amount mentioned in the proposal</p>
             </div>
           )}
 

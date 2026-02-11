@@ -42,7 +42,18 @@ const VenueCounterForm = () => {
     try {
       setLoading(true);
       const res = await api.get(`/collaborations/${id}`);
-      setProposal(res.data);
+      const collaboration = res.data.data || res.data;
+      console.log('Fetched collaboration for counter form:', {
+        id: collaboration._id,
+        type: collaboration.type,
+        status: collaboration.status,
+        proposerId: collaboration.proposerId,
+        recipientId: collaboration.recipientId,
+        hasCounter: collaboration.hasCounter,
+        latestCounterId: collaboration.latestCounterId,
+        formData: collaboration.formData
+      });
+      setProposal(collaboration);
       setError(null);
     } catch (err) {
       console.error('Error fetching proposal:', err);
@@ -97,7 +108,15 @@ const VenueCounterForm = () => {
 
       const counterData = {
         fieldResponses,
-        houseRules,
+        houseRules: {
+          alcohol: {
+            allowed: houseRules.alcohol === 'accept',
+            note: ''
+          },
+          soundLimit: houseRules.soundLimit,
+          ageRestriction: houseRules.ageRestriction,
+          setupWindow: houseRules.setupWindow
+        },
         generalNotes
       };
 
@@ -106,10 +125,21 @@ const VenueCounterForm = () => {
         counterData.commercialCounter = commercialCounter;
       }
 
-      await api.post(`/collaborations/${id}/counter`, { counterData });
+      const response = await api.post(`/collaborations/${id}/counter`, { counterData });
+      
+      console.log('Counter submitted successfully:', {
+        collaborationId: id,
+        counterId: response.data.data?.id,
+        status: response.data.data?.status
+      });
 
-      alert('Counter-proposal submitted successfully! It will be reviewed by admin.');
-      navigate('/collaborations');
+      alert('Counter-proposal submitted successfully! It has been sent to the community.');
+      navigate('/collaborations', {
+        state: { 
+          message: 'Your counter-proposal has been submitted and sent to the community.',
+          tab: 'received'
+        }
+      });
     } catch (err) {
       console.error('Error submitting counter:', err);
       alert(err.response?.data?.message || 'Failed to submit counter-proposal. Please try again.');
@@ -193,21 +223,50 @@ const VenueCounterForm = () => {
             </div>
           </div>
 
-          {formData.capacity && (
+          {/* Event Type */}
+          {formData.eventType && (
             <FieldReviewCard
-              fieldName="Seating / Standing Capacity"
-              originalValue={formData.capacity}
-              onResponseChange={(response) => handleFieldResponseChange('capacity', response)}
+              fieldName="Event Type"
+              originalValue={formData.eventType}
+              proposedLabel="COMMUNITY PROPOSED"
+              onResponseChange={(response) => handleFieldResponseChange('eventType', response)}
             />
           )}
 
+          {/* Expected Attendees */}
+          {formData.expectedAttendees && (
+            <FieldReviewCard
+              fieldName="Seating / Standing Capacity"
+              originalValue={formData.expectedAttendees}
+              proposedLabel="COMMUNITY PROPOSED"
+              onResponseChange={(response) => handleFieldResponseChange('expectedAttendees', response)}
+            />
+          )}
+
+          {/* Event Date & Time */}
           {formData.eventDate && (
             <FieldReviewCard
               fieldName="Date & Time"
-              originalValue={formData.eventDate}
+              originalValue={
+                formData.eventDate.date 
+                  ? `${new Date(formData.eventDate.date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })} | ${formData.eventDate.startTime || ''} - ${formData.eventDate.endTime || ''}`
+                  : formData.eventDate
+              }
               proposedLabel="PROPOSED"
-              showBackup={formData.backupDate}
-              backupValue={formData.backupDate}
+              showBackup={formData.showBackupDate && formData.backupDate}
+              backupValue={
+                formData.backupDate?.date
+                  ? `${new Date(formData.backupDate.date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })} | ${formData.backupDate.startTime || ''} - ${formData.backupDate.endTime || ''}`
+                  : ''
+              }
               backupLabel="BACKUP"
               onResponseChange={(response) => handleFieldResponseChange('eventDate', response)}
             />
@@ -226,44 +285,178 @@ const VenueCounterForm = () => {
             </div>
           </div>
 
-          {formData.audioVisualSupport && (
-            <FieldReviewCard
-              fieldName="Audio / Visual Support"
-              originalValue={formData.audioVisualSupport}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('audioVisualSupport', response)}
-            />
-          )}
+          {formData.requirements ? (
+            <>
+              {/* Check if it's simple boolean structure (from RequestCollaboration) */}
+              {(formData.requirements.audioVisual !== undefined || 
+                formData.requirements.seating !== undefined || 
+                formData.requirements.catering !== undefined || 
+                formData.requirements.parking !== undefined) && (
+                <>
+                  <FieldReviewCard
+                    fieldName="Audio / Visual Support"
+                    originalValue={formData.requirements.audioVisual ? "Mic, Speakers, Projector, Lighting" : "Not Requested"}
+                    proposedLabel="Requested"
+                    allowModify={false}
+                    onResponseChange={(response) => handleFieldResponseChange('audioVisualSupport', response)}
+                  />
 
-          {formData.seatingLayoutSupport && (
-            <FieldReviewCard
-              fieldName="Seating / Layout Support"
-              originalValue={formData.seatingLayoutSupport}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('seatingLayoutSupport', response)}
-            />
-          )}
+                  <FieldReviewCard
+                    fieldName="Seating / Layout Support"
+                    originalValue={formData.requirements.seating ? "Tables, Chairs, Stage area" : "Not Requested"}
+                    proposedLabel="Requested"
+                    allowModify={false}
+                    onResponseChange={(response) => handleFieldResponseChange('seatingLayoutSupport', response)}
+                  />
 
-          {formData.barFoodService && (
-            <FieldReviewCard
-              fieldName="Bar / Food Service"
-              originalValue={formData.barFoodService}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('barFoodService', response)}
-            />
-          )}
+                  <FieldReviewCard
+                    fieldName="Bar / Food Service"
+                    originalValue={formData.requirements.catering ? "Bar service, Light snacks, Beverages" : "Not Requested"}
+                    proposedLabel="Requested"
+                    allowModify={false}
+                    onResponseChange={(response) => handleFieldResponseChange('barFoodService', response)}
+                  />
 
-          {formData.productionSetupSupport && (
-            <FieldReviewCard
-              fieldName="Production / Setup Support"
-              originalValue={formData.productionSetupSupport}
-              proposedLabel="Requested"
-              allowModify={false}
-              onResponseChange={(response) => handleFieldResponseChange('productionSetupSupport', response)}
-            />
+                  <FieldReviewCard
+                    fieldName="Production / Setup Support"
+                    originalValue={formData.requirements.parking ? "Setup assistance, Technical support" : "Not Requested"}
+                    proposedLabel="Requested"
+                    allowModify={false}
+                    onResponseChange={(response) => handleFieldResponseChange('productionSetupSupport', response)}
+                  />
+
+                  {formData.requirements.other && (
+                    <FieldReviewCard
+                      fieldName="Additional Requirements"
+                      originalValue={formData.requirements.other}
+                      proposedLabel="Requested"
+                      onResponseChange={(response) => handleFieldResponseChange('additionalRequirements', response)}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* Check if it's nested object structure (from ProposalForm) */}
+              {(formData.requirements.spaceOnly || formData.requirements.production) && (
+                <>
+                  {formData.requirements.spaceOnly?.selected && (
+                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-4">
+                      <h4 className="text-gray-300 text-sm font-medium mb-2">Space Requirements</h4>
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500 mb-2">COMMUNITY REQUESTED</p>
+                        {formData.requirements.spaceOnly.subOptions && Object.keys(formData.requirements.spaceOnly.subOptions).length > 0 && (
+                          <div className="space-y-1">
+                            {Object.entries(formData.requirements.spaceOnly.subOptions).map(([key, val]) => (
+                              val.selected && (
+                                <p key={key} className="text-white text-sm flex items-center">
+                                  <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                </p>
+                              )
+                            ))}
+                          </div>
+                        )}
+                        {formData.requirements.spaceOnly.comment && (
+                          <p className="text-gray-400 text-sm mt-2 italic">"{formData.requirements.spaceOnly.comment}"</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleFieldResponseChange('spaceOnly', { action: 'accept' })}
+                          className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                            fieldResponses.spaceOnly?.action === 'accept'
+                              ? 'bg-green-600 text-white border-2 border-green-400'
+                              : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-600'
+                          }`}
+                        >
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFieldResponseChange('spaceOnly', { action: 'decline' })}
+                          className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                            fieldResponses.spaceOnly?.action === 'decline'
+                              ? 'bg-red-600 text-white border-2 border-red-400'
+                              : 'bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-600'
+                          }`}
+                        >
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.requirements.production?.selected && (
+                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-4">
+                      <h4 className="text-gray-300 text-sm font-medium mb-2">Production Support</h4>
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500 mb-2">COMMUNITY REQUESTED</p>
+                        {formData.requirements.production.subOptions && Object.keys(formData.requirements.production.subOptions).length > 0 && (
+                          <div className="space-y-1">
+                            {Object.entries(formData.requirements.production.subOptions).map(([key, val]) => (
+                              val.selected && (
+                                <p key={key} className="text-white text-sm flex items-center">
+                                  <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                </p>
+                              )
+                            ))}
+                          </div>
+                        )}
+                        {formData.requirements.production.comment && (
+                          <p className="text-gray-400 text-sm mt-2 italic">"{formData.requirements.production.comment}"</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleFieldResponseChange('production', { action: 'accept' })}
+                          className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                            fieldResponses.production?.action === 'accept'
+                              ? 'bg-green-600 text-white border-2 border-green-400'
+                              : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-600'
+                          }`}
+                        >
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFieldResponseChange('production', { action: 'decline' })}
+                          className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                            fieldResponses.production?.action === 'decline'
+                              ? 'bg-red-600 text-white border-2 border-red-400'
+                              : 'bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-600'
+                          }`}
+                        >
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No specific requirements mentioned in the proposal</p>
+            </div>
           )}
         </div>
 
@@ -279,21 +472,25 @@ const VenueCounterForm = () => {
             </div>
           </div>
 
-          {formData.pricingModel && (
+          {formData.pricing?.model && (
             <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-4">
               <h4 className="text-gray-300 text-sm font-medium mb-2">Pricing Model</h4>
               <div className="mb-3">
                 <p className="text-xs text-gray-500 mb-1">COMMUNITY PROPOSED</p>
-                <p className="text-white text-sm">{formData.pricingModel}</p>
+                <p className="text-white text-sm">{formData.pricing.model}</p>
+                {formData.pricing.proposedValue && (
+                  <p className="text-gray-400 text-sm mt-1">Value: {formData.pricing.proposedValue}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <button
+                  type="button"
                   onClick={() => setShowCommercialCounter(false)}
                   className={`py-2 px-3 rounded text-sm font-medium transition-all ${
                     !showCommercialCounter
-                      ? 'bg-green-700 text-white border-2 border-green-500'
-                      : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-900/50'
+                      ? 'bg-green-600 text-white border-2 border-green-400'
+                      : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-600'
                   }`}
                 >
                   <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,11 +500,12 @@ const VenueCounterForm = () => {
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setShowCommercialCounter(true)}
                   className={`py-2 px-3 rounded text-sm font-medium transition-all ${
                     showCommercialCounter
-                      ? 'bg-yellow-700 text-white border-2 border-yellow-500'
-                      : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700 hover:bg-yellow-900/50'
+                      ? 'bg-yellow-600 text-white border-2 border-yellow-400'
+                      : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700 hover:bg-yellow-600'
                   }`}
                 >
                   <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,7 +515,8 @@ const VenueCounterForm = () => {
                 </button>
 
                 <button
-                  className="py-2 px-3 rounded text-sm font-medium transition-all bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-900/50"
+                  type="button"
+                  className="py-2 px-3 rounded text-sm font-medium transition-all bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-600"
                 >
                   <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -340,6 +539,87 @@ const VenueCounterForm = () => {
                 </svg>
                 Add note about commercials (optional)
               </button>
+            </div>
+         )}
+
+          {/* Complex pricing structure (from ProposalForm) */}
+          {formData.pricing && !formData.pricing.model && Object.keys(formData.pricing).length > 0 && (
+            <div className="space-y-4">
+              {Object.entries(formData.pricing).filter(([key]) => key !== 'additionalNotes').map(([modelKey, modelData]) => {
+                const modelLabels = {
+                  rental: 'Flat Rental Fee',
+                  cover: 'Cover Charge per Person',
+                  revenueShare: 'Revenue Share',
+                  barter: 'Barter / No Fee'
+                };
+                
+                return modelData?.selected && (
+                  <div key={modelKey} className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                    <h4 className="text-gray-300 text-sm font-medium mb-2">{modelLabels[modelKey] || modelKey}</h4>
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-2">COMMUNITY PROPOSED</p>
+                      {modelData.value && (
+                        <p className="text-white text-sm font-semibold">
+                          {modelKey === 'rental' || modelKey === 'cover' ? `Rs.${modelData.value}` : modelData.value}
+                        </p>
+                      )}
+                      {modelData.comment && (
+                        <p className="text-gray-400 text-sm mt-2 italic">"{modelData.comment}"</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleFieldResponseChange(`pricing_${modelKey}`, { action: 'accept' })}
+                        className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                          fieldResponses[`pricing_${modelKey}`]?.action === 'accept'
+                              ? 'bg-green-600 text-white border-2 border-green-400'
+                              : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-600'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFieldResponseChange(`pricing_${modelKey}`, { action: 'counter' })}
+                        className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                          fieldResponses[`pricing_${modelKey}`]?.action === 'counter'
+                            ? 'bg-yellow-600 text-white border-2 border-yellow-400'
+                            : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700 hover:bg-yellow-600'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Counter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFieldResponseChange(`pricing_${modelKey}`, { action: 'decline' })}
+                        className={`py-2 px-3 rounded text-sm font-medium transition-all ${
+                          fieldResponses[`pricing_${modelKey}`]?.action === 'decline'
+                              ? 'bg-red-600 text-white border-2 border-red-400'
+                              : 'bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-600'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {formData.pricing.additionalNotes && (
+                <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                  <h4 className="text-gray-300 text-sm font-medium mb-2">Additional Notes</h4>
+                  <p className="text-gray-400 text-sm">{formData.pricing.additionalNotes}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -376,6 +656,12 @@ const VenueCounterForm = () => {
               </div>
             </div>
           )}
+
+          {!formData.pricing?.model && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+              <p className="text-gray-400">No pricing details mentioned in the proposal</p>
+            </div>
+          )}
         </div>
 
         {/* Section 4: House Rules & Conditions */}
@@ -404,8 +690,8 @@ const VenueCounterForm = () => {
                   onClick={() => handleHouseRuleChange(rule, 'accept')}
                   className={`py-2 px-3 rounded text-sm font-medium transition-all ${
                     houseRules[rule] === 'accept'
-                      ? 'bg-green-700 text-white border-2 border-green-500'
-                      : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-900/50'
+                      ? 'bg-green-600 text-white border-2 border-green-400'
+                      : 'bg-green-900/30 text-green-400 border border-green-700 hover:bg-green-600'
                   }`}
                 >
                   <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,8 +704,8 @@ const VenueCounterForm = () => {
                   onClick={() => handleHouseRuleChange(rule, 'decline')}
                   className={`py-2 px-3 rounded text-sm font-medium transition-all ${
                     houseRules[rule] === 'decline'
-                      ? 'bg-red-800 text-white border-2 border-red-600'
-                      : 'bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-900/50'
+                      ? 'bg-red-600 text-white border-2 border-red-400'
+                      : 'bg-red-900/30 text-red-400 border border-red-700 hover:bg-red-600'
                   }`}
                 >
                   <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,7 +745,7 @@ const VenueCounterForm = () => {
         <div className="flex items-center justify-between pt-6 border-t border-gray-800">
           <button
             onClick={handleDeclineAll}
-            className="px-6 py-3 bg-red-900/30 text-red-400 border border-red-700 rounded-lg hover:bg-red-900/50 transition-colors"
+            className="px-6 py-3 bg-red-900/30 text-red-400 border border-red-700 rounded-lg hover:bg-red-600 transition-colors"
           >
             Decline Entire Proposal
           </button>

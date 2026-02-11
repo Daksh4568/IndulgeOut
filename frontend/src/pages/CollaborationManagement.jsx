@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../config/api';
 import {
   ArrowLeft, MessageCircle, Check, X, Clock, AlertCircle,
@@ -10,6 +10,7 @@ import NavigationBar from '../components/NavigationBar';
 
 const CollaborationManagement = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [collaborations, setCollaborations] = useState([]);
@@ -20,6 +21,7 @@ const CollaborationManagement = () => {
   const [responseMessage, setResponseMessage] = useState('');
   const [responseAction, setResponseAction] = useState(''); // 'accept' or 'reject'
   const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -28,6 +30,18 @@ const CollaborationManagement = () => {
       navigate('/login');
       return;
     }
+
+    // Handle success message from navigation state
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      if (location.state?.tab) {
+        setActiveTab(location.state.tab);
+      }
+      // Clear the state
+      navigate(location.pathname, { replace: true, state: {} });
+      setTimeout(() => setSuccessMessage(''), 5000);
+    }
+
     fetchCollaborations();
   }, [user, authLoading, activeTab]);
 
@@ -52,7 +66,9 @@ const CollaborationManagement = () => {
           formData: response.data.data[0].formData,
           requestDetails: response.data.data[0].requestDetails,
           type: response.data.data[0].type,
-          status: response.data.data[0].status
+          status: response.data.data[0].status,
+          hasCounter: response.data.data[0].hasCounter,
+          latestCounterId: response.data.data[0].latestCounterId
         });
       }
       
@@ -115,35 +131,34 @@ const CollaborationManagement = () => {
     return labels[status] || status.replace(/_/g, ' ');
   };
 
-  const getStatusBadge = (status, isReceived) => {
-    // Hide admin review states from users - they shouldn't know about admin layer
+  const getStatusBadge = (collab, isReceived) => {
+    // Use userFacingStatus if available, otherwise fall back to status
+    const displayStatus = collab.userFacingStatus || collab.status;
+    
+    // Map user-facing status to badge styling
     const badges = {
-      // Proposal states
-      draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Draft' },
-      pending_admin_review: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Pending' },
-      approved_delivered: { 
-        bg: 'bg-purple-100 dark:bg-purple-900/30', 
-        text: 'text-purple-700 dark:text-purple-300', 
-        label: isReceived ? 'Awaiting Your Response' : 'Delivered'
-      },
-      rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Not Approved' },
+      // User-facing statuses
+      'Draft': { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' },
+      'Under Review': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+      'Sent to Recipient': { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
+      'New Proposal': { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
+      'Needs Revision': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
+      'Processing Response': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300' },
+      'Response Received': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+      'Response Sent': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+      'Confirmed': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
+      'Declined': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
       
-      // Counter states
-      counter_pending_review: { 
-        bg: 'bg-yellow-100 dark:bg-yellow-900/30', 
-        text: 'text-yellow-700 dark:text-yellow-300', 
-        label: 'Counter Pending'
-      },
-      counter_delivered: { 
-        bg: 'bg-orange-100 dark:bg-orange-900/30', 
-        text: 'text-orange-700 dark:text-orange-300', 
-        label: 'Counter Received - Review Required'
-      },
-      
-      // Final states
-      confirmed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: '✓ Confirmed' },
-      declined: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Declined' },
-      flagged: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Under Review' },
+      // Legacy fallback for internal statuses
+      draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' },
+      pending_admin_review: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+      approved_delivered: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
+      rejected: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
+      counter_pending_review: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300' },
+      counter_delivered: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+      confirmed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
+      declined: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+      flagged: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
       
       // Legacy support
       submitted: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Pending' },
@@ -157,14 +172,14 @@ const CollaborationManagement = () => {
       vendor_rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Rejected' },
       completed: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', label: 'Completed' },
       cancelled: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Cancelled' },
-      expired: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Expired' },
-      pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300', label: 'Pending' },
-      accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Accepted' }
+      expired: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' },
+      pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
+      accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' }
     };
-    const badge = badges[status] || badges.pending;
+    const badge = badges[displayStatus] || badges[collab.status] || { bg: 'bg-gray-100', text: 'text-gray-700' };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-        {badge.label}
+        {displayStatus}
       </span>
     );
   };
@@ -238,6 +253,13 @@ const CollaborationManagement = () => {
           <p className="text-gray-600 dark:text-gray-400">
             Manage your venue and brand partnership requests
           </p>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -272,12 +294,12 @@ const CollaborationManagement = () => {
               <div className="flex space-x-2">
                 {[
                   { value: 'all', label: 'All' },
-                  { value: 'pending_admin_review', label: 'Pending' },
-                  { value: 'approved_delivered', label: 'Awaiting Response' },
-                  { value: 'counter_delivered', label: 'Counter Received' },
+                  { value: 'pending_admin_review', label: 'Under Review' },
+                  { value: 'approved_delivered', label: activeTab === 'sent' ? 'Sent to Recipient' : 'New Proposal' },
+                  { value: 'counter_delivered', label: activeTab === 'sent' ? 'Response Received' : 'Response Sent' },
                   { value: 'confirmed', label: 'Confirmed' },
                   { value: 'declined', label: 'Declined' },
-                  { value: 'rejected', label: 'Not Approved' }
+                  { value: 'rejected', label: 'Needs Revision' }
                 ].map(({ value, label }) => (
                   <button
                     key={value}
@@ -355,9 +377,9 @@ const CollaborationManagement = () => {
                     <div className="flex items-start space-x-4 flex-1">
                       {/* Partner Info */}
                       <div className="flex-shrink-0">
-                        {partner?.profileImage || partner?.profilePicture ? (
+                        {partner?.profilePicture ? (
                           <img
-                            src={partner.profileImage || partner.profilePicture}
+                            src={partner.profilePicture}
                             alt={partner?.name || partner?.username || 'Partner'}
                             className="w-16 h-16 rounded-lg object-cover"
                           />
@@ -373,8 +395,15 @@ const CollaborationManagement = () => {
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {partner?.name || partner?.username || 'Unknown Partner'}
                           </h3>
-                          {getStatusBadge(collab.status)}
+                          {getStatusBadge(collab, isReceived)}
                           {getPriorityBadge(collab.priority)}
+                          {/* Counter Indicator */}
+                          {collab.hasCounter && collab.latestCounterId && (
+                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded flex items-center">
+                              <FileText className="h-3 w-3 mr-1" />
+                              Has Counter
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 capitalize">
@@ -469,20 +498,33 @@ const CollaborationManagement = () => {
                         <button
                           onClick={() => {
                             // Navigate to counter form based on collaboration type and user role
-                            const collabType = collab.collaborationType;
+                            const collabType = collab.type;
                             let counterPath = '';
                             
+                            console.log('Opening counter form for collaboration:', {
+                              id: collab._id,
+                              type: collabType,
+                              status: collab.status
+                            });
+                            
                             // Determine counter form path based on recipient type and collaboration type
-                            if (collabType === 'community_to_venue') {
+                            if (collabType === 'communityToVenue') {
                               counterPath = `/collaborations/${collab._id}/counter/venue`;
-                            } else if (collabType === 'community_to_brand') {
+                            } else if (collabType === 'communityToBrand') {
                               counterPath = `/collaborations/${collab._id}/counter/brand`;
-                            } else if (collabType === 'brand_to_community') {
+                            } else if (collabType === 'brandToCommunity') {
                               counterPath = `/collaborations/${collab._id}/counter/community-to-brand`;
-                            } else if (collabType === 'venue_to_community') {
+                            } else if (collabType === 'venueToCommunity') {
                               counterPath = `/collaborations/${collab._id}/counter/community-to-venue`;
                             }
                             
+                            if (!counterPath) {
+                              console.error('Could not determine counter form path for type:', collabType);
+                              alert('Unable to open counter form. Please refresh and try again.');
+                              return;
+                            }
+                            
+                            console.log('Navigating to counter form:', counterPath);
                             navigate(counterPath);
                           }}
                           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"

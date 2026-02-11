@@ -36,6 +36,13 @@ export default function ExplorePage() {
   // Modal state
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  
+  // People tab state
+  const [peopleFilter, setPeopleFilter] = useState('recommended');
+  
+  // Carousel state
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  
   const carouselRef = useRef(null);
 
   const scrollCarousel = (direction) => {
@@ -45,6 +52,23 @@ export default function ExplorePage() {
         ? carouselRef.current.scrollLeft - scrollAmount
         : carouselRef.current.scrollLeft + scrollAmount;
       carouselRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToSlide = (index) => {
+    if (carouselRef.current) {
+      const slideWidth = carouselRef.current.scrollWidth / topEvents.length;
+      carouselRef.current.scrollTo({ left: slideWidth * index, behavior: 'smooth' });
+      setCurrentCarouselIndex(index);
+    }
+  };
+
+  // Track carousel scroll position
+  const handleCarouselScroll = () => {
+    if (carouselRef.current) {
+      const slideWidth = carouselRef.current.scrollWidth / topEvents.length;
+      const currentIndex = Math.round(carouselRef.current.scrollLeft / slideWidth);
+      setCurrentCarouselIndex(currentIndex);
     }
   };
 
@@ -283,6 +307,34 @@ export default function ExplorePage() {
     setSearchParams({ tab: newTab });
   };
 
+  // Get sorted people connections based on filter
+  const getSortedPeople = () => {
+    const allPeople = [
+      { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: 2.5, emoji: '👤', bgColor: 'from-purple-500 to-purple-700', isActive: true },
+      { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: 3.8, emoji: '👤', bgColor: 'from-pink-500 to-pink-700', isActive: false },
+      { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: 1.2, emoji: '👤', bgColor: 'from-blue-500 to-blue-700', isActive: true },
+      { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: 4.5, emoji: '👤', bgColor: 'from-indigo-500 to-indigo-700', isActive: false },
+      { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: 5.0, emoji: '👤', bgColor: 'from-violet-500 to-violet-700', isActive: true },
+      { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: 2.1, emoji: '👤', bgColor: 'from-fuchsia-500 to-fuchsia-700', isActive: false },
+      { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: 3.3, emoji: '👤', bgColor: 'from-cyan-500 to-cyan-700', isActive: true },
+      { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: 1.8, emoji: '👤', bgColor: 'from-rose-500 to-rose-700', isActive: false },
+    ];
+
+    switch(peopleFilter) {
+      case 'nearby':
+        return [...allPeople].sort((a, b) => a.distance - b.distance);
+      case 'new':
+        return [...allPeople].reverse();
+      case 'active':
+        return allPeople.filter(p => p.isActive).concat(allPeople.filter(p => !p.isActive));
+      case 'under10km':
+        return allPeople.filter(p => p.distance <= 10);
+      case 'recommended':
+      default:
+        return allPeople;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
       <NavigationBar />
@@ -379,61 +431,62 @@ export default function ExplorePage() {
                       {/* Carousel */}
                       <div 
                         ref={carouselRef}
+                        onScroll={handleCarouselScroll}
                         className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth px-4 sm:px-0"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                       >
                         {topEvents.map((event, index) => (
                           <div 
                             key={event._id} 
-                            className="flex-none w-full sm:w-[600px] lg:w-[650px] snap-center"
+                            className="flex-none w-[90vw] sm:w-[600px] lg:w-[700px] snap-center"
                             style={{
                               animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
                             }}
                           >
-                            {/* Horizontal Event Card */}
+                            {/* Event Card */}
                             <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all h-full">
-                              <div className="flex flex-col sm:flex-row h-full min-h-[400px]">
+                              <div className="flex flex-row h-full">
                                 {/* Left Side - Content */}
-                                <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
-                                  <div>
-                                    <div className="flex items-center gap-2 text-gray-700 mb-3">
-                                      <Calendar className="h-4 w-4" />
-                                      <span className="text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {event.time}
+                                <div className="flex-1 p-4 sm:p-6 flex flex-col justify-between min-w-0">
+                                  <div className="space-y-2 sm:space-y-3">
+                                    <div className="flex items-center gap-1 text-gray-700">
+                                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                      <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time}
                                       </span>
                                     </div>
-                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 line-clamp-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                    <h3 className="text-sm sm:text-xl lg:text-2xl font-bold text-gray-900 line-clamp-3 sm:line-clamp-2 leading-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                       {event.title}
                                     </h3>
-                                    <div className="flex items-start gap-2 text-gray-700 mb-4">
-                                      <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
-                                      <span className="text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                    <div className="flex items-start gap-1 text-gray-700">
+                                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0" />
+                                      <span className="text-xs sm:text-sm line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                         {event.location?.venue || event.location?.city}, {event.location?.state}
                                       </span>
                                     </div>
-                                    <div className="mb-4">
-                                      <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                    <div>
+                                      <span className="text-sm sm:text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                         ₹{event.price?.amount || 499} onwards
                                       </span>
                                     </div>
                                   </div>
                                   <button
                                     onClick={() => window.location.href = `/events/${event._id}`}
-                                    className="w-full sm:w-auto text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+                                    className="w-full mt-3 sm:mt-4 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-md text-sm sm:text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg"
                                     style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                                   >
                                     Get your Ticket
                                   </button>
                                 </div>
 
-                                {/* Right Side - Framed Image */}
-                                <div className="w-full sm:w-1/2 h-64 sm:h-auto p-4 flex items-center justify-center">
-                                  <div className="relative w-full h-full max-w-[280px] mx-auto">
+                                {/* Right Side - Image */}
+                                <div className="w-[45%] sm:w-[50%] p-3 sm:p-4 flex items-center justify-center">
+                                  <div className="relative w-full h-full">
                                     {/* Frame/Shadow effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-2xl"></div>
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-xl"></div>
                                     
                                     {/* Image container */}
-                                    <div className="relative bg-white rounded-lg overflow-hidden shadow-xl h-full">
+                                    <div className="relative bg-white rounded-lg overflow-hidden shadow-lg h-full min-h-[180px] sm:min-h-[280px]">
                                       {event.images && event.images.length > 0 ? (
                                         <img
                                           src={event.images[0]}
@@ -464,7 +517,25 @@ export default function ExplorePage() {
                         <ChevronRight className="h-6 w-6 text-gray-800" />
                       </button>
                     </div>
-                    <style jsx>{`
+
+                    {/* Carousel Dots */}
+                    {topEvents.length > 1 && (
+                      <div className="hidden sm:flex justify-center gap-2 mt-6">
+                        {topEvents.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => scrollToSlide(index)}
+                            className={`rounded-full transition-all ${
+                              index === currentCarouselIndex
+                                ? 'w-8 h-2 bg-[#7878E9]'
+                                : 'w-2 h-2 bg-gray-500 hover:bg-gray-400'
+                            }`}
+                            aria-label={`Go to slide ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <style>{`
                       @keyframes slideIn {
                         from {
                           opacity: 0;
@@ -745,23 +816,40 @@ export default function ExplorePage() {
                   </div>
 
                   {/* Filter Pills */}
-                  <div className="flex gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
-                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      ☰ Filters
-                    </button>
-                    <button className="px-4 sm:px-5 py-2 rounded-full text-white text-sm sm:text-base font-medium hover:opacity-90 transition-all shadow-lg whitespace-nowrap" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' }}>
+                  <div className="hidden md:flex gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
+                    <button 
+                      onClick={() => setPeopleFilter('recommended')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium hover:opacity-90 transition-all whitespace-nowrap ${peopleFilter === 'recommended' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
                       Recommended
                     </button>
-                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    <button 
+                      onClick={() => setPeopleFilter('nearby')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'nearby' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'nearby' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
                       Nearby
                     </button>
-                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    <button 
+                      onClick={() => setPeopleFilter('new')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'new' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'new' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
                       New
                     </button>
-                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    <button 
+                      onClick={() => setPeopleFilter('active')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'active' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'active' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
                       Active Now
                     </button>
-                    <button className="px-4 sm:px-5 py-2 rounded-full bg-[#3A3A52] text-white text-sm sm:text-base font-medium hover:bg-[#4A4A62] transition-colors whitespace-nowrap" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    <button 
+                      onClick={() => setPeopleFilter('under10km')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'under10km' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'under10km' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
                       Under 10km
                     </button>
                   </div>
@@ -771,16 +859,7 @@ export default function ExplorePage() {
                     {/* Mobile: Horizontal Carousel */}
                     <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                       <div className="flex gap-4 px-2">
-                        {[
-                          { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: '2.5 km away', emoji: '👤', bgColor: 'from-purple-500 to-purple-700' },
-                          { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: '3.8 km away', emoji: '👤', bgColor: 'from-pink-500 to-pink-700' },
-                          { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: '1.2 km away', emoji: '👤', bgColor: 'from-blue-500 to-blue-700' },
-                          { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: '4.5 km away', emoji: '👤', bgColor: 'from-indigo-500 to-indigo-700' },
-                          { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: '5.0 km away', emoji: '👤', bgColor: 'from-violet-500 to-violet-700' },
-                          { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: '2.1 km away', emoji: '👤', bgColor: 'from-fuchsia-500 to-fuchsia-700' },
-                          { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: '3.3 km away', emoji: '👤', bgColor: 'from-cyan-500 to-cyan-700' },
-                          { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: '1.8 km away', emoji: '👤', bgColor: 'from-rose-500 to-rose-700' },
-                        ].map((person, index) => (
+                        {getSortedPeople().map((person, index) => (
                           <div key={index} className="flex-none w-[85vw] snap-center">
                             <div className="bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 cursor-pointer flex flex-col blur-sm">
                               <div className="relative h-64">
@@ -799,7 +878,7 @@ export default function ExplorePage() {
                               <div className="p-4 flex-grow flex flex-col">
                                 <div className="flex items-center text-gray-400 text-sm mb-4" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                   <MapPin className="h-4 w-4 mr-1 text-[#7878E9]" />
-                                  {person.distance}
+                                  {person.distance.toFixed(1)} km away
                                 </div>
                                 <button
                                   className="w-full text-white py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-auto"
@@ -816,17 +895,7 @@ export default function ExplorePage() {
 
                     {/* Desktop: Grid Layout */}
                     <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                      {/* Fake Connection Cards */}
-                      {[
-                        { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: '2.5 km away', emoji: '👤', bgColor: 'from-purple-500 to-purple-700' },
-                        { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: '3.8 km away', emoji: '👤', bgColor: 'from-pink-500 to-pink-700' },
-                        { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: '1.2 km away', emoji: '👤', bgColor: 'from-blue-500 to-blue-700' },
-                        { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: '4.5 km away', emoji: '👤', bgColor: 'from-indigo-500 to-indigo-700' },
-                        { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: '5.0 km away', emoji: '👤', bgColor: 'from-violet-500 to-violet-700' },
-                        { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: '2.1 km away', emoji: '👤', bgColor: 'from-fuchsia-500 to-fuchsia-700' },
-                        { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: '3.3 km away', emoji: '👤', bgColor: 'from-cyan-500 to-cyan-700' },
-                        { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: '1.8 km away', emoji: '👤', bgColor: 'from-rose-500 to-rose-700' },
-                      ].map((person, index) => (
+                      {getSortedPeople().map((person, index) => (
                         <div key={index} className="bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 cursor-pointer flex flex-col blur-sm">
                           <div className="relative h-64">
                             <div className={`w-full h-full bg-gradient-to-br ${person.bgColor} flex items-center justify-center`}>
@@ -844,7 +913,7 @@ export default function ExplorePage() {
                           <div className="p-4 flex-grow flex flex-col">
                             <div className="flex items-center text-gray-400 text-sm mb-4" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                               <MapPin className="h-4 w-4 mr-1 text-[#7878E9]" />
-                              {person.distance}
+                              {person.distance.toFixed(1)} km away
                             </div>
                             <button
                               className="w-full text-white py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-auto"

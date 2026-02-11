@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import Footer from '../components/Footer';
+import { api } from '../config/api';
 
 // Community → Venue sections
 import EventInfoSection from '../components/collaboration/sections/EventInfoSection';
@@ -29,6 +30,8 @@ const ProposalForm = () => {
   // Get proposal type from URL params or location state
   // proposalType: 'communityToVenue', 'communityToBrand', 'brandToCommunity', 'venueToCommunity'
   const [proposalType, setProposalType] = useState('communityToVenue');
+  const [recipientId, setRecipientId] = useState(null);
+  const [recipientType, setRecipientType] = useState(null);
   
   const [formData, setFormData] = useState({
     // Community → Venue
@@ -72,6 +75,14 @@ const ProposalForm = () => {
     const urlParams = new URLSearchParams(location.search);
     const type = urlParams.get('type') || location.state?.proposalType || 'communityToVenue';
     setProposalType(type);
+
+    // Get recipient info from location.state
+    if (location.state?.recipientId) {
+      setRecipientId(location.state.recipientId);
+    }
+    if (location.state?.recipientType) {
+      setRecipientType(location.state.recipientType);
+    }
   }, [location]);
 
   const getProposalTitle = () => {
@@ -95,18 +106,31 @@ const ProposalForm = () => {
   };
 
   const handleSaveAsDraft = async () => {
+    // Validate recipient info
+    if (!recipientId || !recipientType) {
+      alert('Missing recipient information. Please go back and select a partner again.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // TODO: API call to save draft
-      console.log('Saving draft:', formData);
+      const payload = {
+        type: proposalType,
+        recipientId: recipientId,
+        recipientType: recipientType,
+        formData: formData
+      };
+
+      console.log('Saving draft:', payload);
       
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await api.post('/collaborations/draft', payload);
       
+      console.log('Draft saved successfully:', response.data);
       alert('Draft saved successfully!');
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Failed to save draft');
+      const errorMsg = error.response?.data?.error || 'Failed to save draft. Please try again.';
+      alert(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -209,19 +233,38 @@ const ProposalForm = () => {
   const handleSendRequest = async () => {
     if (!validateForm()) return;
 
+    // Validate recipient info
+    if (!recipientId || !recipientType) {
+      alert('Missing recipient information. Please go back and select a partner again.');
+      return;
+    }
+
     setIsSending(true);
     try {
-      // TODO: API call to submit proposal
-      console.log('Sending proposal:', formData);
+      const payload = {
+        type: proposalType,
+        recipientId: recipientId,
+        recipientType: recipientType,
+        formData: formData
+      };
+
+      console.log('Sending collaboration proposal:', payload);
       
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await api.post('/collaborations/propose', payload);
       
-      alert('Your request has been sent successfully!');
-      navigate('/collaborations'); // Navigate to collaborations management page
+      console.log('Proposal sent successfully:', response.data);
+      
+      // Navigate to collaborations page with success message
+      navigate('/collaborations', { 
+        state: { 
+          message: 'Your collaboration request has been sent successfully! You can track its status in Sent Requests.',
+          tab: 'sent'
+        } 
+      });
     } catch (error) {
       console.error('Error sending proposal:', error);
-      alert('Failed to send request');
+      const errorMsg = error.response?.data?.error || 'Failed to send request. Please try again.';
+      alert(errorMsg);
     } finally {
       setIsSending(false);
     }
