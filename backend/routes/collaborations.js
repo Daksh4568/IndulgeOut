@@ -279,10 +279,21 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
     const userRole = collaboration.getUserRole(req.user.userId);
 
+    // Convert to plain object
+    const collaborationObj = collaboration.toObject();
+
+    // Convert Map fields to plain objects for proper serialization
+    if (collaborationObj.latestCounterId?.counterData?.fieldResponses) {
+      const fieldResponsesMap = collaborationObj.latestCounterId.counterData.fieldResponses;
+      collaborationObj.latestCounterId.counterData.fieldResponses = fieldResponsesMap instanceof Map
+        ? Object.fromEntries(fieldResponsesMap)
+        : fieldResponsesMap;
+    }
+
     res.json({
       success: true,
       data: {
-        ...collaboration.toObject(),
+        ...collaborationObj,
         userRole,
         userFacingStatus: mapStatusToUserFacing(collaboration.status, userRole),
       },
