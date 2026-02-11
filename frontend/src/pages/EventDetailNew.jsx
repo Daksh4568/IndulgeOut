@@ -651,9 +651,12 @@ const EventDetail = () => {
                     key={index}
                     className={`rounded-xl overflow-hidden transition-all ${
                       openFAQ === index
-                        ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 border-0'
+                        ? 'border-0'
                         : 'bg-transparent border-2 border-white/20'
                     }`}
+                    style={{
+                      background: openFAQ === index ? 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' : 'transparent'
+                    }}
                   >
                     <button
                       onClick={() => setOpenFAQ(openFAQ === index ? null : index)}

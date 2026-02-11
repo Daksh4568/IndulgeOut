@@ -35,6 +35,24 @@ const FinalTermsView = () => {
     alert('PDF export will be implemented soon');
   };
 
+  const formatEventDate = (eventDate) => {
+    if (!eventDate) return null;
+    if (typeof eventDate === 'string') return eventDate;
+    if (!eventDate.date) return 'N/A';
+
+    const dateStr = new Date(eventDate.date).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    const timeStr = eventDate.startTime && eventDate.endTime
+      ? ` | ${eventDate.startTime} - ${eventDate.endTime}`
+      : '';
+
+    return `${dateStr}${timeStr}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white">
@@ -69,19 +87,13 @@ const FinalTermsView = () => {
   }
 
   const original = collaboration.formData || {};
-  const counter = collaboration.counterData || {};
-  const finalTerms = { ...original };
-
-  // Merge counter modifications into final terms
-  if (counter.fieldResponses) {
-    Object.entries(counter.fieldResponses).forEach(([fieldName, response]) => {
-      if (response.action === 'modify' && response.modifiedValue) {
-        finalTerms[fieldName] = response.modifiedValue;
-      } else if (response.action === 'decline') {
-        finalTerms[fieldName] = 'DECLINED';
-      }
-    });
-  }
+  const counter = collaboration.latestCounterId?.counterData || collaboration.counterData || {};
+  const fieldResponses = counter.fieldResponses || {};
+  
+  // Convert Map to object if needed
+  const fieldResponsesObj = fieldResponses instanceof Map
+    ? Object.fromEntries(fieldResponses)
+    : fieldResponses;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -196,83 +208,82 @@ const FinalTermsView = () => {
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <div className="grid grid-cols-2 gap-6">
               {/* Event Type */}
-              {finalTerms.eventType && (
+              {original.eventType && (
                 <div className="border-b border-gray-800 pb-3">
                   <p className="text-xs text-gray-500 mb-1">Event Type</p>
-                  <p className="text-sm text-white">{finalTerms.eventType}</p>
+                  <p className="text-sm text-white">{original.eventType}</p>
                 </div>
               )}
 
               {/* Expected Attendees */}
-              {finalTerms.expectedAttendees && (
+              {original.expectedAttendees && (
                 <div className="border-b border-gray-800 pb-3">
                   <p className="text-xs text-gray-500 mb-1">Expected Attendees</p>
-                  <p className="text-sm text-white">{finalTerms.expectedAttendees}</p>
+                  <p className="text-sm text-white">{original.expectedAttendees}</p>
                 </div>
               )}
 
               {/* Seating Capacity */}
-              {finalTerms.seatingCapacity && (
+              {original.seatingCapacity && (
                 <div className="border-b border-gray-800 pb-3">
                   <p className="text-xs text-gray-500 mb-1">Seating Capacity</p>
-                  <p className="text-sm text-white">{finalTerms.seatingCapacity}</p>
+                  <p className="text-sm text-white">{original.seatingCapacity}</p>
                 </div>
               )}
 
               {/* Event Date */}
-              {finalTerms.eventDate && (
+              {original.eventDate && (
                 <div className="border-b border-gray-800 pb-3 col-span-2">
                   <p className="text-xs text-gray-500 mb-1">Event Date & Time</p>
-                  <p className="text-sm text-white">
-                    {finalTerms.eventDate.date || finalTerms.eventDate}
-                    {finalTerms.eventDate.startTime && ` | ${finalTerms.eventDate.startTime} - ${finalTerms.eventDate.endTime}`}
-                  </p>
+                  <p className="text-sm text-white">{formatEventDate(original.eventDate)}</p>
                 </div>
               )}
 
               {/* Show Backup Date */}
-              {finalTerms.showBackupDate && (
+              {original.showBackupDate && (
                 <div className="border-b border-gray-800 pb-3">
                   <p className="text-xs text-gray-500 mb-1">Show Backup Date</p>
-                  <p className="text-sm text-white">{finalTerms.showBackupDate.toString()}</p>
+                  <p className="text-sm text-white">{original.showBackupDate ? 'Yes' : 'No'}</p>
                 </div>
               )}
 
               {/* Backup Date */}
-              {finalTerms.backupDate && (
+              {original.backupDate && (
                 <div className="border-b border-gray-800 pb-3 col-span-2">
                   <p className="text-xs text-gray-500 mb-1">Backup Date & Time</p>
-                  <p className="text-sm text-white">
-                    {finalTerms.backupDate.date || finalTerms.backupDate}
-                    {finalTerms.backupDate.startTime && ` | ${finalTerms.backupDate.startTime} - ${finalTerms.backupDate.endTime}`}
-                  </p>
+                  <p className="text-sm text-white">{formatEventDate(original.backupDate)}</p>
                 </div>
               )}
 
               {/* Requirements */}
-              {finalTerms.requirements && (
+              {original.requirements && (
                 <div className="border-b border-gray-800 pb-3 col-span-2">
                   <p className="text-xs text-gray-500 mb-2">Requirements</p>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(finalTerms.requirements).map(([key, value]) => 
-                      value ? (
+                    {Object.entries(original.requirements).map(([key, value]) => {
+                      // Skip nested objects, only render simple booleans
+                      if (typeof value !== 'boolean') return null;
+                      return value ? (
                         <span key={key} className="px-3 py-1 bg-purple-900/30 text-purple-300 text-xs rounded border border-purple-700">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
                         </span>
-                      ) : null
-                    )}
+                      ) : null;
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Other simple fields */}
-              {Object.entries(finalTerms).map(([key, value]) => {
+              {/* Other simple fields from original */}
+              {Object.entries(original).map(([key, value]) => {
                 // Skip already rendered fields and objects
                 if (['eventType', 'expectedAttendees', 'seatingCapacity', 'eventDate', 'showBackupDate', 
-                     'backupDate', 'requirements', 'pricing', 'supportingInfo'].includes(key)) {
+                     'backupDate', 'requirements', 'pricing', 'supportingInfo', 'formData', '_id', 'createdAt', 'updatedAt'].includes(key)) {
                   return null;
                 }
-                if (typeof value === 'object') return null;
+                // Skip any object/array types to prevent rendering invalid JSX
+                if (typeof value === 'object' || typeof value === 'boolean' || value === null || value === undefined) {
+                  return null;
+                }
                 
                 return (
                   <div key={key} className="border-b border-gray-800 pb-3">
@@ -280,11 +291,7 @@ const FinalTermsView = () => {
                       {key.replace(/([A-Z])/g, ' $1').trim()}
                     </p>
                     <p className="text-sm text-white">
-                      {value === 'DECLINED' ? (
-                        <span className="text-red-400">Declined</span>
-                      ) : (
-                        value?.toString() || 'N/A'
-                      )}
+                      {String(value || 'N/A')}
                     </p>
                   </div>
                 );
@@ -293,8 +300,99 @@ const FinalTermsView = () => {
           </div>
         </div>
 
-        {/* Commercial Terms */}
-        {(counter.commercialCounter || original.pricing || finalTerms.pricing) && (
+        {/* Space & Production Requirements (Nested ProposalForm Structure) */}
+        {(original.requirements?.spaceOnly || original.requirements?.production) && (
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4">Venue Services & Requirements</h2>
+            <div className="space-y-4">
+              {original.requirements?.spaceOnly?.selected && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-200 mb-3">Space Requirements</h3>
+                  {original.requirements.spaceOnly.subOptions && (
+                    <div className="space-y-2">
+                      {Object.entries(original.requirements.spaceOnly.subOptions).map(([key, val]) => (
+                        val.selected && (
+                          <div key={key} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-300">{key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}</span>
+                            <span className="px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded">✓ Included</span>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  )}
+                  {original.requirements.spaceOnly.comment && (
+                    <p className="text-xs text-gray-400 mt-2 italic">"{original.requirements.spaceOnly.comment}"</p>
+                  )}
+                </div>
+              )}
+
+              {original.requirements?.production?.selected && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-200 mb-3">Production Support</h3>
+                  {original.requirements.production.subOptions && (
+                    <div className="space-y-2">
+                      {Object.entries(original.requirements.production.subOptions).map(([key, val]) => (
+                        val.selected && (
+                          <div key={key} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-300">{key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}</span>
+                            <span className="px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded">✓ Included</span>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  )}
+                  {original.requirements.production.comment && (
+                    <p className="text-xs text-gray-400 mt-2 italic">"{original.requirements.production.comment}"</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Nested Pricing Models (ProposalForm Structure) */}
+        {original.pricing && !original.pricing.model && Object.keys(original.pricing).some(k => k !== 'additionalNotes') && (
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4">Commercial Pricing Models</h2>
+            <div className="space-y-4">
+              {Object.entries(original.pricing).map(([modelKey, modelData]) => {
+                if (modelKey === 'additionalNotes') return null;
+                if (!modelData?.selected) return null;
+
+                const modelLabels = {
+                  rental: 'Flat Rental Fee',
+                  cover: 'Cover Charge per Person',
+                  revenueShare: 'Revenue Share',
+                  barter: 'Barter / No Fee'
+                };
+
+                return (
+                  <div key={modelKey} className="bg-gray-900 border border-green-800 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-gray-200">{modelLabels[modelKey] || modelKey}</h3>
+                      <span className="px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded">✓ Accepted</span>
+                    </div>
+                    {modelData.value && (
+                      <p className="text-lg text-green-400 font-bold mb-2">
+                        {modelKey === 'rental' || modelKey === 'cover' ? `Rs.${modelData.value}` : modelData.value}
+                      </p>
+                    )}
+                    {modelData.comment && (
+                      <p className="text-xs text-gray-400 italic">"{modelData.comment}"</p>
+                    )}
+                  </div>
+                );
+              })}
+              {original.pricing.additionalNotes && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-200 mb-2">Additional Notes</h3>
+                  <p className="text-sm text-gray-300">{original.pricing.additionalNotes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {(counter.commercialCounter || original.pricing?.model) && (
           <div className="mb-6">
             <h2 className="text-xl font-bold mb-4">Commercial Terms</h2>
             <div className="bg-gray-900 border border-green-800 rounded-lg p-6">
@@ -305,7 +403,7 @@ const FinalTermsView = () => {
                     <p className="text-sm text-white font-semibold">{counter.commercialCounter.model}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Value</p>
+                    <p className="text-xs text-gray-500 mb-1">Final Value</p>
                     <p className="text-lg text-green-400 font-bold">{counter.commercialCounter.value}</p>
                   </div>
                   {counter.commercialCounter.note && (
@@ -315,18 +413,82 @@ const FinalTermsView = () => {
                     </div>
                   )}
                 </div>
-              ) : (finalTerms.pricing || original.pricing) ? (
+              ) : original.pricing?.model ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Pricing Model</p>
-                    <p className="text-sm text-white font-semibold">{(finalTerms.pricing || original.pricing).model}</p>
+                    <p className="text-sm text-white font-semibold">{original.pricing.model}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Value</p>
-                    <p className="text-lg text-green-400 font-bold">{(finalTerms.pricing || original.pricing).value}</p>
+                    <p className="text-lg text-green-400 font-bold">{original.pricing.proposedValue}</p>
                   </div>
                 </div>
               ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* House Rules & Conditions */}
+        {counter.houseRules && (
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4">House Rules & Conditions</h2>
+            <div className="space-y-3">
+              {counter.houseRules.alcohol && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-200">Alcohol Policy</h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {counter.houseRules.alcohol.allowed ? 'Permitted' : 'Not Permitted'}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded text-xs font-semibold ${
+                      counter.houseRules.alcohol.allowed 
+                        ? 'bg-green-900/30 text-green-400' 
+                        : 'bg-red-900/30 text-red-400'
+                    }`}>
+                      {counter.houseRules.alcohol.allowed ? '✓ Allowed' : '✗ Not Allowed'}
+                    </span>
+                  </div>
+                  {counter.houseRules.alcohol.note && (
+                    <p className="text-xs text-gray-400 italic mt-2">"{counter.houseRules.alcohol.note}"</p>
+                  )}
+                </div>
+              )}
+
+              {counter.houseRules.soundLimit && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-200">Sound Limit</h3>
+                    <span className="px-3 py-1 bg-blue-900/30 text-blue-400 rounded text-xs font-semibold">
+                      {counter.houseRules.soundLimit}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {counter.houseRules.ageRestriction && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-200">Age Restriction</h3>
+                    <span className="px-3 py-1 bg-yellow-900/30 text-yellow-400 rounded text-xs font-semibold">
+                      {counter.houseRules.ageRestriction}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {counter.houseRules.setupWindow && (
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-200">Setup Window</h3>
+                    <span className="px-3 py-1 bg-purple-900/30 text-purple-400 rounded text-xs font-semibold">
+                      {counter.houseRules.setupWindow}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

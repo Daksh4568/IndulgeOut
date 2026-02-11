@@ -79,6 +79,13 @@ const AdminDashboard = () => {
     }
   }, [activeTab, user]);
 
+  // Re-fetch all collaborations when filters change
+  useEffect(() => {
+    if (activeTab === 'all-collaborations') {
+      fetchAllCollaborations();
+    }
+  }, [proposalFilters]);
+
   // Fetch Functions
   const fetchDashboardData = async () => {
     try {
@@ -91,9 +98,9 @@ const AdminDashboard = () => {
       ]);
 
       setStats(statsRes.data);
-      setPendingProposals(proposalsRes.data);
-      setPendingCounters(countersRes.data);
-      setCollabAnalytics(analyticsRes.data);
+      setPendingProposals(proposalsRes.data.data || proposalsRes.data);
+      setPendingCounters(countersRes.data.data || countersRes.data);
+      setCollabAnalytics(analyticsRes.data.data || analyticsRes.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -106,7 +113,7 @@ const AdminDashboard = () => {
   const fetchPendingProposals = async () => {
     try {
       const res = await api.get('/admin/collaborations/pending');
-      setPendingProposals(res.data);
+      setPendingProposals(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching proposals:', err);
     }
@@ -115,7 +122,7 @@ const AdminDashboard = () => {
   const fetchPendingCounters = async () => {
     try {
       const res = await api.get('/admin/collaborations/counters/pending');
-      setPendingCounters(res.data);
+      setPendingCounters(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching counters:', err);
     }
@@ -124,7 +131,7 @@ const AdminDashboard = () => {
   const fetchFlaggedProposals = async () => {
     try {
       const res = await api.get('/admin/collaborations/flagged');
-      setFlaggedProposals(res.data);
+      setFlaggedProposals(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching flagged proposals:', err);
     }
@@ -133,7 +140,7 @@ const AdminDashboard = () => {
   const fetchCollabAnalytics = async () => {
     try {
       const res = await api.get('/admin/collaborations/analytics');
-      setCollabAnalytics(res.data);
+      setCollabAnalytics(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching analytics:', err);
     }
@@ -163,7 +170,31 @@ const AdminDashboard = () => {
   const fetchProposalDetails = async (id) => {
     try {
       const res = await api.get(`/admin/collaborations/${id}`);
-      setSelectedProposal(res.data);
+      const collaboration = res.data.data || res.data;
+      setSelectedProposal(collaboration);
+      
+      // If collaboration has a counter, fetch counter details
+      if (collaboration.hasCounter && collaboration.latestCounterId) {
+        try {
+          // Extract the actual ID string (handle both populated object and string ID)
+          const counterId = typeof collaboration.latestCounterId === 'object' 
+            ? collaboration.latestCounterId._id 
+            : collaboration.latestCounterId;
+          
+          console.log('Fetching counter with ID:', counterId);
+          const counterRes = await api.get(`/admin/collaborations/counters/${counterId}`);
+          const counterData = counterRes.data.data || counterRes.data;
+          console.log('Counter Data Fetched:', counterData);
+          console.log('Field Responses:', counterData.counterData?.fieldResponses);
+          setSelectedCounter(counterData);
+        } catch (counterErr) {
+          console.error('Error fetching counter details:', counterErr);
+          setSelectedCounter(null);
+        }
+      } else {
+        setSelectedCounter(null);
+      }
+      
       setShowDetailsModal(true);
     } catch (err) {
       console.error('Error fetching proposal details:', err);
@@ -174,7 +205,7 @@ const AdminDashboard = () => {
   const fetchCounterDetails = async (id) => {
     try {
       const res = await api.get(`/admin/collaborations/counters/${id}`);
-      setSelectedCounter(res.data);
+      setSelectedCounter(res.data.data || res.data);
       setShowCounterModal(true);
     } catch (err) {
       console.error('Error fetching counter details:', err);
@@ -197,6 +228,7 @@ const AdminDashboard = () => {
       setShowDetailsModal(false);
       setAdminNotes('');
       setSelectedProposal(null);
+      setSelectedCounter(null);
       
       alert('Proposal approved successfully!');
     } catch (err) {
@@ -228,6 +260,7 @@ const AdminDashboard = () => {
       setRejectionReason('');
       setAdminNotes('');
       setSelectedProposal(null);
+      setSelectedCounter(null);
       
       alert('Proposal rejected successfully!');
     } catch (err) {
@@ -260,6 +293,7 @@ const AdminDashboard = () => {
       setFlagReason('');
       setAdminNotes('');
       setSelectedProposal(null);
+      setSelectedCounter(null);
       
       alert('Proposal flagged successfully!');
     } catch (err) {
@@ -778,7 +812,7 @@ const AdminDashboard = () => {
                         {/* Proposer */}
                         <div className="flex items-center space-x-3">
                           <img
-                            src={proposal.proposerId?.profileImage || '/default-avatar.png'}
+                            src={proposal.proposerId?.profilePicture || '/default-avatar.png'}
                             alt=""
                             className="w-12 h-12 rounded-full object-cover"
                           />
@@ -796,7 +830,7 @@ const AdminDashboard = () => {
                         {/* Recipient */}
                         <div className="flex items-center space-x-3">
                           <img
-                            src={proposal.recipientId?.profileImage || '/default-avatar.png'}
+                            src={proposal.recipientId?.profilePicture || '/default-avatar.png'}
                             alt=""
                             className="w-12 h-12 rounded-full object-cover"
                           />
@@ -918,7 +952,7 @@ const AdminDashboard = () => {
                         {/* Original Proposer */}
                         <div className="flex items-center space-x-3">
                           <img
-                            src={counter.collaborationId?.proposerId?.profileImage || '/default-avatar.png'}
+                            src={counter.collaborationId?.proposerId?.profilePicture || '/default-avatar.png'}
                             alt=""
                             className="w-10 h-10 rounded-full object-cover"
                           />
@@ -933,7 +967,7 @@ const AdminDashboard = () => {
                         {/* Counter Responder */}
                         <div className="flex items-center space-x-3">
                           <img
-                            src={counter.responderId?.profileImage || '/default-avatar.png'}
+                            src={counter.responderId?.profilePicture || '/default-avatar.png'}
                             alt=""
                             className="w-10 h-10 rounded-full object-cover"
                           />
@@ -1038,7 +1072,7 @@ const AdminDashboard = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                         <div className="flex items-center space-x-3">
                           <img
-                            src={proposal.proposerId?.profileImage || '/default-avatar.png'}
+                            src={proposal.proposerId?.profilePicture || '/default-avatar.png'}
                             alt=""
                             className="w-10 h-10 rounded-full object-cover"
                           />
@@ -1052,7 +1086,7 @@ const AdminDashboard = () => {
 
                         <div className="flex items-center space-x-3">
                           <img
-                            src={proposal.recipientId?.profileImage || '/default-avatar.png'}
+                            src={proposal.recipientId?.profilePicture || '/default-avatar.png'}
                             alt=""
                             className="w-10 h-10 rounded-full object-cover"
                           />
@@ -1229,6 +1263,160 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* All Collaborations Tab */}
+        {activeTab === 'all-collaborations' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">All Collaborations</h2>
+              <p className="text-gray-600 dark:text-gray-400">View and manage all collaboration requests in the system</p>
+            </div>
+
+            {/* Filters */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                  <select
+                    value={proposalFilters.status}
+                    onChange={(e) => {
+                      const newFilters = { ...proposalFilters, status: e.target.value };
+                      setProposalFilters(newFilters);
+                    }}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="pending_admin_review">Pending Review</option>
+                    <option value="approved_delivered">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="counter_pending_review">Counter Pending</option>
+                    <option value="counter_delivered">Counter Delivered</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="declined">Declined</option>
+                    <option value="flagged">Flagged</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                  <select
+                    value={proposalFilters.type}
+                    onChange={(e) => {
+                      const newFilters = { ...proposalFilters, type: e.target.value };
+                      setProposalFilters(newFilters);
+                    }}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">All Types</option>
+                    <option value="communityToVenue">Community → Venue</option>
+                    <option value="communityToBrand">Community → Brand</option>
+                    <option value="brandToCommunity">Brand → Community</option>
+                    <option value="venueToCommunity">Venue → Community</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Collaborations List */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+              </div>
+            ) : allCollaborations.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+                <p className="text-gray-500 dark:text-gray-400">No collaborations found</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {allCollaborations.map((collab) => (
+                  <div key={collab._id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        {getStatusBadge(collab.status)}
+                        <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {getCollabTypeLabel(collab.type)}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {getTimeSince(collab.createdAt)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      {/* Proposer */}
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={collab.proposerId?.profilePicture || '/default-avatar.png'}
+                          alt=""
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">From</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {collab.proposerId?.name || 'Unknown'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {collab.proposerType}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Recipient */}
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={collab.recipientId?.profilePicture || '/default-avatar.png'}
+                          alt=""
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">To</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {collab.recipientId?.name || 'Unknown'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {collab.recipientType}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">Submitted:</span>
+                        <p className="text-gray-900 dark:text-white">{formatDate(collab.createdAt)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">Updated:</span>
+                        <p className="text-gray-900 dark:text-white">{formatDate(collab.updatedAt)}</p>
+                      </div>
+                      {collab.hasCounter && (
+                        <div>
+                          <span className="text-purple-600 dark:text-purple-400 font-medium">Has Counter</span>
+                        </div>
+                      )}
+                      {collab.complianceFlags && collab.complianceFlags.length > 0 && (
+                        <div>
+                          {getComplianceRiskBadge(collab.complianceFlags)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end space-x-3">
+                      <button
+                        onClick={() => fetchProposalDetails(collab._id)}
+                        className="px-4 py-2 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 border border-primary-300 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                      >
+                        View Details →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Proposal Details Modal */}
@@ -1237,13 +1425,17 @@ const AdminDashboard = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Proposal Details</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Complete Collaboration Details
+                  {selectedProposal.hasCounter && <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">(with Counter)</span>}
+                </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">ID: {selectedProposal._id}</p>
               </div>
               <button
                 onClick={() => {
                   setShowDetailsModal(false);
                   setSelectedProposal(null);
+                  setSelectedCounter(null);
                 }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
@@ -1297,7 +1489,7 @@ const AdminDashboard = () => {
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">PROPOSER</p>
                   <div className="flex items-center space-x-3 mb-3">
                     <img
-                      src={selectedProposal.proposerId?.profileImage || '/default-avatar.png'}
+                      src={selectedProposal.proposerId?.profilePicture || '/default-avatar.png'}
                       alt=""
                       className="w-16 h-16 rounded-full object-cover"
                     />
@@ -1313,9 +1505,9 @@ const AdminDashboard = () => {
                       📧 {selectedProposal.proposerId.email}
                     </p>
                   )}
-                  {selectedProposal.proposerId?.phone && (
+                  {selectedProposal.proposerId?.phoneNumber && (
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      📱 {selectedProposal.proposerId.phone}
+                      📱 {selectedProposal.proposerId.phoneNumber}
                     </p>
                   )}
                 </div>
@@ -1325,7 +1517,7 @@ const AdminDashboard = () => {
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">RECIPIENT</p>
                   <div className="flex items-center space-x-3 mb-3">
                     <img
-                      src={selectedProposal.recipientId?.profileImage || '/default-avatar.png'}
+                      src={selectedProposal.recipientId?.profilePicture || '/default-avatar.png'}
                       alt=""
                       className="w-16 h-16 rounded-full object-cover"
                     />
@@ -1341,9 +1533,9 @@ const AdminDashboard = () => {
                       📧 {selectedProposal.recipientId.email}
                     </p>
                   )}
-                  {selectedProposal.recipientId?.phone && (
+                  {selectedProposal.recipientId?.phoneNumber && (
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      📱 {selectedProposal.recipientId.phone}
+                      📱 {selectedProposal.recipientId.phoneNumber}
                     </p>
                   )}
                 </div>
@@ -1351,7 +1543,7 @@ const AdminDashboard = () => {
 
               {/* Form Data */}
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Proposal Details</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Original Proposal Details</h4>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {selectedProposal.formData && Object.entries(selectedProposal.formData).map(([key, value]) => {
                     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -1381,6 +1573,202 @@ const AdminDashboard = () => {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Counter Response Section */}
+              {selectedProposal.hasCounter && selectedCounter && (
+                <div className="border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 mt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-purple-900 dark:text-purple-300 text-lg">📋 Counter-Proposal Response</h4>
+                    {getStatusBadge(selectedCounter.status)}
+                  </div>
+
+                  {/* Counter Responder Info */}
+                  <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Submitted by</p>
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={selectedCounter.responderId?.profilePicture || '/default-avatar.png'}
+                        alt=""
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {selectedCounter.responderId?.name || 'Unknown'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {selectedCounter.responderType} • {formatDate(selectedCounter.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Field-by-Field Responses */}
+                  {selectedCounter.counterData?.fieldResponses && (
+                    <div className="mb-4">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📝 Field Responses:</h5>
+                      {Object.keys(selectedCounter.counterData.fieldResponses).length > 0 ? (
+                        <div className="space-y-2">
+                          {Object.entries(selectedCounter.counterData.fieldResponses).map(([field, response]) => (
+                            <div key={field} className={`p-3 rounded-lg border ${
+                              response.action === 'accept' ? 'border-green-300 bg-green-50 dark:bg-green-900/20' :
+                              response.action === 'modify' ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' :
+                              'border-red-300 bg-red-50 dark:bg-red-900/20'
+                            }`}>
+                              <div className="flex items-start justify-between">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                                  response.action === 'accept' ? 'bg-green-500 text-white' :
+                                  response.action === 'modify' ? 'bg-blue-500 text-white' :
+                                  'bg-red-500 text-white'
+                                }`}>
+                                  {response.action.toUpperCase()}
+                                </span>
+                              </div>
+                              {response.action === 'modify' && response.modifiedValue && (
+                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                                  <strong>Modified Value:</strong> {String(response.modifiedValue)}
+                                </p>
+                              )}
+                              {response.note && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
+                                  💬 "{response.note}"
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No field responses recorded</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* House Rules */}
+                  {selectedCounter.counterData?.houseRules && (
+                    <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">House Rules:</h5>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {Object.entries(selectedCounter.counterData.houseRules).map(([rule, value]) => (
+                          <div key={rule}>
+                            <span className="text-gray-500 dark:text-gray-400">{rule}:</span>
+                            <span className="ml-2 text-gray-900 dark:text-white font-medium">{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Commercial Counter */}
+                  {selectedCounter.counterData?.commercialCounter && (
+                    <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                      <h5 className="text-sm font-semibold text-yellow-900 dark:text-yellow-300 mb-2">💰 Commercial Counter-Offer:</h5>
+                      <p className="text-sm"><strong>Model:</strong> {selectedCounter.counterData.commercialCounter.model}</p>
+                      <p className="text-sm"><strong>Value:</strong> {selectedCounter.counterData.commercialCounter.value}</p>
+                      {selectedCounter.counterData.commercialCounter.note && (
+                        <p className="text-sm mt-1 italic">Note: {selectedCounter.counterData.commercialCounter.note}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* General Notes */}
+                  {selectedCounter.counterData?.generalNotes && (
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">General Notes:</h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{selectedCounter.counterData.generalNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Collaboration Timeline */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">📅 Collaboration Timeline</h4>
+                <div className="space-y-3">
+                  {/* Proposal Submitted */}
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Proposal Submitted</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(selectedProposal.createdAt)}</p>
+                      {getStatusBadge('pending_admin_review')}
+                    </div>
+                  </div>
+
+                  {/* Admin Review */}
+                  {selectedProposal.adminReviewedAt && (
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                        2
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          Admin {selectedProposal.status === 'rejected' ? 'Rejected' : 'Approved'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(selectedProposal.adminReviewedAt)} by {selectedProposal.adminReviewedBy?.name || 'Admin'}
+                        </p>
+                        {getStatusBadge(selectedProposal.status === 'rejected' ? 'rejected' : 'approved_delivered')}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Counter Submitted */}
+                  {selectedCounter && (
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">
+                        3
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Counter-Proposal Submitted</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(selectedCounter.createdAt)} by {selectedCounter.responderId?.name}
+                        </p>
+                        {getStatusBadge(selectedCounter.status)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Counter Admin Review */}
+                  {selectedCounter?.adminReviewedAt && (
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                        4
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          Counter {selectedCounter.status === 'rejected' ? 'Rejected' : 'Approved'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(selectedCounter.adminReviewedAt)} by {selectedCounter.adminReviewedBy?.name || 'Admin'}
+                        </p>
+                        {getStatusBadge(selectedCounter.status)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Final Status */}
+                  {(selectedProposal.status === 'confirmed' || selectedProposal.status === 'declined') && (
+                    <div className="flex items-start space-x-3">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full ${
+                        selectedProposal.status === 'confirmed' ? 'bg-green-500' : 'bg-red-500'
+                      } flex items-center justify-center text-white text-sm font-bold`}>
+                        ✓
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          Collaboration {selectedProposal.status === 'confirmed' ? 'Confirmed' : 'Declined'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(selectedProposal.updatedAt)}</p>
+                        {getStatusBadge(selectedProposal.status)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1491,7 +1879,7 @@ const AdminDashboard = () => {
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">COUNTER SUBMITTED BY</p>
                 <div className="flex items-center space-x-3">
                   <img
-                    src={selectedCounter.responderId?.profileImage || '/default-avatar.png'}
+                    src={selectedCounter.responderId?.profilePicture || '/default-avatar.png'}
                     alt=""
                     className="w-16 h-16 rounded-full object-cover"
                   />

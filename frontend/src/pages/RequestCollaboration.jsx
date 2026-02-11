@@ -149,35 +149,69 @@ const RequestCollaboration = () => {
     try {
       setSubmitting(true);
 
-      const endpoint = isVenueRequest 
-        ? `/venues/${id}/request-collaboration`
-        : `/brands/${id}/propose-collaboration`;
+      // Use unified collaboration endpoint
+      const endpoint = '/collaborations/propose';
 
-      const payload = {
-        eventName: formData.eventName,
-        eventDate: formData.eventDate,
-        message: formData.message,
+      // Determine collaboration type and recipient type
+      const collaborationType = isVenueRequest ? 'communityToVenue' : 'communityToBrand';
+      const recipientType = isVenueRequest ? 'venue' : 'brand';
+
+      // Build form data based on type
+      const formDataToSend = {
         ...(isVenueRequest && {
-          timeSlot: formData.timeSlot,
-          expectedAttendees: parseInt(formData.expectedAttendees),
           eventType: formData.eventType,
-          budgetRange: formData.budgetRange
+          expectedAttendees: formData.expectedAttendees,
+          eventDate: {
+            date: formData.eventDate,
+            startTime: formData.timeSlot?.split(' - ')[0] || '',
+            endTime: formData.timeSlot?.split(' - ')[1] || '',
+          },
+          requirements: {
+            audioVisual: true,
+            seating: true,
+            catering: false,
+            parking: false,
+            other: formData.message || ''
+          },
+          pricing: {
+            model: formData.budgetRange,
+            proposedValue: ''
+          }
         }),
         ...(isBrandRequest && {
-          sponsorshipType: formData.sponsorshipType,
-          collaborationFormat: formData.collaborationFormat,
-          expectedReach: parseInt(formData.expectedReach),
+          eventCategory: formData.sponsorshipType?.join(', '),
           targetAudience: formData.targetAudience,
-          budgetProposed: formData.budgetProposed ? parseInt(formData.budgetProposed) : undefined,
-          deliverables: formData.deliverables
+          expectedReach: formData.expectedReach,
+          brandDeliverables: {
+            socialMedia: formData.collaborationFormat?.includes('social_media'),
+            eventSponsorship: formData.collaborationFormat?.includes('event_sponsorship'),
+            productPlacement: formData.collaborationFormat?.includes('product_placement'),
+            contentCreation: formData.collaborationFormat?.includes('content_creation')
+          },
+          pricing: {
+            model: 'cash',
+            proposedValue: formData.budgetProposed || ''
+          },
+          supportingInfo: {
+            note: formData.deliverables || ''
+          }
         })
       };
 
+      const payload = {
+        type: collaborationType,
+        recipientId: id,
+        recipientType: recipientType,
+        formData: formDataToSend
+      };
+
+      console.log('Sending collaboration proposal:', payload);
+
       await api.post(endpoint, payload);
 
-      // Success - navigate back to browse page with success message
-      navigate(isVenueRequest ? '/browse/venues' : '/browse/sponsors', {
-        state: { message: 'Collaboration request sent successfully!' }
+      // Success - navigate to collaborations page
+      navigate('/collaborations', {
+        state: { message: 'Collaboration request sent successfully! You can view its status in Sent Requests.', tab: 'sent' }
       });
     } catch (error) {
       console.error('Error submitting collaboration request:', error);

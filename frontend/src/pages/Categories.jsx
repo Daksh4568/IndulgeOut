@@ -217,14 +217,15 @@ const Categories = () => {
         </h2>
 
         {/* Categories Grid - 3 columns on desktop, 2 on tablet, 1 on mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-2">
           {CATEGORIES.map((category, index) => (
             <div
               key={category.id}
               onClick={() => handleCategoryClick(category)}
-              className="group relative bg-gray-900 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]"
+              className="group relative bg-gray-900 rounded-2xl shadow-xl transition-all duration-300 ease-in-out cursor-pointer hover:scale-110 hover:shadow-2xl hover:z-10"
               style={{
-                animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
+                animation: `slideIn 0.5s ease-out ${index * 0.1}s both`,
+                transformOrigin: 'center'
               }}
             >
               {/* Card Content */}

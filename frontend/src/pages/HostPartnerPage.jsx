@@ -29,7 +29,7 @@ const HostPartnerPage = () => {
         "Monetize your passion"
       ],
       buttonText: "Host an Experience",
-      buttonLink: "/onboarding/community",
+      buttonLink: "/signup/host",
       gradient: "from-[#6366F1] to-[#6366F1]",
       iconBg: "bg-[#6366F1]"
     },
@@ -50,7 +50,7 @@ const HostPartnerPage = () => {
         "Increase brand visibility"
       ],
       buttonText: "List Your Space",
-      buttonLink: "/onboarding/venue",
+      buttonLink: "/signup/venue",
       gradient: "from-[#6366F1] to-[#6366F1]",
       iconBg: "bg-[#6366F1]"
     },
@@ -71,7 +71,7 @@ const HostPartnerPage = () => {
         "Effective Retargeting"
       ],
       buttonText: "Market Your Product/Service",
-      buttonLink: "/onboarding/brand",
+      buttonLink: "/signup/brand",
       gradient: "from-[#6366F1] to-[#6366F1]",
       iconBg: "bg-[#6366F1]"
     }
@@ -197,7 +197,8 @@ const HostPartnerPage = () => {
                 {/* CTA Button */}
                 <button
                   onClick={() => navigate(role.buttonLink)}
-                  className={`w-full bg-gradient-to-r ${role.gradient} text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity uppercase mt-auto`}
+                  className="w-full text-white px-6 py-3 rounded-lg text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl uppercase mt-auto"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                 >
                   {role.buttonText} →
                 </button>
@@ -214,10 +215,10 @@ const HostPartnerPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {howItWorks.map((step, index) => (
-              <div key={index} className="relative">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 hover:scale-105 transition-transform duration-300 border border-gray-700">
-                  {/* Number Badge */}
-                  <div className="absolute -top-4 -right-4 w-12 h-12 bg-black border-2 border-white rounded-full flex items-center justify-center font-bold text-xl">
+              <div key={index} className="relative flex flex-col items-center">
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 hover:scale-105 transition-transform duration-300 border border-gray-700 w-full relative min-h-[320px] flex flex-col justify-between">
+                  {/* Number Badge - Positioned inside on mobile, outside on desktop */}
+                  <div className="absolute top-2 right-2 md:-top-4 md:-right-4 w-12 h-12 bg-black border-2 border-white rounded-full flex items-center justify-center font-bold text-xl">
                     {step.number}
                   </div>
 
@@ -233,8 +234,20 @@ const HostPartnerPage = () => {
 
                 {/* Arrow for desktop */}
                 {index < howItWorks.length - 1 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2">
-                    <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <div
+                    className="hidden md:flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-20 w-8"
+                    style={{ left: '100%' }}
+                  >
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Chevron for mobile */}
+                {index < howItWorks.length - 1 && (
+                  <div className="md:hidden flex items-center justify-center my-4">
+                    <svg className="w-6 h-6 text-white transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
@@ -264,24 +277,29 @@ const HostPartnerPage = () => {
             </div>
 
             {/* Feature Cards */}
-            <div className="space-y-6">
-              {differentiators.map((item, index) => (
-                <div
-                  key={index}
-                  className="bg-white text-black rounded-xl p-6 hover:scale-105 transition-transform duration-300 shadow-lg"
-                >
-                  <h3 className="text-lg font-bold text-[#6366F1] mb-3">{item.title}</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">{item.description}</p>
-                </div>
-              ))}
-
-              <button
-                onClick={() => navigate('/about')}
-                className="w-full bg-[#6366F1] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#5558E3] transition-colors mt-8 uppercase"
-              >
-                Read More
-              </button>
+            <div className="w-full lg:max-w-lg mx-auto lg:mx-0">
+              <div className="flex flex-col gap-6">
+                {differentiators.map((item, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl px-6 py-6 bg-white text-black shadow-[0_25px_55px_rgba(0,0,0,0.35)] border border-white/10 hover:-translate-y-1 transition-transform duration-300"
+                  >
+                    <h3 className="text-lg font-bold text-[#7163FF] tracking-wide mb-3 uppercase">{item.title}</h3>
+                    <p className="text-sm text-gray-700 leading-relaxed">{item.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+
+          <div className="flex justify-center pt-12">
+            <button
+              onClick={() => navigate('/about')}
+              className="inline-flex items-center justify-center w-full sm:w-auto px-12 py-3 rounded-md text-base font-semibold uppercase tracking-wide text-white shadow-[0_20px_35px_rgba(86,93,255,0.35)] hover:scale-[1.02] hover:shadow-[0_30px_65px_rgba(86,93,255,0.35)] transition-all duration-300"
+              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+            >
+              Read More
+            </button>
           </div>
         </div>
       </section>
@@ -297,7 +315,10 @@ const HostPartnerPage = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            Frequently Asked <span className="text-[#6366F1] italic">Questions</span>
+            Frequently Asked
+          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+            <span className="text-[#6366F1] italic">Questions</span>
           </h2>
 
           <div className="space-y-4 mt-12">
@@ -306,9 +327,12 @@ const HostPartnerPage = () => {
                 key={index}
                 className={`rounded-xl overflow-hidden ${
                   openFaq === index
-                    ? 'bg-gradient-to-br from-[#6366F1] to-[#4F46E5] border-0'
+                    ? 'border-0'
                     : 'bg-transparent border-2 border-white/20'
                 }`}
+                style={{
+                  background: openFaq === index ? 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' : 'transparent'
+                }}
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
@@ -316,9 +340,9 @@ const HostPartnerPage = () => {
                 >
                   <span className="font-semibold text-lg">{faq.question}</span>
                   {openFaq === index ? (
-                    <ChevronUp className="h-5 w-5 text-white flex-shrink-0" />
+                    <ChevronUp className="h-5 w-5 flex-shrink-0" style={{ color: openFaq === index ? 'white' : 'currentColor' }} />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-white flex-shrink-0" />
+                    <ChevronDown className="h-5 w-5 flex-shrink-0" style={{ color: openFaq === index ? 'white' : 'currentColor' }} />
                   )}
                 </button>
                 {openFaq === index && (
@@ -343,7 +367,8 @@ const HostPartnerPage = () => {
           </p>
           <button
             onClick={() => navigate('/register')}
-            className="bg-[#6366F1] text-white font-bold py-4 px-8 rounded-lg hover:bg-[#5558E3] transition-colors text-lg uppercase"
+            className="text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl uppercase"
+            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
           >
             Get Started Now →
           </button>
