@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../config/api.js';
-import DarkModeToggle from '../components/DarkModeToggle';
-import Testimonial3D from '../components/Testimonial3D';
+import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
+import Footer from '../components/Footer';
 import { 
-  ArrowLeft,
   Users, 
   Calendar,
   MessageSquare,
@@ -13,17 +12,10 @@ import {
   MapPin,
   Globe,
   Instagram,
-  Facebook,
-  Twitter,
-  Linkedin,
   Send,
-  Heart,
-  ThumbsUp,
-  Award,
-  TrendingUp,
-  Eye,
   Clock,
-  Quote
+  Quote,
+  PartyPopper
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -255,767 +247,618 @@ const CommunityDetail = () => {
 
   return (
     <>
-      {/* 3D Testimonial View - Full Screen */}
-      {activeTab === 'testimonials' && (
-        <div className="fixed inset-0 z-50">
-          {/* Exit Button */}
-          <button
-            onClick={() => setActiveTab('overview')}
-            className="absolute top-6 left-6 z-60 p-3 bg-black/20 backdrop-blur-sm rounded-full text-white hover:bg-black/30 transition-all duration-300 flex items-center space-x-2 group"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="hidden sm:block">Back to Community</span>
-          </button>
-
-          {/* Dark Mode Toggle */}
-          <div className="absolute top-6 right-6 z-60">
-            <DarkModeToggle />
-          </div>
-
-          {/* 3D Testimonial Component */}
-          <Testimonial3D 
-            testimonials={community?.testimonials} 
-            isVisible={activeTab === 'testimonials'}
-            onClose={handleCloseTestimonials}
-          />
-        </div>
-      )}
-
-      {/* Regular Community Detail View */}
-      {activeTab !== 'testimonials' && (
-        <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 text-gray-900 dark:text-white"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                Back
-              </button>
-              {/* Dashboard link for hosts */}
-              {user && community && user.id === community.host._id && (
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 text-blue-600 dark:text-blue-400"
-                >
-                  <Calendar className="h-5 w-5" />
-                  Host Dashboard
-                </button>
-              )}
-            </div>
-            <DarkModeToggle />
-          </div>
-        </div>
-      </div>
-
-      {/* Community Hero Section */}
-      <div className="bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
+      <div className="min-h-screen bg-black">
+        <NavigationBar />
+        
+        {/* Community Hero Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
             {/* Community Image */}
-            <div className="lg:w-1/3">
-              <div className="relative h-64 lg:h-80 rounded-lg overflow-hidden">
-                {community.coverImage ? (
-                  <img
-                    src={community.coverImage}
-                    alt={community.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center text-6xl">
-                    🌟
-                  </div>
-                )}
-              </div>
+            <div className="relative w-full lg:w-[200px] h-[200px] rounded-xl overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+              {community.coverImage ? (
+                <img
+                  src={community.coverImage}
+                  alt={community.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-6xl">
+                  🌟
+                </div>
+              )}
             </div>
 
             {/* Community Info */}
-            <div className="lg:w-2/3">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {community.name}
-                  </h1>
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium">
-                      {community.category}
-                    </span>
-                    {community.stats?.averageRating > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        <span className="text-sm font-medium">
-                          {community.stats.averageRating.toFixed(1)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+            <div className="flex-1">
+              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                {community.name}
+              </h1>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="px-3 py-1.5 rounded-md text-sm font-medium text-[#8B8BCC] bg-[#2A2A4A] border border-[#3A3A5A]" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                  {community.category}
+                </span>
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-400 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    {community.location?.city || 'Bangalore'}
+                  </span>
                 </div>
-                
-                {(!user || (user && user.id !== community.host._id)) && !isUserMember() && (
-                  <button
-                    onClick={joinCommunity}
-                    disabled={isJoining}
-                    className="px-6 py-3 rounded-lg font-medium transition-all bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-105"
-                  >
-                    {isJoining ? 'Joining...' : 'Join Community'}
-                  </button>
-                )}
-                {user && user.id !== community.host._id && isUserMember() && (
-                  <button
-                    onClick={leaveCommunity}
-                    disabled={isJoining}
-                    className="px-6 py-3 rounded-lg font-medium transition-all bg-red-100 text-red-800 hover:bg-red-200"
-                  >
-                    Leave Community
-                  </button>
-                )}
-              </div>
-
-              <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                {community.description}
-              </p>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {community.stats?.totalMembers || community.members?.length || 0}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Members</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <Calendar className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {community.stats?.totalEvents || events.length}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Events</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <MessageSquare className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {community.forum?.length || 0}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Posts</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <Award className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {community.testimonials?.length || 0}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Reviews</div>
-                </div>
-              </div>
-
-              {/* Host and Location */}
-              <div className="flex flex-col sm:flex-row gap-6 mb-6">
-                <div className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
-                    {community.host?.profilePicture ? (
-                      <img
-                        src={community.host.profilePicture}
-                        alt={community.host.name}
-                        className="w-12 h-12 object-cover"
-                      />
-                    ) : (
-                      <span className="text-lg font-semibold text-gray-600 dark:text-gray-400">
-                        {community.host?.name?.charAt(0) || 'H'}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white text-lg">
-                      {community.host?.name}
-                    </div>
-                    <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                      🏆 Community Host & Organizer
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Managing this community since {new Date(community.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-                    </div>
-                  </div>
-                </div>
-                
-                {community.location?.city && (
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <MapPin className="h-4 w-4" />
-                    <span>
-                      {community.location.city}
-                      {community.location.state && `, ${community.location.state}`}
+                {community.stats?.averageRating > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                    <span className="text-white text-sm font-medium">
+                      {community.stats.averageRating.toFixed(1)} ({community.testimonials?.length || 0} reviews)
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* Social Links */}
-              {Object.values(community.socialLinks || {}).some(link => link) && (
-                <div className="flex gap-4 mt-4">
-                  {community.socialLinks?.website && (
-                    <a
-                      href={community.socialLinks.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Globe className="h-4 w-4" />
-                    </a>
-                  )}
-                  {community.socialLinks?.instagram && (
-                    <a
-                      href={`https://instagram.com/${community.socialLinks.instagram}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Instagram className="h-4 w-4" />
-                    </a>
-                  )}
-                  {community.socialLinks?.facebook && (
-                    <a
-                      href={community.socialLinks.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Facebook className="h-4 w-4" />
-                    </a>
-                  )}
-                </div>
+              {/* Social Links - Always visible */}
+              <div className="flex gap-3 mb-4">
+                <a 
+                  href={community.socialLinks?.instagram ? `https://instagram.com/${community.socialLinks.instagram}` : '#'} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+                  onClick={(e) => !community.socialLinks?.instagram && e.preventDefault()}
+                >
+                  <Instagram className="h-4 w-4" />
+                </a>
+                <a 
+                  href={community.socialLinks?.website || '#'} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+                  onClick={(e) => !community.socialLinks?.website && e.preventDefault()}
+                >
+                  <Globe className="h-4 w-4" />
+                </a>
+                <a 
+                  href={community.socialLinks?.twitter ? `https://twitter.com/${community.socialLinks.twitter}` : '#'} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+                  onClick={(e) => !community.socialLinks?.twitter && e.preventDefault()}
+                >
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </a>
+              </div>
+
+            </div>
+
+            {/* Join Button - Positioned on the right */}
+            <div className="flex-shrink-0">
+              {(!user || (user && user.id !== community.host?._id)) && (
+                <button
+                  onClick={isUserMember() ? leaveCommunity : joinCommunity}
+                  disabled={isJoining}
+                  className="px-6 py-2.5 rounded-md font-semibold text-sm transform hover:scale-105 transition-all"
+                  style={{ 
+                    background: isUserMember() ? 'transparent' : 'transparent',
+                    border: isUserMember() ? '1px solid #DC2626' : '1px solid #FFFFFF',
+                    color: isUserMember() ? '#DC2626' : '#FFFFFF',
+                    fontFamily: 'Source Serif Pro, serif'
+                  }}
+                >
+                  {isJoining ? 'Processing...' : isUserMember() ? 'Leave Community' : 'Join Community'}
+                </button>
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-8">
+          {/* Tabs */}
+          <div className="flex gap-8 mt-8 mb-6 overflow-x-auto border-b border-gray-800">
             {[
-              { id: 'overview', name: 'Overview', icon: Eye },
-              { id: 'events', name: 'Events', icon: Calendar },
-              { id: 'forum', name: 'Forum', icon: MessageSquare },
-              { id: 'testimonials', name: 'Testimonials', icon: Star }
+              { id: 'overview', label: 'Overview', icon: Users },
+              { id: 'events', label: 'Events', icon: Calendar },
+              { id: 'reviews', label: 'Reviews', icon: Star },
+              { id: 'forum', label: 'Forum', icon: MessageSquare }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all relative group ${
-                  activeTab === tab.id
-                    ? tab.id === 'testimonials'
-                      ? 'border-purple-500 text-purple-600 dark:text-purple-400'
-                      : 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                } ${tab.id === 'testimonials' ? 'hover:scale-105' : ''}`}
+                className={`pb-3 text-sm font-medium transition-all whitespace-nowrap relative flex items-center gap-2 ${
+                  activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                }`}
+                style={{ fontFamily: 'Source Serif Pro, serif' }}
               >
-                {/* Special glow effect for testimonials tab */}
-                {tab.id === 'testimonials' && activeTab === tab.id && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg blur-sm"></div>
-                )}
-                <tab.icon className={`h-4 w-4 relative z-10 ${
-                  tab.id === 'testimonials' && activeTab === tab.id ? 'animate-pulse' : ''
-                }`} />
-                <span className="relative z-10">{tab.name}</span>
-                {/* 3D indicator for testimonials */}
-                {tab.id === 'testimonials' && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full opacity-80 group-hover:scale-110 transition-transform"></div>
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>
                 )}
               </button>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Guidelines */}
-            {community.guidelines && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Community Guidelines
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-line">
-                  {community.guidelines}
-                </p>
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* About the Community */}
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  About the Community
+                </h2>
+                <div className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                  <p className="text-gray-400 leading-relaxed" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    {community.description}
+                  </p>
+                </div>
               </div>
-            )}
 
-            {/* About the Host */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                About the Host
-              </h3>
-              <div className="flex items-start gap-6">
-                <div className="w-20 h-20 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {community.host?.profilePicture ? (
-                    <img
-                      src={community.host.profilePicture}
-                      alt={community.host.name}
-                      className="w-20 h-20 object-cover"
+              {/* Community Guide */}
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  Community Guide
+                </h2>
+                <div className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Category */}
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-gray-800">
+                        <Users className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        Category
+                      </div>
+                      <div className="text-sm font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        {community.category}
+                      </div>
+                    </div>
+
+                    {/* Who is it for */}
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-gray-800">
+                        <Users className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        Who is it for
+                      </div>
+                      <div className="text-sm font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        Everyone
+                      </div>
+                    </div>
+
+                    {/* What you'll find here */}
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-gray-800">
+                        <PartyPopper className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        What you'll find here
+                      </div>
+                      <div className="text-sm font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        Ice-breaker events <br />& group activities
+                      </div>
+                    </div>
+
+                    {/* Age Restriction */}
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-gray-800">
+                        <Clock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        Age Restriction
+                      </div>
+                      <div className="text-sm font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        18 yrs & above
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Highlights */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Highlights
+                  </h2>
+                  <div className="flex gap-2">
+                    <button className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
+                      ←
+                    </button>
+                    <button className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
+                      →
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Large image on left */}
+                  <div className="row-span-2">
+                    <div className="aspect-[4/3] bg-gray-800 rounded-lg overflow-hidden">
+                      <img 
+                        src="/images/Media (10).jpg"
+                        alt="Community Highlight"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Two smaller images on right */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden">
+                      <img 
+                        src="/images/Media (11).jpg"
+                        alt="Community Highlight"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden">
+                      <img 
+                        src="/images/Media (12).jpg"
+                        alt="Community Highlight"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1">
+                    <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
+                      <img 
+                        src="/images/Media (13).jpg"
+                        alt="Community Highlight"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'events' && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-6" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                Upcoming Events
+              </h2>
+              <p className="text-gray-400 mb-6" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                Experiences trending around you.
+              </p>
+
+              {events.length === 0 ? (
+                <div className="text-center py-12 bg-zinc-900/50 rounded-lg border border-gray-800">
+                  <Calendar className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                  <h4 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    No events yet
+                  </h4>
+                  <p className="text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    Stay tuned for upcoming community events!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {events.map((event) => (
+                    <div
+                      key={event._id}
+                      className="bg-zinc-900/50 rounded-lg overflow-hidden border border-gray-800 hover:border-gray-700 transition-all cursor-pointer"
+                      onClick={() => navigate(`/event/${event._id}`)}
+                    >
+                      <div className="relative h-48 bg-gray-800">
+                        {event.images && event.images.length > 0 ? (
+                          <img
+                            src={event.images[0]}
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-4xl">
+                            📅
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-white mb-2 line-clamp-2 text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                          {event.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-gray-400 mb-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(event.date)}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400 mb-3" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                          <MapPin className="h-3 w-3" />
+                          <span className="line-clamp-1">{event.venue || 'TBD'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                            ₹{event.ticketPrice || 0} onwards
+                          </span>
+                          <span className="px-2 py-0.5 bg-green-900/30 text-green-400 rounded text-xs">
+                            {event.registrations?.length || 0} attending
+                          </span>
+                        </div>
+                        <button 
+                          className="w-full mt-3 px-4 py-2 rounded-md text-white font-bold text-xs uppercase"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-6" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                Reviews
+              </h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Rating Summary */}
+                <div className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800 flex flex-col items-center justify-center">
+                  <div className="text-5xl font-bold mb-2" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: 'Oswald, sans-serif' }}>
+                    {community.stats?.averageRating?.toFixed(1) || '0.0'}
+                  </div>
+                  <div className="flex gap-1 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className={`h-5 w-5 ${star <= (community.stats?.averageRating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
+                    ))}
+                  </div>
+                  <div className="text-gray-400 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                    Based on {community.testimonials?.length || 0} reviews
+                  </div>
+                </div>
+
+                {/* Rating Breakdown */}
+                <div className="lg:col-span-2 bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                  <h3 className="text-lg font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Rating Breakdown:
+                  </h3>
+                  {[5, 4, 3, 2, 1].map((stars) => {
+                    const count = community.testimonials?.filter(t => t.rating === stars).length || 0;
+                    const percentage = community.testimonials?.length ? (count / community.testimonials.length) * 100 : 0;
+                    return (
+                      <div key={stars} className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-1 w-16">
+                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                          <span className="text-white text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>{stars}</span>
+                        </div>
+                        <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full" 
+                            style={{ width: `${percentage}%`, background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                          ></div>
+                        </div>
+                        <span className="text-gray-400 text-sm w-12 text-right" style={{ fontFamily: 'Source Serif Pro, serif' }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Review Form */}
+              {isUserMember() && (
+                <div className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800 mb-6">
+                  <h3 className="text-lg font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Write a Review
+                  </h3>
+                  <form onSubmit={submitTestimonial} className="space-y-4">
+                    <div>
+                      <div className="flex gap-2 mb-3">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setNewTestimonial(prev => ({ ...prev, rating: star }))}
+                            className="transition-colors"
+                          >
+                            <Star className={`h-6 w-6 ${star <= newTestimonial.rating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea
+                      value={newTestimonial.content}
+                      onChange={(e) => setNewTestimonial(prev => ({ ...prev, content: e.target.value }))}
+                      placeholder="Share your experience with this community..."
+                      className="w-full px-4 py-3 bg-black border border-gray-700 rounded-lg text-white resize-none focus:outline-none focus:border-gray-600"
+                      rows={4}
+                      maxLength={500}
+                      style={{ fontFamily: 'Source Serif Pro, serif' }}
                     />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        {newTestimonial.content.length}/500
+                      </span>
+                      <button
+                        type="submit"
+                        disabled={!newTestimonial.content.trim()}
+                        className="px-6 py-2 rounded-md text-white font-bold text-sm uppercase disabled:opacity-50"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                      >
+                        Submit Review
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Recent Reviews */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  Recent Reviews
+                </h3>
+                <div className="space-y-4">
+                  {community.testimonials && community.testimonials.length > 0 ? (
+                    community.testimonials.slice(0, 10).map((testimonial) => (
+                      <div key={testimonial._id} className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                            {testimonial.author?.profilePicture ? (
+                              <img src={testimonial.author.profilePicture} alt={testimonial.author.name} className="w-12 h-12 rounded-full object-cover" />
+                            ) : (
+                              <span className="text-lg font-bold text-gray-400">
+                                {testimonial.author?.name?.charAt(0) || 'U'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h4 className="font-bold text-white text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                  {testimonial.author?.name || 'Anonymous'}
+                                </h4>
+                                <div className="flex gap-1 mt-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star key={star} className={`h-3 w-3 ${star <= testimonial.rating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
+                                  ))}
+                                </div>
+                              </div>
+                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                {formatDate(testimonial.createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-sm leading-relaxed" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {testimonial.content}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <span className="text-2xl font-semibold text-gray-600 dark:text-gray-400">
-                      {community.host?.name?.charAt(0) || 'H'}
-                    </span>
+                    <div className="text-center py-12 bg-zinc-900/50 rounded-lg border border-gray-800">
+                      <Star className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                      <h4 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        No reviews yet
+                      </h4>
+                      <p className="text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        Be the first to share your experience!
+                      </p>
+                    </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {community.host?.name}
-                  </h4>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium">
-                      🏆 Community Host
-                    </span>
-                    <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium">
-                      📅 Event Organizer
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                    <p>
-                      <strong>Community Created:</strong> {formatDate(community.createdAt)}
-                    </p>
-                    <p>
-                      <strong>Total Events Organized:</strong> {community.stats?.totalEvents || events.length}
-                    </p>
-                    <p>
-                      <strong>Community Members:</strong> {community.stats?.totalMembers || community.members?.length || 0}
-                    </p>
-                    {community.host?.email && (
-                      <p>
-                        <strong>Contact:</strong> {community.host.email}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      💡 <strong>Host Responsibilities:</strong> {community.host?.name} manages this community, organizes events, moderates discussions, and ensures a welcoming environment for all members.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
+          )}
 
-            {/* Other Communities by Host */}
-            {hostCommunities.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Other Communities by {community.host?.name}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {hostCommunities.slice(0, 6).map((hostCommunity) => (
-                    <div
-                      key={hostCommunity._id}
-                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/community/${hostCommunity._id}`)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-                          {hostCommunity.coverImage ? (
-                            <img
-                              src={hostCommunity.coverImage}
-                              alt={hostCommunity.name}
-                              className="w-12 h-12 rounded-lg object-cover"
-                            />
-                          ) : (
-                            '🌟'
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
-                            {hostCommunity.name}
-                          </h4>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-                            {hostCommunity.shortDescription || hostCommunity.description}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-                              {hostCommunity.category}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {hostCommunity.stats?.totalMembers || hostCommunity.members?.length || 0} members
-                            </span>
+          {activeTab === 'forum' && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-6" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                Forum
+              </h2>
+
+              {/* Post Form */}
+              {isUserMember() && (
+                <div className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800 mb-6">
+                  <form onSubmit={submitForumPost}>
+                    <textarea
+                      value={newPost}
+                      onChange={(e) => setNewPost(e.target.value)}
+                      placeholder="Start a discussion..."
+                      className="w-full px-4 py-3 bg-black border border-gray-700 rounded-lg text-white resize-none focus:outline-none focus:border-gray-600"
+                      rows={4}
+                      maxLength={1000}
+                      style={{ fontFamily: 'Source Serif Pro, serif' }}
+                    />
+                    <div className="flex justify-between items-center mt-4">
+                      <span className="text-sm text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        {newPost.length}/1000
+                      </span>
+                      <button
+                        type="submit"
+                        disabled={!newPost.trim()}
+                        className="px-6 py-2 rounded-md text-white font-bold text-sm uppercase disabled:opacity-50 flex items-center gap-2"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                      >
+                        <Send className="h-4 w-4" />
+                        Post
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Discussion List - Left sidebar with topics, Right main content area */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* Left Sidebar - Discussion Topics */}
+                <div className="lg:col-span-1 bg-zinc-900/50 rounded-lg p-4 border border-gray-800">
+                  <h3 className="text-sm font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Discussions
+                  </h3>
+                  <div className="space-y-2">
+                    <button className="w-full text-left px-3 py-2 rounded-md text-white text-sm" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' }}>
+                      Weekend Mock Strategy
+                    </button>
+                    <button className="w-full text-left px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      New Members Welcome
+                    </button>
+                    <button className="w-full text-left px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Training Schedule
+                    </button>
+                    <button className="w-full text-left px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Equipment Discussion
+                    </button>
+                  </div>
+                  <button 
+                    className="w-full mt-4 px-4 py-2 rounded-md text-white font-bold text-sm uppercase"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    New Thread
+                  </button>
+                </div>
+
+                {/* Main Content - Forum Posts */}
+                <div className="lg:col-span-3 space-y-4">
+                  {community.forum && community.forum.length > 0 ? (
+                    community.forum.map((post) => (
+                      <div key={post._id} className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                            {post.author?.profilePicture ? (
+                              <img src={post.author.profilePicture} alt={post.author.name} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <span className="text-sm font-bold text-gray-400">
+                                {post.author?.name?.charAt(0) || 'U'}
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {hostCommunities.length > 6 && (
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => navigate(`/communities?host=${community.host._id}`)}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm"
-                    >
-                      View all {hostCommunities.length} communities by {community.host?.name} →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tags */}
-            {community.tags && community.tags.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Community Tags
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {community.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Members */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Recent Members
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {community.members?.slice(0, 8).map((member, index) => (
-                  <div key={index} className="text-center">
-                    <div className="w-16 h-16 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-2 flex items-center justify-center">
-                      {member.user?.profilePicture ? (
-                        <img
-                          src={member.user.profilePicture}
-                          alt={member.user.name}
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-lg font-semibold text-gray-600 dark:text-gray-400">
-                          {member.user?.name?.charAt(0) || 'M'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {member.user?.name || 'Member'}
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {formatDate(member.joinedAt)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'events' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Community Events
-              </h3>
-              {user && user.id === community.host._id && (
-                <button
-                  onClick={() => navigate('/event/create')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Create Event
-                </button>
-              )}
-            </div>
-
-            {events.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  No events yet
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Stay tuned for upcoming community events!
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {events.map((event) => (
-                  <div
-                    key={event._id}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
-                    onClick={() => navigate(`/event/${event._id}`)}
-                  >
-                    <div className="relative h-32 bg-gray-200 dark:bg-gray-700">
-                      {event.images && event.images.length > 0 ? (
-                        <img
-                          src={event.images[0]}
-                          alt={event.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl">
-                          📅
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                        {event.title}
-                      </h4>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(event.date)}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <MapPin className="h-3 w-3" />
-                        {event.venue || 'TBD'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'forum' && (
-          <div className="space-y-6">
-            {/* Post Form */}
-            {isUserMember() && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Start a Discussion
-                </h3>
-                <form onSubmit={submitForumPost}>
-                  <textarea
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                    placeholder="Share your thoughts with the community..."
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-                    rows={4}
-                    maxLength={1000}
-                  />
-                  <div className="flex justify-between items-center mt-4">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {newPost.length}/1000 characters
-                    </span>
-                    <button
-                      type="submit"
-                      disabled={!newPost.trim()}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                    >
-                      <Send className="h-4 w-4" />
-                      Post
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* Forum Posts */}
-            <div className="space-y-4">
-              {community.forum && community.forum.length > 0 ? (
-                community.forum.map((post) => (
-                  <div
-                    key={post._id}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        {post.author?.profilePicture ? (
-                          <img
-                            src={post.author.profilePicture}
-                            alt={post.author.name}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                            {post.author?.name?.charAt(0) || 'U'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {post.author?.name || 'Anonymous'}
-                          </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatRelativeTime(post.createdAt)}
-                          </span>
-                        </div>
-                        <p className="text-gray-700 dark:text-gray-300 mb-3 whitespace-pre-line">
-                          {post.content}
-                        </p>
-                        <div className="flex items-center gap-4">
-                          <button className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                            <ThumbsUp className="h-4 w-4" />
-                            {post.likes?.length || 0}
-                          </button>
-                          <button className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                            <MessageSquare className="h-4 w-4" />
-                            {post.replies?.length || 0} replies
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-12">
-                  <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No discussions yet
-                  </h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {isUserMember() 
-                      ? 'Be the first to start a conversation!'
-                      : 'Join the community to start participating in discussions.'
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'testimonials' && (
-          <div className="space-y-4 sm:space-y-6">
-            {/* Testimonial Form */}
-            {isUserMember() && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-                  Share Your Experience
-                </h3>
-                <form onSubmit={submitTestimonial} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Rating
-                    </label>
-                    <div className="flex gap-2 sm:gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setNewTestimonial(prev => ({ ...prev, rating: star }))}
-                          className={`w-10 h-10 sm:w-8 sm:h-8 min-h-[44px] sm:min-h-0 touch-manipulation ${
-                            star <= newTestimonial.rating
-                              ? 'text-yellow-400 fill-current'
-                              : 'text-gray-300 dark:text-gray-600'
-                          } transition-colors`}
-                        >
-                          <Star className="w-full h-full" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <textarea
-                    value={newTestimonial.content}
-                    onChange={(e) => setNewTestimonial(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="Share your experience with this community..."
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-                    rows={4}
-                    maxLength={500}
-                  />
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                      {newTestimonial.content.length}/500 characters
-                    </span>
-                    <button
-                      type="submit"
-                      disabled={!newTestimonial.content.trim()}
-                      className="w-full sm:w-auto px-4 py-3 sm:px-6 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm sm:text-base min-h-[44px] sm:min-h-0 touch-manipulation"
-                    >
-                      <Star className="h-4 w-4" />
-                      Submit Review
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* Testimonials List */}
-            <div className="space-y-4">
-              {community.testimonials && community.testimonials.length > 0 ? (
-                community.testimonials.map((testimonial) => (
-                  <div
-                    key={testimonial._id}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        {testimonial.author?.profilePicture ? (
-                          <img
-                            src={testimonial.author.profilePicture}
-                            alt={testimonial.author.name}
-                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-base sm:text-lg font-semibold text-gray-600 dark:text-gray-400">
-                            {testimonial.author?.name?.charAt(0) || 'U'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
-                              {testimonial.author?.name || 'Anonymous'}
-                            </h4>
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
-                                    i < testimonial.rating
-                                      ? 'text-yellow-400 fill-current'
-                                      : 'text-gray-300 dark:text-gray-600'
-                                  }`}
-                                />
-                              ))}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-bold text-white text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                {post.author?.name || 'Anonymous'}
+                              </span>
+                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                {formatRelativeTime(post.createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-sm leading-relaxed mb-3 whitespace-pre-line" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {post.content}
+                            </p>
+                            <div className="flex items-center gap-4">
+                              <button className="flex items-center gap-1 text-gray-500 hover:text-white text-xs transition-colors">
+                                <MessageSquare className="h-3 w-3" />
+                                Reply
+                              </button>
                             </div>
                           </div>
-                          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {formatDate(testimonial.createdAt)}
-                          </span>
                         </div>
-                        <blockquote className="text-gray-700 dark:text-gray-300 italic text-sm sm:text-base break-words">
-                          <Quote className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 text-gray-400" />
-                          {testimonial.content}
-                        </blockquote>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 bg-zinc-900/50 rounded-lg border border-gray-800">
+                      <MessageSquare className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                      <h4 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                        No discussions yet
+                      </h4>
+                      <p className="text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                        Be the first to start a conversation!
+                      </p>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 sm:py-12">
-                  <Star className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
-                  <h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2 px-4">
-                    No testimonials yet
-                  </h4>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 px-4">
-                    {isUserMember() 
-                      ? 'Be the first to share your experience!'
-                      : 'Join the community to leave a testimonial.'
-                    }
-                  </p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Login Prompt Modal */}
       <LoginPromptModal
@@ -1023,6 +866,9 @@ const CommunityDetail = () => {
         onClose={() => setShowLoginPrompt(false)}
         eventTitle={community?.name}
       />
+
+      {/* Footer */}
+      <Footer />
     </>
   );
 };
