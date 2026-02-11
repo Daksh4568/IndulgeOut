@@ -950,13 +950,13 @@ function Homepage() {
           </div>
           
           {/* Deck of Cards Carousel */}
-          <div className="relative h-[240px] sm:h-[300px] lg:h-[320px] flex items-center justify-center mt-8">
+          <div className="relative h-[240px] sm:h-[300px] lg:h-[320px] flex items-center justify-center mt-8" style={{ perspective: '2000px' }}>
             <div className="relative w-full max-w-7xl h-full flex items-center justify-center">
               {[0, 1, 2, 3, 4, 5].map((index) => {
                 const position = (index - currentPosterIndex + 6) % 6;
                 
                 // Calculate position and rotation for deck effect
-                let zIndex, scale, translateX, translateY, rotate, opacity;
+                let zIndex, scale, translateX, translateY, translateZ, rotate, opacity;
                 
                 // Mobile responsiveness
                 const isMobile = window.innerWidth < 640;
@@ -968,6 +968,7 @@ function Homepage() {
                   scale = isMobile ? 0.65 : (isTablet ? 0.8 : 0.9);
                   translateX = isMobile ? -100 : (isTablet ? -250 : -350);
                   translateY = 0;
+                  translateZ = 0;
                   rotate = -6;
                   opacity = 1;
                 } else if (position === 1) {
@@ -975,6 +976,7 @@ function Homepage() {
                   scale = isMobile ? 0.63 : (isTablet ? 0.78 : 0.88);
                   translateX = isMobile ? -60 : (isTablet ? -150 : -210);
                   translateY = isMobile ? 3 : (isTablet ? 5 : 8);
+                  translateZ = -20;
                   rotate = -5;
                   opacity = 1;
                 } else if (position === 2) {
@@ -982,6 +984,7 @@ function Homepage() {
                   scale = isMobile ? 0.61 : (isTablet ? 0.76 : 0.86);
                   translateX = isMobile ? -20 : (isTablet ? -50 : -70);
                   translateY = isMobile ? 6 : (isTablet ? 10 : 16);
+                  translateZ = -40;
                   rotate = -4;
                   opacity = 1;
                 } else if (position === 3) {
@@ -989,6 +992,7 @@ function Homepage() {
                   scale = isMobile ? 0.59 : (isTablet ? 0.74 : 0.84);
                   translateX = isMobile ? 20 : (isTablet ? 50 : 70);
                   translateY = isMobile ? 9 : (isTablet ? 15 : 24);
+                  translateZ = -60;
                   rotate = -3;
                   opacity = 1;
                 } else if (position === 4) {
@@ -996,16 +1000,18 @@ function Homepage() {
                   scale = isMobile ? 0.57 : (isTablet ? 0.72 : 0.82);
                   translateX = isMobile ? 60 : (isTablet ? 150 : 210);
                   translateY = isMobile ? 12 : (isTablet ? 20 : 32);
+                  translateZ = -80;
                   rotate = -2;
                   opacity = 1;
                 } else {
-                  // Last card - moving to back
+                  // Last card - moving to back, reduce opacity for smoother transition
                   zIndex = 15;
                   scale = isMobile ? 0.55 : (isTablet ? 0.7 : 0.8);
                   translateX = isMobile ? 100 : (isTablet ? 250 : 350);
                   translateY = isMobile ? 15 : (isTablet ? 25 : 40);
+                  translateZ = -100;
                   rotate = -1;
-                  opacity = 1;
+                  opacity = 0.3;
                 }
                 
                 return (
@@ -1014,12 +1020,13 @@ function Homepage() {
                     className="absolute transition-all duration-1000 ease-in-out"
                     style={{
                       zIndex,
-                      transform: `translate(${translateX}px, ${translateY}px) scale(${scale}) rotate(${rotate}deg)`,
+                      transform: `translate(${translateX}px, ${translateY}px) translateZ(${translateZ}px) scale(${scale}) rotate(${rotate}deg)`,
                       opacity,
                       left: '50%',
                       top: '50%',
                       marginLeft: isMobile ? '-85px' : (isTablet ? '-100px' : '-115px'),
-                      marginTop: isMobile ? '-120px' : (isTablet ? '-140px' : '-155px')
+                      marginTop: isMobile ? '-120px' : (isTablet ? '-140px' : '-155px'),
+                      transformStyle: 'preserve-3d'
                     }}
                   >
                     <div className="w-[170px] sm:w-[200px] lg:w-[230px] h-[240px] sm:w-[280px] lg:h-[320px] bg-white rounded-lg shadow-2xl overflow-hidden">

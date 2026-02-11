@@ -187,24 +187,26 @@ const OTPLogin = () => {
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+        {/* Logo - Fully Outside Card, Clickable */}
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20 flex justify-center w-full">
+          <button onClick={() => navigate('/')} className="focus:outline-none bg-transparent" style={{ pointerEvents: 'auto' }}>
+            <img 
+              src="/images/LogoOrbital.png" 
+              alt="IndulgeOut" 
+              className="h-20 w-auto object-contain drop-shadow-xl bg-transparent" 
+            />
+          </button>
+        </div>
         {/* Glass Morphism Card */}
         <div 
-          className="rounded-3xl p-8 border"
+          className="rounded-3xl p-8 border w-full mt-12"
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(10px)',
             borderColor: 'rgba(255, 255, 255, 0.1)',
           }}
         >
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <img 
-              src="/images/LogoFinal2.jpg" 
-              alt="IndulgeOut" 
-              className="h-20 w-auto object-contain" 
-            />
-          </div>
 
           {/* Tagline */}
           <p className="text-gray-300 text-center mb-8 text-sm">

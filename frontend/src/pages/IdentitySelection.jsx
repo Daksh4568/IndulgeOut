@@ -6,69 +6,51 @@ const IdentitySelection = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
-      {/* Top Section - Pure Black */}
-      <div className="w-full bg-black relative z-10 pt-8 pb-4 px-4">
-        {/* Logo */}
-        <div className="flex justify-center mb-3">
-          <img 
-            src="/images/LogoFinal2.jpg" 
-            alt="IndulgeOut" 
-            className="h-10 w-auto object-contain" 
-          />
-        </div>
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden p-4">
+      {/* Background Image with Opacity and Blur */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-20 blur-sm"
+        style={{
+          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          zIndex: 0,
+        }}
+      />
 
-        {/* Step Indicator */}
-        <div className="flex justify-center mb-3">
-          <div className="px-4 py-1.5 rounded-full border border-[#6366F1] bg-[#6366F1]/10">
-            <span className="text-[#6366F1] text-xs font-medium tracking-wider">STEP 1 OF 2</span>
+      {/* Content Container */}
+      <div className="relative z-10 w-full max-w-4xl flex flex-col items-center">
+        {/* Logo - Outside Card */}
+        <div className="mb-6">
+          <button onClick={() => navigate('/')} className="focus:outline-none">
+            <img 
+              src="/images/LogoOrbital.png" 
+              alt="IndulgeOut" 
+              className="h-20 w-auto object-contain" 
+            />
+          </button>
+        </div>
+        {/* Glass Morphism Card */}
+        <div 
+          className="rounded-3xl p-8 border w-full"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(10px)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          {/* Step Indicator */}
+          <div className="flex justify-center mb-4">
+            <div className="px-4 py-1.5 rounded-full border border-[#6366F1] bg-[#6366F1]/10">
+              <span className="text-[#6366F1] text-xs font-medium tracking-wider">STEP 1 OF 2</span>
+            </div>
           </div>
-        </div>
 
-        {/* Heading */}
-        <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5" style={{ fontFamily: 'Oswald, sans-serif' }}>
-          Choose Your Identity
-        </h1>
-        <p className="text-gray-300 text-center text-sm">
-          Select the account type that describes your approach
-        </p>
-      </div>
-
-      {/* Bottom Section - With Mirror Background */}
-      <div className="flex-1 relative py-6">
-        {/* Background with mirror effect */}
-        <div className="absolute inset-0 flex">
-          {/* Left side - normal image */}
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-            }}
-          />
-          {/* Right side - mirrored image */}
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-              transform: 'scaleX(-1)',
-            }}
-          />
-        </div>
-
-        {/* Overlay for better readability - darker */}
-        <div className="absolute inset-0 bg-black/85" />
-
-        {/* Content */}
-        <div className="relative z-10 w-full">
-          {/* Main Card - Centered */}
-          <div className="max-w-4xl mx-auto px-4">
-          <div 
-            className="rounded-2xl p-4 md:p-6"
-            style={{
-              background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
+          {/* Heading */}
+          <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            Choose Your Identity
+          </h1>
+          <p className="text-gray-300 text-center text-sm mb-8">
+            Select the account type that describes your approach
+          </p>
           {/* Options */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {/* B2C Option */}
@@ -76,7 +58,7 @@ const IdentitySelection = () => {
               onClick={() => navigate('/signup/b2c')}
               className="group relative rounded-xl p-6 text-left transition-all duration-300 border border-gray-700 hover:border-[#6366F1]"
               style={{
-                background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+                background: 'rgba(255, 255, 255, 0.02)',
                 backdropFilter: 'blur(10px)',
               }}
             >
@@ -127,7 +109,7 @@ const IdentitySelection = () => {
               onClick={() => navigate('/signup/b2b-type')}
               className="group relative rounded-xl p-6 text-left transition-all duration-300 border border-gray-700 hover:border-[#6366F1]"
               style={{
-                background: 'linear-gradient(180deg, rgba(217,217,217,0.02) 0%, rgba(115,115,115,0.04) 100%)',
+                background: 'rgba(255, 255, 255, 0.02)',
                 backdropFilter: 'blur(10px)',
               }}
             >
@@ -194,8 +176,6 @@ const IdentitySelection = () => {
                 Log In
               </button>
             </p>
-          </div>
-          </div>
           </div>
         </div>
       </div>

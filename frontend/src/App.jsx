@@ -45,6 +45,7 @@ import EventAnalytics from './pages/EventAnalytics'
 import ContactUs from './pages/ContactUs'
 import TermsConditions from './pages/TermsConditions'
 import RefundsCancellations from './pages/RefundsCancellations'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import NotificationCenter from './pages/NotificationCenter'
 import KYCSetupPage from './pages/KYCSetupPage'
 
@@ -80,11 +81,13 @@ function AppContent() {
     '/contact-us',
     '/terms-conditions',
     '/refunds-cancellations',
+    '/privacy-policy',
     '/explore',
     '/categories',
     '/host-partner',
-    '/login',
-    '/register'
+    // Always show footer on community detail pages
+    '/communities/:id',
+    '/community/:id'
   ];
   
   // Check if current path starts with any category path or if it's in the showFooterPaths
@@ -114,7 +117,7 @@ function AppContent() {
         <Route path="/signup/venue" element={<VenueSignup />} />
         
         {/* Legacy Login */}
-        <Route path="/login" element={<OTPLogin />} />
+        <Route path="/login" element={<OTPLogin />} />  
         <Route path="/interests" element={<InterestSelection />} />
         <Route path="/kyc-setup" element={<ErrorBoundary><KYCSetupPage /></ErrorBoundary>} />
         <Route path="/organizer/dashboard" element={<ErrorBoundary><CommunityOrganizerDashboard /></ErrorBoundary>} />
@@ -151,16 +154,11 @@ function AppContent() {
         <Route path="/collaborations/:id/final-terms" element={<ErrorBoundary><FinalTermsView /></ErrorBoundary>} />
         
         <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Routes>
-      {shouldShowFooter && (
-        <>
-          {/* Black Gap Before Footer */}
-          <div className="bg-black py-8"></div>
-          <Footer />
-        </>
-      )}
+      {shouldShowFooter && <Footer />}
     </>
-  );
+  )
 }
 
 function App() {
@@ -169,19 +167,17 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <ToastContext.Provider value={toast}>
-              <Router>
+        <Router>
+          <AuthProvider>
+            <NotificationProvider>
+              <ToastContext.Provider value={toast}>
                 <ScrollToTop />
-                <div className="App min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
-                  <AppContent />
-                  <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
-                </div>
-              </Router>
-            </ToastContext.Provider>
-          </NotificationProvider>
-        </AuthProvider>
+                <AppContent />
+                <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
+              </ToastContext.Provider>
+            </NotificationProvider>
+          </AuthProvider>
+        </Router>
       </ThemeProvider>
     </ErrorBoundary>
   )

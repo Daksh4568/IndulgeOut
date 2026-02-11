@@ -6,79 +6,62 @@ const B2BTypeSelection = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
-      {/* Top Section - Pure Black */}
-      <div className="w-full bg-black relative z-10 pt-4 pb-3 px-4">
-        {/* Back Button */}
-        <div className="max-w-4xl mx-auto mb-3">
-          <button
-            onClick={() => navigate('/signup')}
-            className="flex items-center text-gray-300 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 mr-1" />
-            Back to Account Type
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden p-4">
+      {/* Background Image with Opacity and Blur */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-20 blur-sm"
+        style={{
+          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          zIndex: 0,
+        }}
+      />
+
+      {/* Content Container */}
+      <div className="relative z-10 w-full max-w-4xl flex flex-col items-center">
+        {/* Logo - Outside Card */}
+        <div className="mb-6">
+          <button onClick={() => navigate('/')} className="focus:outline-none">
+            <img 
+              src="/images/LogoOrbital.png" 
+              alt="IndulgeOut" 
+              className="h-20 w-auto object-contain" 
+            />
           </button>
         </div>
-
-        {/* Logo */}
-        <div className="flex justify-center mb-3">
-            <img 
-              src="/images/LogoFinal2.jpg" 
-              alt="IndulgeOut" 
-              className="h-10 w-auto object-contain" 
-            />
+        {/* Glass Morphism Card */}
+        <div 
+          className="rounded-3xl p-8 border w-full"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(10px)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          {/* Back Button */}
+          <div className="mb-4">
+            <button
+              onClick={() => navigate('/signup')}
+              className="flex items-center text-gray-300 hover:text-white transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 mr-1" />
+              Back to Account Type
+            </button>
           </div>
 
           {/* Step Indicator */}
-          <div className="flex justify-center mb-3">
+          <div className="flex justify-center mb-4">
             <div className="px-4 py-1.5 rounded-full border bg-purple-500/10" style={{ borderColor: '#7878E9' }}>
               <span className="text-xs font-medium tracking-wider" style={{ color: '#7878E9' }}>STEP 2 OF 2</span>
             </div>
           </div>
 
           {/* Heading */}
-          <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5" style={{ fontFamily: 'Oswald, sans-serif' }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
             Select Your Business Type
           </h1>
-        <p className="text-gray-300 text-center text-sm">
-          Choose the category that best represents your business
-        </p>
-      </div>
-
-      {/* Bottom Section - With Mirror Background */}
-      <div className="flex-1 relative py-6">
-        {/* Background with mirror effect */}
-        <div className="absolute inset-0 flex">
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-            }}
-          />
-          <div 
-            className="w-1/2 h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/images/BackgroundLogin.jpg)',
-              transform: 'scaleX(-1)',
-            }}
-          />
-        </div>
-
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/85" />
-
-        {/* Content */}
-        <div className="relative z-10 w-full">
-          {/* Main Card - Centered */}
-          <div className="max-w-4xl mx-auto px-4">
-          <div 
-            className="rounded-3xl p-6 md:p-8 border"
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-            }}
-          >
+          <p className="text-gray-300 text-center text-sm mb-8">
+            Choose the category that best represents your business
+          </p>
           {/* Business Type Cards */}
           <div className="grid md:grid-cols-3 gap-4 mb-6">
             {/* Host Card */}
@@ -86,7 +69,7 @@ const B2BTypeSelection = () => {
               onClick={() => navigate('/signup/host')}
               className="group rounded-2xl p-5 transition-all duration-300 border"
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(255, 255, 255, 0.02)',
                 backdropFilter: 'blur(10px)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
               }}
@@ -135,7 +118,7 @@ const B2BTypeSelection = () => {
               onClick={() => navigate('/signup/brand')}
               className="group rounded-2xl p-5 transition-all duration-300 border"
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(255, 255, 255, 0.02)',
                 backdropFilter: 'blur(10px)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
               }}
@@ -184,7 +167,7 @@ const B2BTypeSelection = () => {
               onClick={() => navigate('/signup/venue')}
               className="group rounded-2xl p-5 transition-all duration-300 border"
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(255, 255, 255, 0.02)',
                 backdropFilter: 'blur(10px)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
               }}
@@ -243,8 +226,6 @@ const B2BTypeSelection = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
   );
 };
 

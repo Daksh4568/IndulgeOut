@@ -118,25 +118,27 @@ const BrandSignup = () => {
         }}
       />
 
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-2xl">
-          {/* Glass Morphism Card */}
-          <div 
-          className="rounded-3xl p-8 max-h-[85vh] overflow-y-auto border"
+      {/* Content Container */}
+      <div className="relative z-10 w-full max-w-2xl flex flex-col items-center">
+        {/* Logo - Outside Card */}
+        <div className="mb-6">
+          <button onClick={() => navigate('/')} className="focus:outline-none">
+            <img 
+              src="/images/LogoOrbital.png" 
+              alt="IndulgeOut" 
+              className="h-20 w-auto object-contain" 
+            />
+          </button>
+        </div>
+        {/* Glass Morphism Card */}
+        <div 
+          className="rounded-3xl p-8 border w-full max-h-[80vh] overflow-y-auto"
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(10px)',
             borderColor: 'rgba(255, 255, 255, 0.1)',
           }}
         >
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <img 
-              src="/images/LogoFinal2.jpg" 
-              alt="IndulgeOut" 
-              className="h-16 w-auto object-contain" 
-            />
-          </div>
 
           {/* Back Button */}
           <button

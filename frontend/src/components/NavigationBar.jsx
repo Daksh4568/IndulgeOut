@@ -222,7 +222,7 @@ export default function NavigationBar() {
               // Logged OUT Actions
               <>
                 <button
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate('/login')}
                   className="hidden md:block text-white px-6 py-2 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
                   style={{ 
                     background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
@@ -355,7 +355,7 @@ export default function NavigationBar() {
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        navigate('/signup');
+                        navigate('/login');
                       }}
                       className="w-full text-white px-6 py-3 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
                       style={{ 
