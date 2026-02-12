@@ -70,7 +70,7 @@ const HostPartnerPage = () => {
         "Real Time Consumer Feedback & Insights",
         "Effective Retargeting"
       ],
-      buttonText: "Market Your Product/Service",
+      buttonText: "Market Your Product",
       buttonLink: "/signup/brand",
       gradient: "from-[#6366F1] to-[#6366F1]",
       iconBg: "bg-[#6366F1]"
@@ -200,7 +200,7 @@ const HostPartnerPage = () => {
                   className="w-full text-white px-6 py-3 rounded-lg text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl uppercase mt-auto"
                   style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                 >
-                  {role.buttonText} →
+                  {role.buttonText}
                 </button>
               </div>
             ))}
@@ -282,10 +282,10 @@ const HostPartnerPage = () => {
                 {differentiators.map((item, index) => (
                   <div
                     key={index}
-                    className="rounded-2xl px-6 py-6 bg-white text-black shadow-[0_25px_55px_rgba(0,0,0,0.35)] border border-white/10 hover:-translate-y-1 transition-transform duration-300"
+                    className="rounded-2xl px-6 py-6 bg-zinc-900 text-white shadow-[0_25px_55px_rgba(0,0,0,0.35)] border border-white/10 hover:-translate-y-1 transition-transform duration-300"
                   >
                     <h3 className="text-lg font-bold text-[#7163FF] tracking-wide mb-3 uppercase">{item.title}</h3>
-                    <p className="text-sm text-gray-700 leading-relaxed">{item.description}</p>
+                    <p className="text-sm text-white leading-relaxed">{item.description}</p>
                   </div>
                 ))}
               </div>

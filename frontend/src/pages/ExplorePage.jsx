@@ -23,6 +23,7 @@ export default function ExplorePage() {
   // Events state
   const [topEvents, setTopEvents] = useState([]);
   const [events, setEvents] = useState([]);
+  const [allEvents, setAllEvents] = useState([]); // Cache all events for client-side pagination
   const [eventsPage, setEventsPage] = useState(1);
   const [eventsPagination, setEventsPagination] = useState(null);
   const [savedEventIds, setSavedEventIds] = useState([]);
@@ -85,7 +86,36 @@ export default function ExplorePage() {
     } else if (tab === 'communities') {
       fetchCommunities();
     }
-  }, [tab, searchQuery, filters, eventsPage, communitiesPage]);
+  }, [tab, searchQuery, filters]); // Removed eventsPage and communitiesPage from dependencies
+
+  // Handle events pagination client-side when page changes
+  useEffect(() => {
+    if (tab === 'events' && allEvents.length > 0) {
+      const itemsPerPage = 8;
+      const totalPages = Math.ceil(allEvents.length / itemsPerPage);
+      const startIdx = (eventsPage - 1) * itemsPerPage;
+      const endIdx = startIdx + itemsPerPage;
+      const paginatedEvents = allEvents.slice(startIdx, endIdx);
+      
+      setEventsPagination({
+        page: eventsPage,
+        limit: itemsPerPage,
+        total: allEvents.length,
+        totalPages: totalPages
+      });
+      
+      setEvents(paginatedEvents);
+      console.log('📄 Page changed to', eventsPage, '- showing', paginatedEvents.length, 'of', allEvents.length, 'events');
+    }
+  }, [eventsPage, allEvents, tab]);
+
+  // Handle communities pagination when page changes
+  useEffect(() => {
+    if (tab === 'communities') {
+      // Communities page change will be handled in the render
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [communitiesPage, tab]);
 
   // Fetch saved events
   const fetchSavedEvents = async () => {
@@ -127,76 +157,41 @@ export default function ExplorePage() {
       console.log('✅ Upcoming events (future only):', upcomingEvents.length, 'events');
       setTopEvents(upcomingEvents);
 
-      // Fetch main events with filters
-      let eventsEndpoint = `${API_URL}/api/explore/events/popular?limit=12&page=${eventsPage}`;
+      // Fetch ALL events at once with a large limit to work around backend pagination bug
+      // Backend has pagination issues, so we fetch all events and paginate client-side
+      let eventsEndpoint = `${API_URL}/api/explore/events/popular?limit=100&page=1`;
       
       if (searchQuery) {
-        eventsEndpoint = `${API_URL}/api/explore/events/search?q=${encodeURIComponent(searchQuery)}&limit=12&page=${eventsPage}`;
+        eventsEndpoint = `${API_URL}/api/explore/events/search?q=${encodeURIComponent(searchQuery)}&limit=100&page=1`;
       } else if (filters.useGeolocation && filters.userLocation) {
-        eventsEndpoint = `${API_URL}/api/explore/events/nearby?lat=${filters.userLocation.lat}&lng=${filters.userLocation.lng}&radius=50&limit=12&page=${eventsPage}`;
+        eventsEndpoint = `${API_URL}/api/explore/events/nearby?lat=${filters.userLocation.lat}&lng=${filters.userLocation.lng}&radius=50&limit=100&page=1`;
       }
 
       const eventsResponse = await fetch(eventsEndpoint);
       const eventsData = await eventsResponse.json();
       console.log('✅ Main events received:', eventsData.events?.length || 0, 'events');
-      setEventsPagination(eventsData.pagination);
       
-      let filteredEvents = eventsData.events || [];
-
-      // Apply additional filters
-      if (filters.price && filters.price !== 'all') {
-        filteredEvents = filteredEvents.filter(event => {
-          const price = event.price?.amount || 0;
-          if (filters.price === 'free') return price === 0;
-          if (filters.price === 'under500') return price > 0 && price < 500;
-          if (filters.price === '500-2000') return price >= 500 && price <= 2000;
-          if (filters.price === 'over2000') return price > 2000;
-          return true;
-        });
-      }
-
-      if (filters.city && filters.city !== 'all') {
-        filteredEvents = filteredEvents.filter(event => 
-          event.location?.city === filters.city
-        );
-      }
-
-      if (filters.mood && filters.mood !== 'all') {
-        filteredEvents = filteredEvents.filter(event => 
-          event.mood === filters.mood
-        );
-      }
-
-      if (filters.showToday) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        filteredEvents = filteredEvents.filter(event => {
-          const eventDate = new Date(event.date);
-          return eventDate >= today && eventDate < tomorrow;
-        });
-      }
-
-      if (filters.showWeekend) {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
-        const saturday = new Date(today);
-        saturday.setDate(today.getDate() + daysUntilSaturday);
-        saturday.setHours(0, 0, 0, 0);
-        const monday = new Date(saturday);
-        monday.setDate(saturday.getDate() + 3);
-        
-        filteredEvents = filteredEvents.filter(event => {
-          const eventDate = new Date(event.date);
-          return eventDate >= saturday && eventDate < monday;
-        });
-      }
-
-      setEvents(filteredEvents);
-      console.log('📊 Final events count:', filteredEvents.length);
+      // Store all events for client-side pagination
+      const fetchedEvents = eventsData.events || [];
+      setAllEvents(fetchedEvents);
+      
+      // Client-side pagination (8 events per page)
+      const itemsPerPage = 8;
+      const totalPages = Math.ceil(fetchedEvents.length / itemsPerPage);
+      const startIdx = (eventsPage - 1) * itemsPerPage;
+      const endIdx = startIdx + itemsPerPage;
+      const paginatedEvents = fetchedEvents.slice(startIdx, endIdx);
+      
+      // Set custom pagination object
+      setEventsPagination({
+        page: eventsPage,
+        limit: itemsPerPage,
+        total: fetchedEvents.length,
+        totalPages: totalPages
+      });
+      
+      setEvents(paginatedEvents);
+      console.log('📊 Final events count:', paginatedEvents.length, 'of', fetchedEvents.length, 'total');
     } catch (error) {
       console.error('❌ Error fetching events:', error);
       setTopEvents([]);
@@ -211,11 +206,11 @@ export default function ExplorePage() {
     console.log('🔄 Fetching communities... Query:', searchQuery, 'Page:', communitiesPage);
     setLoading(true);
     try {
-      let featuredEndpoint = `${API_URL}/api/explore/communities/featured?limit=15&page=${communitiesPage}`;
+      let featuredEndpoint = `${API_URL}/api/explore/communities/featured?limit=8&page=${communitiesPage}`;
       
       // If there's a search query, use search endpoint instead
       if (searchQuery) {
-        featuredEndpoint = `${API_URL}/api/explore/communities/search?q=${encodeURIComponent(searchQuery)}&limit=15&page=${communitiesPage}`;
+        featuredEndpoint = `${API_URL}/api/explore/communities/search?q=${encodeURIComponent(searchQuery)}&limit=8&page=${communitiesPage}`;
       }
       
       console.log('📡 Fetching communities from:', featuredEndpoint);
@@ -438,41 +433,55 @@ export default function ExplorePage() {
                         {topEvents.map((event, index) => (
                           <div 
                             key={event._id} 
-                            className="flex-none w-[90vw] sm:w-[600px] lg:w-[700px] snap-center"
+                            className="flex-none w-[90vw] sm:w-[550px] lg:w-[600px] snap-center"
                             style={{
                               animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
                             }}
                           >
                             {/* Event Card */}
-                            <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all h-full">
-                              <div className="flex flex-row h-full">
+                            <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all">
+                              <div className="flex flex-row min-h-[280px] max-h-[320px]">
                                 {/* Left Side - Content */}
-                                <div className="flex-1 p-4 sm:p-6 flex flex-col justify-between min-w-0">
-                                  <div className="space-y-2 sm:space-y-3">
-                                    <div className="flex items-center gap-1 text-gray-700">
-                                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                      <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time}
+                                <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
+                                  <div>
+                                    {/* Date */}
+                                    <div className="flex items-center gap-2 text-gray-700 mb-3">
+                                      <Calendar className="h-4 w-4 flex-shrink-0" />
+                                      <span className="text-sm font-bold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time || '6:30 PM'}
                                       </span>
                                     </div>
-                                    <h3 className="text-sm sm:text-xl lg:text-2xl font-bold text-gray-900 line-clamp-3 sm:line-clamp-2 leading-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                    
+                                    {/* Title */}
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                       {event.title}
                                     </h3>
-                                    <div className="flex items-start gap-1 text-gray-700">
-                                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0" />
-                                      <span className="text-xs sm:text-sm line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                        {event.location?.venue || event.location?.city}, {event.location?.state}
+                                    
+                                    {/* Category/Type */}
+                                    <p className="text-sm text-gray-700 mb-3 font-semibold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                      {event.category || 'Live Performances'} · {event.type || 'Music'} · {event.genre || 'Alternative'}
+                                    </p>
+                                    
+                                    {/* Location */}
+                                    <div className="flex items-start gap-2 text-gray-700 mb-3">
+                                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                      <span className="text-sm font-bold line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                        {event.location?.address || event.location?.venue || event.location?.city}, {event.location?.state || event.location?.city}
                                       </span>
                                     </div>
-                                    <div>
-                                      <span className="text-sm sm:text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                    
+                                    {/* Price */}
+                                    <div className="mb-3">
+                                      <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                         ₹{event.price?.amount || 499} onwards
                                       </span>
                                     </div>
                                   </div>
+                                  
+                                  {/* Button */}
                                   <button
                                     onClick={() => window.location.href = `/events/${event._id}`}
-                                    className="w-full mt-3 sm:mt-4 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-md text-sm sm:text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg"
+                                    className="w-full text-white px-8 py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-xl"
                                     style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                                   >
                                     Get your Ticket
@@ -480,13 +489,13 @@ export default function ExplorePage() {
                                 </div>
 
                                 {/* Right Side - Image */}
-                                <div className="w-[45%] sm:w-[50%] p-3 sm:p-4 flex items-center justify-center">
-                                  <div className="relative w-full h-full">
-                                    {/* Frame/Shadow effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-xl"></div>
+                                <div className="w-[45%] p-4 flex items-center justify-center">
+                                  <div className="relative w-full max-w-[250px]">
+                                    {/* Shadow frame effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-2xl"></div>
                                     
                                     {/* Image container */}
-                                    <div className="relative bg-white rounded-lg overflow-hidden shadow-lg h-full min-h-[180px] sm:min-h-[280px]">
+                                    <div className="relative bg-white rounded-lg overflow-hidden shadow-xl aspect-[3/4]">
                                       {event.images && event.images.length > 0 ? (
                                         <img
                                           src={event.images[0]}
@@ -749,56 +758,120 @@ export default function ExplorePage() {
                   </div>
                   
                   <div className="relative">
-                    {/* Mobile: Horizontal Carousel */}
-                    <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                      <div className="flex gap-4 px-2">
-                        {lockedCommunities.slice(0, 13).map(community => (
-                          <div key={community._id} className="flex-none w-[85vw] snap-center">
-                            <CommunityCard
-                              community={community}
-                              isLocked={true}
-                            />
+                    {/* Calculate pagination for locked communities */}
+                    {(() => {
+                      const itemsPerPage = 8;
+                      const totalPages = Math.ceil(lockedCommunities.length / itemsPerPage);
+                      const startIdx = (communitiesPage - 1) * itemsPerPage;
+                      const endIdx = startIdx + itemsPerPage;
+                      const paginatedCommunities = lockedCommunities.slice(startIdx, endIdx);
+                      
+                      return (
+                        <>
+                          {/* Mobile: Horizontal Carousel */}
+                          <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <div className="flex gap-4 px-2">
+                              {paginatedCommunities.map(community => (
+                                <div key={community._id} className="flex-none w-[85vw] snap-center">
+                                  <CommunityCard
+                                    community={community}
+                                    isLocked={true}
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Desktop: Grid Layout */}
-                    <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {/* Show all communities as locked/blurred */}
-                      {lockedCommunities.slice(0, 13).map(community => (
-                        <CommunityCard
-                          key={community._id}
-                          community={community}
-                          isLocked={true}
-                        />
-                      ))}
-                    </div>
-                    
-                    {/* Unlock Overlay - positioned higher in the grid */}
-                    {lockedCommunities.length > 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '0%' }}>
-                        <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-8 text-center text-white max-w-md pointer-events-auto">
-                          <div className="h-16 w-16 bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Lock className="h-8 w-8 text-white" />
+                          
+                          {/* Desktop: Grid Layout */}
+                          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {/* Show paginated communities as locked/blurred */}
+                            {paginatedCommunities.map(community => (
+                              <CommunityCard
+                                key={community._id}
+                                community={community}
+                                isLocked={true}
+                              />
+                            ))}
                           </div>
-                          <h3 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                            Unlock More Communities
-                          </h3>
-                          <p className="text-base mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                           Viewing 5 of many communities. <br /> Download the app to join more communities                          </p>
-                          <a
-                            href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
-                            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
-                          >
-                            Download the App
-                          </a>
-                        </div>
-                      </div>
-                    )}
+                          
+                          {/* Unlock Overlay - positioned higher in the grid */}
+                          {lockedCommunities.length > 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '0%' }}>
+                              <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-8 text-center text-white max-w-md pointer-events-auto">
+                                <div className="h-16 w-16 bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <Lock className="h-8 w-8 text-white" />
+                                </div>
+                                <h3 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                  Unlock More Communities
+                                </h3>
+                                <p className="text-base mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                 Viewing {Math.min(8, lockedCommunities.length)} of {lockedCommunities.length} communities. <br /> Download the app to join more communities                          </p>
+                                <a
+                                  href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+                                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
+                                >
+                                  Download the App
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Pagination Controls for Communities */}
+                          {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 mt-8">
+                              <button
+                                onClick={() => setCommunitiesPage(Math.max(1, communitiesPage - 1))}
+                                disabled={communitiesPage === 1}
+                                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronLeft className="h-5 w-5 text-gray-900 dark:text-white" />
+                              </button>
+                              
+                              {[...Array(totalPages)].map((_, i) => {
+                                const page = i + 1;
+                                if (
+                                  page === 1 ||
+                                  page === totalPages ||
+                                  (page >= communitiesPage - 1 && page <= communitiesPage + 1)
+                                ) {
+                                  return (
+                                    <button
+                                      key={page}
+                                      onClick={() => setCommunitiesPage(page)}
+                                      className={`px-4 py-2 rounded-lg font-medium ${
+                                        page === communitiesPage
+                                          ? 'bg-orange-500 text-white'
+                                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                                      }`}
+                                    >
+                                      {page}
+                                    </button>
+                                  );
+                                } else if (page === communitiesPage - 2 || page === communitiesPage + 2) {
+                                  return <span key={page} className="px-2 text-gray-500">...</span>;
+                                }
+                                return null;
+                              })}
+                              
+                              <button
+                                onClick={() => setCommunitiesPage(Math.min(totalPages, communitiesPage + 1))}
+                                disabled={communitiesPage === totalPages}
+                                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronRight className="h-5 w-5 text-gray-900 dark:text-white" />
+                              </button>
+                              
+                              <span className="ml-4 text-sm text-gray-600 dark:text-gray-400">
+                                Page {communitiesPage} of {totalPages}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </section>
               </div>

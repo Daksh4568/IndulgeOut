@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORIES } from '../constants/categories';
 import NavigationBar from '../components/NavigationBar';
-import { api } from '../config/api';
+import { API_URL } from '../config/api';
 
 /**
  * All Categories Page
@@ -22,19 +22,24 @@ const Categories = () => {
   const fetchUpcomingEvents = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/events?status=published&limit=10');
+      const endpoint = `${API_URL}/api/explore/events/popular?limit=10&page=1`;
+      console.log('📡 Fetching upcoming events from:', endpoint);
       
-      // Handle response - could be array or object with data property
-      const eventsData = Array.isArray(response.data) 
-        ? response.data 
-        : (response.data?.events || []);
+      const response = await fetch(endpoint);
+      const data = await response.json();
+      console.log('✅ Events received:', data.events?.length || 0, 'events');
       
-      // Filter upcoming events
+      // Filter to only show upcoming events (future dates)
       const now = new Date();
-      const upcoming = eventsData.filter(event => new Date(event.date) >= now).slice(0, 6);
+      const upcoming = (data.events || []).filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate >= now;
+      }).slice(0, 6);
+      
+      console.log('✅ Upcoming events (future only):', upcoming.length, 'events');
       setUpcomingEvents(upcoming);
     } catch (error) {
-      console.error('Error fetching upcoming events:', error);
+      console.error('❌ Error fetching upcoming events:', error);
       setUpcomingEvents([]);
     } finally {
       setLoading(false);
@@ -112,41 +117,55 @@ const Categories = () => {
                 {upcomingEvents.map((event, index) => (
                   <div 
                     key={event._id} 
-                    className="flex-none w-full sm:w-[600px] lg:w-[650px] snap-center"
+                    className="flex-none w-full sm:w-[550px] lg:w-[600px] snap-center"
                     style={{
                       animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
                     }}
                   >
                     {/* Horizontal Event Card */}
-                    <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all h-full">
-                      <div className="flex flex-col sm:flex-row h-full min-h-[400px]">
+                    <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all">
+                      <div className="flex flex-row min-h-[280px] max-h-[320px]">
                         {/* Left Side - Content */}
-                        <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
+                        <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
                           <div>
+                            {/* Date */}
                             <div className="flex items-center gap-2 text-gray-700 mb-3">
-                              <Calendar className="h-4 w-4" />
+                              <Calendar className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm font-bold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                {formatDate(event.date)} · {event.time}
+                                {formatDate(event.date)} · {event.time || '6:30 PM'}
                               </span>
                             </div>
-                            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 line-clamp-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                            
+                            {/* Title */}
+                            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
                               {event.title}
                             </h3>
-                            <div className="flex items-start gap-2 text-gray-700 mb-4">
-                              <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
-                              <span className="text-sm font-bold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                {event.location?.address || `${event.location?.city}, ${event.location?.state}`}
+                            
+                            {/* Category/Type */}
+                            <p className="text-sm text-gray-700 mb-3 font-semibold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {event.category || 'Live Performances'} · {event.type || 'Music'} · {event.genre || 'Alternative'}
+                            </p>
+                            
+                            {/* Location */}
+                            <div className="flex items-start gap-2 text-gray-700 mb-3">
+                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm font-bold line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                {event.location?.address || event.location?.venue || event.location?.city}, {event.location?.state || event.location?.city}
                               </span>
                             </div>
-                            <div className="mb-4">
+                            
+                            {/* Price */}
+                            <div className="mb-3">
                               <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                                ₹{event.price?.amount || 0} onwards
+                                ₹{event.price?.amount || 499} onwards
                               </span>
                             </div>
                           </div>
+                          
+                          {/* Button */}
                           <button
                             onClick={() => navigate(`/event/${event._id}`)}
-                            className="w-full sm:w-auto text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
+                            className="w-full text-white px-8 py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-xl"
                             style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                           >
                             Get your Ticket
@@ -154,13 +173,13 @@ const Categories = () => {
                         </div>
 
                         {/* Right Side - Framed Image */}
-                        <div className="w-full sm:w-1/2 h-64 sm:h-auto p-4 flex items-center justify-center">
-                          <div className="relative w-full h-full max-w-[280px] mx-auto">
+                        <div className="w-[45%] p-4 flex items-center justify-center">
+                          <div className="relative w-full max-w-[250px]">
                             {/* Frame/Shadow effect */}
                             <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-2xl"></div>
                             
                             {/* Image container */}
-                            <div className="relative bg-white rounded-lg overflow-hidden shadow-xl h-full">
+                            <div className="relative bg-white rounded-lg overflow-hidden shadow-xl aspect-[3/4]">
                               {event.images && event.images.length > 0 ? (
                                 <img
                                   src={event.images[0]}

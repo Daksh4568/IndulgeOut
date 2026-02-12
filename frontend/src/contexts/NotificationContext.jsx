@@ -162,13 +162,30 @@ export const NotificationProvider = ({ children }) => {
     if (user) {
       fetchNotifications();
       // Poll for new notifications every 30 seconds
-      const interval = setInterval(() => fetchUnreadCount(), 30000);
+      const interval = setInterval(() => {
+        console.log('🔄 Polling for notification updates...');
+        fetchUnreadCount();
+        // Also refresh notifications list to ensure it's current
+        fetchNotifications();
+      }, 30000);
       return () => clearInterval(interval);
     } else {
       setNotifications([]);
       setUnreadCount(0);
     }
   }, [user]);
+
+  // Automatically fetch notifications when unread count increases
+  useEffect(() => {
+    if (user && unreadCount > 0) {
+      // Only fetch if we have unread notifications but no notifications in state
+      // This handles the case when count updates but notifications haven't been fetched
+      if (notifications.length === 0 || notifications.every(n => n.isRead)) {
+        console.log('📬 Unread count updated but no unread notifications loaded - fetching...');
+        fetchNotifications();
+      }
+    }
+  }, [unreadCount, user]);
 
   return (
     <NotificationContext.Provider
