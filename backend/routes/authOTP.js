@@ -1,11 +1,130 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const otpService = require('../services/msg91OTPService');
 const { authMiddleware } = require('../utils/authUtils');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
+const { sendWelcomeEmail, sendOTPEmail } = require('../utils/emailService');
+
+// Helper functions
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPhone = (phone) => /^[6-9]\d{9}$/.test(phone);
+const isValidOTP = (otp) => /^\d{6}$/.test(otp);
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const router = express.Router();
+
+/**
+ * Register New User with OTP
+ * POST /api/auth/otp/register
+ */
+router.post('/otp/register', async (req, res) => {
+  try {
+    const { name, email, phoneNumber, method } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !phoneNumber || !method) {
+      return res.status(400).json({
+        message: 'Name, email, phone number, and method are required'
+      });
+    }
+
+    // Validate method
+    if (!['sms', 'email'].includes(method)) {
+      return res.status(400).json({
+        message: 'Method must be either "sms" or "email"'
+      });
+    }
+
+    // Validate formats
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    if (!isValidPhone(phoneNumber)) {
+      return res.status(400).json({
+        message: 'Please provide a valid 10-digit Indian mobile number'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { phoneNumber: phoneNumber }
+      ]
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email.toLowerCase()) {
+        return res.status(409).json({ 
+          message: 'An account with this email already exists. Please login instead.' 
+        });
+      }
+      if (existingUser.phoneNumber === phoneNumber) {
+        return res.status(409).json({ 
+          message: 'An account with this phone number already exists. Please login instead.' 
+        });
+      }
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Send OTP via email (SMS temporarily disabled)
+    if (method === 'email') {
+      try {
+        await sendOTPEmail(email, otp, name);
+      } catch (error) {
+        return res.status(500).json({
+          message: `Failed to send OTP: ${error.message}`
+        });
+      }
+    } else {
+      // SMS not implemented - for now, just log
+      console.log(`SMS OTP for ${phoneNumber}: ${otp}`);
+    }
+
+    // Create user account (unverified)
+    const newUser = new User({
+      name,
+      email: email.toLowerCase(),
+      phoneNumber,
+      role: 'user',
+      otpVerification: {
+        otp,
+        otpExpiry,
+        otpAttempts: 1,
+        lastOTPSent: new Date(),
+        isPhoneVerified: false
+      },
+      analytics: {
+        registrationDate: new Date(),
+        registrationMethod: 'otp',
+        lastLogin: new Date()
+      }
+    });
+
+    await newUser.save();
+
+    console.log(`✅ New user registered and OTP sent to ${method === 'email' ? email : phoneNumber} via ${method}`);
+
+    res.status(201).json({
+      message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
+      expiresIn: 600,
+      userId: newUser._id
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      message: 'Failed to register. Please try again.',
+      error: error.message
+    });
+  }
+});
 
 /**
  * Send OTP for Login (Phone or Email)
@@ -30,13 +149,13 @@ router.post('/otp/send', async (req, res) => {
     }
 
     // Validate identifier format based on method
-    if (method === 'sms' && !otpService.isValidPhone(identifier)) {
+    if (method === 'sms' && !isValidPhone(identifier)) {
       return res.status(400).json({
         message: 'Please provide a valid 10-digit Indian mobile number'
       });
     }
 
-    if (method === 'email' && !otpService.isValidEmail(identifier)) {
+    if (method === 'email' && !isValidEmail(identifier)) {
       return res.status(400).json({
         message: 'Please provide a valid email address'
       });
@@ -55,35 +174,33 @@ router.post('/otp/send', async (req, res) => {
       });
     }
 
-    // Check rate limiting
-    const rateLimit = otpService.isRateLimited(
-      user.otpVerification?.lastOTPSent,
-      user.otpVerification?.otpAttempts || 0
-    );
-
-    if (rateLimit.limited) {
+    // Check rate limiting (simple 1-minute check)
+    const lastSent = user.otpVerification?.lastOTPSent;
+    if (lastSent && (Date.now() - lastSent.getTime()) < 60000) {
       return res.status(429).json({
-        message: rateLimit.reason,
-        retryAfter: rateLimit.retryAfter
+        message: 'Please wait 1 minute before requesting another OTP',
+        retryAfter: 60
       });
     }
 
     // Generate OTP
-    const otp = otpService.generateOTP();
+    const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Send OTP
-    const result = await otpService.sendOTP({
-      method,
-      to: identifier,
-      otp,
-      userName: user.name
-    });
-
-    if (!result.success) {
-      return res.status(500).json({
-        message: `Failed to send OTP: ${result.error}`
-      });
+    // Send OTP via email (SMS temporarily disabled)
+    let emailSent = false;
+    if (method === 'email') {
+      try {
+        await sendOTPEmail(identifier, otp, user.name);
+        emailSent = true;
+      } catch (error) {
+        return res.status(500).json({
+          message: `Failed to send OTP: ${error.message}`
+        });
+      }
+    } else {
+      // SMS not implemented - for now, just log
+      console.log(`SMS OTP for ${identifier}: ${otp}`);
     }
 
     // Update user with OTP details
@@ -97,7 +214,7 @@ router.post('/otp/send', async (req, res) => {
 
     await user.save();
 
-    console.log(`✅ OTP sent to ${identifier} via ${method}. Mock: ${result.mock || false}`);
+    console.log(`✅ OTP sent to ${identifier} via ${method}`);
 
     // Check if this is a test/dummy email (common patterns for test accounts)
     const isDummyEmail = method === 'email' && (
@@ -107,18 +224,16 @@ router.post('/otp/send', async (req, res) => {
       identifier.includes('@dummy.com') ||
       identifier.includes('@example.com') ||
       identifier.includes('@indulgeout.com') || // Development domain for test accounts
-      identifier.endsWith('.test') ||
-      result.mock // Also include mock mode
+      identifier.endsWith('.test')
     );
 
     const response = {
       message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
-      mock: result.mock || false,
       expiresIn: 600 // 10 minutes in seconds
     };
 
     // Include OTP in response for test accounts (development only)
-    if (isDummyEmail || result.mock) {
+    if (isDummyEmail) {
       response.otp = otp;
       response.isDummyAccount = true;
       console.log(`⚠️ TEST ACCOUNT: OTP ${otp} returned in response for ${identifier}`);
@@ -151,7 +266,7 @@ router.post('/otp/verify', async (req, res) => {
     }
 
     // Validate OTP format
-    if (!otpService.isValidOTP(otp)) {
+    if (!isValidOTP(otp)) {
       return res.status(400).json({
         message: 'Invalid OTP format. OTP must be 6 digits'
       });
@@ -222,7 +337,9 @@ router.post('/otp/verify', async (req, res) => {
       });
     }
 
-    // OTP verified successfully - clear OTP data
+    // OTP verified successfully - clear OTP data and activate account
+    const isNewUser = !user.otpVerification?.isPhoneVerified;
+    
     user.otpVerification = {
       ...user.otpVerification,
       otp: undefined,
@@ -232,6 +349,18 @@ router.post('/otp/verify', async (req, res) => {
     };
 
     await user.save();
+
+    // Send welcome email for new users (non-blocking)
+    if (isNewUser) {
+      setImmediate(async () => {
+        try {
+          await sendWelcomeEmail(user.email, user.name);
+          console.log(`✅ Welcome email sent to: ${user.email}`);
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+        }
+      });
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -250,11 +379,12 @@ router.post('/otp/verify', async (req, res) => {
       console.error('Error generating action required notifications on login:', err);
     });
 
-    console.log(`✅ User logged in successfully via OTP: ${user.email}`);
+    console.log(`✅ User ${isNewUser ? 'registered and verified' : 'logged in'} successfully via OTP: ${user.email}`);
 
     res.json({
-      message: 'Login successful',
+      message: isNewUser ? 'Account verified successfully! Welcome to IndulgeOut.' : 'Login successful',
       token,
+      isNewUser,
       user: {
         id: user._id,
         name: user.name,
@@ -303,35 +433,31 @@ router.post('/otp/resend', async (req, res) => {
       });
     }
 
-    // Check rate limiting
-    const rateLimit = otpService.isRateLimited(
-      user.otpVerification?.lastOTPSent,
-      user.otpVerification?.otpAttempts || 0
-    );
-
-    if (rateLimit.limited) {
+    // Check rate limiting (simple 1-minute check)
+    const lastSent = user.otpVerification?.lastOTPSent;
+    if (lastSent && (Date.now() - lastSent.getTime()) < 60000) {
       return res.status(429).json({
-        message: rateLimit.reason,
-        retryAfter: rateLimit.retryAfter
+        message: 'Please wait 1 minute before requesting another OTP',
+        retryAfter: 60
       });
     }
 
     // Generate new OTP
-    const otp = otpService.generateOTP();
+    const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Send OTP
-    const result = await otpService.sendOTP({
-      method,
-      to: identifier,
-      otp,
-      userName: user.name
-    });
-
-    if (!result.success) {
-      return res.status(500).json({
-        message: `Failed to resend OTP: ${result.error}`
-      });
+    // Send OTP via email (SMS temporarily disabled)
+    if (method === 'email') {
+      try {
+        await sendOTPEmail(identifier, otp, user.name);
+      } catch (error) {
+        return res.status(500).json({
+          message: `Failed to resend OTP: ${error.message}`
+        });
+      }
+    } else {
+      // SMS not implemented - for now, just log
+      console.log(`SMS OTP for ${identifier}: ${otp}`);
     }
 
     // Update user

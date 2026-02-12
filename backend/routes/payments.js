@@ -6,6 +6,7 @@ const User = require('../models/User.js');
 const { authMiddleware } = require('../utils/authUtils.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
+const ticketService = require('../services/ticketService.js');
 
 const router = express.Router();
 
@@ -244,6 +245,21 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       }
     });
 
+    // Generate ticket for the registered user
+    let ticket = null;
+    try {
+      ticket = await ticketService.generateTicket({
+        userId,
+        eventId: event._id,
+        amount: payment.payment_amount,
+        paymentId: payment.cf_payment_id
+      });
+      console.log('✅ Ticket generated successfully:', ticket.ticketNumber);
+    } catch (ticketError) {
+      console.error('⚠️ Failed to generate ticket:', ticketError);
+      // Don't fail the registration if ticket generation fails
+    }
+
     res.json({
       success: true,
       message: 'Payment verified and registration successful',
@@ -251,7 +267,12 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         id: event._id,
         title: event.title,
         date: event.date
-      }
+      },
+      ticket: ticket ? {
+        id: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        downloadUrl: `/api/tickets/${ticket._id}/download`
+      } : null
     });
 
   } catch (error) {

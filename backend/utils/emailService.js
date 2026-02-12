@@ -22,10 +22,14 @@ const createTransporter = () => {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT) || 587,
     secure: false,
+    family: 4, // Force IPv4 - fixes ENETUNREACH error on networks without IPv6
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    tls: {
+      rejectUnauthorized: false // Accept self-signed certificates (for development)
+    }
   });
 };
 

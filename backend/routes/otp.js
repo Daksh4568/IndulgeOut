@@ -1,9 +1,18 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const otpService = require('../services/otpService');
 const authMiddleware = require('../utils/authUtils');
+const { sendOTPEmail } = require('../utils/emailService');
+
+// Helper functions
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPhone = (phone) => /^[6-9]\d{9}$/.test(phone);
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const formatPhoneNumber = (phone) => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10 && /^[6-9]/.test(cleaned)) return cleaned;
+  throw new Error('Invalid phone number');
+};
 
 const router = express.Router();
 
@@ -25,7 +34,7 @@ router.post('/register/send', async (req, res) => {
     // Format and validate phone number
     let formattedPhone;
     try {
-      formattedPhone = otpService.formatPhoneNumber(phoneNumber);
+      formattedPhone = formatPhoneNumber(phoneNumber);
     } catch (error) {
       return res.status(400).json({ 
         message: 'Please provide a valid 10-digit Indian mobile number' 
@@ -51,11 +60,10 @@ router.post('/register/send', async (req, res) => {
     }
 
     // Generate and send OTP
-    const otp = otpService.generateOTP();
+    const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store temporary registration data in session or cache
-    // For now, we'll store it in a temporary collection or use JWT
+    // Store temporary registration data in JWT
     const tempToken = jwt.sign({
       phoneNumber,
       email,
@@ -65,19 +73,21 @@ router.post('/register/send', async (req, res) => {
       type: 'registration'
     }, process.env.JWT_SECRET, { expiresIn: '15m' });
 
-    // Send OTP
-    const result = await otpService.sendOTP(formattedPhone, otp);
-    
-    if (!result.success) {
+    // Send OTP to email (SMS temporarily disabled)
+    try {
+      await sendOTPEmail(email, otp, fullName);
+    } catch (error) {
+      console.error('Failed to send OTP:', error);
       return res.status(500).json({ 
         message: 'Failed to send OTP. Please try again.' 
       });
     }
 
+    console.log(`SMS OTP for ${formattedPhone}: ${otp}`);
+
     res.status(200).json({
-      message: 'OTP sent successfully to your phone',
-      tempToken, // Frontend will store this temporarily
-      mock: result.mock || false
+      message: 'OTP sent successfully to your email',
+      tempToken // Frontend will store this temporarily
     });
 
   } catch (error) {
@@ -124,7 +134,6 @@ router.post('/register/verify', async (req, res) => {
       name: tokenData.fullName, // Map fullName to name field
       email: tokenData.email,
       phoneNumber: tokenData.phoneNumber,
-      isOTPUser: true,
       interests: interests || [],
       otpVerification: {
         isPhoneVerified: true,
@@ -185,7 +194,7 @@ router.post('/login/send', async (req, res) => {
     // Format phone number
     let formattedPhone;
     try {
-      formattedPhone = otpService.formatPhoneNumber(phoneNumber);
+      formattedPhone = formatPhoneNumber(phoneNumber);
     } catch (error) {
       return res.status(400).json({ 
         message: 'Please provide a valid 10-digit Indian mobile number' 
@@ -201,24 +210,22 @@ router.post('/login/send', async (req, res) => {
       });
     }
 
-    // Check rate limiting
-    const rateLimitCheck = otpService.isRateLimited(
-      user.otpVerification?.lastOTPSent, 
-      user.otpVerification?.otpAttempts || 0
-    );
-
-    if (rateLimitCheck.limited) {
-      return res.status(429).json({ message: rateLimitCheck.reason });
+    // Check rate limiting (1 minute cooldown)
+    const lastSent = user.otpVerification?.lastOTPSent;
+    if (lastSent && (Date.now() - lastSent.getTime()) < 60000) {
+      return res.status(429).json({ 
+        message: 'Please wait 1 minute before requesting another OTP' 
+      });
     }
 
     // Generate and send OTP
-    const otp = otpService.generateOTP();
+    const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Update user with OTP details
     user.otpVerification = {
       ...user.otpVerification,
-      otp: await bcrypt.hash(otp, 10), // Hash OTP for security
+      otp, // Store plain OTP (short-lived, single-use)
       otpExpiry,
       lastOTPSent: new Date(),
       otpAttempts: (user.otpVerification?.otpAttempts || 0) + 1
@@ -226,19 +233,17 @@ router.post('/login/send', async (req, res) => {
 
     await user.save();
 
-    // Send OTP
-    const result = await otpService.sendOTP(formattedPhone, otp);
-    
-    if (!result.success) {
-      return res.status(500).json({ 
-        message: 'Failed to send OTP. Please try again.' 
-      });
+    // Send OTP to email (SMS temporarily disabled)
+    try {
+      await sendOTPEmail(user.email, otp, user.name);
+    } catch (error) {
+      console.error('Failed to send OTP:', error);
     }
+    console.log(`SMS OTP for ${formattedPhone}: ${otp}`);
 
     res.status(200).json({
-      message: 'OTP sent successfully to your phone',
-      userId: user._id, // Frontend will store this temporarily
-      mock: result.mock || false
+      message: 'OTP sent successfully to your email',
+      userId: user._id // Frontend will store this temporarily
     });
 
   } catch (error) {
@@ -272,7 +277,7 @@ router.post('/login/verify', async (req, res) => {
     }
 
     // Verify OTP
-    const isValidOTP = await bcrypt.compare(otp, user.otpVerification.otp);
+    const isValidOTP = otp === user.otpVerification.otp;
     
     if (!isValidOTP) {
       return res.status(400).json({ message: 'Invalid OTP' });
@@ -329,7 +334,7 @@ router.post('/resend', async (req, res) => {
     // Format phone number
     let formattedPhone;
     try {
-      formattedPhone = otpService.formatPhoneNumber(phoneNumber);
+      formattedPhone = formatPhoneNumber(phoneNumber);
     } catch (error) {
       return res.status(400).json({ 
         message: 'Please provide a valid 10-digit Indian mobile number' 
@@ -338,8 +343,7 @@ router.post('/resend', async (req, res) => {
 
     if (type === 'register') {
       // Handle resend for registration (similar to registration flow)
-      const otp = otpService.generateOTP();
-      const result = await otpService.sendOTP(formattedPhone, otp);
+      const otp = generateOTP();
       
       const tempToken = jwt.sign({
         phoneNumber,
@@ -350,8 +354,7 @@ router.post('/resend', async (req, res) => {
 
       return res.status(200).json({
         message: 'OTP resent successfully',
-        tempToken,
-        mock: result.mock || false
+        tempToken
       });
     } else {
       // Handle resend for login (similar to login flow)
@@ -361,23 +364,26 @@ router.post('/resend', async (req, res) => {
         return res.status(404).json({ message: 'Phone number not registered' });
       }
 
-      // Rate limit check
-      const rateLimitCheck = otpService.isRateLimited(
-        user.otpVerification?.lastOTPSent, 
-        user.otpVerification?.otpAttempts || 0
-      );
-
-      if (rateLimitCheck.limited) {
-        return res.status(429).json({ message: rateLimitCheck.reason });
+      // Rate limit check (1 minute cooldown)
+      const lastSent = user.otpVerification?.lastOTPSent;
+      if (lastSent && (Date.now() - lastSent.getTime()) < 60000) {
+        return res.status(429).json({ 
+          message: 'Please wait 1 minute before requesting another OTP' 
+        });
       }
 
-      const otp = otpService.generateOTP();
-      const result = await otpService.sendOTP(formattedPhone, otp);
+      const otp = generateOTP();
+      try {
+        await sendOTPEmail(user.email, otp, user.name);
+      } catch (error) {
+        console.error('Failed to send OTP:', error);
+      }
+      console.log(`SMS OTP for ${formattedPhone}: ${otp}`);
 
       // Update user
       user.otpVerification = {
         ...user.otpVerification,
-        otp: await bcrypt.hash(otp, 10),
+        otp,
         otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
         lastOTPSent: new Date(),
         otpAttempts: (user.otpVerification?.otpAttempts || 0) + 1
@@ -387,8 +393,7 @@ router.post('/resend', async (req, res) => {
 
       return res.status(200).json({
         message: 'OTP resent successfully',
-        userId: user._id,
-        mock: result.mock || false
+        userId: user._id
       });
     }
 
