@@ -31,12 +31,12 @@ const PaymentCallback = () => {
 
       if (response.data.success) {
         setStatus('success');
-        setMessage('Payment successful! You are now registered for the event.');
+        setMessage('Payment successful! Redirecting to your dashboard...');
         sessionStorage.removeItem('payment_event_id');
         
-        // Redirect to event detail page after 3 seconds
+        // Redirect to dashboard with refresh flag
         setTimeout(() => {
-          navigate(`/events/${eventId}`);
+          navigate(`/user/dashboard?refresh=true&eventId=${eventId}`);
         }, 3000);
       } else {
         setStatus('failed');

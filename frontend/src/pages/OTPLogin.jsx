@@ -45,8 +45,11 @@ const OTPLogin = () => {
         setStep(2)
         setResendTimer(60) // 60 seconds cooldown
         
-        // If OTP is returned (test account), store it for display
-        if (response.data.otp && response.data.isDummyAccount) {
+        // Only display OTP for test accounts in development/staging (not production)
+        const isProduction = window.location.hostname.includes('indulgeout.com') || 
+                            window.location.hostname.includes('vercel.app');
+        
+        if (!isProduction && response.data.otp && response.data.isDummyAccount) {
           setTestAccountOTP(response.data.otp)
           console.log('🧪 Test Account OTP:', response.data.otp)
         } else {
@@ -134,8 +137,11 @@ const OTPLogin = () => {
         setResendTimer(60)
         setOTP('') // Clear previous OTP
         
-        // If OTP is returned (test account), store it for display
-        if (response.data.otp && response.data.isDummyAccount) {
+        // Only display OTP for test accounts in development/staging (not production)
+        const isProduction = window.location.hostname.includes('indulgeout.com') || 
+                            window.location.hostname.includes('vercel.app');
+        
+        if (!isProduction && response.data.otp && response.data.isDummyAccount) {
           setTestAccountOTP(response.data.otp)
           console.log('🧪 Test Account OTP:', response.data.otp)
         } else {
