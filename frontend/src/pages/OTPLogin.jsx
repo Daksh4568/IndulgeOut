@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Home, Mail, Phone, ArrowRight, RefreshCw, Copy, Check } from 'lucide-react'
+import { Home, Mail, Phone, ArrowRight, RefreshCw } from 'lucide-react'
 import DarkModeToggle from '../components/DarkModeToggle'
 import { api } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,8 +17,6 @@ const OTPLogin = () => {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [resendTimer, setResendTimer] = useState(0)
-  const [testAccountOTP, setTestAccountOTP] = useState(null) // Store OTP for test accounts
-  const [copied, setCopied] = useState(false) // Track if OTP was copied
 
   // Countdown timer for resend OTP
   useEffect(() => {
@@ -44,17 +42,6 @@ const OTPLogin = () => {
         setSuccessMessage(response.data.message)
         setStep(2)
         setResendTimer(60) // 60 seconds cooldown
-        
-        // Only display OTP for test accounts in development/staging (not production)
-        const isProduction = window.location.hostname.includes('indulgeout.com') || 
-                            window.location.hostname.includes('vercel.app');
-        
-        if (!isProduction && response.data.otp && response.data.isDummyAccount) {
-          setTestAccountOTP(response.data.otp)
-          console.log('🧪 Test Account OTP:', response.data.otp)
-        } else {
-          setTestAccountOTP(null)
-        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.')
@@ -136,17 +123,6 @@ const OTPLogin = () => {
         setSuccessMessage(response.data.message)
         setResendTimer(60)
         setOTP('') // Clear previous OTP
-        
-        // Only display OTP for test accounts in development/staging (not production)
-        const isProduction = window.location.hostname.includes('indulgeout.com') || 
-                            window.location.hostname.includes('vercel.app');
-        
-        if (!isProduction && response.data.otp && response.data.isDummyAccount) {
-          setTestAccountOTP(response.data.otp)
-          console.log('🧪 Test Account OTP:', response.data.otp)
-        } else {
-          setTestAccountOTP(null)
-        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend OTP.')
@@ -169,16 +145,6 @@ const OTPLogin = () => {
     setOTP('')
     setError('')
     setSuccessMessage('')
-    setTestAccountOTP(null) // Clear test OTP
-    setCopied(false) // Reset copy state
-  }
-
-  const handleCopyOTP = () => {
-    if (testAccountOTP) {
-      navigator.clipboard.writeText(testAccountOTP)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000) // Reset after 2 seconds
-    }
   }
 
   return (
@@ -365,43 +331,6 @@ const OTPLogin = () => {
                     onChange={(e) => setOTP(e.target.value.replace(/\D/g, ''))}
                     className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
-                  
-                  {/* Display OTP for Test/Dummy Accounts */}
-                  {testAccountOTP && (
-                    <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide">
-                          🧪 Test Account
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleCopyOTP}
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-yellow-400 hover:text-yellow-300 transition-colors"
-                        >
-                          {copied ? (
-                            <>
-                              <Check className="h-3 w-3" />
-                              <span>Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3 w-3" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <div className="bg-white/5 rounded-md p-3 border border-white/10">
-                        <p className="text-xs text-gray-400 mb-1">Your OTP:</p>
-                        <p className="text-3xl font-bold text-center text-white font-mono tracking-widest">
-                          {testAccountOTP}
-                        </p>
-                      </div>
-                      <p className="mt-2 text-xs text-yellow-400 text-center">
-                        This OTP is shown because you're using a test email address
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Verify Button with Purple Gradient */}
