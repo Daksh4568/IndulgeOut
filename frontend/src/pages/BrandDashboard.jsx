@@ -1,14 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  AlertCircle, TrendingUp, Users, MapPin, Calendar,
-  CheckCircle, ArrowRight, Star, Briefcase, Eye, Target,
-  Grid, Bell, BarChart3, Settings, HelpCircle, Filter,
-  ChevronRight, ChevronLeft, Building2, Sparkles, Copy
-} from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import NavigationBar from '../components/NavigationBar';
-import { api } from '../config/api';
+  AlertCircle,
+  TrendingUp,
+  Users,
+  MapPin,
+  Calendar,
+  CheckCircle,
+  ArrowRight,
+  Star,
+  Briefcase,
+  Eye,
+  Target,
+  Grid,
+  Bell,
+  BarChart3,
+  Settings,
+  HelpCircle,
+  Filter,
+  ChevronRight,
+  ChevronLeft,
+  Building2,
+  Sparkles,
+  Copy,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import NavigationBar from "../components/NavigationBar";
+import { api } from "../config/api";
 
 const BrandDashboard = () => {
   const navigate = useNavigate();
@@ -16,14 +34,18 @@ const BrandDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
-  const [activeSidebarItem, setActiveSidebarItem] = useState('all');
-  const [collaborationFilter, setCollaborationFilter] = useState('all'); // all, upcoming, live, completed
+  const [activeSidebarItem, setActiveSidebarItem] = useState("all");
+  const [collaborationFilter, setCollaborationFilter] = useState("all"); // all, upcoming, live, completed
 
   useEffect(() => {
     if (authLoading) return;
-    
-    if (!user || user.role !== 'host_partner' || user.hostPartnerType !== 'brand_sponsor') {
-      navigate('/login');
+
+    if (
+      !user ||
+      user.role !== "host_partner" ||
+      user.hostPartnerType !== "brand_sponsor"
+    ) {
+      navigate("/login");
       return;
     }
     fetchDashboardData();
@@ -32,12 +54,12 @@ const BrandDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/brands/dashboard');
+      const response = await api.get("/brands/dashboard");
       setDashboardData(response.data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching brand dashboard:', err);
-      setError('Failed to load dashboard data');
+      console.error("Error fetching brand dashboard:", err);
+      setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -45,25 +67,29 @@ const BrandDashboard = () => {
 
   const handleActionClick = (actionType, itemId) => {
     switch (actionType) {
-      case 'missing_kyc':
-      case 'complete_kyc':
-      case 'kyc_required':
-        navigate('/kyc-setup');
+      case "missing_kyc":
+      case "complete_kyc":
+      case "kyc_required":
+      case "kyc_pending":
+        navigate("/kyc-setup");
         break;
-      case 'collaboration_request':
+      case "collaboration_request":
         navigate(`/organizer/collaborations?id=${itemId}`);
         break;
-      case 'pending_approval':
+      case "pending_approval":
         navigate(`/organizer/collaborations?id=${itemId}`);
         break;
-      case 'clarification_requested':
+      case "clarification_requested":
         navigate(`/organizer/collaborations?id=${itemId}`);
         break;
-      case 'feedback_pending':
+      case "feedback_pending":
         navigate(`/feedback/${itemId}`);
         break;
-      case 'missing_deliverables':
-        navigate('/profile?section=deliverables');
+      case "missing_deliverables":
+        navigate("/profile?section=deliverables");
+        break;
+      case "profile_incomplete_brand":
+        navigate("/profile");
         break;
       default:
         break;
@@ -72,19 +98,34 @@ const BrandDashboard = () => {
 
   const getCollaborationTypeColor = (type) => {
     const colors = {
-      sponsorship: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-      sampling: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-      popup: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-      cohosted: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+      sponsorship:
+        "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300",
+      sampling:
+        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
+      popup: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+      cohosted:
+        "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300",
     };
-    return colors[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+    return (
+      colors[type] ||
+      "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+    );
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      upcoming: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-      live: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
-      completed: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' }
+      upcoming: {
+        bg: "bg-blue-100 dark:bg-blue-900/30",
+        text: "text-blue-700 dark:text-blue-300",
+      },
+      live: {
+        bg: "bg-green-100 dark:bg-green-900/30",
+        text: "text-green-700 dark:text-green-300",
+      },
+      completed: {
+        bg: "bg-gray-100 dark:bg-gray-700",
+        text: "text-gray-700 dark:text-gray-300",
+      },
     };
     const badge = badges[status] || badges.upcoming;
     return `${badge.bg} ${badge.text}`;
@@ -101,13 +142,15 @@ const BrandDashboard = () => {
     );
   }
 
-  const { actionsRequired, activeCollaborations, performance, insights } = dashboardData || {};
+  const { actionsRequired, activeCollaborations, performance, insights } =
+    dashboardData || {};
 
   // Filter collaborations based on selected filter
-  const filteredCollaborations = activeCollaborations?.filter(collab => {
-    if (collaborationFilter === 'all') return true;
-    return collab.status === collaborationFilter;
-  }) || [];
+  const filteredCollaborations =
+    activeCollaborations?.filter((collab) => {
+      if (collaborationFilter === "all") return true;
+      return collab.status === collaborationFilter;
+    }) || [];
 
   return (
     <div className="min-h-screen bg-black">
@@ -119,15 +162,20 @@ const BrandDashboard = () => {
           <nav className="flex flex-col items-center space-y-6">
             {/* Dashboard/All */}
             <button
-              onClick={() => setActiveSidebarItem('all')}
+              onClick={() => setActiveSidebarItem("all")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'all'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "all"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'all' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "all"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Dashboard"
             >
               <Grid className="h-6 w-6" />
@@ -136,15 +184,20 @@ const BrandDashboard = () => {
 
             {/* Actions Required */}
             <button
-              onClick={() => setActiveSidebarItem('actions')}
+              onClick={() => setActiveSidebarItem("actions")}
               className={`relative flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'actions'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "actions"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'actions' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "actions"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Actions Required"
             >
               {actionsRequired && actionsRequired.length > 0 && (
@@ -158,15 +211,20 @@ const BrandDashboard = () => {
 
             {/* Analytics */}
             <button
-              onClick={() => setActiveSidebarItem('analytics')}
+              onClick={() => setActiveSidebarItem("analytics")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'analytics'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "analytics"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'analytics' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "analytics"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Analytics"
             >
               <BarChart3 className="h-6 w-6" />
@@ -175,15 +233,20 @@ const BrandDashboard = () => {
 
             {/* Help */}
             <button
-              onClick={() => setActiveSidebarItem('help')}
+              onClick={() => setActiveSidebarItem("help")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'help'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "help"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'help' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "help"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Help"
             >
               <HelpCircle className="h-6 w-6" />
@@ -198,19 +261,23 @@ const BrandDashboard = () => {
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h1
+                  className="text-3xl font-bold text-white mb-2"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <Building2 className="h-8 w-8 inline-block mr-3" />
                   Brand Dashboard
                 </h1>
                 <p className="text-gray-400">
-                  Welcome back, {user?.brandProfile?.brandName || 'Partner'}
+                  Welcome back, {user?.brandProfile?.brandName || "Partner"}
                 </p>
               </div>
               <button
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate("/profile")}
                 className="px-6 py-2.5 rounded-lg font-medium text-white transition-all"
                 style={{
-                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                  background:
+                    "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
                 }}
               >
                 Edit Profile
@@ -220,7 +287,10 @@ const BrandDashboard = () => {
             {/* Actions Required Section */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <AlertCircle className="h-6 w-6 mr-2" />
                   Actions Required
                   {actionsRequired && actionsRequired.length > 0 && (
@@ -242,7 +312,7 @@ const BrandDashboard = () => {
                         <div className="p-2 rounded-lg bg-red-500/20">
                           <AlertCircle className="h-5 w-5 text-red-500" />
                         </div>
-                        {action.priority === 'high' && (
+                        {action.priority === "high" && (
                           <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
                             High Priority
                           </span>
@@ -255,10 +325,12 @@ const BrandDashboard = () => {
                         {action.description}
                       </p>
                       <button
-                        onClick={() => handleActionClick(action.type, action.itemId)}
+                        onClick={() =>
+                          handleActionClick(action.type, action.itemId)
+                        }
                         className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
                       >
-                        <span>{action.ctaText || 'Respond'}</span>
+                        <span>{action.ctaText || "Respond"}</span>
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -277,7 +349,10 @@ const BrandDashboard = () => {
             {/* Collaborations Section */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <Briefcase className="h-6 w-6 mr-2" />
                   Collaborations
                 </h2>
@@ -290,44 +365,53 @@ const BrandDashboard = () => {
               {/* Filter Tabs */}
               <div className="flex items-center gap-3 mb-6">
                 <button
-                  onClick={() => setCollaborationFilter('all')}
+                  onClick={() => setCollaborationFilter("all")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    collaborationFilter === 'all'
-                      ? 'bg-white text-black'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    collaborationFilter === "all"
+                      ? "bg-white text-black"
+                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                   }`}
                 >
                   All
                 </button>
                 <button
-                  onClick={() => setCollaborationFilter('upcoming')}
+                  onClick={() => setCollaborationFilter("upcoming")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    collaborationFilter === 'upcoming'
-                      ? 'bg-white text-black'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    collaborationFilter === "upcoming"
+                      ? "bg-white text-black"
+                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                   }`}
                 >
-                  Upcoming ({activeCollaborations?.filter(c => c.status === 'upcoming').length || 0})
+                  Upcoming (
+                  {activeCollaborations?.filter((c) => c.status === "upcoming")
+                    .length || 0}
+                  )
                 </button>
                 <button
-                  onClick={() => setCollaborationFilter('live')}
+                  onClick={() => setCollaborationFilter("live")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    collaborationFilter === 'live'
-                      ? 'bg-white text-black'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    collaborationFilter === "live"
+                      ? "bg-white text-black"
+                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                   }`}
                 >
-                  Live ({activeCollaborations?.filter(c => c.status === 'live').length || 0})
+                  Live (
+                  {activeCollaborations?.filter((c) => c.status === "live")
+                    .length || 0}
+                  )
                 </button>
                 <button
-                  onClick={() => setCollaborationFilter('completed')}
+                  onClick={() => setCollaborationFilter("completed")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    collaborationFilter === 'completed'
-                      ? 'bg-white text-black'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    collaborationFilter === "completed"
+                      ? "bg-white text-black"
+                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                   }`}
                 >
-                  Completed ({activeCollaborations?.filter(c => c.status === 'completed').length || 0})
+                  Completed (
+                  {activeCollaborations?.filter((c) => c.status === "completed")
+                    .length || 0}
+                  )
                 </button>
               </div>
 
@@ -338,12 +422,16 @@ const BrandDashboard = () => {
                     <div
                       key={collab._id}
                       className="bg-zinc-900 rounded-xl overflow-hidden border border-gray-800 hover:border-purple-500/50 transition-all cursor-pointer"
-                      onClick={() => navigate(`/organizer/collaborations?id=${collab._id}`)}
+                      onClick={() =>
+                        navigate(`/organizer/collaborations?id=${collab._id}`)
+                      }
                     >
                       {/* Event Banner */}
                       <div className="relative h-32 bg-gradient-to-br from-purple-600 to-blue-600">
                         <div className="absolute top-3 left-3">
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(collab.status)}`}>
+                          <span
+                            className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(collab.status)}`}
+                          >
                             {collab.status.toUpperCase()}
                           </span>
                         </div>
@@ -359,7 +447,7 @@ const BrandDashboard = () => {
                         <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">
                           {collab.eventName}
                         </h3>
-                        
+
                         <div className="space-y-2 mb-3">
                           <div className="flex items-center text-sm text-gray-400">
                             <MapPin className="h-4 w-4 mr-2" />
@@ -367,21 +455,30 @@ const BrandDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Calendar className="h-4 w-4 mr-2" />
-                            <span>{new Date(collab.date).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })}</span>
+                            <span>
+                              {new Date(collab.date).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
                           </div>
                         </div>
 
                         {/* Collaboration Type Badge */}
                         <div className="flex items-center justify-between pt-3 border-t border-gray-800">
-                          <span className={`px-3 py-1 text-xs font-medium rounded-lg ${
-                            collab.type === 'sampling' ? 'bg-green-500/20 text-green-400' :
-                            collab.type === 'sponsorship' ? 'bg-purple-500/20 text-purple-400' :
-                            'bg-blue-500/20 text-blue-400'
-                          }`}>
+                          <span
+                            className={`px-3 py-1 text-xs font-medium rounded-lg ${
+                              collab.type === "sampling"
+                                ? "bg-green-500/20 text-green-400"
+                                : collab.type === "sponsorship"
+                                  ? "bg-purple-500/20 text-purple-400"
+                                  : "bg-blue-500/20 text-blue-400"
+                            }`}
+                          >
                             {collab.type}
                           </span>
                           <div className="flex items-center text-xs text-gray-400">
@@ -408,16 +505,19 @@ const BrandDashboard = () => {
                 <div className="bg-zinc-900 border border-gray-800 rounded-xl p-12 text-center">
                   <Briefcase className="h-16 w-16 text-gray-600 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-white mb-2">
-                    No {collaborationFilter !== 'all' ? collaborationFilter : ''} Collaborations
+                    No{" "}
+                    {collaborationFilter !== "all" ? collaborationFilter : ""}{" "}
+                    Collaborations
                   </h3>
                   <p className="text-gray-400 mb-6">
                     Start collaborating with communities to activate your brand.
                   </p>
                   <button
-                    onClick={() => navigate('/browse/communities')}
+                    onClick={() => navigate("/browse/communities")}
                     className="px-6 py-3 rounded-lg font-medium text-white transition-all"
                     style={{
-                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
                     }}
                   >
                     Browse Communities
@@ -429,7 +529,10 @@ const BrandDashboard = () => {
             {/* Performance & Insights Section */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <BarChart3 className="h-6 w-6 mr-2" />
                   Performance & Insights
                 </h2>
@@ -448,9 +551,7 @@ const BrandDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalCollaborations || 12}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Collaborations
-                  </p>
+                  <p className="text-sm text-gray-400">Total Collaborations</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
 
@@ -461,9 +562,7 @@ const BrandDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalCollaborations || 12}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Collaborations
-                  </p>
+                  <p className="text-sm text-gray-400">Total Collaborations</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
 
@@ -474,9 +573,7 @@ const BrandDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalCollaborations || 12}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Collaborations
-                  </p>
+                  <p className="text-sm text-gray-400">Total Collaborations</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
 
@@ -487,9 +584,7 @@ const BrandDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalCollaborations || 12}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Collaborations
-                  </p>
+                  <p className="text-sm text-gray-400">Total Collaborations</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
               </div>
@@ -499,7 +594,9 @@ const BrandDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* What's Working */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">What's Working</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  What's Working
+                </h3>
                 <div className="space-y-3">
                   {[1, 2, 3].map((_, index) => (
                     <div
@@ -519,7 +616,9 @@ const BrandDashboard = () => {
 
               {/* Suggestions for You */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Suggestions for You</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Suggestions for You
+                </h3>
                 <div className="space-y-3">
                   {[1, 2, 3].map((_, index) => (
                     <div
@@ -540,7 +639,9 @@ const BrandDashboard = () => {
 
             {/* Event-Level Performance */}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Event-Level Performance</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Event-Level Performance
+              </h3>
               <div className="space-y-3">
                 {[1, 2, 3].map((_, index) => (
                   <div
@@ -552,7 +653,9 @@ const BrandDashboard = () => {
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-white font-semibold mb-1">Cooking Workshop Series</h4>
+                        <h4 className="text-white font-semibold mb-1">
+                          Cooking Workshop Series
+                        </h4>
                         <div className="flex items-center gap-4 text-sm text-gray-400">
                           <span>Food & Culture Meetup • Bangalore</span>
                           <span>Jan 20, 2026</span>
@@ -583,4 +686,3 @@ const BrandDashboard = () => {
 };
 
 export default BrandDashboard;
-

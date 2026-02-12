@@ -1,15 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  AlertCircle, Calendar, Users, TrendingUp, Clock,
-  MapPin, Star, ArrowRight, CheckCircle, DollarSign,
-  Briefcase, Image, FileText, Settings, Grid, Bell,
-  BarChart3, HelpCircle, ChevronLeft, ChevronRight,
-  Building2, Sparkles, Eye, Copy
-} from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import NavigationBar from '../components/NavigationBar';
-import { api } from '../config/api';
+  AlertCircle,
+  Calendar,
+  Users,
+  TrendingUp,
+  Clock,
+  MapPin,
+  Star,
+  ArrowRight,
+  CheckCircle,
+  DollarSign,
+  Briefcase,
+  Image,
+  FileText,
+  Settings,
+  Grid,
+  Bell,
+  BarChart3,
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight,
+  Building2,
+  Sparkles,
+  Eye,
+  Copy,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import NavigationBar from "../components/NavigationBar";
+import { api } from "../config/api";
 
 const VenueDashboard = () => {
   const navigate = useNavigate();
@@ -17,13 +36,17 @@ const VenueDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
-  const [activeSidebarItem, setActiveSidebarItem] = useState('all');
+  const [activeSidebarItem, setActiveSidebarItem] = useState("all");
 
   useEffect(() => {
     if (authLoading) return;
-    
-    if (!user || user.role !== 'host_partner' || user.hostPartnerType !== 'venue') {
-      navigate('/login');
+
+    if (
+      !user ||
+      user.role !== "host_partner" ||
+      user.hostPartnerType !== "venue"
+    ) {
+      navigate("/login");
       return;
     }
     fetchDashboardData();
@@ -32,12 +55,12 @@ const VenueDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/venues/dashboard');
+      const response = await api.get("/venues/dashboard");
       setDashboardData(response.data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching venue dashboard:', err);
-      setError('Failed to load dashboard data');
+      console.error("Error fetching venue dashboard:", err);
+      setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -45,21 +68,23 @@ const VenueDashboard = () => {
 
   const handleActionClick = (actionType, itemId) => {
     switch (actionType) {
-      case 'missing_kyc':
-      case 'complete_kyc':
-      case 'kyc_required':
-        navigate('/kyc-setup');
+      case "missing_kyc":
+      case "complete_kyc":
+      case "kyc_required":
+      case "kyc_pending":
+        navigate("/kyc-setup");
         break;
-      case 'collaboration_request':
+      case "collaboration_request":
         navigate(`/organizer/collaborations?id=${itemId}`);
         break;
-      case 'profile_incomplete':
-        navigate('/profile');
+      case "profile_incomplete":
+      case "profile_incomplete_venue":
+        navigate("/profile");
         break;
-      case 'missing_photos':
-        navigate('/profile?section=photos');
+      case "missing_photos":
+        navigate("/profile?section=photos");
         break;
-      case 'pending_confirmation':
+      case "pending_confirmation":
         navigate(`/organizer/collaborations?id=${itemId}`);
         break;
       default:
@@ -78,7 +103,8 @@ const VenueDashboard = () => {
     );
   }
 
-  const { actionsRequired, upcomingEvents, performance, insights } = dashboardData || {};
+  const { actionsRequired, upcomingEvents, performance, insights } =
+    dashboardData || {};
 
   return (
     <div className="min-h-screen bg-black">
@@ -90,15 +116,20 @@ const VenueDashboard = () => {
           <nav className="flex flex-col items-center space-y-6">
             {/* Dashboard/All */}
             <button
-              onClick={() => setActiveSidebarItem('all')}
+              onClick={() => setActiveSidebarItem("all")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'all'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "all"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'all' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "all"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Dashboard"
             >
               <Grid className="h-6 w-6" />
@@ -107,15 +138,20 @@ const VenueDashboard = () => {
 
             {/* Actions Required */}
             <button
-              onClick={() => setActiveSidebarItem('actions')}
+              onClick={() => setActiveSidebarItem("actions")}
               className={`relative flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'actions'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "actions"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'actions' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "actions"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Actions Required"
             >
               {actionsRequired && actionsRequired.length > 0 && (
@@ -129,15 +165,20 @@ const VenueDashboard = () => {
 
             {/* Events */}
             <button
-              onClick={() => setActiveSidebarItem('events')}
+              onClick={() => setActiveSidebarItem("events")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'events'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "events"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'events' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "events"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Events"
             >
               <Calendar className="h-6 w-6" />
@@ -146,15 +187,20 @@ const VenueDashboard = () => {
 
             {/* Analytics */}
             <button
-              onClick={() => setActiveSidebarItem('analytics')}
+              onClick={() => setActiveSidebarItem("analytics")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'analytics'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "analytics"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'analytics' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "analytics"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Analytics"
             >
               <BarChart3 className="h-6 w-6" />
@@ -163,15 +209,20 @@ const VenueDashboard = () => {
 
             {/* Settings */}
             <button
-              onClick={() => setActiveSidebarItem('settings')}
+              onClick={() => setActiveSidebarItem("settings")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'settings'
-                  ? 'text-white'
-                  : 'text-gray-600 hover:text-gray-400'
+                activeSidebarItem === "settings"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
               }`}
-              style={activeSidebarItem === 'settings' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
+              style={
+                activeSidebarItem === "settings"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
               title="Settings"
             >
               <Settings className="h-6 w-6" />
@@ -186,20 +237,22 @@ const VenueDashboard = () => {
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2 flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h1
+                  className="text-3xl font-bold text-white mb-2 flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <Building2 className="h-8 w-8 mr-3" />
-                  {user?.venueProfile?.venueName || 'The Garden Lounge'}
+                  {user?.venueProfile?.venueName || "The Garden Lounge"}
                 </h1>
-                <p className="text-gray-400">
-                  Rooftop Cafe, Bangalore
-                </p>
+                <p className="text-gray-400">Rooftop Cafe, Bangalore</p>
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate("/profile")}
                   className="px-6 py-2.5 rounded-lg font-medium text-white transition-all"
                   style={{
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    background:
+                      "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
                   }}
                 >
                   Edit Venue
@@ -213,7 +266,10 @@ const VenueDashboard = () => {
             {/* Actions Required Section */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <Bell className="h-6 w-6 mr-2" />
                   Actions Required
                   {actionsRequired && actionsRequired.length > 0 && (
@@ -230,22 +286,26 @@ const VenueDashboard = () => {
                     <div
                       key={index}
                       className={`flex-shrink-0 w-80 bg-zinc-900 rounded-xl p-5 border transition-all ${
-                        action.priority === 'high' 
-                          ? 'border-red-500/50 hover:border-red-500' 
-                          : 'border-yellow-500/50 hover:border-yellow-500'
+                        action.priority === "high"
+                          ? "border-red-500/50 hover:border-red-500"
+                          : "border-yellow-500/50 hover:border-yellow-500"
                       }`}
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className={`p-2 rounded-lg ${
-                          action.priority === 'high' ? 'bg-red-500/20' : 'bg-yellow-500/20'
-                        }`}>
-                          {action.priority === 'high' ? (
+                        <div
+                          className={`p-2 rounded-lg ${
+                            action.priority === "high"
+                              ? "bg-red-500/20"
+                              : "bg-yellow-500/20"
+                          }`}
+                        >
+                          {action.priority === "high" ? (
                             <AlertCircle className="h-5 w-5 text-red-500" />
                           ) : (
                             <AlertCircle className="h-5 w-5 text-yellow-500" />
                           )}
                         </div>
-                        {action.priority === 'high' && (
+                        {action.priority === "high" && (
                           <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
                             High Priority
                           </span>
@@ -258,10 +318,12 @@ const VenueDashboard = () => {
                         {action.description}
                       </p>
                       <button
-                        onClick={() => handleActionClick(action.type, action.itemId)}
+                        onClick={() =>
+                          handleActionClick(action.type, action.itemId)
+                        }
                         className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
                       >
-                        <span>{action.ctaText || 'Respond'}</span>
+                        <span>{action.ctaText || "Respond"}</span>
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -280,7 +342,10 @@ const VenueDashboard = () => {
             {/* Upcoming Events Section */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <Calendar className="h-6 w-6 mr-2" />
                   Upcoming Events
                 </h2>
@@ -303,7 +368,9 @@ const VenueDashboard = () => {
                           Upcoming
                         </span>
                         <div className="text-center text-white">
-                          <p className="text-sm opacity-80">Sunday Jazz & Wine</p>
+                          <p className="text-sm opacity-80">
+                            Sunday Jazz & Wine
+                          </p>
                           <p className="text-xl font-bold">Night</p>
                         </div>
                       </div>
@@ -316,15 +383,20 @@ const VenueDashboard = () => {
                         <p className="text-sm text-gray-400 mb-3">
                           Culture Club Collective
                         </p>
-                        
+
                         <div className="space-y-2 mb-4">
                           <div className="flex items-center text-sm text-gray-400">
                             <Calendar className="h-4 w-4 mr-2" />
-                            <span>{new Date(event.date).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })}</span>
+                            <span>
+                              {new Date(event.date).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
@@ -351,7 +423,8 @@ const VenueDashboard = () => {
                     No Upcoming Events
                   </h3>
                   <p className="text-gray-400">
-                    IndulgeOut is bringing activity into your space. Check back soon!
+                    IndulgeOut is bringing activity into your space. Check back
+                    soon!
                   </p>
                 </div>
               )}
@@ -360,7 +433,10 @@ const VenueDashboard = () => {
             {/* Performance & Insights Section */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   <BarChart3 className="h-6 w-6 mr-2" />
                   Performance & Insights
                 </h2>
@@ -379,9 +455,7 @@ const VenueDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalEvents || 47}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Events Hosted
-                  </p>
+                  <p className="text-sm text-gray-400">Total Events Hosted</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
 
@@ -392,9 +466,7 @@ const VenueDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalEvents || 47}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Events Hosted
-                  </p>
+                  <p className="text-sm text-gray-400">Total Events Hosted</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
 
@@ -405,9 +477,7 @@ const VenueDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalEvents || 47}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Events Hosted
-                  </p>
+                  <p className="text-sm text-gray-400">Total Events Hosted</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
 
@@ -418,9 +488,7 @@ const VenueDashboard = () => {
                   <p className="text-3xl font-bold text-white mb-1">
                     {performance?.totalEvents || 47}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Total Events Hosted
-                  </p>
+                  <p className="text-sm text-gray-400">Total Events Hosted</p>
                   <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
               </div>
@@ -428,7 +496,9 @@ const VenueDashboard = () => {
 
             {/* What's Working & Suggestions */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-white mb-4">What's Working</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                What's Working
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 {[1, 2, 3].map((_, index) => (
                   <div
@@ -445,7 +515,9 @@ const VenueDashboard = () => {
                 ))}
               </div>
 
-              <h3 className="text-lg font-semibold text-white mb-4">Suggestions for You</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Suggestions for You
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[1, 2, 3].map((_, index) => (
                   <div
@@ -470,4 +542,3 @@ const VenueDashboard = () => {
 };
 
 export default VenueDashboard;
-

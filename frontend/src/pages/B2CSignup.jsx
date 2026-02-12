@@ -1,27 +1,29 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import API_URL from '../config/api';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import API_URL from "../config/api";
+import { useAuth } from "../contexts/AuthContext";
 
 const B2CSignup = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [step, setStep] = useState(1); // 1 = details form, 2 = OTP verification
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phoneNumber: '',
+    fullName: "",
+    email: "",
+    phoneNumber: "",
   });
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [contactMethod, setContactMethod] = useState('email'); // 'email' or 'phone'
+  const [error, setError] = useState("");
+  const [contactMethod, setContactMethod] = useState("email"); // 'email' or 'phone'
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
+    setError("");
   };
 
   const handleOtpChange = (index, value) => {
@@ -38,26 +40,26 @@ const B2CSignup = () => {
   };
 
   const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
       document.getElementById(`otp-${index - 1}`)?.focus();
     }
   };
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // Validation
     if (!formData.fullName.trim()) {
-      setError('Please enter your full name');
+      setError("Please enter your full name");
       return;
     }
     if (!formData.email.trim()) {
-      setError('Please enter your email');
+      setError("Please enter your email");
       return;
     }
     if (!formData.phoneNumber.trim()) {
-      setError('Please enter your phone number');
+      setError("Please enter your phone number");
       return;
     }
 
@@ -65,15 +67,16 @@ const B2CSignup = () => {
 
     try {
       // Send OTP
-      const identifier = contactMethod === 'email' ? formData.email : formData.phoneNumber;
-      await axios.post(`${API_URL}/auth/otp/send`, {
+      const identifier =
+        contactMethod === "email" ? formData.email : formData.phoneNumber;
+      await axios.post(`${API_URL}/api/auth/otp/send`, {
         identifier,
         method: contactMethod,
       });
 
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+      setError(err.response?.data?.message || "Failed to send OTP");
     } finally {
       setIsLoading(false);
     }
@@ -81,55 +84,60 @@ const B2CSignup = () => {
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    const otpCode = otp.join('');
+    const otpCode = otp.join("");
     if (otpCode.length !== 6) {
-      setError('Please enter complete OTP');
+      setError("Please enter complete OTP");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const identifier = contactMethod === 'email' ? formData.email : formData.phoneNumber;
-      
+      const identifier =
+        contactMethod === "email" ? formData.email : formData.phoneNumber;
+
       // Verify OTP and register
-      const response = await axios.post(`${API_URL}/auth/otp/verify`, {
+      const response = await axios.post(`${API_URL}/api/auth/otp/verify`, {
         identifier,
         otp: otpCode,
         method: contactMethod,
         name: formData.fullName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        role: 'user',
+        role: "user",
       });
 
       // Store token
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+
+      // Refresh auth context to update navbar
+      await refreshUser();
 
       // Redirect to user dashboard
-      navigate('/user/dashboard');
+      navigate("/user/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTP');
+      setError(err.response?.data?.message || "Invalid OTP");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleResendOTP = async () => {
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
-      const identifier = contactMethod === 'email' ? formData.email : formData.phoneNumber;
-      await axios.post(`${API_URL}/auth/otp/resend`, {
+      const identifier =
+        contactMethod === "email" ? formData.email : formData.phoneNumber;
+      await axios.post(`${API_URL}/api/auth/otp/resend`, {
         identifier,
         method: contactMethod,
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend OTP');
+      setError(err.response?.data?.message || "Failed to resend OTP");
     } finally {
       setIsLoading(false);
     }
@@ -138,10 +146,10 @@ const B2CSignup = () => {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden p-4">
       {/* Background Image with Opacity and Blur */}
-      <div 
+      <div
         className="fixed inset-0 bg-cover bg-center opacity-20 blur-sm"
         style={{
-          backgroundImage: 'url(/images/BackgroundLogin.jpg)',
+          backgroundImage: "url(/images/BackgroundLogin.jpg)",
           zIndex: 0,
         }}
       />
@@ -150,24 +158,23 @@ const B2CSignup = () => {
       <div className="relative z-10 w-full max-w-md flex flex-col items-center">
         {/* Logo - Outside Card */}
         <div className="mb-6">
-          <button onClick={() => navigate('/')} className="focus:outline-none">
-            <img 
-              src="/images/LogoOrbital.png" 
-              alt="IndulgeOut" 
-              className="h-16 w-auto object-contain" 
+          <button onClick={() => navigate("/")} className="focus:outline-none">
+            <img
+              src="/images/LogoOrbital.png"
+              alt="IndulgeOut"
+              className="h-16 w-auto object-contain"
             />
           </button>
         </div>
         {/* Glass Morphism Card */}
-        <div 
+        <div
           className="rounded-3xl p-8 border w-full"
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            backdropFilter: 'blur(10px)',
-            borderColor: 'rgba(255, 255, 255, 0.1)',
+            background: "rgba(255, 255, 255, 0.03)",
+            backdropFilter: "blur(10px)",
+            borderColor: "rgba(255, 255, 255, 0.1)",
           }}
         >
-
           {/* Tagline */}
           <p className="text-gray-300 text-center mb-8 text-sm">
             Find offline experiences, join communities and connect with people
@@ -175,9 +182,9 @@ const B2CSignup = () => {
           {step === 1 ? (
             /* Step 1: Details Form */
             <>
-              <h1 
+              <h1
                 className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
+                style={{ fontFamily: "Oswald, sans-serif" }}
               >
                 Join Us
               </h1>
@@ -222,9 +229,9 @@ const B2CSignup = () => {
                     Phone Number
                   </label>
                   <div className="flex gap-2">
-                    <select 
+                    <select
                       className="px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent"
-                      style={{ '--tw-ring-color': '#7878E9' }}
+                      style={{ "--tw-ring-color": "#7878E9" }}
                     >
                       <option value="+91">🇮🇳 +91</option>
                     </select>
@@ -235,27 +242,33 @@ const B2CSignup = () => {
                       onChange={handleChange}
                       placeholder="Enter mobile number"
                       className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                      style={{ '--tw-ring-color': '#7878E9' }}
+                      style={{ "--tw-ring-color": "#7878E9" }}
                     />
                   </div>
                 </div>
 
                 {/* Terms */}
                 <div className="flex items-start gap-2">
-                  <input 
-                    type="checkbox" 
-                    id="terms" 
+                  <input
+                    type="checkbox"
+                    id="terms"
                     required
                     className="mt-1 w-4 h-4 rounded border-white/10 bg-white/5"
-                    style={{ accentColor: '#7878E9' }}
+                    style={{ accentColor: "#7878E9" }}
                   />
                   <label htmlFor="terms" className="text-sm text-gray-300">
-                    I agree to the{' '}
-                    <span className="hover:underline cursor-pointer" style={{ color: '#7878E9' }}>
+                    I agree to the{" "}
+                    <span
+                      className="hover:underline cursor-pointer"
+                      style={{ color: "#7878E9" }}
+                    >
                       Terms & Conditions
-                    </span>{' '}
-                    and{' '}
-                    <span className="hover:underline cursor-pointer" style={{ color: '#7878E9' }}>
+                    </span>{" "}
+                    and{" "}
+                    <span
+                      className="hover:underline cursor-pointer"
+                      style={{ color: "#7878E9" }}
+                    >
                       Privacy Policy
                     </span>
                   </label>
@@ -273,22 +286,23 @@ const B2CSignup = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                    fontFamily: 'Oswald, sans-serif',
+                  style={{
+                    background:
+                      "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    fontFamily: "Oswald, sans-serif",
                   }}
                 >
-                  {isLoading ? 'SENDING...' : 'SEND OTP'}
+                  {isLoading ? "SENDING..." : "SEND OTP"}
                 </button>
 
                 {/* Login Link */}
                 <div className="text-center pt-4 border-t border-white/10">
                   <p className="text-gray-400 text-sm">
-                    Already have an Account?{' '}
-                    <span 
-                      onClick={() => navigate('/login')}
+                    Already have an Account?{" "}
+                    <span
+                      onClick={() => navigate("/login")}
                       className="cursor-pointer font-bold transition-colors"
-                      style={{ color: '#7878E9' }}
+                      style={{ color: "#7878E9" }}
                     >
                       Log In
                     </span>
@@ -299,9 +313,9 @@ const B2CSignup = () => {
           ) : (
             /* Step 2: OTP Verification */
             <>
-              <h1 
+              <h1
                 className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
+                style={{ fontFamily: "Oswald, sans-serif" }}
               >
                 Enter Your OTP here
               </h1>
@@ -322,7 +336,7 @@ const B2CSignup = () => {
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
                       className="w-12 h-12 text-center text-2xl font-bold bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                        style={{ '--tw-ring-color': '#7878E9' }}
+                      style={{ "--tw-ring-color": "#7878E9" }}
                     />
                   ))}
                 </div>
@@ -339,22 +353,23 @@ const B2CSignup = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                    fontFamily: 'Oswald, sans-serif',
+                  style={{
+                    background:
+                      "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    fontFamily: "Oswald, sans-serif",
                   }}
                 >
-                  {isLoading ? 'VERIFYING...' : 'SIGN UP'}
+                  {isLoading ? "VERIFYING..." : "SIGN UP"}
                 </button>
 
                 {/* Resend OTP */}
                 <div className="text-center pt-4">
                   <p className="text-gray-400 text-sm">
-                    Didn't receive code?{' '}
-                    <span 
+                    Didn't receive code?{" "}
+                    <span
                       onClick={handleResendOTP}
                       className="cursor-pointer font-semibold transition-colors"
-                      style={{ color: '#7878E9' }}
+                      style={{ color: "#7878E9" }}
                     >
                       Resend OTP
                     </span>

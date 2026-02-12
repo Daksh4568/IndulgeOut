@@ -181,3 +181,21 @@ body {
 .font-handwriting {
   font-family: 'Caveat', 'Dancing Script', cursive;
 }
+
+/* Glassmorphism Dropdown Styling */
+select option {
+  background: rgba(0, 0, 0, 0.98) !important;
+  color: white !important;
+  padding: 8px !important;
+}
+
+select option:first-child {
+  color: #9ca3af !important;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background: linear-gradient(135deg, rgba(120, 120, 233, 0.2), rgba(61, 61, 212, 0.2)) !important;
+  color: white !important;
+}
