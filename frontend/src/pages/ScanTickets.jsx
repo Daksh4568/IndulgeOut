@@ -1,26 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api } from '../config/api';
-import { useAuth } from '../contexts/AuthContext';
-import NavigationBar from '../components/NavigationBar';
-import QRScanner from '../components/QRScanner';
-import { 
-  QrCode, Camera, CheckCircle, XCircle, AlertCircle, 
-  Clock, User, Ticket, ArrowLeft, Search, BarChart3,
-  Calendar, MapPin, Users
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from "../config/api";
+import { useAuth } from "../contexts/AuthContext";
+import NavigationBar from "../components/NavigationBar";
+import QRScanner from "../components/QRScanner";
+import {
+  QrCode,
+  Camera,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+  User,
+  Ticket,
+  ArrowLeft,
+  Search,
+  BarChart3,
+  Calendar,
+  MapPin,
+  Users,
+} from "lucide-react";
 
 const ScanTickets = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const eventIdFromParams = searchParams.get('eventId');
+  const eventIdFromParams = searchParams.get("eventId");
 
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [scannerActive, setScannerActive] = useState(false);
-  const [manualEntry, setManualEntry] = useState('');
+  const [manualEntry, setManualEntry] = useState("");
   const [recentScans, setRecentScans] = useState([]);
   const [checkInResult, setCheckInResult] = useState(null);
   const [processingCheckIn, setProcessingCheckIn] = useState(false);
@@ -33,7 +44,7 @@ const ScanTickets = () => {
 
   useEffect(() => {
     if (eventIdFromParams && events.length > 0) {
-      const event = events.find(e => e._id === eventIdFromParams);
+      const event = events.find((e) => e._id === eventIdFromParams);
       if (event) {
         setSelectedEvent(event);
       }
@@ -44,18 +55,19 @@ const ScanTickets = () => {
   const fetchOrganizerEvents = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/organizer/events');
-      
+      const response = await api.get("/organizer/events");
+
       // Filter to only show upcoming and today's events
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      const relevantEvents = response.data.live?.filter(event => {
-        const eventDate = new Date(event.date);
-        eventDate.setHours(0, 0, 0, 0);
-        // Show events from today and future events
-        return eventDate >= today;
-      }) || [];
+
+      const relevantEvents =
+        response.data.live?.filter((event) => {
+          const eventDate = new Date(event.date);
+          eventDate.setHours(0, 0, 0, 0);
+          // Show events from today and future events
+          return eventDate >= today;
+        }) || [];
 
       setEvents(relevantEvents);
 
@@ -64,7 +76,7 @@ const ScanTickets = () => {
         setSelectedEvent(relevantEvents[0]);
       }
     } catch (error) {
-      console.error('❌ Error fetching events:', error);
+      console.error("❌ Error fetching events:", error);
     } finally {
       setLoading(false);
     }
@@ -73,8 +85,8 @@ const ScanTickets = () => {
   // Handle QR code scan
   const handleScanSuccess = async (ticketData) => {
     const ticketNumber = ticketData.ticketNumber || ticketData;
-    console.log('✅ Scanned ticket number:', ticketNumber);
-    
+    console.log("✅ Scanned ticket number:", ticketNumber);
+
     await fetchTicketInfo(ticketNumber);
   };
 
@@ -87,26 +99,26 @@ const ScanTickets = () => {
     try {
       // Fetch ticket details without checking in
       const response = await api.get(`/tickets/info/${ticketNumber}`);
-      
-      console.log('✅ Ticket info fetched:', response.data);
-      
+
+      console.log("✅ Ticket info fetched:", response.data);
+
       setTicketPreview({
         ticketNumber,
-        ticket: response.data.ticket
+        ticket: response.data.ticket,
       });
 
       // Clear manual entry
-      setManualEntry('');
-
+      setManualEntry("");
     } catch (error) {
-      console.error('❌ Error fetching ticket:', error);
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Ticket not found';
-      
+      console.error("❌ Error fetching ticket:", error);
+
+      const errorMessage =
+        error.response?.data?.message || error.message || "Ticket not found";
+
       setCheckInResult({
-        type: 'error',
+        type: "error",
         message: errorMessage,
-        ticketNumber
+        ticketNumber,
       });
 
       // Auto-clear error after 5 seconds
@@ -125,55 +137,61 @@ const ScanTickets = () => {
 
     try {
       const response = await api.post(`/tickets/check-in/${ticketNumber}`);
-      
-      console.log('✅ Check-in successful:', response.data);
-      
+
+      console.log("✅ Check-in successful:", response.data);
+
       // Success
       setCheckInResult({
-        type: 'success',
+        type: "success",
         message: response.data.message,
-        ticket: response.data.ticket
+        ticket: response.data.ticket,
       });
 
       // Clear ticket preview after successful check-in
       setTicketPreview(null);
 
       // Add to recent scans
-      setRecentScans(prev => [{
-        ticketNumber,
-        userName: response.data.ticket.user.name,
-        userEmail: response.data.ticket.user.email,
-        checkInTime: new Date(),
-        status: 'success'
-      }, ...prev.slice(0, 9)]); // Keep last 10 scans
+      setRecentScans((prev) => [
+        {
+          ticketNumber,
+          userName: response.data.ticket.user.name,
+          userEmail: response.data.ticket.user.email,
+          checkInTime: new Date(),
+          status: "success",
+        },
+        ...prev.slice(0, 9),
+      ]); // Keep last 10 scans
 
       // Clear manual entry
-      setManualEntry('');
+      setManualEntry("");
 
       // Auto-clear result after 5 seconds
       setTimeout(() => {
         setCheckInResult(null);
       }, 5000);
-
     } catch (error) {
-      console.error('❌ Check-in error:', error);
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Check-in failed';
-      
+      console.error("❌ Check-in error:", error);
+
+      const errorMessage =
+        error.response?.data?.message || error.message || "Check-in failed";
+
       setCheckInResult({
-        type: 'error',
+        type: "error",
         message: errorMessage,
-        ticketNumber
+        ticketNumber,
       });
 
       // Add to recent scans with error
-      setRecentScans(prev => [{
-        ticketNumber,
-        userName: 'Unknown',
-        checkInTime: new Date(),
-        status: 'error',
-        errorMessage
-      }, ...prev.slice(0, 9)]);
+      setRecentScans((prev) => [
+        {
+          ticketNumber,
+          userName: "Unknown",
+          checkInTime: new Date(),
+          status: "error",
+          errorMessage,
+        },
+        ...prev.slice(0, 9),
+      ]);
 
       // Auto-clear error after 5 seconds
       setTimeout(() => {
@@ -194,19 +212,19 @@ const ScanTickets = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
   // Format time
   const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
+    return new Date(date).toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -224,18 +242,18 @@ const ScanTickets = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       <NavigationBar />
-      
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/organizer/dashboard')}
+            onClick={() => navigate("/organizer/dashboard")}
             className="flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 mb-4 transition-colors"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to Dashboard
           </button>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
@@ -246,10 +264,12 @@ const ScanTickets = () => {
                 Check in attendees at your event entrance
               </p>
             </div>
-            
+
             {selectedEvent && (
               <button
-                onClick={() => navigate(`/organizer/events/${selectedEvent._id}/analytics`)}
+                onClick={() =>
+                  navigate(`/organizer/events/${selectedEvent._id}/analytics`)
+                }
                 className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 <BarChart3 className="h-5 w-5 mr-2" />
@@ -265,23 +285,26 @@ const ScanTickets = () => {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Select an Event
             </h2>
-            
+
             {events.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No upcoming events found
                 </p>
-                <button
-                  onClick={() => navigate('/create-event')}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Create Event
-                </button>
+                {user?.role === "host_partner" &&
+                  user?.hostPartnerType === "community_organizer" && (
+                    <button
+                      onClick={() => navigate("/create-event")}
+                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Create Event
+                    </button>
+                  )}
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {events.map(event => (
+                {events.map((event) => (
                   <div
                     key={event._id}
                     onClick={() => setSelectedEvent(event)}
@@ -301,7 +324,8 @@ const ScanTickets = () => {
                       </div>
                       <div className="flex items-center">
                         <Users className="h-4 w-4 mr-2" />
-                        {event.currentParticipants} / {event.maxParticipants} registered
+                        {event.currentParticipants} / {event.maxParticipants}{" "}
+                        registered
                       </div>
                     </div>
                   </div>
@@ -327,7 +351,8 @@ const ScanTickets = () => {
                       </div>
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 mr-2" />
-                        {selectedEvent.location?.address}, {selectedEvent.location?.city}
+                        {selectedEvent.location?.address},{" "}
+                        {selectedEvent.location?.city}
                       </div>
                     </div>
                   </div>
@@ -349,7 +374,9 @@ const ScanTickets = () => {
                 >
                   <Camera className="h-12 w-12 mx-auto mb-3" />
                   <span className="text-xl font-semibold">Scan QR Code</span>
-                  <p className="text-sm opacity-90 mt-1">Use camera to scan ticket</p>
+                  <p className="text-sm opacity-90 mt-1">
+                    Use camera to scan ticket
+                  </p>
                 </button>
 
                 {/* Manual Entry */}
@@ -370,7 +397,9 @@ const ScanTickets = () => {
                       <input
                         type="text"
                         value={manualEntry}
-                        onChange={(e) => setManualEntry(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setManualEntry(e.target.value.toUpperCase())
+                        }
                         placeholder="IND-XXX-XXX"
                         className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         disabled={processingCheckIn}
@@ -406,7 +435,9 @@ const ScanTickets = () => {
                   <div className="space-y-4">
                     {/* Ticket Number */}
                     <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Ticket Number</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        Ticket Number
+                      </p>
                       <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">
                         {ticketPreview.ticketNumber}
                       </p>
@@ -424,7 +455,9 @@ const ScanTickets = () => {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Email</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          Email
+                        </p>
                         <p className="text-sm text-gray-700 dark:text-gray-300">
                           {ticketPreview.ticket.user.email}
                         </p>
@@ -433,7 +466,9 @@ const ScanTickets = () => {
 
                     {/* Event Info */}
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Event</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        Event
+                      </p>
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {ticketPreview.ticket.event.title}
                       </p>
@@ -454,11 +489,15 @@ const ScanTickets = () => {
 
                     {/* Check-in Status */}
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Status</p>
-                      {ticketPreview.ticket.status === 'checked_in' ? (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        Status
+                      </p>
+                      {ticketPreview.ticket.status === "checked_in" ? (
                         <div className="flex items-center text-yellow-600 dark:text-yellow-400">
                           <AlertCircle className="h-4 w-4 mr-2" />
-                          <span className="font-medium">Already Checked In</span>
+                          <span className="font-medium">
+                            Already Checked In
+                          </span>
                           {ticketPreview.ticket.checkInTime && (
                             <span className="ml-2 text-sm">
                               at {formatTime(ticketPreview.ticket.checkInTime)}
@@ -468,7 +507,9 @@ const ScanTickets = () => {
                       ) : (
                         <div className="flex items-center text-green-600 dark:text-green-400">
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          <span className="font-medium">Ready for Check-in</span>
+                          <span className="font-medium">
+                            Ready for Check-in
+                          </span>
                         </div>
                       )}
                     </div>
@@ -476,20 +517,23 @@ const ScanTickets = () => {
                     {/* Check-in Button */}
                     <button
                       onClick={() => checkInTicket(ticketPreview.ticketNumber)}
-                      disabled={processingCheckIn || ticketPreview.ticket.status === 'checked_in'}
+                      disabled={
+                        processingCheckIn ||
+                        ticketPreview.ticket.status === "checked_in"
+                      }
                       className={`w-full py-4 rounded-lg font-semibold text-lg transition-all ${
-                        ticketPreview.ticket.status === 'checked_in'
-                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                          : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105'
-                      } ${processingCheckIn ? 'animate-pulse' : ''}`}
+                        ticketPreview.ticket.status === "checked_in"
+                          ? "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                          : "bg-green-600 text-white hover:bg-green-700 transform hover:scale-105"
+                      } ${processingCheckIn ? "animate-pulse" : ""}`}
                     >
                       {processingCheckIn ? (
                         <span className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                           Checking In...
                         </span>
-                      ) : ticketPreview.ticket.status === 'checked_in' ? (
-                        'Already Checked In'
+                      ) : ticketPreview.ticket.status === "checked_in" ? (
+                        "Already Checked In"
                       ) : (
                         <>
                           <CheckCircle className="inline h-5 w-5 mr-2" />
@@ -503,32 +547,44 @@ const ScanTickets = () => {
 
               {/* Check-in Result */}
               {checkInResult && (
-                <div className={`rounded-lg shadow-lg p-6 ${
-                  checkInResult.type === 'success' 
-                    ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-500'
-                    : 'bg-red-50 dark:bg-red-900/20 border-2 border-red-500'
-                }`}>
+                <div
+                  className={`rounded-lg shadow-lg p-6 ${
+                    checkInResult.type === "success"
+                      ? "bg-green-50 dark:bg-green-900/20 border-2 border-green-500"
+                      : "bg-red-50 dark:bg-red-900/20 border-2 border-red-500"
+                  }`}
+                >
                   <div className="flex items-start space-x-3">
-                    {checkInResult.type === 'success' ? (
+                    {checkInResult.type === "success" ? (
                       <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400 flex-shrink-0" />
                     ) : (
                       <XCircle className="h-8 w-8 text-red-600 dark:text-red-400 flex-shrink-0" />
                     )}
                     <div className="flex-1">
-                      <h3 className={`text-lg font-semibold mb-2 ${
-                        checkInResult.type === 'success'
-                          ? 'text-green-900 dark:text-green-100'
-                          : 'text-red-900 dark:text-red-100'
-                      }`}>
+                      <h3
+                        className={`text-lg font-semibold mb-2 ${
+                          checkInResult.type === "success"
+                            ? "text-green-900 dark:text-green-100"
+                            : "text-red-900 dark:text-red-100"
+                        }`}
+                      >
                         {checkInResult.message}
                       </h3>
-                      
+
                       {checkInResult.ticket && (
                         <div className="space-y-2 text-sm">
-                          <div className={checkInResult.type === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}>
+                          <div
+                            className={
+                              checkInResult.type === "success"
+                                ? "text-green-800 dark:text-green-200"
+                                : "text-red-800 dark:text-red-200"
+                            }
+                          >
                             <div className="flex items-center space-x-2 mb-1">
                               <User className="h-4 w-4" />
-                              <span className="font-semibold">{checkInResult.ticket.user.name}</span>
+                              <span className="font-semibold">
+                                {checkInResult.ticket.user.name}
+                              </span>
                             </div>
                             <div className="ml-6">
                               {checkInResult.ticket.user.email}
@@ -565,16 +621,16 @@ const ScanTickets = () => {
                       <div
                         key={index}
                         className={`p-3 rounded-lg border ${
-                          scan.status === 'success'
-                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          scan.status === "success"
+                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
                         }`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <span className="font-medium text-gray-900 dark:text-white text-sm">
                             {scan.userName}
                           </span>
-                          {scan.status === 'success' ? (
+                          {scan.status === "success" ? (
                             <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                           ) : (
                             <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
@@ -583,7 +639,7 @@ const ScanTickets = () => {
                         <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                           {scan.userEmail && <div>{scan.userEmail}</div>}
                           <div>{formatTime(scan.checkInTime)}</div>
-                          {scan.status === 'error' && scan.errorMessage && (
+                          {scan.status === "error" && scan.errorMessage && (
                             <div className="text-red-600 dark:text-red-400 mt-1">
                               {scan.errorMessage}
                             </div>
@@ -604,10 +660,10 @@ const ScanTickets = () => {
         <QRScanner
           onScanSuccess={handleScanSuccess}
           onScanError={(error) => {
-            console.error('Scan error:', error);
+            console.error("Scan error:", error);
             setCheckInResult({
-              type: 'error',
-              message: error
+              type: "error",
+              message: error,
             });
           }}
           onClose={() => setScannerActive(false)}
@@ -619,4 +675,3 @@ const ScanTickets = () => {
 };
 
 export default ScanTickets;
-
