@@ -13,14 +13,12 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
     if (!user) return [];
 
     const createdNotifications = [];
-    
-    // Check for existing notifications created in the last 24 hours (regardless of read status)
-    // This prevents spamming users with the same notifications on every login
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Check for existing action_required notifications of each type
+    // This prevents duplicate action items from appearing in the dashboard
     const existingNotifications = await Notification.find({
       recipient: userId,
-      category: 'action_required',
-      createdAt: { $gte: twentyFourHoursAgo }
+      category: 'action_required'
     }).select('type');
 
     const existingTypes = new Set(existingNotifications.map(n => n.type));
@@ -44,8 +42,8 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
     }
 
     // Check 2: Profile Incomplete (Host/Organizer)
-    if (user.role === 'host_partner' || user.role === 'community_organizer') {
-      const isProfileIncomplete = 
+    if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
+      const isProfileIncomplete =
         !user.communityProfile?.communityName ||
         !user.communityProfile?.communityDescription ||
         !user.phoneNumber;
@@ -59,10 +57,10 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
       }
     }
 
-    // Check 3: KYC/Payout Details Missing
-    if (user.role === 'host_partner' || user.role === 'community_organizer') {
-      const hasPayoutDetails = user.payoutInfo && 
-        user.payoutInfo.accountNumber && 
+    // Check 3: KYC/Payout Details Missing (for all host_partner types)
+    if (user.role === 'host_partner') {
+      const hasPayoutDetails = user.payoutInfo &&
+        user.payoutInfo.accountNumber &&
         user.payoutInfo.ifscCode &&
         user.payoutInfo.accountHolderName;
 
@@ -72,11 +70,18 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
           { sendEmail: false }
         );
         if (notification) createdNotifications.push(notification);
+      } else if (hasPayoutDetails) {
+        // Remove existing KYC pending notifications if payout details are now complete
+        await Notification.deleteMany({
+          recipient: userId,
+          type: 'kyc_pending',
+          category: 'action_required'
+        });
       }
     }
 
     // Check 4: Brand Profile Incomplete
-    if (user.role === 'brand_sponsor') {
+    if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
       const isBrandProfileIncomplete =
         !user.brandProfile?.brandName ||
         !user.brandProfile?.brandCategory ||
@@ -93,7 +98,7 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
     }
 
     // Check 5: Venue Profile Incomplete
-    if (user.role === 'venue') {
+    if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
       const isVenueProfileIncomplete =
         !user.venueProfile?.venueName ||
         !user.venueProfile?.venueType ||

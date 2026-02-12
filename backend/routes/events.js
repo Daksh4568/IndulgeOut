@@ -32,17 +32,17 @@ const registrationLimiter = rateLimit({
 router.get('/', async (req, res) => {
   try {
     const { categories, city, date, page = 1, limit = 10 } = req.query;
-    
+
     let filter = { status: 'published' };
-    
+
     if (categories) {
       filter.categories = { $in: categories.split(',') };
     }
-    
+
     if (city) {
       filter['location.city'] = new RegExp(city, 'i');
     }
-    
+
     if (date) {
       const startDate = new Date(date);
       const endDate = new Date(startDate);
@@ -52,7 +52,7 @@ router.get('/', async (req, res) => {
 
     const now = new Date();
     const skip = (page - 1) * limit;
-    
+
     // Get upcoming events (sorted by date ascending - soonest first)
     const upcomingEvents = await Event.find({
       ...filter,
@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
       .sort({ date: 1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
-    
+
     // Get past events (sorted by date descending - most recent first)
     const pastEvents = await Event.find({
       ...filter,
@@ -74,10 +74,10 @@ router.get('/', async (req, res) => {
       .sort({ date: -1, createdAt: -1 })
       .skip(Math.max(0, skip - upcomingEvents.length))
       .limit(Math.max(0, parseInt(limit) - upcomingEvents.length));
-    
+
     // Combine: upcoming events first, then past events
     const events = [...upcomingEvents, ...pastEvents];
-    
+
     // Get total counts
     const totalUpcoming = await Event.countDocuments({
       ...filter,
@@ -152,16 +152,16 @@ router.post('/', authMiddleware, [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        message: 'Validation failed', 
-        errors: errors.array() 
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: errors.array()
       });
     }
 
-    // Check if user is community member
+    // Check if user is community organizer
     const user = await User.findById(req.user.id);
-    if (!user || user.role !== 'community_member') {
-      return res.status(403).json({ message: 'Only community members can create events' });
+    if (!user || !(user.role === 'host_partner' && user.hostPartnerType === 'community_organizer')) {
+      return res.status(403).json({ message: 'Only community organizers can create events' });
     }
 
     const eventData = {
@@ -206,48 +206,48 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
   try {
     const userId = req.user.userId || req.user.id;
     const { quantity = 1 } = req.body; // Get quantity from request, default to 1
-    
+
     // Check if user is allowed to register (only regular users, not host_partner or admin)
     const User = require('../models/User');
     const currentUser = await User.findById(userId);
-    
+
     if (!currentUser) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     if (currentUser.role !== 'user') {
-      return res.status(403).json({ 
-        message: 'Only regular users can register for events. Organizers, venues, and sponsors cannot register as attendees.' 
+      return res.status(403).json({
+        message: 'Only regular users can register for events. Organizers, venues, and sponsors cannot register as attendees.'
       });
     }
-    
+
     // Validate quantity
     const ticketQuantity = Math.min(Math.max(parseInt(quantity) || 1, 1), 10);
     console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}`);
-    
+
     // First check if user is already registered
     const existingEvent = await Event.findById(req.params.id);
-    
+
     if (!existingEvent) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    
+
     const alreadyRegistered = existingEvent.participants.some(
       p => p.user.toString() === userId
     );
-    
+
     if (alreadyRegistered) {
       return res.status(400).json({ message: 'Already registered for this event' });
     }
-    
+
     // Check if enough spots are available (use currentParticipants to account for quantity)
     const availableSpots = existingEvent.maxParticipants - (existingEvent.currentParticipants || 0);
     if (ticketQuantity > availableSpots) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: `Only ${availableSpots} spot(s) available. You requested ${ticketQuantity}.`
       });
     }
-    
+
     // Use findOneAndUpdate with atomic operations to prevent race conditions
     console.log(`🔄 Incrementing currentParticipants by ${ticketQuantity} for event ${req.params.id}`);
     const event = await Event.findOneAndUpdate(
@@ -273,29 +273,29 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         runValidators: true
       }
     ).populate('host', 'name email');
-    
+
     console.log(`✅ Event updated: currentParticipants is now ${event?.currentParticipants}`);
 
     if (!event) {
       // Check which condition failed
       const existingEvent = await Event.findById(req.params.id);
-      
+
       if (!existingEvent) {
         return res.status(404).json({ message: 'Event not found' });
       }
-      
+
       const alreadyRegistered = existingEvent.participants.some(
         p => p.user.toString() === userId
       );
-      
+
       if (alreadyRegistered) {
         return res.status(400).json({ message: 'Already registered for this event' });
       }
-      
+
       if (existingEvent.participants.length >= existingEvent.maxParticipants) {
         return res.status(400).json({ message: 'Event is full' });
       }
-      
+
       return res.status(400).json({ message: 'Registration failed. Please try again.' });
     }
 
@@ -367,7 +367,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       try {
         // Notify user of booking confirmation
         await notificationService.notifyBookingConfirmed(userId, event, ticket);
-        
+
         // Notify user that QR code is ready
         if (ticket) {
           await notificationService.notifyCheckinQRReady(userId, event, ticket);
@@ -394,12 +394,12 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
 
         // Check capacity alerts
         const percentageFull = (event.currentParticipants / event.maxParticipants) * 100;
-        
+
         if (percentageFull >= 80 && percentageFull < 100) {
           // Check if we haven't sent this notification before
           const previousParticipants = event.currentParticipants - ticketQuantity;
           const previousPercentage = (previousParticipants / event.maxParticipants) * 100;
-          
+
           if (previousPercentage < 80) {
             await notificationService.notifyEventNearingFull(
               event.host._id,
@@ -442,7 +442,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
 router.get('/recommended/for-me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
     if (!user || !user.interests.length) {
       return res.status(400).json({ message: 'No interests found for user' });
     }
@@ -452,9 +452,9 @@ router.get('/recommended/for-me', authMiddleware, async (req, res) => {
       status: 'published',
       date: { $gte: new Date() }
     })
-    .populate('host', 'name email')
-    .sort({ date: 1 })
-    .limit(20);
+      .populate('host', 'name email')
+      .sort({ date: 1 })
+      .limit(20);
 
     res.json({ events });
   } catch (error) {
@@ -467,7 +467,7 @@ router.get('/recommended/for-me', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -481,10 +481,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const eventDate = new Date(event.date);
     const now = new Date();
     now.setHours(0, 0, 0, 0); // Reset time to start of today
-    
+
     if (eventDate < now) {
-      return res.status(400).json({ 
-        message: '❌ Cannot edit past events. This event has already occurred.' 
+      return res.status(400).json({
+        message: '❌ Cannot edit past events. This event has already occurred.'
       });
     }
 
@@ -495,7 +495,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     ).populate('host', 'name email');
 
     console.log(`✅ Event updated: ${updatedEvent.title}`);
-    
+
     res.json({
       message: 'Event updated successfully',
       event: updatedEvent
@@ -510,7 +510,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -534,7 +534,7 @@ router.post('/:id/click', authMiddleware, async (req, res) => {
   try {
     const eventId = req.params.id;
     const userId = req.user.userId;
-    
+
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -543,9 +543,9 @@ router.post('/:id/click', authMiddleware, async (req, res) => {
     // Use the trackClick method from Event model
     await event.trackClick(userId, 'event_discovery');
 
-    res.json({ 
+    res.json({
       message: 'Click tracked successfully',
-      totalClicks: event.analytics.clicks 
+      totalClicks: event.analytics.clicks
     });
   } catch (error) {
     console.error('Track click error:', error);
@@ -558,7 +558,7 @@ router.post('/:id/view', async (req, res) => {
   try {
     const eventId = req.params.id;
     const userId = req.user?.userId || null; // Optional auth
-    
+
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -567,7 +567,7 @@ router.post('/:id/view', async (req, res) => {
     // Use the trackView method from Event model
     await event.trackView(userId);
 
-    res.json({ 
+    res.json({
       message: 'View tracked successfully',
       totalViews: event.analytics.views,
       uniqueViews: event.analytics.uniqueViews
@@ -579,48 +579,179 @@ router.post('/:id/view', async (req, res) => {
 });
 
 // @route   GET /api/events/:id/analytics
-// @desc    Get event attendance analytics with check-in status (organizer only)
+// @desc    Get comprehensive event analytics (organizer only)
 // @access  Private
 router.get('/:id/analytics', authMiddleware, async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await Event.findById(eventId);
-    
+
     if (!event) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Event not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
       });
     }
-    
+
     // Authorization: Only event host or co-hosts can view analytics
-    const isAuthorized = 
+    const isAuthorized =
       event.host.toString() === req.user.id ||
       (event.coHosts && event.coHosts.some(coHost => coHost.toString() === req.user.id));
-    
+
     if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to view analytics for this event'
       });
     }
-    
+
     // Get all tickets for this event with user details
     const Ticket = require('../models/Ticket');
+    const Review = require('../models/Review');
+    const User = require('../models/User');
+
     const tickets = await Ticket.find({ event: eventId })
-      .populate('user', 'name email phoneNumber profilePicture')
+      .populate('user', 'name email phoneNumber profilePicture createdAt interests location')
       .populate('checkInBy', 'name')
       .sort({ purchaseDate: -1 });
-    
+
+    // Get reviews for this event
+    const reviews = await Review.find({ event: eventId })
+      .populate('user', 'name profilePicture')
+      .sort({ createdAt: -1 });
+
     // Calculate statistics
-    const totalRegistered = tickets.length;
+    const totalTickets = tickets.length;
+    const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
     const checkedIn = tickets.filter(t => t.status === 'checked_in').length;
     const notCheckedIn = tickets.filter(t => t.status === 'active').length;
     const cancelled = tickets.filter(t => t.status === 'cancelled').length;
-    
+
+    // Core Performance Metrics
+    const eventViews = event.analytics?.views || 0;
+    const conversionRate = eventViews > 0 ? ((totalTickets / eventViews) * 100).toFixed(2) : 0;
+    const avgFillRate = event.maxParticipants > 0
+      ? Math.round((totalSlots / event.maxParticipants) * 100)
+      : 0;
+
+    // Revenue Performance
+    const ticketRevenue = tickets
+      .filter(t => t.status !== 'cancelled')
+      .reduce((sum, ticket) => sum + (ticket.price?.amount || 0), 0);
+
+    const avgRevenuePerAttendee = totalTickets > 0
+      ? Math.round(ticketRevenue / totalTickets)
+      : 0;
+
+    // Revenue by ticket type
+    const revenueByType = {};
+    tickets.filter(t => t.status !== 'cancelled').forEach(ticket => {
+      const type = ticket.metadata?.ticketType || 'general';
+      if (!revenueByType[type]) {
+        revenueByType[type] = { count: 0, revenue: 0 };
+      }
+      revenueByType[type].count += 1;
+      revenueByType[type].revenue += ticket.price?.amount || 0;
+    });
+
+    // Attendance & Show-up Quality
+    const showUpRate = totalTickets > 0
+      ? ((checkedIn / totalTickets) * 100).toFixed(1)
+      : 0;
+    const noShows = notCheckedIn;
+
+    // Demand Timing & Sales Velocity
+    const firstBooking = tickets.length > 0
+      ? tickets[tickets.length - 1].purchaseDate
+      : null;
+
+    // Calculate bookings in last 72 hours
+    const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+    const recentBookings = tickets.filter(t =>
+      new Date(t.purchaseDate) > seventyTwoHoursAgo
+    ).length;
+    const recentBookingPercentage = totalTickets > 0
+      ? Math.round((recentBookings / totalTickets) * 100)
+      : 0;
+
+    // Booking period (days between first and last booking)
+    const lastBooking = tickets.length > 0 ? tickets[0].purchaseDate : null;
+    const bookingPeriodDays = firstBooking && lastBooking
+      ? Math.ceil((new Date(lastBooking) - new Date(firstBooking)) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    // Audience Quality Snapshot
+    const uniqueAttendees = new Set(tickets.map(t => t.user._id.toString()));
+
+    // Get all tickets by these users to determine first-time vs repeat
+    const allUserTickets = await Ticket.find({
+      user: { $in: Array.from(uniqueAttendees) },
+      event: { $ne: eventId },
+      status: { $ne: 'cancelled' }
+    });
+
+    const repeatAttendees = new Set();
+    allUserTickets.forEach(ticket => {
+      repeatAttendees.add(ticket.user.toString());
+    });
+
+    const firstTimeCount = uniqueAttendees.size - repeatAttendees.size;
+    const repeatCount = repeatAttendees.size;
+    const firstTimePercentage = uniqueAttendees.size > 0
+      ? Math.round((firstTimeCount / uniqueAttendees.size) * 100)
+      : 0;
+    const repeatPercentage = uniqueAttendees.size > 0
+      ? Math.round((repeatCount / uniqueAttendees.size) * 100)
+      : 0;
+
+    // Interest conversion (percentage of attendees whose interests match event categories)
+    let interestMatchCount = 0;
+    tickets.forEach(ticket => {
+      if (ticket.user.interests && ticket.user.interests.length > 0) {
+        const hasMatch = ticket.user.interests.some(interest =>
+          event.categories.some(cat => cat.toLowerCase().includes(interest.toLowerCase()))
+        );
+        if (hasMatch) interestMatchCount++;
+      }
+    });
+    const interestConversion = totalTickets > 0
+      ? Math.round((interestMatchCount / totalTickets) * 100)
+      : 0;
+
+    // Local distribution (percentage from same city)
+    const localCount = tickets.filter(ticket =>
+      ticket.user.location?.city?.toLowerCase() === event.location?.city?.toLowerCase()
+    ).length;
+    const localPercentage = totalTickets > 0
+      ? Math.round((localCount / totalTickets) * 100)
+      : 0;
+
+    // Event Outcome & Feedback
+    const avgRating = reviews.length > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : 0;
+    const totalReviews = reviews.length;
+
+    // Rating breakdown
+    const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviews.forEach(review => {
+      ratingBreakdown[review.rating]++;
+    });
+
+    // Recent reviews (top 5)
+    const recentReviews = reviews.slice(0, 5).map(review => ({
+      id: review._id,
+      userName: review.user.name,
+      userProfilePicture: review.user.profilePicture,
+      rating: review.rating,
+      comment: review.comment,
+      createdAt: review.createdAt,
+      photos: review.photos
+    }));
+
     // Format attendee data
     const attendees = tickets.map(ticket => ({
-      ticketId: ticket._id, // Unique ticket ID for React key
+      ticketId: ticket._id,
       userId: ticket.user._id,
       name: ticket.user.name,
       email: ticket.user.email,
@@ -634,12 +765,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       checkInTime: ticket.checkInTime,
       checkInBy: ticket.checkInBy?.name || null
     }));
-    
-    // Calculate total slots (sum of all quantities)
-    const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
-    
-    console.log(`✅ Analytics fetched for event: ${event.title} - ${checkedIn}/${totalRegistered} tickets, ${totalSlots} total slots`);
-    
+
+    console.log(`✅ Comprehensive analytics fetched for event: ${event.title}`);
+
     res.json({
       success: true,
       eventId: event._id,
@@ -647,22 +775,79 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       eventDate: event.date,
       eventTime: event.time,
       eventLocation: event.location,
+      eventCategory: event.categories?.[0] || 'Event',
+
+      // Core Performance Metrics
+      coreMetrics: {
+        eventViews,
+        totalBookings: totalTickets,
+        bookingsVsCapacity: `${totalSlots}/${event.maxParticipants}`,
+        fillPercentage: avgFillRate,
+        conversionRate
+      },
+
+      // Revenue Performance
+      revenue: {
+        totalRevenue: ticketRevenue,
+        avgPerAttendee: avgRevenuePerAttendee,
+        revenueByTicketType: Object.entries(revenueByType).map(([type, data]) => ({
+          type: type.charAt(0).toUpperCase() + type.slice(1),
+          count: data.count,
+          revenue: data.revenue
+        }))
+      },
+
+      // Attendance & Show-up Quality
+      attendance: {
+        ticketsSold: totalTickets,
+        actualCheckIns: checkedIn,
+        showUpRate,
+        noShows
+      },
+
+      // Demand Timing & Sales Velocity
+      demandTiming: {
+        firstBookingDate: firstBooking,
+        peakBookingMessage: recentBookingPercentage > 0
+          ? `${recentBookingPercentage}% bookings in last 72 hrs`
+          : null,
+        bookingPeriodDays
+      },
+
+      // Audience Quality
+      audienceQuality: {
+        firstTimeAttendees: firstTimePercentage,
+        repeatAttendees: repeatPercentage,
+        interestConversion,
+        localDistribution: localPercentage
+      },
+
+      // Event Outcome & Feedback
+      feedback: {
+        avgRating,
+        totalReviews,
+        ratingBreakdown,
+        recentReviews
+      },
+
+      // Basic statistics (for backward compatibility)
       statistics: {
-        totalTickets: totalRegistered,
+        totalTickets,
         totalSlots,
         checkedIn,
         notCheckedIn,
         cancelled,
-        attendanceRate: totalRegistered > 0 ? ((checkedIn / totalRegistered) * 100).toFixed(1) : 0
+        attendanceRate: totalTickets > 0 ? ((checkedIn / totalTickets) * 100).toFixed(1) : 0
       },
+
       attendees
     });
   } catch (error) {
     console.error('❌ Error fetching event analytics:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -672,26 +857,26 @@ router.get('/:id/attendees', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
     const eventId = req.params.id;
-    
+
     // Find the event
     const event = await Event.findById(eventId)
       .populate('participants.user', 'name email profilePicture bio interests');
-    
+
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    
+
     // Check if the requesting user is registered for this event
     const isRegistered = event.participants.some(
       p => p.user._id.toString() === userId
     );
-    
+
     if (!isRegistered) {
-      return res.status(403).json({ 
-        message: 'You must be registered for this event to view attendees' 
+      return res.status(403).json({
+        message: 'You must be registered for this event to view attendees'
       });
     }
-    
+
     // Return list of attendees (excluding cancelled registrations)
     const attendees = event.participants
       .filter(p => p.status !== 'cancelled')
@@ -704,7 +889,7 @@ router.get('/:id/attendees', authMiddleware, async (req, res) => {
         registeredAt: p.registeredAt,
         status: p.status
       }));
-    
+
     res.json({
       success: true,
       eventId: event._id,
@@ -714,10 +899,10 @@ router.get('/:id/attendees', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error fetching event attendees:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message 
+      error: error.message
     });
   }
 });

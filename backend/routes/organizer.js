@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Event = require('../models/Event');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
+const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 
 // ==================== ACTION REQUIRED ====================
 /**
@@ -12,6 +14,16 @@ const { authMiddleware } = require('../utils/authUtils');
 router.get('/action-required', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Verify user is a community organizer
+    const user = await User.findById(userId);
+    if (!user || !(user.role === 'host_partner' && user.hostPartnerType === 'community_organizer')) {
+      return res.status(403).json({ message: 'Only community organizers can access this resource' });
+    }
+
+    // Check and cleanup action notifications (removes completed items like KYC)
+    await checkAndGenerateActionRequiredNotifications(userId);
+
     console.log('[Action Required] Fetching for user:', userId);
     const actionItems = [];
 
@@ -70,19 +82,28 @@ router.get('/action-required', authMiddleware, async (req, res) => {
       }
     });
 
-    // 3. Check for missing KYC/Payout details (if user has earnings but no payout info)
-    const user = await User.findById(userId);
-    const totalEarnings = 50000; // TODO: Calculate from actual earnings model
-    if (totalEarnings > 0 && !user.payoutDetails) {
-      actionItems.push({
-        id: 'missing_kyc',
-        type: 'missing_kyc',
-        priority: 'high',
-        title: 'Complete Payment Setup',
-        description: 'You have earnings pending. Complete KYC and add bank details to receive payouts.',
-        ctaText: 'Complete Setup'
-      });
-    }
+    // 3. Get KYC/Profile notifications from the database
+    const systemNotifications = await Notification.find({
+      recipient: userId,
+      category: 'action_required'
+    }).select('type title message actionButton priority createdAt').sort({ createdAt: -1 });
+
+    // Deduplicate notifications by type - keep only the most recent of each type
+    const seenTypes = new Set();
+    systemNotifications.forEach(notif => {
+      if (!seenTypes.has(notif.type)) {
+        seenTypes.add(notif.type);
+        actionItems.push({
+          id: notif._id.toString(),
+          type: notif.type,
+          priority: notif.priority || 'medium',
+          title: notif.title,
+          description: notif.message,
+          ctaText: notif.actionButton?.text || 'Take Action',
+          createdAt: notif.createdAt
+        });
+      }
+    });
 
     // 4. TODO: Check for pending collaboration requests (venues/brands)
     // This requires a Collaboration model to be created
@@ -106,6 +127,13 @@ router.get('/action-required', authMiddleware, async (req, res) => {
 router.get('/events', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Verify user is a community organizer
+    const user = await User.findById(userId);
+    if (!user || !(user.role === 'host_partner' && user.hostPartnerType === 'community_organizer')) {
+      return res.status(403).json({ message: 'Only community organizers can access this resource' });
+    }
+
     const now = new Date();
     console.log('[Events] Fetching events for user:', userId);
     console.log('[Events] Current time:', now);
@@ -152,8 +180,8 @@ router.get('/events', authMiddleware, async (req, res) => {
       const fillPercentage = event.maxParticipants > 0
         ? Math.round((event.currentParticipants / event.maxParticipants) * 100)
         : 0;
-      
-      const revenue = event.ticketPrice 
+
+      const revenue = event.ticketPrice
         ? event.currentParticipants * event.ticketPrice
         : 0;
 
@@ -229,6 +257,12 @@ router.get('/earnings', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Verify user is a community organizer
+    const user = await User.findById(userId);
+    if (!user || !(user.role === 'host_partner' && user.hostPartnerType === 'community_organizer')) {
+      return res.status(403).json({ message: 'Only community organizers can access this resource' });
+    }
+
     // TODO: This requires an Earnings/Transactions model
     // For now, calculating from events
     const completedEvents = await Event.find({
@@ -248,7 +282,7 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const thisMonthEvents = completedEvents.filter(event => 
+    const thisMonthEvents = completedEvents.filter(event =>
       new Date(event.date) >= startOfMonth
     );
 
@@ -269,7 +303,7 @@ router.get('/earnings', authMiddleware, async (req, res) => {
       return sum + (event.currentParticipants * event.ticketPrice);
     }, 0);
 
-    const monthGrowth = lastMonth > 0 
+    const monthGrowth = lastMonth > 0
       ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100)
       : 0;
 
@@ -302,13 +336,20 @@ router.get('/earnings', authMiddleware, async (req, res) => {
 router.get('/analytics', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Verify user is a community organizer
+    const user = await User.findById(userId);
+    if (!user || !(user.role === 'host_partner' && user.hostPartnerType === 'community_organizer')) {
+      return res.status(403).json({ message: 'Only community organizers can access this resource' });
+    }
+
     const { dateRange = '30days' } = req.query;
     const now = new Date();
 
     // Calculate date filter based on event date, not creation date
     let eventDateFilter = {};
     let pastDateCutoff;
-    
+
     if (dateRange === '7days') {
       pastDateCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     } else if (dateRange === '30days') {
@@ -335,28 +376,28 @@ router.get('/analytics', authMiddleware, async (req, res) => {
     const events = await Event.find(query)
       .select('title date currentParticipants maxParticipants analytics status')
       .sort({ date: -1 });
-    
+
     console.log('[Analytics] Events found for user:', events.length);
     console.log('[Analytics] Date range:', dateRange);
     console.log('[Analytics] Past cutoff:', pastDateCutoff);
-    console.log('[Analytics] Events breakdown:', events.map(e => ({ 
-      title: e.title, 
-      date: e.date, 
+    console.log('[Analytics] Events breakdown:', events.map(e => ({
+      title: e.title,
+      date: e.date,
       status: e.status,
-      isPast: new Date(e.date) < now 
+      isPast: new Date(e.date) < now
     })));
 
     // Calculate aggregate metrics
     const totalViews = events.reduce((sum, event) => sum + (event.analytics?.views || 0), 0);
     const totalBookings = events.reduce((sum, event) => sum + (event.currentParticipants || 0), 0);
-    
+
     const avgFillRate = events.length > 0
       ? Math.round(events.reduce((sum, event) => {
-          const fill = event.maxParticipants > 0 
-            ? (event.currentParticipants / event.maxParticipants) * 100 
-            : 0;
-          return sum + fill;
-        }, 0) / events.length)
+        const fill = event.maxParticipants > 0
+          ? (event.currentParticipants / event.maxParticipants) * 100
+          : 0;
+        return sum + fill;
+      }, 0) / events.length)
       : 0;
 
     const conversionRate = totalViews > 0
@@ -406,6 +447,12 @@ router.get('/insights', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Verify user is a community organizer
+    const user = await User.findById(userId);
+    if (!user || !(user.role === 'host_partner' && user.hostPartnerType === 'community_organizer')) {
+      return res.status(403).json({ message: 'Only community organizers can access this resource' });
+    }
+
     const events = await Event.find({
       host: userId
     }).select('title date currentParticipants maxParticipants categories location ticketPrice');
@@ -438,8 +485,8 @@ router.get('/insights', authMiddleware, async (req, res) => {
       const affordableEvents = events.filter(e => e.ticketPrice < 999);
       const fillRateAffordable = affordableEvents.length > 0
         ? affordableEvents.reduce((sum, e) => {
-            return sum + (e.maxParticipants > 0 ? (e.currentParticipants / e.maxParticipants) : 0);
-          }, 0) / affordableEvents.length
+          return sum + (e.maxParticipants > 0 ? (e.currentParticipants / e.maxParticipants) : 0);
+        }, 0) / affordableEvents.length
         : 0;
 
       if (fillRateAffordable > 0.6) {

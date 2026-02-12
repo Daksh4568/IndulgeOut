@@ -3,13 +3,15 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const User = require('../models/User.js');
 const Community = require('../models/Community.js');
+const Notification = require('../models/Notification.js');
 const cloudinary = require('../config/cloudinary.js');
+const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
 
 const router = express.Router();
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for ID proof documents
 });
@@ -17,7 +19,7 @@ const upload = multer({
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
-  
+
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
   }
@@ -35,7 +37,7 @@ const authenticateToken = (req, res, next) => {
 router.put('/interests', authenticateToken, async (req, res) => {
   try {
     const { interests } = req.body;
-    
+
     if (!Array.isArray(interests)) {
       return res.status(400).json({ message: 'Interests must be an array' });
     }
@@ -87,19 +89,19 @@ router.get('/profile', authenticateToken, async (req, res) => {
 // Update user profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { 
-      name, 
-      bio, 
+    const {
+      name,
+      bio,
       location,
       phoneNumber,
-      communityProfile, 
-      venueProfile, 
+      communityProfile,
+      venueProfile,
       brandProfile,
       onboardingCompleted,
       createCommunity,
-      socialLinks 
+      socialLinks
     } = req.body;
-    
+
     // Build update data - only allow basic fields
     const updateData = {};
     if (name !== undefined) updateData.name = name;
@@ -107,7 +109,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
     if (location !== undefined) updateData.location = location;
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
-    
+
     // For profile objects during onboarding, allow full update
     // But in normal profile editing, use specific endpoints
     if (communityProfile && !onboardingCompleted) updateData.communityProfile = communityProfile;
@@ -151,7 +153,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (createCommunity && communityProfile && user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
       // Check if community already exists for this user
       const existingCommunity = await Community.findOne({ host: user._id });
-      
+
       if (!existingCommunity) {
         const newCommunity = new Community({
           name: communityProfile.communityName,
@@ -189,7 +191,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
         });
 
         await newCommunity.save();
-        
+
         console.log(`✅ Created community "${communityProfile.communityName}" for organizer ${user.name}`);
       }
     }
@@ -270,9 +272,9 @@ router.post('/upload-profile-picture', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Profile picture upload error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to upload profile picture',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -307,7 +309,7 @@ router.delete('/profile-picture', authenticateToken, async (req, res) => {
 router.put('/profile/hosting-preferences', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -361,7 +363,7 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
     const { accountNumber, ifscCode, accountHolderName, bankName, accountType, panNumber, gstNumber } = req.body;
 
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -394,9 +396,9 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
         idProofUrl = uploadResult.secure_url;
       } catch (uploadError) {
         console.error('Cloudinary upload error:', uploadError);
-        return res.status(500).json({ 
-          message: 'Failed to upload ID proof document', 
-          error: uploadError.message 
+        return res.status(500).json({
+          message: 'Failed to upload ID proof document',
+          error: uploadError.message
         });
       }
     }
@@ -415,6 +417,16 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
 
     await user.save();
 
+    // Remove any existing KYC pending notifications since payout info is now complete
+    await Notification.deleteMany({
+      recipient: req.user.userId,
+      type: 'kyc_pending',
+      category: 'action_required'
+    });
+
+    // Re-check for any other action required items
+    await checkAndGenerateActionRequiredNotifications(req.user.userId);
+
     res.json({
       success: true,
       message: 'Payout information updated successfully',
@@ -430,7 +442,7 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
 router.put('/profile/venue-details', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -485,7 +497,7 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -493,7 +505,7 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
     // Check user type and photo limit
     let photoArray;
     let folderPath;
-    
+
     if (user.hostPartnerType === 'community_organizer') {
       photoArray = user.communityProfile?.pastEventPhotos || [];
       folderPath = 'indulgeout/community-photos';
@@ -538,9 +550,9 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Photo upload error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to upload photo',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -555,7 +567,7 @@ router.delete('/profile/photos', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }

@@ -3,7 +3,9 @@ const router = express.Router();
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
 const Event = require('../models/Event');
+const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
+const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 
 // @route   GET /api/venues/browse
 // @desc    Get all venues with optional filters
@@ -108,22 +110,50 @@ router.get('/browse', async (req, res) => {
 router.get('/dashboard', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-    
-    // Verify user is a venue
+
+    // Verify user is a venue partner
     const venue = await User.findById(userId);
-    if (!venue || venue.hostPartnerType !== 'venue') {
-      return res.status(403).json({ message: 'Access denied. Venue account required.' });
+    if (!venue || !(venue.role === 'host_partner' && venue.hostPartnerType === 'venue')) {
+      return res.status(403).json({ message: 'Access denied. Venue partner account required.' });
     }
+
+    // Generate action required notifications if needed
+    await checkAndGenerateActionRequiredNotifications(userId);
 
     // Get actions required
     const actionsRequired = [];
-    
+
+    // Query action_required notifications from Notification model
+    // Don't filter by read status - action items should show until completed
+    const actionRequiredNotifications = await Notification.find({
+      recipient: userId,
+      category: 'action_required'
+    }).sort({ createdAt: -1 });
+
+    // Deduplicate notifications by type - keep only the most recent of each type
+    const seenTypes = new Set();
+    actionRequiredNotifications.forEach(notif => {
+      if (!seenTypes.has(notif.type)) {
+        seenTypes.add(notif.type);
+        actionsRequired.push({
+          id: notif._id,
+          type: notif.type,
+          priority: notif.priority || 'medium',
+          title: notif.title,
+          description: notif.message,
+          actionUrl: notif.actionButton?.link || '/profile',
+          ctaText: notif.actionButton?.text || 'View',
+          createdAt: notif.createdAt
+        });
+      }
+    });
+
     // Check for pending collaborations
     const pendingCollaborations = await Collaboration.find({
       'recipient.user': userId,
       status: 'admin_approved'
     }).limit(5);
-    
+
     pendingCollaborations.forEach(collab => {
       actionsRequired.push({
         type: 'collaboration_request',
@@ -134,12 +164,12 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         priority: collab.priority
       });
     });
-    
+
     // Check profile completion
-    const profileComplete = venue.venueProfile?.venueName && 
-                           venue.venueProfile?.city && 
-                           venue.venueProfile?.photos?.length > 0;
-    
+    const profileComplete = venue.venueProfile?.venueName &&
+      venue.venueProfile?.city &&
+      venue.venueProfile?.photos?.length > 0;
+
     if (!profileComplete) {
       actionsRequired.push({
         type: 'profile_incomplete',
@@ -156,10 +186,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       date: { $gte: new Date() },
       status: 'live'
     })
-    .sort({ date: 1 })
-    .limit(6)
-    .populate('host', 'name communityProfile')
-    .lean();
+      .sort({ date: 1 })
+      .limit(6)
+      .populate('host', 'name communityProfile')
+      .lean();
 
     const transformedEvents = upcomingEvents.map(event => ({
       _id: event._id,

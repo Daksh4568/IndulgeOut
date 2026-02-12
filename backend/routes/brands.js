@@ -3,7 +3,9 @@ const router = express.Router();
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
 const Event = require('../models/Event');
+const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
+const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 
 // @route   GET /api/brands/browse
 // @desc    Get all brands with optional filters
@@ -112,22 +114,51 @@ router.get('/browse', async (req, res) => {
 router.get('/dashboard', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-    
-    // Verify the user is a brand
+
+    // Verify the user is a brand sponsor
     const brand = await User.findById(userId);
-    if (!brand || brand.hostPartnerType !== 'brand_sponsor') {
-      return res.status(403).json({ message: 'Access denied. Only brands can access this dashboard.' });
+    if (!brand || !(brand.role === 'host_partner' && brand.hostPartnerType === 'brand_sponsor')) {
+      return res.status(403).json({ message: 'Access denied. Only brand sponsors can access this dashboard.' });
     }
+
+    // Generate action required notifications if needed
+    await checkAndGenerateActionRequiredNotifications(userId);
 
     // 1. Actions Required
     const actionsRequired = [];
-    
+
+    // Query action_required notifications from Notification model
+    // Don't filter by read status - action items should show until completed
+    const actionRequiredNotifications = await Notification.find({
+      recipient: userId,
+      category: 'action_required'
+    }).sort({ createdAt: -1 });
+
+    // Deduplicate notifications by type - keep only the most recent of each type
+    const seenTypes = new Set();
+    actionRequiredNotifications.forEach(notif => {
+      if (!seenTypes.has(notif.type)) {
+        seenTypes.add(notif.type);
+        actionsRequired.push({
+          id: notif._id,
+          type: notif.type,
+          priority: notif.priority || 'medium',
+          title: notif.title,
+          description: notif.message,
+          actionUrl: notif.actionButton?.link || '/profile',
+          ctaText: notif.actionButton?.text || 'View',
+          itemId: notif._id,
+          createdAt: notif.createdAt
+        });
+      }
+    });
+
     // Check for pending collaboration approvals (submitted by admin, awaiting brand response)
     const pendingApprovals = await Collaboration.find({
       'recipient.user': userId,
       status: 'admin_approved'
     }).populate('requestDetails.eventId', 'name date').limit(5);
-    
+
     pendingApprovals.forEach(collab => {
       actionsRequired.push({
         id: collab._id,
@@ -139,13 +170,13 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         createdAt: collab.createdAt
       });
     });
-    
+
     // Check for clarifications requested
     const clarificationsNeeded = await Collaboration.find({
       'recipient.user': userId,
       status: 'clarification_requested'
     }).populate('requestDetails.eventId', 'name').limit(3);
-    
+
     clarificationsNeeded.forEach(collab => {
       actionsRequired.push({
         id: collab._id,
@@ -157,14 +188,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         createdAt: collab.updatedAt
       });
     });
-    
+
     // Check for completed events awaiting feedback
     const feedbackPending = await Collaboration.find({
       'recipient.user': userId,
       status: 'completed',
       'feedback.brandFeedback': { $exists: false }
     }).populate('requestDetails.eventId', 'name').limit(3);
-    
+
     feedbackPending.forEach(collab => {
       actionsRequired.push({
         id: collab._id,
@@ -176,13 +207,13 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         createdAt: collab.updatedAt
       });
     });
-    
+
     // Check for profile completion
-    const profileComplete = brand.brandProfile?.companyName && 
-                           brand.brandProfile?.industries && 
-                           brand.brandProfile?.industries.length > 0 &&
-                           brand.brandProfile?.logo;
-    
+    const profileComplete = brand.brandProfile?.companyName &&
+      brand.brandProfile?.industries &&
+      brand.brandProfile?.industries.length > 0 &&
+      brand.brandProfile?.logo;
+
     if (!profileComplete) {
       actionsRequired.push({
         id: 'profile_incomplete',
@@ -193,7 +224,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         actionUrl: '/brand/profile/edit'
       });
     }
-    
+
     // Sort actions by priority and date
     actionsRequired.sort((a, b) => {
       const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -208,11 +239,11 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       'recipient.user': userId,
       status: { $in: ['vendor_accepted', 'in_progress', 'completed'] }
     })
-    .populate('requestDetails.eventId', 'name date city category status analytics')
-    .populate('requestDetails.communityId', 'name communityProfile')
-    .sort({ 'requestDetails.eventId.date': 1 })
-    .limit(10);
-    
+      .populate('requestDetails.eventId', 'name date city category status analytics')
+      .populate('requestDetails.communityId', 'name communityProfile')
+      .sort({ 'requestDetails.eventId.date': 1 })
+      .limit(10);
+
     const collaborationsData = activeCollaborations.map(collab => {
       const event = collab.requestDetails?.eventId;
       return {
@@ -226,7 +257,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         collaborationType: collab.collaborationType,
         expectedFootfall: event?.analytics?.expectedAttendance || 0,
         actualFootfall: event?.analytics?.actualAttendance || null,
-        engagement: event?.analytics?.actualAttendance && event?.analytics?.expectedAttendance 
+        engagement: event?.analytics?.actualAttendance && event?.analytics?.expectedAttendance
           ? ((event.analytics.actualAttendance / event.analytics.expectedAttendance) * 100).toFixed(0)
           : null
       };
@@ -237,14 +268,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       'recipient.user': userId,
       status: { $in: ['vendor_accepted', 'in_progress', 'completed'] }
     });
-    
+
     // Calculate cities reached
     const citiesReached = await Collaboration.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           'recipient.user': userId,
           status: { $in: ['vendor_accepted', 'in_progress', 'completed'] }
-        } 
+        }
       },
       {
         $lookup: {
@@ -262,14 +293,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       },
       { $count: 'total' }
     ]);
-    
+
     // Calculate total footfall from completed events
     const footfallData = await Collaboration.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           'recipient.user': userId,
           status: 'completed'
-        } 
+        }
       },
       {
         $lookup: {
@@ -288,7 +319,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         }
       }
     ]);
-    
+
     const totalFootfall = footfallData.length > 0 ? footfallData[0].totalFootfall || 0 : 0;
     const completedCollabs = footfallData.length > 0 ? footfallData[0].count || 0 : 0;
     const avgEngagement = completedCollabs > 0 ? Math.round(totalFootfall / completedCollabs) : 0;
@@ -298,14 +329,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       whatsWorking: [],
       recentPerformance: []
     };
-    
+
     // Best event types for the brand
     const eventTypePerformance = await Collaboration.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           'recipient.user': userId,
           status: 'completed'
-        } 
+        }
       },
       {
         $lookup: {
@@ -326,7 +357,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 3 }
     ]);
-    
+
     if (eventTypePerformance.length > 0) {
       eventTypePerformance.forEach(type => {
         insights.whatsWorking.push({
@@ -336,14 +367,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         });
       });
     }
-    
+
     // Top performing collaboration types
     const collabTypePerformance = await Collaboration.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           'recipient.user': userId,
           status: 'completed'
-        } 
+        }
       },
       {
         $group: {
@@ -354,7 +385,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 1 }
     ]);
-    
+
     if (collabTypePerformance.length > 0) {
       insights.whatsWorking.push({
         title: `${collabTypePerformance[0]._id} Collaborations Excel`,
@@ -362,14 +393,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         metric: collabTypePerformance[0].count
       });
     }
-    
+
     // Top performing cities
     const cityPerformance = await Collaboration.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           'recipient.user': userId,
           status: 'completed'
-        } 
+        }
       },
       {
         $lookup: {
@@ -390,7 +421,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       { $sort: { totalFootfall: -1 } },
       { $limit: 1 }
     ]);
-    
+
     if (cityPerformance.length > 0) {
       insights.whatsWorking.push({
         title: `${cityPerformance[0]._id} is Your Top Market`,
@@ -398,16 +429,16 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         metric: cityPerformance[0].totalFootfall
       });
     }
-    
+
     // Recent high-performing events
     const recentEvents = await Collaboration.find({
       'recipient.user': userId,
       status: 'completed'
     })
-    .populate('requestDetails.eventId', 'name date analytics category')
-    .sort({ updatedAt: -1 })
-    .limit(3);
-    
+      .populate('requestDetails.eventId', 'name date analytics category')
+      .sort({ updatedAt: -1 })
+      .limit(3);
+
     recentEvents.forEach(collab => {
       const event = collab.requestDetails?.eventId;
       if (event && event.analytics?.actualAttendance) {
@@ -420,7 +451,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         });
       }
     });
-    
+
     // Add general suggestions if needed
     if (totalCollaborations === 0) {
       insights.whatsWorking.push({
@@ -448,7 +479,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       },
       insights
     });
-    
+
   } catch (error) {
     console.error('Error fetching brand dashboard:', error);
     res.status(500).json({ message: 'Server error while fetching dashboard data' });
