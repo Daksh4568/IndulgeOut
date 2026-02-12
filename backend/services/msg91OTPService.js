@@ -85,17 +85,9 @@ class MSG91OTPService {
    */
   async sendEmail(email, otp, userName = 'User') {
     try {
-      if (!this.authKey) {
-        // Mock mode for development
-        console.log(`[MOCK EMAIL] Sending OTP ${otp} to ${email}`);
-        return {
-          success: true,
-          messageId: 'mock-email-' + Date.now(),
-          mock: true
-        };
-      }
-
-      // Send email using the emailService utility
+      // Send email using the emailService utility (nodemailer)
+      // Note: Email sending doesn't depend on MSG91_AUTH_KEY
+      // It uses EMAIL_USER and EMAIL_PASS from environment variables
       await sendOTPEmail(email, userName, otp);
 
       console.log(`✅ OTP email sent successfully to ${email}`);
@@ -107,6 +99,7 @@ class MSG91OTPService {
       };
     } catch (error) {
       console.error('❌ Error sending OTP email:', error);
+      console.error('Error details:', error.message);
       
       return {
         success: false,
