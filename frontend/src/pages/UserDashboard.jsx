@@ -39,14 +39,33 @@ const UserDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Auto-open ticket viewer if eventId is in URL (from notification)
+  // Force refresh when coming from payment
+  useEffect(() => {
+    const refresh = searchParams.get('refresh');
+    if (refresh === 'true') {
+      console.log('🔄 Force refreshing dashboard after payment...');
+      fetchDashboardData();
+      // Remove refresh param after triggering reload
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('refresh');
+      setSearchParams(newParams);
+    }
+  }, [searchParams]);
+
+  // Auto-open ticket viewer if eventId is in URL (from notification or payment)
   useEffect(() => {
     const eventId = searchParams.get('eventId');
     if (eventId && !loading) {
+      console.log('🎫 Auto-opening ticket for event:', eventId);
       setSelectedTicket(eventId);
       setShowTicketViewer(true);
-      // Remove the query parameter after opening
-      setSearchParams({});
+      setActiveTab('upcoming'); // Switch to upcoming tab
+      // Don't remove eventId immediately to allow ticket viewer to use it
+      setTimeout(() => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('eventId');
+        setSearchParams(newParams);
+      }, 1000);
     }
   }, [searchParams, loading]);
 
@@ -62,13 +81,32 @@ const UserDashboard = () => {
         api.get('/users/my-rewards')
       ]);
 
-      setMyEvents(eventsRes.data);
-      setMyInterests(interestsRes.data.interests || []);
-      setMyCommunities(communitiesRes.data.communities || []);
-      setPeopleRecommendations(peopleRes.data.people || []);
-      setRewards(rewardsRes.data);
+      console.log('📊 Dashboard data loaded:', {
+        events: eventsRes.data,
+        upcoming: eventsRes.data?.upcoming?.length || 0,
+        past: eventsRes.data?.past?.length || 0,
+        saved: eventsRes.data?.saved?.length || 0
+      });
+
+      // Set events with fallback to empty structure
+      setMyEvents({
+        upcoming: eventsRes.data?.upcoming || [],
+        past: eventsRes.data?.past || [],
+        saved: eventsRes.data?.saved || []
+      });
+      setMyInterests(interestsRes.data?.interests || []);
+      setMyCommunities(communitiesRes.data?.communities || []);
+      setPeopleRecommendations(peopleRes.data?.people || []);
+      setRewards(rewardsRes.data || { points: 0, tier: 'Bronze' });
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('❌ Error fetching dashboard data:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      // Set empty states on error to prevent crashes
+      setMyEvents({ upcoming: [], past: [], saved: [] });
+      setMyInterests([]);
+      setMyCommunities([]);
+      setPeopleRecommendations([]);
+      setRewards({ points: 0, tier: 'Bronze' });
     } finally {
       setLoading(false);
     }
