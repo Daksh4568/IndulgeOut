@@ -179,7 +179,7 @@ const PrivacyPolicy = () => {
           {sections.map((section) => (
             <div 
               key={section.number}
-              className="bg-[#1A1A1A] rounded-lg p-5 sm:p-8 border border-gray-800"
+              className="bg-zinc-900/50 rounded-lg p-5 sm:p-8 border border-gray-800"
             >
               {/* Section Header */}
               <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -302,7 +302,7 @@ const PrivacyPolicy = () => {
         </div>
 
         {/* Contact */}
-        <div className="mt-8 sm:mt-10 bg-[#1A1A1A] rounded-lg p-5 sm:p-8 border border-gray-800">
+        <div className="mt-8 sm:mt-10 bg-zinc-900/50 rounded-lg p-5 sm:p-8 border border-gray-800">
           <p 
             className="text-xs sm:text-sm text-gray-400"
             style={{ fontFamily: 'Source Serif Pro, serif' }}

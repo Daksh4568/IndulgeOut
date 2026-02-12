@@ -4,10 +4,22 @@ import { useState, useRef, useEffect } from 'react';
 import NotificationDropdown from './NotificationDropdown';
 
 export default function NotificationBell() {
-  const { unreadCount } = useNotifications();
+  const { unreadCount, fetchNotifications } = useNotifications();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
+
+  // Fetch notifications when dropdown is opened
+  const handleToggleDropdown = () => {
+    const newShowState = !showDropdown;
+    setShowDropdown(newShowState);
+    
+    // Fetch latest notifications when opening the dropdown
+    if (newShowState) {
+      console.log('🔔 Bell clicked - fetching latest notifications...');
+      fetchNotifications();
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,7 +47,7 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         ref={buttonRef}
-        onClick={() => setShowDropdown(!showDropdown)}
+        onClick={handleToggleDropdown}
         className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="Notifications"
       >
