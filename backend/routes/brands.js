@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
 const Event = require('../models/Event');
+const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
 
 // @route   GET /api/brands/browse
@@ -102,88 +104,62 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Only brands can access this dashboard.' });
     }
 
-    // 1. Actions Required
-    const actionsRequired = [];
+    // Fetch action_required notifications and deduplicate by type
+    const notifications = await Notification.find({
+      recipient: userId,
+      category: 'action_required',
+      isRead: false
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+    // Group notifications by type to remove duplicates
+    const uniqueNotifications = [];
+    const seenTypes = new Set();
     
-    // Check for pending collaboration approvals (submitted by admin, awaiting brand response)
-    const pendingApprovals = await Collaboration.find({
-      'recipient.user': userId,
-      status: 'admin_approved'
-    }).populate('requestDetails.eventId', 'name date').limit(5);
-    
-    pendingApprovals.forEach(collab => {
-      actionsRequired.push({
-        id: collab._id,
-        type: 'collaboration_request',
-        priority: 'high',
-        title: 'New Collaboration Request',
-        description: `Review collaboration for ${collab.requestDetails?.eventId?.name || 'an event'}`,
-        actionUrl: `/collaborations/${collab._id}`,
-        createdAt: collab.createdAt
-      });
-    });
-    
-    // Check for clarifications requested
-    const clarificationsNeeded = await Collaboration.find({
-      'recipient.user': userId,
-      status: 'clarification_requested'
-    }).populate('requestDetails.eventId', 'name').limit(3);
-    
-    clarificationsNeeded.forEach(collab => {
-      actionsRequired.push({
-        id: collab._id,
-        type: 'clarification_requested',
-        priority: 'high',
-        title: 'Clarification Needed',
-        description: `Provide additional information for ${collab.requestDetails?.eventId?.name || 'collaboration'}`,
-        actionUrl: `/collaborations/${collab._id}`,
-        createdAt: collab.updatedAt
-      });
-    });
-    
-    // Check for completed events awaiting feedback
-    const feedbackPending = await Collaboration.find({
-      'recipient.user': userId,
-      status: 'completed',
-      'feedback.brandFeedback': { $exists: false }
-    }).populate('requestDetails.eventId', 'name').limit(3);
-    
-    feedbackPending.forEach(collab => {
-      actionsRequired.push({
-        id: collab._id,
-        type: 'feedback_pending',
-        priority: 'medium',
-        title: 'Provide Event Feedback',
-        description: `Share your experience for ${collab.requestDetails?.eventId?.name || 'completed event'}`,
-        actionUrl: `/collaborations/${collab._id}/feedback`,
-        createdAt: collab.updatedAt
-      });
-    });
-    
-    // Check for profile completion
-    const profileComplete = brand.brandProfile?.companyName && 
-                           brand.brandProfile?.industries && 
-                           brand.brandProfile?.industries.length > 0 &&
-                           brand.brandProfile?.logo;
-    
-    if (!profileComplete) {
-      actionsRequired.push({
-        id: 'profile_incomplete',
-        type: 'profile_incomplete',
-        priority: 'medium',
-        title: 'Complete Your Brand Profile',
-        description: 'Add company details and logo to increase collaboration opportunities',
-        actionUrl: '/brand/profile/edit'
-      });
-    }
-    
-    // Sort actions by priority and date
-    actionsRequired.sort((a, b) => {
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
+    for (const notif of notifications) {
+      if (!seenTypes.has(notif.type)) {
+        seenTypes.add(notif.type);
+        uniqueNotifications.push(notif);
       }
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    }
+
+    // Map notifications to dashboard action format
+    const actionsRequired = uniqueNotifications.map(notif => {
+      let actionType = notif.type;
+      let actionUrl = '/collaborations';
+      let ctaText = 'Take Action';
+      
+      // Map notification types to action types, URLs, and CTA text
+      if (notif.type === 'kyc_pending') {
+        actionType = 'missing_kyc';
+        actionUrl = '/kyc-setup';
+        ctaText = 'Add Payout Details';
+      } else if (notif.type === 'profile_incomplete_brand') {
+        actionType = 'profile_incomplete';
+        actionUrl = '/brand/profile/edit';
+        ctaText = 'Complete Profile';
+      } else if (notif.type === 'community_proposal_received') {
+        actionType = 'collaboration_request';
+        actionUrl = notif.relatedCollaboration ? `/collaborations/${notif.relatedCollaboration}` : '/collaborations';
+        ctaText = 'Review Request';
+      } else if (notif.type === 'subscription_payment_pending') {
+        actionType = 'subscription_pending';
+        actionUrl = '/subscription';
+        ctaText = 'Complete Payment';
+      }
+
+      return {
+        id: notif._id,
+        type: actionType,
+        title: notif.title,
+        description: notif.message,
+        ctaText: notif.actionText || ctaText,
+        actionUrl,
+        itemId: notif.relatedCollaboration || notif.relatedEvent || null,
+        priority: notif.priority || 'medium',
+        createdAt: notif.createdAt
+      };
     });
 
     // 2. Active Collaborations
@@ -443,6 +419,11 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
 // @access  Public
 router.get('/:id', async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid brand ID format' });
+    }
+    
     const brand = await User.findOne({
       _id: req.params.id,
       hostPartnerType: 'brand_sponsor'

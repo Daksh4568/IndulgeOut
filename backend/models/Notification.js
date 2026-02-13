@@ -19,10 +19,10 @@ const notificationSchema = new mongoose.Schema({
       'checkin_qr_ready',
       'rate_experience',
       'host_reply_feedback',
-      'profile_incomplete_user',
+      'profile_incomplete',
       
-      // Host/Community Notifications
-      'profile_incomplete_host',
+      // Community Organizer Notifications
+      'profile_incomplete_community_organizer',
       'kyc_pending',
       'event_draft_incomplete',
       'event_published',
@@ -32,19 +32,41 @@ const notificationSchema = new mongoose.Schema({
       'capacity_reached',
       'revenue_milestone',
       'ratings_updated',
+      'low_booking_alert',
       'venue_response_received',
+      'venue_counter_received',
+      'venue_confirmation_required',
+      'venue_declined_request',
       'brand_proposal_received',
+      'brand_counter_received',
+      'brand_confirmation_required',
+      'brand_declined_proposal',
       'respond_to_feedback',
       
-      // Brand Notifications
-      'profile_incomplete_brand',
+      // Brand Sponsor Notifications
+      'profile_incomplete_brand_sponsor',
       'community_proposal_received',
+      'community_counter_received',
+      'approval_required',
+      'proposal_declined',
       'performance_report_ready',
       
       // Venue Notifications
       'profile_incomplete_venue',
       'hosting_request_received',
+      'community_counter_received',
+      'confirmation_required',
+      'community_declined_proposal',
       'venue_rating_updated',
+      
+      // Collaboration-specific (Generic for all types)
+      'communityToVenue_received',
+      'communityToBrand_received',
+      'brandToCommunity_received',
+      'venueToCommunity_received',
+      'counter_proposal_received',
+      'collaboration_confirmed',
+      'collaboration_declined',
       
       // Generic
       'subscription_payment_pending',

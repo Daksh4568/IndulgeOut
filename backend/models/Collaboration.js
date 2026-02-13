@@ -115,8 +115,8 @@ const collaborationSchema = new mongoose.Schema({
     reviewedAt: Date,
     decision: {
       type: String,
-      enum: ['approved', 'rejected', 'pending_info'],
-      default: null
+      enum: ['approved', 'rejected', 'pending_info']
+      // No default - will be undefined until admin reviews
     },
     notes: String  // Admin's internal notes or reason for rejection
   },

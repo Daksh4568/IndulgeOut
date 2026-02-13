@@ -145,7 +145,8 @@ router.post('/register/verify', async (req, res) => {
         userId: newUser._id, 
         email: newUser.email,
         phoneNumber: newUser.phoneNumber,
-        role: newUser.role 
+        role: newUser.role,
+        hostPartnerType: newUser.hostPartnerType // Include for B2B users
       },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
@@ -289,7 +290,8 @@ router.post('/login/verify', async (req, res) => {
         userId: user._id, 
         email: user.email,
         phoneNumber: user.phoneNumber,
-        role: user.role 
+        role: user.role,
+        hostPartnerType: user.hostPartnerType // Include for B2B users
       },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }

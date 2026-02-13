@@ -8,6 +8,7 @@ const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../
 const { authMiddleware } = require('../utils/authUtils.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
+const notificationService = require('../services/notificationService.js');
 
 const router = express.Router();
 
@@ -121,6 +122,12 @@ router.get('/my-hosted', authMiddleware, async (req, res) => {
 // Get single event
 router.get('/:id', async (req, res) => {
   try {
+    // Validate ObjectId format
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid event ID format' });
+    }
+    
     const event = await Event.findById(req.params.id)
       .populate('host', 'name email bio profilePicture')
       .populate('coHosts', 'name email bio profilePicture')
@@ -178,6 +185,18 @@ router.post('/', authMiddleware, [
 
     const populatedEvent = await Event.findById(event._id)
       .populate('host', 'name email');
+
+    // Send event published notification if status is published
+    if (event.status === 'published') {
+      setImmediate(async () => {
+        try {
+          await notificationService.notifyEventPublished(user._id, populatedEvent);
+          console.log(`✅ Event published notification sent to ${user.name}`);
+        } catch (notifError) {
+          console.error('Failed to send event published notification:', notifError);
+        }
+      });
+    }
 
     res.status(201).json({
       message: 'Event created successfully',

@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const notificationService = require('../services/notificationService');
+const Notification = require('../models/Notification');
 
 /**
  * Check if user needs to complete any required actions
@@ -19,67 +21,124 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
       throw new Error('User not found');
     }
 
-    const actionItems = [];
+    // Check for existing notifications to avoid duplicates
+    const existingProfileNotification = await Notification.findOne({
+      recipient: userId,
+      type: {
+        $in: [
+          'profile_incomplete', 
+          'profile_incomplete_community_organizer', 
+          'profile_incomplete_brand_sponsor', 
+          'profile_incomplete_venue'
+        ]
+      },
+      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+    });
 
-    // Check if profile picture is missing
-    if (!user.profilePicture) {
-      actionItems.push({
-        type: 'profile_incomplete',
-        field: 'profilePicture',
-        message: 'Add a profile picture to personalize your account',
-        priority: 'low'
-      });
-    }
+    const existingKYCNotification = await Notification.findOne({
+      recipient: userId,
+      type: 'kyc_pending',
+      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+    });
 
-    // Check if bio/about is missing (for host partners)
-    if (user.role === 'host_partner' && !user.about) {
-      actionItems.push({
-        type: 'profile_incomplete',
-        field: 'about',
-        message: 'Complete your profile by adding an about section',
-        priority: 'medium'
-      });
-    }
+    // Check profile completeness based on user role
+    if (user.role === 'host_partner') {
+      const { isComplete, missingFields } = checkHostPartnerProfile(user);
+      
+      if (!isComplete && !existingProfileNotification) {
+        // Create profile incomplete notification based on hostPartnerType
+        if (user.hostPartnerType === 'venue') {
+          await notificationService.notifyProfileIncompleteVenue(userId);
+          console.log(`📢 Created profile incomplete notification for venue: ${user.name}`);
+        } else if (user.hostPartnerType === 'brand_sponsor') {
+          await notificationService.notifyProfileIncompleteBrand(userId);
+          console.log(`📢 Created profile incomplete notification for brand: ${user.name}`);
+        } else if (user.hostPartnerType === 'community_organizer') {
+          await notificationService.notifyProfileIncompleteHost(userId);
+          console.log(`📢 Created profile incomplete notification for community: ${user.name}`);
+        }
+      }
 
-    // Check if location is missing
-    if (!user.location) {
-      actionItems.push({
-        type: 'profile_incomplete',
-        field: 'location',
-        message: 'Add your location to discover nearby events',
-        priority: 'low'
-      });
-    }
+      // Check KYC/payout details for all host partners
+      // Required fields: accountHolderName, accountNumber, ifscCode, billingAddress
+      const hasPayoutDetails = user.payoutDetails?.accountHolderName && 
+                               user.payoutDetails?.accountNumber && 
+                               user.payoutDetails?.ifscCode &&
+                               user.payoutDetails?.billingAddress;
+      
+      if (!hasPayoutDetails && !existingKYCNotification) {
+        await notificationService.notifyKYCPending(userId);
+        console.log(`💳 Created KYC/payout notification for: ${user.name} (${user.hostPartnerType})`);
+      }
 
-    // Log action items (in future, create notifications here)
-    if (actionItems.length > 0) {
-      console.log(`📋 User ${user.name} has ${actionItems.length} action items:`, 
-        actionItems.map(item => item.field).join(', '));
+      return {
+        success: true,
+        profileComplete: isComplete,
+        payoutDetailsComplete: hasPayoutDetails,
+        missingFields,
+        requiresAction: !isComplete || !hasPayoutDetails
+      };
     } else {
-      console.log(`✅ User ${user.name} profile is complete`);
+      // Regular B2C user - comprehensive check
+      const missingFields = [];
+      if (!user.name) missingFields.push('name');
+      if (!user.phoneNumber) missingFields.push('phoneNumber');
+
+      if (missingFields.length > 0 && !existingProfileNotification) {
+        await notificationService.notifyProfileIncompleteUser(userId, missingFields);
+        console.log(`📢 Created profile incomplete notification for user: ${user.name || user.email}`);
+      }
+
+      return {
+        success: true,
+        profileComplete: missingFields.length === 0,
+        missingFields,
+        requiresAction: missingFields.length > 0
+      };
     }
-
-    // TODO: When Notification model is implemented, create notifications here:
-    // for (const item of actionItems) {
-    //   await Notification.create({
-    //     user: userId,
-    //     type: item.type,
-    //     message: item.message,
-    //     priority: item.priority,
-    //     isRead: false
-    //   });
-    // }
-
-    return {
-      success: true,
-      actionItems,
-      requiresAction: actionItems.length > 0
-    };
 
   } catch (error) {
     console.error('Error checking user action requirements:', error);
     throw error;
   }
+}
+
+/**
+ * Check host partner profile completeness based on type
+ * @param {Object} user - User object
+ * @returns {Object} - { isComplete: boolean, missingFields: array }
+ */
+function checkHostPartnerProfile(user) {
+  const missingFields = [];
+
+  if (user.hostPartnerType === 'venue') {
+    // Check venue profile fields - comprehensive check
+    if (!user.venueProfile?.venueName) missingFields.push('venueName');
+    if (!user.venueProfile?.venueType) missingFields.push('venueType');
+    if (!user.venueProfile?.capacityRange) missingFields.push('capacityRange');
+    if (!user.venueProfile?.city) missingFields.push('city');
+    if (!user.venueProfile?.locality) missingFields.push('locality');
+    if (!user.venueProfile?.photos || user.venueProfile?.photos.length === 0) missingFields.push('photos');
+  } else if (user.hostPartnerType === 'brand_sponsor') {
+    // Check brand profile fields - comprehensive check
+    if (!user.brandProfile?.brandName) missingFields.push('brandName');
+    if (!user.brandProfile?.industry) missingFields.push('industry');
+    if (!user.brandProfile?.targetAudience) missingFields.push('targetAudience');
+    if (!user.brandProfile?.city) missingFields.push('city');
+    if (!user.brandProfile?.brandDescription) missingFields.push('brandDescription');
+  } else if (user.hostPartnerType === 'community_organizer') {
+    // Check community profile fields - comprehensive check
+    if (!user.communityProfile?.communityName) missingFields.push('communityName');
+    if (!user.communityProfile?.city) missingFields.push('city');
+    if (!user.communityProfile?.eventExperience) missingFields.push('eventExperience');
+    if (!user.communityProfile?.description) missingFields.push('description');
+    if (!user.communityProfile?.eventCategories || user.communityProfile?.eventCategories.length === 0) missingFields.push('eventCategories');
+  }
+
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields
+  };
 }
 
 /**
@@ -95,19 +154,19 @@ async function isProfileComplete(userId) {
       return false;
     }
 
-    // Basic completeness check
-    const hasBasicInfo = user.name && user.email && user.phoneNumber;
-    const hasProfilePicture = !!user.profilePicture;
-    const hasLocation = !!user.location;
-
-    // Host partners need additional fields
+    // Host partners need role-specific fields
     if (user.role === 'host_partner') {
-      const hasAbout = !!user.about;
-      return hasBasicInfo && hasProfilePicture && hasLocation && hasAbout;
+      const { isComplete } = checkHostPartnerProfile(user);
+      return isComplete;
     }
 
     // Regular users just need basic info
-    return hasBasicInfo;
+    const hasBasicInfo = user.name && user.email && user.phoneNumber;
+    const hasProfilePicture = !!user.profilePicture;
+    const hasLocation = !!user.location;
+    const hasInterests = user.interests && user.interests.length > 0;
+    
+    return hasBasicInfo && hasProfilePicture && hasLocation && hasInterests;
     
   } catch (error) {
     console.error('Error checking profile completeness:', error);
@@ -132,21 +191,74 @@ async function getProfileCompletionPercentage(userId) {
     let completedFields = 0;
 
     // Basic fields (required for all users)
-    const basicFields = ['name', 'email', 'phoneNumber', 'profilePicture', 'location'];
+    const basicFields = ['name', 'email', 'phoneNumber'];
     totalFields += basicFields.length;
     
     basicFields.forEach(field => {
       if (user[field]) completedFields++;
     });
 
-    // Additional fields for host partners
+    // Role-specific fields
     if (user.role === 'host_partner') {
-      const hostFields = ['about', 'hostPartnerType'];
-      totalFields += hostFields.length;
-      
-      hostFields.forEach(field => {
-        if (user[field]) completedFields++;
-      });
+      if (user.hostPartnerType === 'venue') {
+        const venueFields = [
+          'venueProfile.venueName',
+          'venueProfile.locality',
+          'venueProfile.venueType',
+          'venueProfile.capacityRange',
+          'venueProfile.contactPerson.name',
+          'location.city'
+        ];
+        totalFields += venueFields.length;
+        
+        if (user.venueProfile?.venueName) completedFields++;
+        if (user.venueProfile?.locality) completedFields++;
+        if (user.venueProfile?.venueType) completedFields++;
+        if (user.venueProfile?.capacityRange) completedFields++;
+        if (user.venueProfile?.contactPerson?.name) completedFields++;
+        if (user.location?.city) completedFields++;
+      } else if (user.hostPartnerType === 'brand_sponsor') {
+        const brandFields = [
+          'brandProfile.brandName',
+          'brandProfile.brandCategory',
+          'brandProfile.contactPerson.name',
+          'brandProfile.targetCity',
+          'brandProfile.sponsorshipType'
+        ];
+        totalFields += brandFields.length;
+        
+        if (user.brandProfile?.brandName) completedFields++;
+        if (user.brandProfile?.brandCategory) completedFields++;
+        if (user.brandProfile?.contactPerson?.name) completedFields++;
+        if (user.brandProfile?.targetCity?.length > 0) completedFields++;
+        if (user.brandProfile?.sponsorshipType?.length > 0) completedFields++;
+      } else if (user.hostPartnerType === 'community_organizer') {
+        const communityFields = [
+          'communityProfile.communityName',
+          'communityProfile.primaryCategory',
+          'communityProfile.contactPerson.name',
+          'communityProfile.typicalAudienceSize',
+          'location.city'
+        ];
+        totalFields += communityFields.length;
+        
+        if (user.communityProfile?.communityName) completedFields++;
+        if (user.communityProfile?.primaryCategory) completedFields++;
+        if (user.communityProfile?.contactPerson?.name) completedFields++;
+        if (user.communityProfile?.typicalAudienceSize) completedFields++;
+        if (user.location?.city) completedFields++;
+      }
+
+      // Payout details
+      totalFields += 2;
+      if (user.payoutDetails?.accountNumber) completedFields++;
+      if (user.payoutDetails?.bankName) completedFields++;
+    } else {
+      // B2C user additional fields
+      totalFields += 3;
+      if (user.profilePicture) completedFields++;
+      if (user.location) completedFields++;
+      if (user.interests && user.interests.length > 0) completedFields++;
     }
 
     return Math.round((completedFields / totalFields) * 100);

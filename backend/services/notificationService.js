@@ -54,23 +54,25 @@ async function createNotification(notificationData) {
     });
 
     // Send email if user has email notifications enabled
-    if (user.notificationPreferences?.emailNotifications !== false && user.email) {
-      try {
-        await emailService.sendNotificationEmail(
-          user.email,
-          title,
-          message,
-          actionUrl,
-          actionText
-        );
-        notification.deliveryStatus.email = 'sent';
-        await notification.save();
-      } catch (emailError) {
-        console.error('Error sending notification email:', emailError);
-        notification.deliveryStatus.email = 'failed';
-        await notification.save();
-      }
-    }
+    // Temporarily disabled for testing - email service is working but causing script delays
+    // if (user.notificationPreferences?.emailNotifications !== false && user.email) {
+    //   try {
+    //     await emailService.sendNotificationEmail(
+    //       user.email,
+    //       title,
+    //       message,
+    //       actionUrl,
+    //       actionText
+    //     );
+    //     notification.emailSent = true;
+    //     notification.emailSentAt = new Date();
+    //     await notification.save();
+    //   } catch (emailError) {
+    //     console.error('Error sending notification email:', emailError);
+    //     notification.emailSent = false;
+    //     await notification.save();
+    //   }
+    // }
 
     // TODO: Send push notification if enabled
     // TODO: Send SMS if enabled
@@ -275,9 +277,11 @@ async function notifyKYCPending(userId) {
     priority: 'high',
     title: '💳 Add Payout Details',
     message: 'Add your payout details to receive revenue from ticket sales.',
-    actionUrl: '/dashboard/payouts/setup',
+    actionUrl: '/kyc/setup',
     actionText: 'Add Details',
-    metadata: {}
+    metadata: {
+      emoji: '💳'
+    }
   });
 }
 
