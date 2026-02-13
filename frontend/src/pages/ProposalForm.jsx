@@ -230,6 +230,60 @@ const ProposalForm = () => {
     return texts[proposalType] || texts.communityToVenue;
   };
 
+  const getRelevantFormData = () => {
+    // Only include fields relevant to the specific proposal type
+    switch (proposalType) {
+      case 'communityToVenue':
+        return {
+          eventType: formData.eventType,
+          expectedAttendees: formData.expectedAttendees,
+          seatingCapacity: formData.seatingCapacity,
+          eventDate: formData.eventDate,
+          showBackupDate: formData.showBackupDate,
+          backupDate: formData.backupDate,
+          requirements: formData.requirements,
+          pricing: formData.pricing,
+          supportingInfo: formData.supportingInfo
+        };
+      
+      case 'communityToBrand':
+        return {
+          eventCategory: formData.eventCategory,
+          expectedAttendees: formData.expectedAttendees,
+          targetAudience: formData.targetAudience,
+          city: formData.city,
+          brandDeliverables: formData.brandDeliverables,
+          pricing: formData.pricing,
+          supportingInfo: formData.supportingInfo
+        };
+      
+      case 'brandToCommunity':
+        return {
+          campaignObjectives: formData.campaignObjectives,
+          targetAudience: formData.targetAudience,
+          preferredFormats: formData.preferredFormats,
+          brandOffers: formData.brandOffers,
+          brandExpectations: formData.brandExpectations,
+          additionalTerms: formData.additionalTerms,
+          supportingInfo: formData.supportingInfo
+        };
+      
+      case 'venueToCommunity':
+        return {
+          venueType: formData.venueType,
+          capacityRange: formData.capacityRange,
+          preferredEventFormats: formData.preferredFormats,
+          venueOfferings: formData.venueOfferings,
+          commercialModels: formData.commercialModels,
+          additionalTerms: formData.additionalTerms,
+          supportingInfo: formData.supportingInfo
+        };
+      
+      default:
+        return formData;
+    }
+  };
+
   const handleSendRequest = async () => {
     if (!validateForm()) return;
 
@@ -241,11 +295,14 @@ const ProposalForm = () => {
 
     setIsSending(true);
     try {
+      // Get only relevant fields for this proposal type
+      const relevantFormData = getRelevantFormData();
+      
       const payload = {
         type: proposalType,
         recipientId: recipientId,
         recipientType: recipientType,
-        formData: formData
+        formData: relevantFormData
       };
 
       console.log('Sending collaboration proposal:', payload);

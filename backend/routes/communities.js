@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Community = require('../models/Community');
-const Event = require('../models/Event');
 const User = require('../models/User');
+const Event = require('../models/Event');
 const { authMiddleware } = require('../utils/authUtils');
 
 // @route   GET /api/communities/browse
-// @desc    Get all community organizers for browsing (B2B)
+// @desc    Get all communities (users with community profiles) with optional filters
 // @access  Public
 router.get('/browse', async (req, res) => {
   try {
@@ -19,8 +20,13 @@ router.get('/browse', async (req, res) => {
       search
     } = req.query;
 
-    // Build query for users with hostPartnerType: 'community_organizer'
-    let query = { hostPartnerType: 'community_organizer' };
+    // Build query for users with communityProfile
+    let query = { 
+      $or: [
+        { userType: 'community_organizer' },
+        { 'communityProfile.communityName': { $exists: true } }
+      ]
+    };
 
     // City filter
     if (city) {
@@ -34,7 +40,7 @@ router.get('/browse', async (req, res) => {
 
     // Primary category filter
     if (primaryCategory) {
-      query['communityProfile.primaryCategory'] = new RegExp(primaryCategory, 'i');
+      query['communityProfile.primaryCategory'] = { $regex: primaryCategory, $options: 'i' };
     }
 
     // Audience size filter
@@ -47,23 +53,34 @@ router.get('/browse', async (req, res) => {
       query['communityProfile.pastEventExperience'] = eventExperience;
     }
 
-    // Search filter (search in community name, description)
+    // Search filter
     if (search) {
-      query.$or = [
-        { 'communityProfile.communityName': new RegExp(search, 'i') },
-        { 'communityProfile.communityDescription': new RegExp(search, 'i') },
-        { 'communityProfile.primaryCategory': new RegExp(search, 'i') }
-      ];
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { 'communityProfile.communityName': { $regex: search, $options: 'i' } },
+          { 'communityProfile.communityDescription': { $regex: search, $options: 'i' } },
+          { 'communityProfile.primaryCategory': { $regex: search, $options: 'i' } }
+        ]
+      });
     }
 
+    // Fetch communities
     const communities = await User.find(query)
-      .select('name email communityProfile profilePicture createdAt')
-      .sort({ createdAt: -1 });
+      .select('communityProfile email')
+      .lean();
 
-    res.json(communities);
+    // Transform data for frontend
+    const transformedCommunities = communities.map(user => ({
+      _id: user._id,
+      email: user.email,
+      communityProfile: user.communityProfile
+    }));
+
+    res.json(transformedCommunities);
   } catch (error) {
-    console.error('Error fetching communities for browse:', error);
-    res.status(500).json({ message: 'Error fetching communities' });
+    console.error('Error fetching communities:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -111,6 +128,11 @@ router.get('/', async (req, res) => {
 // Get single community by ID
 router.get('/:id', async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid community ID format' });
+    }
+    
     const community = await Community.findById(req.params.id)
       .populate('host', 'name email profilePicture bio')
       .populate('members.user', 'name profilePicture')

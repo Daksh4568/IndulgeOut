@@ -206,6 +206,69 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Update user payout details (KYC)
+router.put('/profile/payout', authenticateToken, async (req, res) => {
+  try {
+    const {
+      accountHolderName,
+      accountNumber,
+      ifscCode,
+      billingAddress,
+      upiId,
+      gstNumber
+    } = req.body;
+
+    // Validation - only required fields
+    if (!accountHolderName || !accountNumber || !ifscCode || !billingAddress) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: accountHolderName, accountNumber, ifscCode, billingAddress' 
+      });
+    }
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Only host_partners can have payout details
+    if (user.role !== 'host_partner') {
+      return res.status(403).json({ 
+        message: 'Only host partners (venues, brands, communities) can add payout details' 
+      });
+    }
+
+    // Update payout details
+    user.payoutDetails = {
+      accountHolderName,
+      accountNumber,
+      ifscCode,
+      billingAddress,
+      upiId: upiId || undefined,
+      gstNumber: gstNumber || undefined,
+      isVerified: false, // Admin needs to verify
+      lastUpdated: new Date()
+    };
+
+    await user.save();
+
+    console.log(`✅ Payout details updated for ${user.name} (${user.hostPartnerType})`);
+
+    res.json({
+      success: true,
+      message: 'Payout details submitted successfully. Admin will verify shortly.',
+      payoutDetails: {
+        accountHolderName: user.payoutDetails.accountHolderName,
+        billingAddress: user.payoutDetails.billingAddress,
+        isVerified: user.payoutDetails.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Update payout details error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Get user's registered events
 router.get('/registered-events', authenticateToken, async (req, res) => {
   try {

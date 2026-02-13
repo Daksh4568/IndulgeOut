@@ -55,8 +55,8 @@ const CommunityOrganizerDashboard = () => {
       setLoading(true);
       
       // Fetch all dashboard data in parallel
-      const [actionRes, eventsRes, earningsRes, analyticsRes, insightsRes] = await Promise.all([
-        api.get('/organizer/action-required'),
+      const [dashboardRes, eventsRes, earningsRes, analyticsRes, insightsRes] = await Promise.all([
+        api.get('/organizer/dashboard'),
         api.get('/organizer/events'),
         api.get('/organizer/earnings'),
         api.get('/organizer/analytics', {
@@ -65,7 +65,13 @@ const CommunityOrganizerDashboard = () => {
         api.get('/organizer/insights')
       ]);
 
-      setActionItems(actionRes.data);
+      console.log('🔍 [Frontend] Dashboard response received:', dashboardRes.data);
+      console.log('📋 [Frontend] actionsRequired:', dashboardRes.data.actionsRequired);
+      console.log('🔢 [Frontend] actionsRequired length:', dashboardRes.data.actionsRequired?.length);
+
+      // Dashboard response includes actionsRequired from notifications
+      setActionItems(dashboardRes.data.actionsRequired || []);
+      console.log('✅ [Frontend] actionItems state set to:', dashboardRes.data.actionsRequired || []);
       setEvents(eventsRes.data);
       setEarnings(earningsRes.data);
       setAnalytics(analyticsRes.data);
@@ -92,6 +98,9 @@ const CommunityOrganizerDashboard = () => {
 
   // ==================== ACTION REQUIRED SECTION ====================
   const ActionRequiredSection = () => {
+    console.log('🎯 [ActionRequiredSection] Rendering with actionItems:', actionItems);
+    console.log('🔢 [ActionRequiredSection] actionItems.length:', actionItems.length);
+    
     if (actionItems.length === 0) {
       return (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
@@ -1438,6 +1447,10 @@ const CommunityOrganizerDashboard = () => {
             {/* Dashboard Sections */}
             <div className="space-y-8">
               {/* Conditionally render sections based on sidebar selection */}
+              {console.log('🎨 [Render] Checking condition for Actions Required section:')}
+              {console.log('  - activeSidebarItem:', activeSidebarItem)}
+              {console.log('  - actionItems.length:', actionItems.length)}
+              {console.log('  - Condition result:', (activeSidebarItem === 'all' || activeSidebarItem === 'actions') && actionItems.length > 0)}
               {(activeSidebarItem === 'all' || activeSidebarItem === 'actions') && actionItems.length > 0 && (
                 <section>
                   <div className="flex items-center space-x-2 mb-4">

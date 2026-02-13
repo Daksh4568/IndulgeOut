@@ -366,6 +366,23 @@ const userSchema = new mongoose.Schema({
     verifiedAt: Date,
     addedAt: { type: Date, default: Date.now }
   },
+  
+  // Payout Details (for all host_partner types)
+  payoutDetails: {
+    accountHolderName: String,
+    accountNumber: String,
+    ifscCode: String,
+    billingAddress: String,
+    upiId: String,
+    gstNumber: String,
+    idProofDocument: String, // URL to uploaded ID proof
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verifiedAt: Date,
+    lastUpdated: Date
+  },
   interests: [{
     type: String,
     enum: [

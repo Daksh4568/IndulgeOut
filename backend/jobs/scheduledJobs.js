@@ -170,56 +170,122 @@ async function sendRatingRequests() {
 }
 
 /**
+ * Check if user profile is complete based on role
+ */
+function isProfileComplete(user) {
+  if (user.role === 'user') {
+    return !!(user.name && user.email && user.phoneNumber);
+  }
+  
+  if (user.role === 'host_partner') {
+    if (user.hostPartnerType === 'community_organizer') {
+      const profile = user.communityProfile;
+      return !!(
+        profile?.communityName &&
+        profile?.city &&
+        profile?.eventExperience &&
+        profile?.description &&
+        profile?.eventCategories && 
+        profile?.eventCategories.length > 0
+      );
+    } else if (user.hostPartnerType === 'venue') {
+      const profile = user.venueProfile;
+      return !!(
+        profile?.venueName &&
+        profile?.venueType &&
+        profile?.capacityRange &&
+        profile?.city &&
+        profile?.locality &&
+        profile?.photos && 
+        profile?.photos.length > 0
+      );
+    } else if (user.hostPartnerType === 'brand_sponsor') {
+      const profile = user.brandProfile;
+      return !!(
+        profile?.brandName &&
+        profile?.industry &&
+        profile?.targetAudience &&
+        profile?.city &&
+        profile?.brandDescription
+      );
+    }
+  }
+  
+  return true;
+}
+
+/**
  * Send profile incomplete reminders
  */
 async function sendProfileIncompleteReminders() {
   try {
-    // Find users with incomplete profiles who haven't been reminded in 7 days
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     
-    const users = await User.find({
-      $or: [
-        { profilePicture: { $exists: false } },
-        { location: { $exists: false } },
-        { location: null },
-        { interests: { $size: 0 } }
-      ]
-    });
+    // Get all non-admin users
+    const users = await User.find({ role: { $ne: 'admin' } });
     
-    console.log(`👤 Found ${users.length} users with incomplete profiles`);
+    console.log(`👤 Checking ${users.length} users for profile completeness`);
+    
+    let remindersSent = 0;
     
     for (const user of users) {
+      // Check if profile is complete using comprehensive checks
+      if (isProfileComplete(user)) {
+        continue; // Profile is complete, skip
+      }
+      
+      // Determine notification type based on role and hostPartnerType
+      let notificationType;
+      if (user.role === 'host_partner') {
+        if (user.hostPartnerType === 'venue') {
+          notificationType = 'profile_incomplete_venue';
+        } else if (user.hostPartnerType === 'brand_sponsor') {
+          notificationType = 'profile_incomplete_brand_sponsor';
+        } else if (user.hostPartnerType === 'community_organizer') {
+          notificationType = 'profile_incomplete_community_organizer';
+        } else {
+          notificationType = 'profile_incomplete_community_organizer';
+        }
+      } else {
+        notificationType = 'profile_incomplete';
+      }
+
       // Check if we already sent reminder in the last 7 days
       const recentReminder = await Notification.findOne({
         recipient: user._id,
-        type: user.role === 'host_partner' ? 'profile_incomplete_host' : 'profile_incomplete_user',
+        type: notificationType,
         createdAt: { $gte: sevenDaysAgo }
       });
       
       if (recentReminder) {
-        console.log(`⏭️ Skipping user ${user.name} - already reminded recently`);
-        continue;
+        continue; // Already reminded recently
       }
       
-      // Send appropriate reminder based on role
+      // Send appropriate reminder based on role and type
       try {
         if (user.role === 'host_partner') {
-          await notificationService.notifyProfileIncompleteHost(user._id);
+          if (user.hostPartnerType === 'venue') {
+            await notificationService.notifyProfileIncompleteVenue(user._id);
+          } else if (user.hostPartnerType === 'brand_sponsor') {
+            await notificationService.notifyProfileIncompleteBrand(user._id);
+          } else {
+            await notificationService.notifyProfileIncompleteHost(user._id);
+          }
         } else {
           const missingFields = [];
-          if (!user.profilePicture) missingFields.push('profilePicture');
-          if (!user.location) missingFields.push('location');
-          if (!user.interests || user.interests.length === 0) missingFields.push('interests');
+          if (!user.name) missingFields.push('name');
+          if (!user.phoneNumber) missingFields.push('phoneNumber');
           
           await notificationService.notifyProfileIncompleteUser(user._id, missingFields);
         }
-        console.log(`✅ Sent profile reminder to: ${user.name}`);
+        remindersSent++;
+        console.log(`✅ Sent profile reminder to: ${user.name || user.email} (${user.hostPartnerType || 'user'})`);
       } catch (error) {
         console.error(`❌ Error sending profile reminder to user ${user._id}:`, error.message);
       }
     }
     
-    console.log('✨ Profile reminder job completed');
+    console.log(`✨ Profile reminder job completed - Sent ${remindersSent} reminders`);
   } catch (error) {
     console.error('❌ Error in sendProfileIncompleteReminders:', error);
   }
@@ -275,24 +341,40 @@ async function sendDraftEventReminders() {
 }
 
 /**
+ * Check if KYC/Payout details are complete
+ */
+function isKYCComplete(user) {
+  if (user.role !== 'host_partner') return true;
+  
+  const payout = user.payoutDetails;
+  return !!(
+    payout?.accountHolderName &&
+    payout?.accountNumber &&
+    payout?.ifscCode &&
+    payout?.billingAddress
+  );
+}
+
+/**
  * Send KYC pending reminders to hosts
  */
 async function sendKYCPendingReminders() {
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     
-    // Find hosts with pending KYC (no payout details)
-    const hosts = await User.find({
-      role: 'host_partner',
-      $or: [
-        { 'payoutDetails.accountNumber': { $exists: false } },
-        { 'payoutDetails.bankName': { $exists: false } }
-      ]
-    });
+    // Find all B2B users (host_partners)
+    const hosts = await User.find({ role: 'host_partner' });
     
-    console.log(`💳 Found ${hosts.length} hosts with pending KYC`);
+    console.log(`💳 Checking ${hosts.length} hosts for KYC completeness`);
+    
+    let remindersSent = 0;
     
     for (const host of hosts) {
+      // Check if KYC is complete using comprehensive check
+      if (isKYCComplete(host)) {
+        continue; // KYC is complete, skip
+      }
+      
       // Check if we already sent reminder in the last 7 days
       const recentReminder = await Notification.findOne({
         recipient: host._id,
@@ -301,19 +383,19 @@ async function sendKYCPendingReminders() {
       });
       
       if (recentReminder) {
-        console.log(`⏭️ Skipping host ${host.name} - already reminded recently`);
-        continue;
+        continue; // Already reminded recently
       }
       
       try {
         await notificationService.notifyKYCPending(host._id);
-        console.log(`✅ Sent KYC reminder to: ${host.name}`);
+        remindersSent++;
+        console.log(`✅ Sent KYC reminder to: ${host.name || host.email} (${host.hostPartnerType})`);
       } catch (error) {
         console.error(`❌ Error sending KYC reminder to host ${host._id}:`, error.message);
       }
     }
     
-    console.log('✨ KYC reminder job completed');
+    console.log(`✨ KYC reminder job completed - Sent ${remindersSent} reminders`);
   } catch (error) {
     console.error('❌ Error in sendKYCPendingReminders:', error);
   }

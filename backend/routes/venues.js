@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
-const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 
 // @route   GET /api/venues/browse
 // @desc    Get all venues with optional filters
@@ -75,27 +75,10 @@ router.get('/browse', async (req, res) => {
       amenities: venue.venueProfile?.amenities || [],
       eventSuitabilityTags: venue.venueProfile?.eventSuitabilityTags || [],
       photos: venue.venueProfile?.photos || [],
-      images: venue.venueProfile?.photos || [], // Alias for consistency
       availability: venue.venueProfile?.availability,
       eventsHosted: venue.venueProfile?.eventsHosted || 0,
-      description: venue.venueProfile?.description,
-      // Add missing fields
-      rules: venue.venueProfile?.rules || {},
-      pricing: venue.venueProfile?.pricing || {},
-      targetCity: venue.venueProfile?.targetCity || [],
-      contactPerson: venue.venueProfile?.contactPerson || {},
-      location: venue.venueProfile?.location || {},
-      venueScale: venue.venueProfile?.venueScale || [],
-      eventSuitability: venue.venueProfile?.eventSuitability || []
+      description: venue.venueProfile?.description
     }));
-
-    console.log('📍 Venues fetched:', transformedVenues.length);
-    transformedVenues.forEach((venue, index) => {
-      console.log(`\n🏢 Venue ${index + 1}: ${venue.venueName}`);
-      console.log('  Rules:', venue.rules);
-      console.log('  Pricing:', venue.pricing);
-      console.log('  Target Cities:', venue.targetCity);
-    });
 
     res.json(transformedVenues);
   } catch (error) {
@@ -110,75 +93,62 @@ router.get('/browse', async (req, res) => {
 router.get('/dashboard', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-
-    // Verify user is a venue partner
+    
+    // Verify user is a venue
     const venue = await User.findById(userId);
-    if (!venue || !(venue.role === 'host_partner' && venue.hostPartnerType === 'venue')) {
-      return res.status(403).json({ message: 'Access denied. Venue partner account required.' });
+    if (!venue || venue.hostPartnerType !== 'venue') {
+      return res.status(403).json({ message: 'Access denied. Venue account required.' });
     }
 
-    // Generate action required notifications if needed
-    await checkAndGenerateActionRequiredNotifications(userId);
-
-    // Get actions required
-    const actionsRequired = [];
-
-    // Query action_required notifications from Notification model
-    // Don't filter by read status - action items should show until completed
-    const actionRequiredNotifications = await Notification.find({
+    // Fetch action_required notifications and deduplicate by type
+    const notifications = await Notification.find({
       recipient: userId,
-      category: 'action_required'
-    }).sort({ createdAt: -1 });
+      category: 'action_required',
+      isRead: false
+    })
+    .sort({ createdAt: -1 })
+    .lean();
 
-    // Deduplicate notifications by type - keep only the most recent of each type
+    // Group notifications by type to remove duplicates
+    const uniqueNotifications = [];
     const seenTypes = new Set();
-    actionRequiredNotifications.forEach(notif => {
+    
+    for (const notif of notifications) {
       if (!seenTypes.has(notif.type)) {
         seenTypes.add(notif.type);
-        actionsRequired.push({
-          id: notif._id,
-          type: notif.type,
-          priority: notif.priority || 'medium',
-          title: notif.title,
-          description: notif.message,
-          actionUrl: notif.actionButton?.link || '/profile',
-          ctaText: notif.actionButton?.text || 'View',
-          createdAt: notif.createdAt
-        });
+        uniqueNotifications.push(notif);
       }
-    });
-
-    // Check for pending collaborations
-    const pendingCollaborations = await Collaboration.find({
-      'recipient.user': userId,
-      status: 'admin_approved'
-    }).limit(5);
-
-    pendingCollaborations.forEach(collab => {
-      actionsRequired.push({
-        type: 'collaboration_request',
-        title: `New collaboration request from ${collab.initiator.name}`,
-        description: `${collab.initiator.name} wants to host an event at your venue`,
-        ctaText: 'Review Request',
-        itemId: collab._id,
-        priority: collab.priority
-      });
-    });
-
-    // Check profile completion
-    const profileComplete = venue.venueProfile?.venueName &&
-      venue.venueProfile?.city &&
-      venue.venueProfile?.photos?.length > 0;
-
-    if (!profileComplete) {
-      actionsRequired.push({
-        type: 'profile_incomplete',
-        title: 'Complete your venue profile',
-        description: 'Add photos, amenities, and venue details to attract more organizers',
-        ctaText: 'Complete Profile',
-        priority: 'high'
-      });
     }
+
+    // Map notifications to dashboard action format
+    const actionsRequired = uniqueNotifications.map(notif => {
+      let actionType = notif.type;
+      let ctaText = 'Take Action';
+      
+      // Map notification types to action types and CTA text
+      if (notif.type === 'kyc_pending') {
+        actionType = 'missing_kyc';
+        ctaText = 'Add Payout Details';
+      } else if (notif.type === 'profile_incomplete_venue') {
+        actionType = 'profile_incomplete';
+        ctaText = 'Complete Profile';
+      } else if (notif.type === 'hosting_request_received') {
+        actionType = 'collaboration_request';
+        ctaText = 'Review Request';
+      } else if (notif.type === 'subscription_payment_pending') {
+        actionType = 'subscription_pending';
+        ctaText = 'Complete Payment';
+      }
+
+      return {
+        type: actionType,
+        title: notif.title,
+        description: notif.message,
+        ctaText: notif.actionText || ctaText,
+        itemId: notif.relatedCollaboration || notif.relatedEvent || null,
+        priority: notif.priority || 'medium'
+      };
+    });
 
     // Get upcoming events at this venue
     const upcomingEvents = await Event.find({
@@ -186,10 +156,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       date: { $gte: new Date() },
       status: 'live'
     })
-      .sort({ date: 1 })
-      .limit(6)
-      .populate('host', 'name communityProfile')
-      .lean();
+    .sort({ date: 1 })
+    .limit(6)
+    .populate('host', 'name communityProfile')
+    .lean();
 
     const transformedEvents = upcomingEvents.map(event => ({
       _id: event._id,
@@ -289,6 +259,11 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
 // @access  Public
 router.get('/:id', async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid venue ID format' });
+    }
+    
     const venue = await User.findOne({
       _id: req.params.id,
       hostPartnerType: 'venue'

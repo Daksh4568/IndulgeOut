@@ -329,7 +329,8 @@ router.post('/otp/verify', async (req, res) => {
       { 
         userId: user._id,
         email: user.email,
-        role: user.role 
+        role: user.role,
+        hostPartnerType: user.hostPartnerType // Include for B2B users
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }

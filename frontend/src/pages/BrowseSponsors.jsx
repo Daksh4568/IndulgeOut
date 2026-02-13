@@ -210,6 +210,14 @@ const BrowseSponsors = () => {
       navigate('/login');
       return;
     }
+    
+    // Only communities can propose to brands in current system
+    // TODO: Add venue→brand and brand→venue collaboration types if needed
+    if (user.hostPartnerType !== 'community_organizer' && user.role !== 'user') {
+      alert('Only Communities can propose collaborations to Brands in the current system. Venue-to-Brand collaborations are not yet supported.');
+      return;
+    }
+    
     navigate('/collaboration/proposal?type=communityToBrand', {
       state: { 
         proposalType: 'communityToBrand',

@@ -204,12 +204,28 @@ const CollaborationManagement = () => {
     return <Users className="h-5 w-5" />;
   };
 
+  const formatCollaborationType = (type) => {
+    if (!type) return 'Collaboration';
+    const typeMap = {
+      'communityToVenue': 'Community → Venue',
+      'communityToBrand': 'Community → Brand',
+      'brandToCommunity': 'Brand → Community',
+      'venueToCommunity': 'Venue → Community',
+      'venueToBrand': 'Venue → Brand',
+      'brandToVenue': 'Brand → Venue'
+    };
+    return typeMap[type] || type.replace('_', ' ');
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Date not set';
     // Handle object format {date, startTime, endTime}
     if (typeof dateString === 'object' && dateString.date) {
       dateString = dateString.date;
     }
+    // If date is empty string, return appropriate message
+    if (dateString === '' || !dateString) return 'Date not set';
+    
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Invalid Date';
     return date.toLocaleDateString('en-IN', {
@@ -355,7 +371,8 @@ const CollaborationManagement = () => {
           <div className="space-y-4">
             {filteredCollaborations.map((collab) => {
               const isReceived = activeTab === 'received';
-              const partner = isReceived ? collab.proposerId : collab.recipientId;
+              // Use new structure (initiator/recipient) for partner info
+              const partner = isReceived ? collab.initiator : collab.recipient;
               const eventDays = getDaysUntilEvent(collab.formData?.eventDate?.date || collab.formData?.eventDate || collab.requestDetails?.eventDate);
               
               // Debug logging
@@ -363,8 +380,8 @@ const CollaborationManagement = () => {
                 console.warn('Partner is undefined for collaboration:', {
                   collabId: collab._id,
                   isReceived,
-                  proposerId: collab.proposerId,
-                  recipientId: collab.recipientId
+                  initiator: collab.initiator,
+                  recipient: collab.recipient
                 });
               }
               
@@ -377,10 +394,10 @@ const CollaborationManagement = () => {
                     <div className="flex items-start space-x-4 flex-1">
                       {/* Partner Info */}
                       <div className="flex-shrink-0">
-                        {partner?.profilePicture ? (
+                        {partner?.profileImage ? (
                           <img
-                            src={partner.profilePicture}
-                            alt={partner?.name || partner?.username || 'Partner'}
+                            src={partner.profileImage}
+                            alt={partner?.name || 'Partner'}
                             className="w-16 h-16 rounded-lg object-cover"
                           />
                         ) : (
@@ -393,7 +410,7 @@ const CollaborationManagement = () => {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {partner?.name || partner?.username || 'Unknown Partner'}
+                            {partner?.name || 'Unknown Partner'}
                           </h3>
                           {getStatusBadge(collab, isReceived)}
                           {getPriorityBadge(collab.priority)}
@@ -407,7 +424,7 @@ const CollaborationManagement = () => {
                         </div>
 
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 capitalize">
-                          {collab.type?.replace('_', ' ') || 'Collaboration'} • {isReceived ? 'From' : 'To'} {partner?.name || partner?.username || 'Unknown'}
+                          {formatCollaborationType(collab.type)} • {isReceived ? 'From' : 'To'} {partner?.name || 'Unknown'}
                         </p>
 
                         {/* Event Details */}
@@ -493,39 +510,18 @@ const CollaborationManagement = () => {
                     </div>
 
                     {/* Actions for RECEIVED proposals */}
-                    {isReceived && (collab.status === 'admin_approved' || collab.status === 'approved_delivered') && (
+                    {isReceived && (collab.status === 'admin_approved' || collab.status === 'approved_delivered' || collab.status === 'accepted') && (
                       <div className="flex items-center space-x-2 ml-4">
                         <button
                           onClick={() => {
-                            // Navigate to counter form based on collaboration type and user role
-                            const collabType = collab.type;
-                            let counterPath = '';
-                            
                             console.log('Opening counter form for collaboration:', {
                               id: collab._id,
-                              type: collabType,
+                              type: collab.type,
                               status: collab.status
                             });
                             
-                            // Determine counter form path based on recipient type and collaboration type
-                            if (collabType === 'communityToVenue') {
-                              counterPath = `/collaborations/${collab._id}/counter/venue`;
-                            } else if (collabType === 'communityToBrand') {
-                              counterPath = `/collaborations/${collab._id}/counter/brand`;
-                            } else if (collabType === 'brandToCommunity') {
-                              counterPath = `/collaborations/${collab._id}/counter/community-to-brand`;
-                            } else if (collabType === 'venueToCommunity') {
-                              counterPath = `/collaborations/${collab._id}/counter/community-to-venue`;
-                            }
-                            
-                            if (!counterPath) {
-                              console.error('Could not determine counter form path for type:', collabType);
-                              alert('Unable to open counter form. Please refresh and try again.');
-                              return;
-                            }
-                            
-                            console.log('Navigating to counter form:', counterPath);
-                            navigate(counterPath);
+                            // Navigate to counter form
+                            navigate(`/collaborations/${collab._id}/counter`);
                           }}
                           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"
                           title="Respond to proposal"
@@ -621,7 +617,7 @@ const CollaborationManagement = () => {
               <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">From:</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {selectedCollaboration.proposerId?.name || selectedCollaboration.proposerId?.username || 'Unknown Partner'}
+                  {selectedCollaboration.initiator?.name || 'Unknown Partner'}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   {selectedCollaboration.formData?.message || selectedCollaboration.requestDetails?.message}
