@@ -39,6 +39,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import VenueDashboard from './pages/VenueDashboard'
 import BrandDashboard from './pages/BrandDashboard'
 import UserDashboard from './pages/UserDashboard'
+import DashboardRedirect from './pages/DashboardRedirect'
 import EventReviewPage from './pages/EventReviewPage'
 import ScanTickets from './pages/ScanTickets'
 import EventAnalytics from './pages/EventAnalytics'
@@ -120,6 +121,11 @@ function AppContent() {
         <Route path="/login" element={<OTPLogin />} />  
         <Route path="/interests" element={<InterestSelection />} />
         <Route path="/kyc-setup" element={<ErrorBoundary><KYCSetupPage /></ErrorBoundary>} />
+        
+        {/* Smart dashboard redirect - redirects to appropriate dashboard based on user role */}
+        <Route path="/dashboard" element={<ErrorBoundary><DashboardRedirect /></ErrorBoundary>} />
+        
+        {/* Role-specific dashboards */}
         <Route path="/organizer/dashboard" element={<ErrorBoundary><CommunityOrganizerDashboard /></ErrorBoundary>} />
         <Route path="/scan-tickets" element={<ErrorBoundary><ScanTickets /></ErrorBoundary>} />
         <Route path="/organizer/events/:eventId/analytics" element={<ErrorBoundary><EventAnalytics /></ErrorBoundary>} />
@@ -167,7 +173,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <Router>
+        <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
           <AuthProvider>
             <NotificationProvider>
               <ToastContext.Provider value={toast}>

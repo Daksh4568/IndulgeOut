@@ -277,9 +277,9 @@ const About = () => {
 
             {/* Card 2 - Create & Collaborate */}
             <div className="relative w-full max-w-lg transform rotate-3 hover:rotate-0 transition-all duration-300">
-              <div className="bg-gradient-to-br from-white to-gray-100 text-gray-900 rounded-2xl p-8 shadow-2xl border-2 border-gray-300">
+              <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl border-2 border-gray-800">
                 <h3 className="text-2xl font-bold mb-4">Create & Collaborate</h3>
-                <p className="text-gray-700 mb-6">
+                <p className="text-gray-400 mb-6">
                   List events seamlessly and collaborate with the right partners to deliver better offline experiences.
                 </p>
                 <button 
@@ -316,7 +316,7 @@ const About = () => {
           <div className="hidden md:block space-y-12">
             {/* Authenticity Card - Top Center */}
             <div className="flex justify-center">
-              <div className="relative w-full max-w-md transform rotate-2 hover:rotate-0 transition-all duration-300">
+              <div className="relative w-full max-w-lg transform rotate-2 hover:rotate-0 transition-all duration-300">
                 <div className="bg-gradient-to-br from-[#E5D4B8] to-[#D4B896] text-gray-900 rounded-lg p-8 shadow-xl">
                   {/* Tape Effect */}
                   <div className="absolute -top-4 left-8 w-24 h-8 bg-[#C9B088] opacity-60 transform -rotate-12"></div>
@@ -333,7 +333,7 @@ const About = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
               {/* Inclusivity Card */}
               <div className="relative transform -rotate-3 hover:rotate-0 transition-all duration-300">
-                <div className="bg-gradient-to-br from-[#E5D4B8] to-[#D4B896] text-gray-900 rounded-lg p-8 shadow-xl">
+                <div className="bg-gradient-to-br from-[#E5D4B8] to-[#D4B896] text-gray-900 rounded-lg p-8 shadow-xl h-full min-h-[200px]">
                   {/* Tape Effect */}
                   <div className="absolute -top-4 left-8 w-24 h-8 bg-[#C9B088] opacity-60 transform rotate-6"></div>
                   
@@ -346,7 +346,7 @@ const About = () => {
 
               {/* Simplicity Card */}
               <div className="relative transform rotate-1 hover:rotate-0 transition-all duration-300">
-                <div className="bg-gradient-to-br from-[#E5D4B8] to-[#D4B896] text-gray-900 rounded-lg p-8 shadow-xl">
+                <div className="bg-gradient-to-br from-[#E5D4B8] to-[#D4B896] text-gray-900 rounded-lg p-8 shadow-xl h-full min-h-[200px]">
                   {/* Tape Effect */}
                   <div className="absolute -top-4 right-8 w-24 h-8 bg-[#C9B088] opacity-60 transform -rotate-6"></div>
                   

@@ -834,7 +834,7 @@ function Homepage() {
       </section>
 
       {/* Vox Pop Testimonials Section */}
-      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+      <section className="py-20 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
@@ -938,7 +938,7 @@ function Homepage() {
       </section>
 
       {/* Looking For Events In Your City - Carousel Section */}
-      <section className="py-16 bg-black relative overflow-hidden">
+      <section className="py-16 bg-zinc-900 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
@@ -1057,7 +1057,7 @@ function Homepage() {
       </section>
 
       {/* Partner With Us Section */}
-      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+      <section className="py-20 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 lg:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6" style={{ fontFamily: 'Oswald, sans-serif' }}>
@@ -1086,20 +1086,17 @@ function Homepage() {
               {[
                 { 
                   label: 'Want to list your venue?', 
-                  icon: '📍',
-                  bgImage: '/images/Media (6).jpg',
+          
                   delay: '0s'
                 },
                 { 
                   label: 'List your brand as collaborator?', 
-                  icon: '👥',
-                  bgImage: '/images/Media (7).jpg',
+                 
                   delay: '8.33s'
                 },
                 { 
                   label: 'Want to list your events?', 
-                  icon: '✨',
-                  bgImage: '/images/Media (5).jpg',
+                 
                   delay: '16.67s'
                 }
               ].map((item, index) => (
@@ -1126,7 +1123,7 @@ function Homepage() {
 
             {/* Right Side - Single Auto-Rotating Card */}
             <div className="relative flex items-center justify-center mt-8 lg:mt-0">
-              <div className="w-full max-w-md bg-white shadow-2xl transition-all duration-700 h-[640px] flex flex-col p-6">
+              <div className="w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-gray-800 transition-all duration-700 h-[640px] flex flex-col p-6">
                 {/* Fixed height image container */}
                 <div className="w-full h-[280px] flex-shrink-0 mb-4">
                   <img 
@@ -1137,10 +1134,10 @@ function Homepage() {
                 </div>
                 {/* Content area with flex-1 to fill remaining space */}
                 <div className="flex-1 flex flex-col px-2">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4 transition-opacity duration-700" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  <h3 className="text-2xl font-bold text-white mb-4 transition-opacity duration-700" style={{ fontFamily: 'Oswald, sans-serif' }}>
                     {partnerCards[currentPartnerCard].title}
                   </h3>
-                  <p className="text-gray-600 text-base mb-8 leading-relaxed transition-opacity duration-700 flex-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                  <p className="text-gray-300 text-base mb-8 leading-relaxed transition-opacity duration-700 flex-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                     {partnerCards[currentPartnerCard].description}
                   </p>
                   <button
