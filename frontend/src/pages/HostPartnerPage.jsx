@@ -217,11 +217,6 @@ const HostPartnerPage = () => {
             {howItWorks.map((step, index) => (
               <div key={index} className="relative flex flex-col items-center">
                 <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 hover:scale-105 transition-transform duration-300 border border-gray-700 w-full relative min-h-[320px] flex flex-col justify-between">
-                  {/* Number Badge - Positioned inside on mobile, outside on desktop */}
-                  <div className="absolute top-2 right-2 md:-top-4 md:-right-4 w-12 h-12 bg-black border-2 border-white rounded-full flex items-center justify-center font-bold text-xl">
-                    {step.number}
-                  </div>
-
                   {/* Icon */}
                   <div className="bg-[#6366F1] w-16 h-16 rounded-full flex items-center justify-center mb-6">
                     {step.icon}
@@ -231,27 +226,6 @@ const HostPartnerPage = () => {
                   <h3 className="text-xl font-bold mb-4">{step.title}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed">{step.description}</p>
                 </div>
-
-                {/* Arrow for desktop */}
-                {index < howItWorks.length - 1 && (
-                  <div
-                    className="hidden md:flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-20 w-8"
-                    style={{ left: '100%' }}
-                  >
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-
-                {/* Chevron for mobile */}
-                {index < howItWorks.length - 1 && (
-                  <div className="md:hidden flex items-center justify-center my-4">
-                    <svg className="w-6 h-6 text-white transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
               </div>
             ))}
           </div>

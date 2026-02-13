@@ -251,7 +251,7 @@ router.post('/otp/send', async (req, res) => {
 });
 
 /**
- * Verify OTP and Login
+ * Verify OTP and Complete Login/Registration
  * POST /api/auth/otp/verify
  */
 router.post('/otp/verify', async (req, res) => {
@@ -268,13 +268,13 @@ router.post('/otp/verify', async (req, res) => {
     // Validate OTP format
     if (!isValidOTP(otp)) {
       return res.status(400).json({
-        message: 'Invalid OTP format. OTP must be 6 digits'
+        message: 'OTP must be a 6-digit number'
       });
     }
 
-    // Find user
-    const query = method === 'sms'
-      ? { phoneNumber: identifier }
+    // Find user by phone or email
+    const query = method === 'sms' 
+      ? { phoneNumber: identifier } 
       : { email: identifier.toLowerCase() };
 
     const user = await User.findOne(query);
@@ -286,115 +286,90 @@ router.post('/otp/verify', async (req, res) => {
     }
 
     // Check if OTP exists
-    if (!user.otpVerification || !user.otpVerification.otp) {
-      // If OTP is already cleared and phone is verified, user might have already logged in
-      // (React Strict Mode can cause double requests)
-      if (user.otpVerification?.isPhoneVerified) {
-        // Generate token for already verified user
-        const token = jwt.sign(
-          {
-            userId: user._id,
-            email: user.email,
-            role: user.role,
-            hostPartnerType: user.hostPartnerType
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: '7d' }
-        );
-
-        return res.json({
-          message: 'Already verified. Login successful',
-          token,
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            role: user.role,
-            hostPartnerType: user.hostPartnerType,
-            profilePicture: user.profilePicture,
-            isVerified: user.isVerified
-          }
-        });
-      }
-
+    if (!user.otpVerification?.otp) {
       return res.status(400).json({
-        message: 'No OTP found. Please request a new OTP'
+        message: 'No OTP found. Please request a new OTP.'
       });
     }
 
-    // Check if OTP is expired
+    // Check if OTP has expired
     if (new Date() > user.otpVerification.otpExpiry) {
       return res.status(400).json({
-        message: 'OTP has expired. Please request a new one'
+        message: 'OTP has expired. Please request a new OTP.'
       });
     }
 
     // Verify OTP
     if (user.otpVerification.otp !== otp) {
       return res.status(400).json({
-        message: 'Invalid OTP. Please check and try again'
+        message: 'Invalid OTP. Please try again.'
       });
     }
 
-    // OTP verified successfully - clear OTP data and activate account
-    const isNewUser = !user.otpVerification?.isPhoneVerified;
-    
-    user.otpVerification = {
-      ...user.otpVerification,
-      otp: undefined,
-      otpExpiry: undefined,
-      otpAttempts: 0,
-      isPhoneVerified: true
-    };
+    // Check if this is a new user (first-time verification)
+    const isNewUser = !user.analytics?.lastLogin || 
+                       user.analytics?.registrationMethod === 'otp' && 
+                       user.otpVerification?.otpAttempts === 1;
+
+    // Mark phone as verified
+    user.otpVerification.isPhoneVerified = true;
+    user.otpVerification.otp = undefined; // Clear OTP after successful verification
+    user.otpVerification.otpExpiry = undefined;
+
+    // Update last login
+    if (!user.analytics) {
+      user.analytics = {};
+    }
+    user.analytics.lastLogin = new Date();
 
     await user.save();
 
-    // Send welcome email for new users (non-blocking)
-    if (isNewUser) {
-      setImmediate(async () => {
-        try {
-          await sendWelcomeEmail(user.email, user.name);
-          console.log(`✅ Welcome email sent to: ${user.email}`);
-        } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError);
-        }
-      });
-    }
-
     // Generate JWT token
     const token = jwt.sign(
-      {
+      { 
         userId: user._id,
         email: user.email,
-        role: user.role,
-        hostPartnerType: user.hostPartnerType
+        role: user.role 
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
 
-    // Generate action required notifications in background (non-blocking)
-    checkAndGenerateActionRequiredNotifications(user._id).catch(err => {
-      console.error('Error generating action required notifications on login:', err);
-    });
+    console.log(`✅ OTP verified for ${identifier}. User logged in.`);
 
-    console.log(`✅ User ${isNewUser ? 'registered and verified' : 'logged in'} successfully via OTP: ${user.email}`);
+    // Send welcome email for new users
+    if (isNewUser) {
+      try {
+        await sendWelcomeEmail(user.email, user.name);
+        console.log(`📧 Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // Don't fail the registration if welcome email fails
+      }
+    }
 
+    // Check for action required notifications
+    try {
+      await checkAndGenerateActionRequiredNotifications(user._id);
+    } catch (notifError) {
+      console.error('Failed to generate action required notifications:', notifError);
+      // Don't fail login if notification generation fails
+    }
+
+    // Return success response with token and user data
     res.json({
-      message: isNewUser ? 'Account verified successfully! Welcome to IndulgeOut.' : 'Login successful',
+      message: isNewUser ? 'Account created successfully!' : 'Login successful!',
       token,
-      isNewUser,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber,
         role: user.role,
-        hostPartnerType: user.hostPartnerType,
         profilePicture: user.profilePicture,
-        isVerified: user.isVerified
-      }
+        hostPartnerType: user.hostPartnerType
+      },
+      isNewUser
     });
 
   } catch (error) {
@@ -414,15 +389,23 @@ router.post('/otp/resend', async (req, res) => {
   try {
     const { identifier, method } = req.body;
 
+    // Validate required fields
     if (!identifier || !method) {
       return res.status(400).json({
         message: 'Identifier and method are required'
       });
     }
 
-    // Find user
-    const query = method === 'sms'
-      ? { phoneNumber: identifier }
+    // Validate method
+    if (!['sms', 'email'].includes(method)) {
+      return res.status(400).json({
+        message: 'Method must be either "sms" or "email"'
+      });
+    }
+
+    // Find user by phone or email
+    const query = method === 'sms' 
+      ? { phoneNumber: identifier } 
       : { email: identifier.toLowerCase() };
 
     const user = await User.findOne(query);
@@ -433,18 +416,19 @@ router.post('/otp/resend', async (req, res) => {
       });
     }
 
-    // Check rate limiting (simple 1-minute check)
+    // Check rate limiting (1 minute between resends)
     const lastSent = user.otpVerification?.lastOTPSent;
     if (lastSent && (Date.now() - lastSent.getTime()) < 60000) {
+      const waitTime = Math.ceil((60000 - (Date.now() - lastSent.getTime())) / 1000);
       return res.status(429).json({
-        message: 'Please wait 1 minute before requesting another OTP',
-        retryAfter: 60
+        message: `Please wait ${waitTime} seconds before requesting another OTP`,
+        retryAfter: waitTime
       });
     }
 
     // Generate new OTP
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Send OTP via email (SMS temporarily disabled)
     if (method === 'email') {
@@ -452,7 +436,7 @@ router.post('/otp/resend', async (req, res) => {
         await sendOTPEmail(identifier, otp, user.name);
       } catch (error) {
         return res.status(500).json({
-          message: `Failed to resend OTP: ${error.message}`
+          message: `Failed to send OTP: ${error.message}`
         });
       }
     } else {
@@ -460,14 +444,11 @@ router.post('/otp/resend', async (req, res) => {
       console.log(`SMS OTP for ${identifier}: ${otp}`);
     }
 
-    // Update user
-    user.otpVerification = {
-      otp,
-      otpExpiry,
-      otpAttempts: (user.otpVerification?.otpAttempts || 0) + 1,
-      lastOTPSent: new Date(),
-      isPhoneVerified: user.otpVerification?.isPhoneVerified
-    };
+    // Update user with new OTP details
+    user.otpVerification.otp = otp;
+    user.otpVerification.otpExpiry = otpExpiry;
+    user.otpVerification.otpAttempts = (user.otpVerification.otpAttempts || 0) + 1;
+    user.otpVerification.lastOTPSent = new Date();
 
     await user.save();
 
@@ -475,12 +456,11 @@ router.post('/otp/resend', async (req, res) => {
 
     res.json({
       message: `OTP resent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
-      mock: result.mock || false,
       expiresIn: 600
     });
 
   } catch (error) {
-    console.error('Error resending OTP:', error);
+    console.error('OTP resend error:', error);
     res.status(500).json({
       message: 'Failed to resend OTP. Please try again.',
       error: error.message

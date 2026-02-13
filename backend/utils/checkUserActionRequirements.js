@@ -1,128 +1,164 @@
 const User = require('../models/User');
-const Notification = require('../models/Notification');
-const notificationService = require('../services/notificationService');
 
 /**
- * Check user's profile and generate action required notifications if needed
- * @param {String} userId - The user ID to check
- * @returns {Promise<Array>} Array of created notifications
+ * Check if user needs to complete any required actions
+ * and generate notifications accordingly
+ * 
+ * This function checks for incomplete profile fields and other
+ * action items that new users should complete.
+ * 
+ * @param {String} userId - User ID to check
+ * @returns {Promise<Object>} - Object with action requirements
  */
 async function checkAndGenerateActionRequiredNotifications(userId) {
   try {
+    // Fetch user
     const user = await User.findById(userId);
-    if (!user) return [];
-
-    const createdNotifications = [];
-
-    // Check for existing action_required notifications of each type
-    // This prevents duplicate action items from appearing in the dashboard
-    const existingNotifications = await Notification.find({
-      recipient: userId,
-      category: 'action_required'
-    }).select('type');
-
-    const existingTypes = new Set(existingNotifications.map(n => n.type));
-
-    // Check 1: Profile Incomplete (User)
-    if (user.role === 'user') {
-      const missingFields = [];
-      if (!user.interests || user.interests.length === 0) missingFields.push('interests');
-      if (!user.location?.city) missingFields.push('location');
-      if (!user.phoneNumber) missingFields.push('phone number');
-      if (!user.bio || user.bio.length < 10) missingFields.push('bio');
-
-      if (missingFields.length > 0 && !existingTypes.has('profile_incomplete_user')) {
-        const notification = await notificationService.notifyProfileIncompleteUser(
-          userId,
-          missingFields,
-          { sendEmail: false } // Don't send email for auto-generated notifications
-        );
-        if (notification) createdNotifications.push(notification);
-      }
+    
+    if (!user) {
+      throw new Error('User not found');
     }
 
-    // Check 2: Profile Incomplete (Host/Organizer)
-    if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
-      const isProfileIncomplete =
-        !user.communityProfile?.communityName ||
-        !user.communityProfile?.communityDescription ||
-        !user.phoneNumber;
+    const actionItems = [];
 
-      if (isProfileIncomplete && !existingTypes.has('profile_incomplete_host')) {
-        const notification = await notificationService.notifyProfileIncompleteHost(
-          userId,
-          { sendEmail: false }
-        );
-        if (notification) createdNotifications.push(notification);
-      }
+    // Check if profile picture is missing
+    if (!user.profilePicture) {
+      actionItems.push({
+        type: 'profile_incomplete',
+        field: 'profilePicture',
+        message: 'Add a profile picture to personalize your account',
+        priority: 'low'
+      });
     }
 
-    // Check 3: KYC/Payout Details Missing (for all host_partner types)
-    if (user.role === 'host_partner') {
-      const hasPayoutDetails = user.payoutInfo &&
-        user.payoutInfo.accountNumber &&
-        user.payoutInfo.ifscCode &&
-        user.payoutInfo.accountHolderName;
-
-      if (!hasPayoutDetails && !existingTypes.has('kyc_pending')) {
-        const notification = await notificationService.notifyKYCPending(
-          userId,
-          { sendEmail: false }
-        );
-        if (notification) createdNotifications.push(notification);
-      } else if (hasPayoutDetails) {
-        // Remove existing KYC pending notifications if payout details are now complete
-        await Notification.deleteMany({
-          recipient: userId,
-          type: 'kyc_pending',
-          category: 'action_required'
-        });
-      }
+    // Check if bio/about is missing (for host partners)
+    if (user.role === 'host_partner' && !user.about) {
+      actionItems.push({
+        type: 'profile_incomplete',
+        field: 'about',
+        message: 'Complete your profile by adding an about section',
+        priority: 'medium'
+      });
     }
 
-    // Check 4: Brand Profile Incomplete
-    if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
-      const isBrandProfileIncomplete =
-        !user.brandProfile?.brandName ||
-        !user.brandProfile?.brandCategory ||
-        !user.brandProfile?.brandDescription ||
-        !user.phoneNumber;
-
-      if (isBrandProfileIncomplete && !existingTypes.has('profile_incomplete_brand')) {
-        const notification = await notificationService.notifyProfileIncompleteBrand(
-          userId,
-          { sendEmail: false }
-        );
-        if (notification) createdNotifications.push(notification);
-      }
+    // Check if location is missing
+    if (!user.location) {
+      actionItems.push({
+        type: 'profile_incomplete',
+        field: 'location',
+        message: 'Add your location to discover nearby events',
+        priority: 'low'
+      });
     }
 
-    // Check 5: Venue Profile Incomplete
-    if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
-      const isVenueProfileIncomplete =
-        !user.venueProfile?.venueName ||
-        !user.venueProfile?.venueType ||
-        !user.venueProfile?.capacityRange ||
-        !user.phoneNumber;
-
-      if (isVenueProfileIncomplete && !existingTypes.has('profile_incomplete_venue')) {
-        const notification = await notificationService.notifyProfileIncompleteVenue(
-          userId,
-          { sendEmail: false }
-        );
-        if (notification) createdNotifications.push(notification);
-      }
+    // Log action items (in future, create notifications here)
+    if (actionItems.length > 0) {
+      console.log(`📋 User ${user.name} has ${actionItems.length} action items:`, 
+        actionItems.map(item => item.field).join(', '));
+    } else {
+      console.log(`✅ User ${user.name} profile is complete`);
     }
 
-    console.log(`Generated ${createdNotifications.length} action required notifications for user ${userId}`);
-    return createdNotifications;
+    // TODO: When Notification model is implemented, create notifications here:
+    // for (const item of actionItems) {
+    //   await Notification.create({
+    //     user: userId,
+    //     type: item.type,
+    //     message: item.message,
+    //     priority: item.priority,
+    //     isRead: false
+    //   });
+    // }
+
+    return {
+      success: true,
+      actionItems,
+      requiresAction: actionItems.length > 0
+    };
 
   } catch (error) {
     console.error('Error checking user action requirements:', error);
-    return [];
+    throw error;
+  }
+}
+
+/**
+ * Check if user profile is complete
+ * @param {String} userId - User ID to check
+ * @returns {Promise<Boolean>} - True if profile is complete
+ */
+async function isProfileComplete(userId) {
+  try {
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return false;
+    }
+
+    // Basic completeness check
+    const hasBasicInfo = user.name && user.email && user.phoneNumber;
+    const hasProfilePicture = !!user.profilePicture;
+    const hasLocation = !!user.location;
+
+    // Host partners need additional fields
+    if (user.role === 'host_partner') {
+      const hasAbout = !!user.about;
+      return hasBasicInfo && hasProfilePicture && hasLocation && hasAbout;
+    }
+
+    // Regular users just need basic info
+    return hasBasicInfo;
+    
+  } catch (error) {
+    console.error('Error checking profile completeness:', error);
+    return false;
+  }
+}
+
+/**
+ * Get percentage of profile completion
+ * @param {String} userId - User ID to check
+ * @returns {Promise<Number>} - Percentage (0-100)
+ */
+async function getProfileCompletionPercentage(userId) {
+  try {
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return 0;
+    }
+
+    let totalFields = 0;
+    let completedFields = 0;
+
+    // Basic fields (required for all users)
+    const basicFields = ['name', 'email', 'phoneNumber', 'profilePicture', 'location'];
+    totalFields += basicFields.length;
+    
+    basicFields.forEach(field => {
+      if (user[field]) completedFields++;
+    });
+
+    // Additional fields for host partners
+    if (user.role === 'host_partner') {
+      const hostFields = ['about', 'hostPartnerType'];
+      totalFields += hostFields.length;
+      
+      hostFields.forEach(field => {
+        if (user[field]) completedFields++;
+      });
+    }
+
+    return Math.round((completedFields / totalFields) * 100);
+    
+  } catch (error) {
+    console.error('Error calculating profile completion:', error);
+    return 0;
   }
 }
 
 module.exports = {
-  checkAndGenerateActionRequiredNotifications
+  checkAndGenerateActionRequiredNotifications,
+  isProfileComplete,
+  getProfileCompletionPercentage
 };

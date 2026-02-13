@@ -1,175 +1,378 @@
 const mongoose = require('mongoose');
 
 /**
- * Collaboration Model - Structured Proposal Forms
- * Supports 4 collaboration types with admin review workflow
+ * Collaboration Request Model
+ * Manages partnership requests between Communities, Venues, and Brands
  */
 
 const collaborationSchema = new mongoose.Schema({
-  // Collaboration type
+  // Request Type
   type: {
     type: String,
-    enum: ['communityToVenue', 'communityToBrand', 'brandToCommunity', 'venueToCommunity'],
+    enum: [
+      // New types (with admin review layer)
+      'venue_request', 
+      'brand_sponsorship', 
+      'community_partnership',
+      // Old types (for backward compatibility)
+      'communityToVenue',
+      'communityToBrand',
+      'venueToCommunity',
+      'brandToCommunity'
+    ],
     required: true,
+    index: true
   },
-
-  // Proposer information
+  
+  // NEW STRUCTURE - Initiator (Who sent the request)
+  initiator: {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true
+    },
+    userType: {
+      type: String,
+      enum: ['community_organizer', 'venue', 'brand_sponsor']
+    },
+    name: String,  // Community/Venue/Brand name
+    profileImage: String
+  },
+  
+  // NEW STRUCTURE - Recipient (Who receives the request)
+  recipient: {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true
+    },
+    userType: {
+      type: String,
+      enum: ['community_organizer', 'venue', 'brand_sponsor']
+    },
+    name: String,
+    profileImage: String
+  },
+  
+  // OLD STRUCTURE - For backward compatibility with existing data
   proposerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    index: true
   },
   proposerType: {
     type: String,
-    enum: ['community', 'venue', 'brand'],
-    required: true,
+    enum: ['community', 'venue', 'brand']
   },
-
-  // Recipient information
   recipientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    index: true
   },
   recipientType: {
     type: String,
-    enum: ['community', 'venue', 'brand'],
-    required: true,
+    enum: ['community', 'venue', 'brand']
   },
-
-  // Status workflow
+  
+  // Form data (old structure - for backward compatibility)
+  formData: mongoose.Schema.Types.Mixed,
+  
+  // Status Workflow - Updated to include admin review + backward compatibility
   status: {
     type: String,
     enum: [
-      'draft',                      // Saved but not submitted
-      'pending_admin_review',       // Submitted, waiting for admin
-      'approved_delivered',         // Admin approved, delivered to recipient
-      'rejected',                   // Admin rejected
-      'counter_pending_review',     // Counter received, waiting for admin review
-      'counter_delivered',          // Counter approved and delivered
-      'confirmed',                  // Final agreement reached
-      'declined',                   // Declined by either party
-      'flagged'                     // Flagged for compliance review
+      // New statuses (with admin review layer)
+      'submitted',          // Initial submission by community
+      'admin_approved',     // Approved by admin, forwarded to vendor
+      'admin_rejected',     // Rejected by admin
+      'vendor_accepted',    // Vendor accepted/submitted counter
+      'counter_delivered',  // Admin approved counter, delivered to initiator
+      'vendor_rejected',    // Vendor rejected the request
+      'completed',          // Collaboration completed successfully
+      'cancelled',          // Cancelled by initiator
+      'expired',            // Expired without response
+      
+      // Old statuses (for backward compatibility with existing data)
+      'pending',                  // Legacy - awaiting response
+      'accepted',                 // Legacy - accepted by vendor
+      'rejected',                 // Legacy - rejected
+      'pending_admin_review',     // Legacy - awaiting admin review
+      'approved_delivered',       // Legacy - approved and delivered to recipient
+      'confirmed',                // Legacy - confirmed/accepted
+      'declined',                 // Legacy - declined/rejected
+      'counter_pending_review'    // Legacy - counter awaiting review
     ],
-    default: 'draft',
-    required: true,
+    default: 'submitted',
+    index: true
   },
-
-  // Form data (flexible structure based on type)
-  formData: {
-    // Community → Venue fields
-    eventType: String,
-    expectedAttendees: String,
-    seatingCapacity: String,
-    eventDate: {
-      date: String,
-      startTime: String,
-      endTime: String,
+  
+  // Admin Review (New - IndulgeOut admin review)
+  adminReview: {
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'  // Admin user
     },
-    showBackupDate: Boolean,
-    backupDate: {
-      date: String,
-      startTime: String,
-      endTime: String,
+    reviewedAt: Date,
+    decision: {
+      type: String,
+      enum: ['approved', 'rejected', 'pending_info'],
+      default: null
     },
-    requirements: mongoose.Schema.Types.Mixed, // Nested object of requirements
-
-    // Community → Brand fields
-    eventCategory: String,
-    targetAudience: String,
-    city: String,
-    brandDeliverables: mongoose.Schema.Types.Mixed, // Nested object of deliverables
-
-    // Brand → Community fields
-    campaignObjectives: mongoose.Schema.Types.Mixed,
-    preferredFormats: [String],
-    brandOffers: mongoose.Schema.Types.Mixed,
-    brandExpectations: mongoose.Schema.Types.Mixed,
-
-    // Venue → Community fields
-    venueType: String,
-    capacityRange: String,
-    venueOfferings: mongoose.Schema.Types.Mixed,
-    commercialModels: mongoose.Schema.Types.Mixed,
-    additionalTerms: String,
-
-    // Shared fields
-    pricing: mongoose.Schema.Types.Mixed, // For commercial terms
-    supportingInfo: {
-      images: [String], // Array of Cloudinary URLs
-      note: String,
-    },
+    notes: String  // Admin's internal notes or reason for rejection
   },
-
-  // Admin review fields
-  adminReviewedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+  
+  // Request Details
+  requestDetails: {
+    // For Event-specific collaborations
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event'
+    },
+    eventName: String,
+    eventDate: Date,
+    
+    // Collaboration specifics
+    message: {
+      type: String,
+      required: true,
+      maxlength: 1000
+    },
+    
+    // For Venue Requests
+    venueRequest: {
+      date: Date,
+      timeSlot: String,
+      expectedAttendees: Number,
+      eventType: String,
+      specialRequirements: String,
+      budgetRange: String  // 'free', 'revenue_share', 'rental'
+    },
+    
+    // For Brand Sponsorships
+    brandSponsorship: {
+      sponsorshipType: [{
+        type: String,
+        enum: ['barter', 'paid_monetary', 'product_sampling', 'co-marketing']
+      }],
+      collaborationFormat: [{
+        type: String,
+        enum: ['sponsorship', 'sampling', 'popups', 'experience_partnerships', 'brand_activation', 'content_creation']
+      }],
+      expectedReach: Number,
+      targetAudience: String,
+      budgetProposed: {
+        min: Number,
+        max: Number,
+        currency: { type: String, default: 'INR' }
+      },
+      deliverables: String
+    },
+    
+    // For Community Partnerships
+    communityPartnership: {
+      partnershipType: String,  // 'co-host', 'cross-promotion', 'joint-event'
+      proposedBenefits: String,
+      expectedOutcome: String
+    }
   },
-  adminReviewedAt: Date,
-  adminNotes: String, // Private notes for admin use
-  rejectionReason: String, // Shown to user if rejected
-  complianceFlags: [String], // Auto-detected issues
-
-  // Counter tracking
-  hasCounter: {
+  
+  // Response from recipient
+  response: {
+    message: String,
+    respondedAt: Date,
+    counterOffer: {
+      terms: String,
+      budgetAdjustment: Number
+    }
+  },
+  
+  // Timeline
+  expiresAt: {
+    type: Date,
+    default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)  // 14 days
+  },
+  acceptedAt: Date,
+  rejectedAt: Date,
+  cancelledAt: Date,
+  
+  // Priority for recipient's action queue
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
+  
+  // Communication Thread
+  messages: [{
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    message: String,
+    sentAt: {
+      type: Date,
+      default: Date.now
+    },
+    read: {
+      type: Boolean,
+      default: false
+    }
+  }],
+  
+  // Tracking
+  viewedByRecipient: {
     type: Boolean,
-    default: false,
+    default: false
   },
-  latestCounterId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'CollaborationCounter',
-  },
-
-  // Metadata
-  isDraft: {
-    type: Boolean,
-    default: true,
-  },
+  viewedAt: Date,
+  
+  // Tags for filtering
+  tags: [String],
+  
+  // Internal notes (admin only)
+  internalNotes: String
+  
 }, {
-  timestamps: true, // Adds createdAt and updatedAt
+  timestamps: true
 });
 
 // Indexes for efficient queries
-collaborationSchema.index({ proposerId: 1, createdAt: -1 });
-collaborationSchema.index({ recipientId: 1, createdAt: -1 });
-collaborationSchema.index({ status: 1, createdAt: -1 });
-collaborationSchema.index({ type: 1 });
+collaborationSchema.index({ 'initiator.user': 1, status: 1 });
+collaborationSchema.index({ 'recipient.user': 1, status: 1 });
+collaborationSchema.index({ type: 1, status: 1 });
+collaborationSchema.index({ createdAt: -1 });
+collaborationSchema.index({ expiresAt: 1 });
 
-// Virtual for proposal age
-collaborationSchema.virtual('age').get(function() {
-  return Date.now() - this.createdAt;
+// Virtual for days until expiration
+collaborationSchema.virtual('daysUntilExpiry').get(function() {
+  if (!this.expiresAt) return null;
+  const days = Math.ceil((this.expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+  return days > 0 ? days : 0;
 });
 
-// Method to check if user is involved
-collaborationSchema.methods.isUserInvolved = function(userId) {
-  return this.proposerId.equals(userId) || this.recipientId.equals(userId);
+// Methods
+collaborationSchema.methods.accept = async function(responseMessage = '') {
+  // Only vendors can accept after admin approval
+  if (this.status !== 'admin_approved') {
+    throw new Error('Collaboration must be admin-approved before vendor can respond');
+  }
+  this.status = 'vendor_accepted';
+  this.acceptedAt = new Date();
+  this.response = {
+    message: responseMessage,
+    respondedAt: new Date()
+  };
+  await this.save();
 };
 
-// Method to get user's role in collaboration
-collaborationSchema.methods.getUserRole = function(userId) {
-  if (this.proposerId.equals(userId)) return 'proposer';
-  if (this.recipientId.equals(userId)) return 'recipient';
-  return null;
+collaborationSchema.methods.reject = async function(responseMessage = '') {
+  // Only vendors can reject after admin approval
+  if (this.status !== 'admin_approved') {
+    throw new Error('Collaboration must be admin-approved before vendor can respond');
+  }
+  this.status = 'vendor_rejected';
+  this.rejectedAt = new Date();
+  this.response = {
+    message: responseMessage,
+    respondedAt: new Date()
+  };
+  await this.save();
 };
 
-// Static method to get pending admin reviews
-collaborationSchema.statics.getPendingReviews = function() {
-  return this.find({ status: 'pending_admin_review' })
-    .populate('proposerId', 'name email role profilePicture')
-    .populate('recipientId', 'name email role profilePicture')
-    .sort({ createdAt: 1 }); // Oldest first
+collaborationSchema.methods.cancel = async function() {
+  this.status = 'cancelled';
+  this.cancelledAt = new Date();
+  await this.save();
 };
 
-// Static method to get user's collaborations
-collaborationSchema.statics.getUserCollaborations = function(userId) {
+collaborationSchema.methods.markAsViewed = async function() {
+  if (!this.viewedByRecipient) {
+    this.viewedByRecipient = true;
+    this.viewedAt = new Date();
+    await this.save();
+  }
+};
+
+collaborationSchema.methods.addMessage = async function(senderId, messageText) {
+  this.messages.push({
+    sender: senderId,
+    message: messageText,
+    sentAt: new Date(),
+    read: false
+  });
+  await this.save();
+};
+
+// Statics
+collaborationSchema.statics.getPendingForUser = async function(userId) {
+  // Vendors see only admin-approved requests
   return this.find({
-    $or: [{ proposerId: userId }, { recipientId: userId }],
-    isDraft: false,
-  })
-    .populate('proposerId', 'name email role profilePicture')
-    .populate('recipientId', 'name email role profilePicture')
-    .sort({ createdAt: -1 });
+    'recipient.user': userId,
+    status: 'admin_approved',
+    expiresAt: { $gt: new Date() }
+  }).sort({ priority: 1, createdAt: -1 });
 };
+
+collaborationSchema.statics.getSentByUser = async function(userId, status = null) {
+  const query = {
+    'initiator.user': userId
+  };
+  if (status) {
+    query.status = status;
+  }
+  return this.find(query).sort({ createdAt: -1 });
+};
+
+collaborationSchema.statics.getReceivedByUser = async function(userId, status = null) {
+  const query = {
+    'recipient.user': userId,
+    status: { $in: ['admin_approved', 'vendor_accepted', 'vendor_rejected', 'completed'] }  // Only show admin-approved onwards
+  };
+  if (status) {
+    query.status = status;
+  }
+  return this.find(query).sort({ createdAt: -1 });
+};
+
+collaborationSchema.statics.getActionRequired = async function(userId) {
+  // Vendors see admin-approved requests awaiting their response
+  return this.find({
+    'recipient.user': userId,
+    status: 'admin_approved',
+    expiresAt: { $gt: new Date() }
+  })
+  .sort({ priority: -1, createdAt: -1 })
+  .populate('initiator.user', 'name profilePicture')
+  .populate('requestDetails.eventId', 'title date');
+};
+
+// Auto-expire old requests
+collaborationSchema.statics.expireOldRequests = async function() {
+  const result = await this.updateMany(
+    {
+      status: { $in: ['submitted', 'admin_approved'] },  // Can expire if not yet responded
+      expiresAt: { $lt: new Date() }
+    },
+    {
+      $set: { status: 'expired' }
+    }
+  );
+  return result.modifiedCount;
+};
+
+// Pre-save middleware to set priority based on event date proximity
+collaborationSchema.pre('save', function(next) {
+  if (this.requestDetails?.eventDate) {
+    const daysUntilEvent = Math.ceil((this.requestDetails.eventDate - new Date()) / (1000 * 60 * 60 * 24));
+    if (daysUntilEvent <= 7) {
+      this.priority = 'high';
+    } else if (daysUntilEvent <= 14) {
+      this.priority = 'medium';
+    } else {
+      this.priority = 'low';
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model('Collaboration', collaborationSchema);

@@ -228,6 +228,21 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       console.error('Failed to update analytics:', analyticsError);
     }
 
+    // Generate ticket for the registration
+    let ticket = null;
+    try {
+      ticket = await ticketService.generateTicket({
+        userId,
+        eventId: event._id,
+        amount: event.ticketPrice || event.price?.amount || 0,
+        paymentId: orderId
+      });
+      console.log(`✅ Ticket generated: ${ticket.ticketNumber}`);
+    } catch (ticketError) {
+      console.error('Failed to generate ticket:', ticketError);
+      // Continue without failing the entire registration
+    }
+
     // Send confirmation emails asynchronously
     setImmediate(async () => {
       try {
@@ -245,21 +260,6 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       }
     });
 
-    // Generate ticket for the registered user
-    let ticket = null;
-    try {
-      ticket = await ticketService.generateTicket({
-        userId,
-        eventId: event._id,
-        amount: payment.payment_amount,
-        paymentId: payment.cf_payment_id
-      });
-      console.log('✅ Ticket generated successfully:', ticket.ticketNumber);
-    } catch (ticketError) {
-      console.error('⚠️ Failed to generate ticket:', ticketError);
-      // Don't fail the registration if ticket generation fails
-    }
-
     res.json({
       success: true,
       message: 'Payment verified and registration successful',
@@ -269,9 +269,9 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         date: event.date
       },
       ticket: ticket ? {
-        id: ticket._id,
         ticketNumber: ticket.ticketNumber,
-        downloadUrl: `/api/tickets/${ticket._id}/download`
+        qrCode: ticket.qrCode,
+        downloadUrl: `/api/tickets/${ticket.ticketNumber}/download`
       } : null
     });
 

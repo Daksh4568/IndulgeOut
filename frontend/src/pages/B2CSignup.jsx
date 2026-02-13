@@ -66,11 +66,11 @@ const B2CSignup = () => {
     setIsLoading(true);
 
     try {
-      // Send OTP
-      const identifier =
-        contactMethod === "email" ? formData.email : formData.phoneNumber;
-      await axios.post(`${API_URL}/api/auth/otp/send`, {
-        identifier,
+      // Register new user and send OTP
+      await axios.post(`${API_URL}/api/auth/otp/register`, {
+        name: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
         method: contactMethod,
       });
 
@@ -98,15 +98,11 @@ const B2CSignup = () => {
       const identifier =
         contactMethod === "email" ? formData.email : formData.phoneNumber;
 
-      // Verify OTP and register
+      // Verify OTP and activate account
       const response = await axios.post(`${API_URL}/api/auth/otp/verify`, {
         identifier,
         otp: otpCode,
         method: contactMethod,
-        name: formData.fullName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        role: "user",
       });
 
       // Store token

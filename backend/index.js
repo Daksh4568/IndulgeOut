@@ -23,8 +23,9 @@ const userDashboardRoutes = require('./routes/userDashboard.js');
 const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
 const notificationRoutes = require('./routes/notifications.js');
-const supportRoutes = require('./routes/support.js');
-const { startAllJobs } = require('./jobs/scheduledJobs.js');
+
+// Import scheduled jobs
+const { initializeScheduledJobs } = require('./jobs/scheduledJobs.js');
 
 const app = express();
 
@@ -45,9 +46,6 @@ const connectDB = async () => {
       heartbeatFrequencyMS: 10000, // Check server health every 10 seconds
     });
     console.log('✅ MongoDB connected successfully with connection pool', mongoURI);
-    
-    // Start scheduled jobs for notifications
-    startAllJobs();
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     console.log('📝 Note: If you haven\'t set up MongoDB yet, add MONGODB_URI to your .env file');
@@ -110,7 +108,8 @@ app.use(async (req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/auth', authOTPRoutes); // OTP-based authentication
+app.use('/api/auth', authOTPRoutes); // Mount OTP auth routes (primary OTP system)
+// Note: /api/otp routes (otpRoutes) are deprecated - use /api/auth/otp/* instead
 app.use('/api/events', eventRoutes);
 app.use('/api/events', reviewRoutes); // Review routes under /api/events
 app.use('/api/reviews', reviewRoutes); // Also accessible under /api/reviews
@@ -118,7 +117,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/users', userDashboardRoutes); // User dashboard endpoints
 app.use('/api/communities', communityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
-app.use('/api/otp', otpRoutes);
+// app.use('/api/otp', otpRoutes); // DEPRECATED - Use /api/auth/otp/* instead
 app.use('/api/explore', exploreRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -129,12 +128,12 @@ app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/support', supportRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
   '/api/events', 
   '/api/users',
+  '/api/notifications',
   '/api/communities',
   '/api/recommendations',
   '/api/explore',
@@ -144,8 +143,6 @@ console.log('✅ All routes registered:', [
   '/api/venues',
   '/api/brands',
   '/api/collaborations',
-  '/api/notifications',
-  '/api/support',
   '/api/admin'
 ]);
 
@@ -187,6 +184,13 @@ if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    
+    // Initialize scheduled jobs after server starts
+    try {
+      initializeScheduledJobs();
+    } catch (error) {
+      console.error('❌ Error initializing scheduled jobs:', error);
+    }
   });
 }
 

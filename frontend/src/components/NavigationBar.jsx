@@ -59,6 +59,11 @@ export default function NavigationBar() {
     return user.hostPartnerType === 'community_organizer' || user.hostPartnerType === 'venue';
   };
 
+  const canBrowseVenuesSponsors = () => {
+    if (!user || user.role !== 'host_partner') return false;
+    return user.hostPartnerType === 'community_organizer' || user.hostPartnerType === 'brand_sponsor';
+  };
+
   return (
     <nav className="bg-white dark:bg-black shadow-sm border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -259,175 +264,203 @@ export default function NavigationBar() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
+            className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
+              <X className="h-6 w-6 text-white" />
             ) : (
-              <Menu className="h-6 w-6" />
+              <Menu className="h-6 w-6 text-white dark:text-white" />
             )}
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Side Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {!user ? (
-                // Logged OUT Mobile Menu
-                <>
-                  {/* Explore Section */}
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => setExploreOpen(!exploreOpen)}
-                      className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                    >
-                      EXPLORE
-                      <ChevronDown className={`h-4 w-4 transition-transform ${exploreOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {exploreOpen && (
-                      <div className="pl-4 space-y-1">
-                        <Link
-                          to="/explore?tab=events"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-sm"
-                        >
-                          Events
-                        </Link>
-                        <Link
-                          to="/explore?tab=communities"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-sm"
-                        >
-                          Communities
-                        </Link>
-                        <Link
-                          to="/explore?tab=people"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-sm"
-                        >
-                          People
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            
+            {/* Side Drawer */}
+            <div className="fixed right-0 top-0 h-full w-80 bg-gradient-to-b from-gray-900 via-black to-gray-900 shadow-2xl z-50 md:hidden overflow-y-auto">
+              {/* Header with frosted glass effect */}
+              <div className="sticky top-0 bg-black/40 backdrop-blur-md border-b border-gray-700 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Menu</h2>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <X className="h-6 w-6 text-white" />
+                </button>
+              </div>
 
-                  {/* Categories Section */}
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => setCategoriesOpen(!categoriesOpen)}
-                      className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                    >
-                      CATEGORIES
-                      <ChevronDown className={`h-4 w-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {categoriesOpen && (
-                      <div className="pl-4 space-y-1">
-                        <Link
-                          to="/categories"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-sm"
-                        >
-                          All Categories
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-
-                  <Link
-                    to="/host-partner"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                  >
-                    HOST & PARTNER
-                  </Link>
-                  <Link
-                    to="/about"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                  >
-                    ABOUT
-                  </Link>
-                  
-                  {/* Login/Signup Button - Mobile Only */}
-                  <div className="px-3 pt-2">
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        navigate('/login');
-                      }}
-                      className="w-full text-white px-6 py-3 rounded-md text-sm font-bold uppercase transition-all hover:opacity-90"
-                      style={{ 
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                        fontFamily: 'Oswald, sans-serif'
-                      }}
-                    >
-                      LOG IN/SIGN UP
-                    </button>
-                  </div>
-                </>
-              ) : (
-                // Logged IN Mobile Menu
-                <>
-                  <Link
-                    to={getDashboardRoute()}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                  >
-                    DASHBOARD
-                  </Link>
+              <div className="px-4 py-6 space-y-3">
+                {!user ? (
+                  // Logged OUT Mobile Menu
+                  <>
+                  {/* Explore Card */}
                   <Link
                     to="/explore"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
+                    className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                   >
-                    EXPLORE
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🔍</span>
+                      <span className="text-white font-semibold text-lg">Explore</span>
+                    </div>
+                  </Link>
+
+                  {/* Host & Partner Card */}
+                  <Link
+                    to="/host-partner"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🤝</span>
+                      <span className="text-white font-semibold text-lg">Host & Partner</span>
+                    </div>
+                  </Link>
+
+                  {/* About Card */}
+                  <Link
+                    to="/about"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">ℹ️</span>
+                      <span className="text-white font-semibold text-lg">About</span>
+                    </div>
                   </Link>
                   
-                  {/* Browse Venues and Sponsors - Only for Community Organizers and Brands */}
-                  {canBrowseVenuesSponsors() && (
-                    <>
+                  {/* Login/Signup Button */}
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/login');
+                    }}
+                    className="w-full mt-4 text-white px-6 py-4 rounded-xl text-base font-bold uppercase transition-all hover:opacity-90 shadow-lg"
+                    style={{ 
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                      fontFamily: 'Oswald, sans-serif'
+                    }}
+                  >
+                    LOG IN / SIGN UP
+                  </button>
+                </>
+                ) : (
+                  // Logged IN Mobile Menu
+                  <>
+                    {/* Dashboard Card */}
+                    <Link
+                      to={getDashboardRoute()}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🏠</span>
+                        <span className="text-white font-semibold text-lg">Dashboard</span>
+                      </div>
+                    </Link>
+
+                    {/* Explore Card */}
+                    <Link
+                      to="/explore"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🔍</span>
+                        <span className="text-white font-semibold text-lg">Explore</span>
+                      </div>
+                    </Link>
+                    
+                    {/* Browse Venues - Only for Community Organizers and Brands */}
+                    {canBrowseVenues() && (
                       <Link
                         to="/browse/venues"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
+                        className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                       >
-                        <Building2 className="h-5 w-5" />
-                        <span>Browse Venues</span>
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-6 w-6 text-white" />
+                          <span className="text-white font-semibold text-lg">Browse Venues</span>
+                        </div>
                       </Link>
+                    )}
+
+                    {/* Browse Communities - Only for Venues and Brands */}
+                    {canBrowseCommunities() && (
+                      <Link
+                        to="/browse/communities"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Users className="h-6 w-6 text-white" />
+                          <span className="text-white font-semibold text-lg">Browse Communities</span>
+                        </div>
+                      </Link>
+                    )}
+
+                    {/* Browse Sponsors - Only for Community Organizers and Venues */}
+                    {canBrowseSponsors() && (
                       <Link
                         to="/browse/sponsors"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
+                        className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                       >
-                        <Sparkles className="h-5 w-5" />
-                        <span>Browse Sponsors</span>
+                        <div className="flex items-center gap-3">
+                          <Sparkles className="h-6 w-6 text-white" />
+                          <span className="text-white font-semibold text-lg">Browse Sponsors</span>
+                        </div>
                       </Link>
-                    </>
-                  )}
-                  <Link
-                    to="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 px-3 py-2 rounded-md text-base font-medium"
-                  >
-                    {user.profilePicture ? (
-                      <img
-                        src={user.profilePicture}
-                        alt={user.name}
-                        className="h-8 w-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                        {getUserInitials()}
-                      </div>
                     )}
-                    Profile Settings
-                  </Link>
-                </>
-              )}
+
+                    {/* Profile Settings Card */}
+                    <Link
+                      to="/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        {user.profilePicture ? (
+                          <img
+                            src={user.profilePicture}
+                            alt={user.name}
+                            className="h-10 w-10 rounded-full object-cover border-2 border-gray-600"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
+                            {getUserInitials()}
+                          </div>
+                        )}
+                        <span className="text-white font-semibold text-lg">Profile Settings</span>
+                      </div>
+                    </Link>
+
+                    {/* Logout Button */}
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full mt-6 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 px-6 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-xl">🚪</span>
+                        <span>Logout</span>
+                      </div>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </nav>

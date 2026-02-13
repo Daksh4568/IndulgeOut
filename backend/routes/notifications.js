@@ -1,22 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const Notification = require('../models/Notification');
+const Notification = require('../models/Notification.js');
 const { authMiddleware } = require('../utils/authUtils');
-const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 
-// Get user notifications with pagination and filtering
+// GET /api/notifications - Get all notifications with pagination & filtering
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      category,
-      unreadOnly = 'false',
-      type
+    const userId = req.user._id || req.user.id;
+    const { 
+      page = 1, 
+      limit = 20, 
+      category, 
+      unreadOnly, 
+      type 
     } = req.query;
 
+    const skip = (page - 1) * limit;
+
+    // Build query
     const query = {
-      recipient: req.user.id,
+      recipient: userId,
       isArchived: false
     };
 
@@ -24,34 +27,36 @@ router.get('/', authMiddleware, async (req, res) => {
       query.category = category;
     }
 
-    if (type) {
-      query.type = type;
-    }
-
     if (unreadOnly === 'true') {
       query.isRead = false;
     }
 
-    const notifications = await Notification.find(query)
-      .populate('relatedEvent', 'title date time location images categories')
-      .populate('relatedCommunity', 'name coverImage category')
-      .populate('relatedUser', 'name profilePicture')
-      .populate('relatedTicket', 'ticketNumber qrCode')
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit));
+    if (type) {
+      query.type = type;
+    }
 
-    const total = await Notification.countDocuments(query);
-    const unreadCount = await Notification.getUnreadCount(req.user.id);
+    // Fetch notifications and count
+    const [notifications, total, unreadCount] = await Promise.all([
+      Notification.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate('relatedEvent', 'title date location')
+        .populate('relatedCommunity', 'name profilePicture')
+        .populate('relatedUser', 'name profilePicture')
+        .lean(),
+      Notification.countDocuments(query),
+      Notification.getUnreadCount(userId)
+    ]);
 
     res.json({
       success: true,
       notifications,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / parseInt(limit))
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
       },
       unreadCount
     });
@@ -65,14 +70,15 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// Get unread notification count
+// GET /api/notifications/unread-count - Get unread notification count
 router.get('/unread-count', authMiddleware, async (req, res) => {
   try {
-    const count = await Notification.getUnreadCount(req.user.id);
-    
+    const userId = req.user._id || req.user.id;
+    const unreadCount = await Notification.getUnreadCount(userId);
+
     res.json({
       success: true,
-      unreadCount: count
+      unreadCount
     });
   } catch (error) {
     console.error('Error fetching unread count:', error);
@@ -84,26 +90,27 @@ router.get('/unread-count', authMiddleware, async (req, res) => {
   }
 });
 
-// Get notifications by category
+// GET /api/notifications/category/:category - Get notifications by category
 router.get('/category/:category', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
     const { category } = req.params;
-    const { limit = 20, skip = 0, includeRead = 'true' } = req.query;
+    const { page = 1, limit = 20 } = req.query;
 
-    const notifications = await Notification.getByCategory(
-      req.user.id,
-      category,
-      {
-        limit: parseInt(limit),
-        skip: parseInt(skip),
-        includeRead: includeRead === 'true'
-      }
-    );
+    // Validate category
+    const validCategories = ['action_required', 'status_update', 'reminder', 'milestone'];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid category. Must be one of: ' + validCategories.join(', ')
+      });
+    }
+
+    const result = await Notification.getByCategory(userId, category, { page, limit });
 
     res.json({
       success: true,
-      notifications,
-      category
+      ...result
     });
   } catch (error) {
     console.error('Error fetching notifications by category:', error);
@@ -115,12 +122,54 @@ router.get('/category/:category', authMiddleware, async (req, res) => {
   }
 });
 
-// Mark notification as read
+// GET /api/notifications/preferences - Get user notification preferences
+router.get('/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const User = require('../models/User.js');
+    
+    const user = await User.findById(userId).select('notificationPreferences');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Default preferences if none exist
+    const preferences = user.notificationPreferences || {
+      emailNotifications: true,
+      pushNotifications: true,
+      smsNotifications: false,
+      eventReminders: true,
+      communityUpdates: true,
+      promotionalEmails: false
+    };
+
+    res.json({
+      success: true,
+      preferences
+    });
+  } catch (error) {
+    console.error('Error fetching notification preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch preferences',
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/notifications/:id/read - Mark single notification as read
 router.put('/:id/read', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
+    const { id } = req.params;
+
     const notification = await Notification.findOne({
-      _id: req.params.id,
-      recipient: req.user.id
+      _id: id,
+      recipient: userId
     });
 
     if (!notification) {
@@ -147,9 +196,10 @@ router.put('/:id/read', authMiddleware, async (req, res) => {
   }
 });
 
-// Mark multiple notifications as read
+// PUT /api/notifications/read/bulk - Mark multiple notifications as read
 router.put('/read/bulk', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
     const { notificationIds } = req.body;
 
     if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
@@ -159,7 +209,7 @@ router.put('/read/bulk', authMiddleware, async (req, res) => {
       });
     }
 
-    const result = await Notification.markManyAsRead(notificationIds, req.user.id);
+    const result = await Notification.markManyAsRead(notificationIds, userId);
 
     res.json({
       success: true,
@@ -176,20 +226,12 @@ router.put('/read/bulk', authMiddleware, async (req, res) => {
   }
 });
 
-// Mark all notifications as read
+// PUT /api/notifications/read/all - Mark all notifications as read
 router.put('/read/all', authMiddleware, async (req, res) => {
   try {
-    const result = await Notification.updateMany(
-      { 
-        recipient: req.user.id,
-        isRead: false,
-        isArchived: false
-      },
-      { 
-        isRead: true,
-        readAt: new Date()
-      }
-    );
+    const userId = req.user._id || req.user.id;
+
+    const result = await Notification.markAllAsRead(userId);
 
     res.json({
       success: true,
@@ -206,12 +248,15 @@ router.put('/read/all', authMiddleware, async (req, res) => {
   }
 });
 
-// Archive notification
+// PUT /api/notifications/:id/archive - Archive notification
 router.put('/:id/archive', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
+    const { id } = req.params;
+
     const notification = await Notification.findOne({
-      _id: req.params.id,
-      recipient: req.user.id
+      _id: id,
+      recipient: userId
     });
 
     if (!notification) {
@@ -238,12 +283,67 @@ router.put('/:id/archive', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete notification
+// PUT /api/notifications/preferences - Update notification preferences
+router.put('/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const User = require('../models/User.js');
+    
+    const {
+      emailNotifications,
+      pushNotifications,
+      smsNotifications,
+      eventReminders,
+      communityUpdates,
+      promotionalEmails
+    } = req.body;
+
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update preferences
+    user.notificationPreferences = {
+      ...user.notificationPreferences,
+      ...(emailNotifications !== undefined && { emailNotifications }),
+      ...(pushNotifications !== undefined && { pushNotifications }),
+      ...(smsNotifications !== undefined && { smsNotifications }),
+      ...(eventReminders !== undefined && { eventReminders }),
+      ...(communityUpdates !== undefined && { communityUpdates }),
+      ...(promotionalEmails !== undefined && { promotionalEmails })
+    };
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Notification preferences updated',
+      preferences: user.notificationPreferences
+    });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update preferences',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/notifications/:id - Delete single notification
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
+    const { id } = req.params;
+
     const notification = await Notification.findOneAndDelete({
-      _id: req.params.id,
-      recipient: req.user.id
+      _id: id,
+      recipient: userId
     });
 
     if (!notification) {
@@ -267,13 +367,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete all read notifications
+// DELETE /api/notifications/read/all - Delete all read notifications
 router.delete('/read/all', authMiddleware, async (req, res) => {
   try {
-    const result = await Notification.deleteMany({
-      recipient: req.user.id,
-      isRead: true
-    });
+    const userId = req.user._id || req.user.id;
+
+    const result = await Notification.deleteAllRead(userId);
 
     res.json({
       success: true,
@@ -284,89 +383,7 @@ router.delete('/read/all', authMiddleware, async (req, res) => {
     console.error('Error deleting read notifications:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete notifications',
-      error: error.message
-    });
-  }
-});
-
-// Get notification preferences
-router.get('/preferences', authMiddleware, async (req, res) => {
-  try {
-    const User = require('../models/User');
-    const user = await User.findById(req.user.id).select('preferences');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      preferences: user.preferences || {}
-    });
-  } catch (error) {
-    console.error('Error fetching notification preferences:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch preferences',
-      error: error.message
-    });
-  }
-});
-
-// Update notification preferences
-router.put('/preferences', authMiddleware, async (req, res) => {
-  try {
-    const User = require('../models/User');
-    const {
-      emailNotifications,
-      pushNotifications,
-      eventReminders,
-      communityUpdates
-    } = req.body;
-
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Update preferences
-    if (!user.preferences) {
-      user.preferences = {};
-    }
-
-    if (emailNotifications !== undefined) {
-      user.preferences.emailNotifications = emailNotifications;
-    }
-    if (pushNotifications !== undefined) {
-      user.preferences.pushNotifications = pushNotifications;
-    }
-    if (eventReminders !== undefined) {
-      user.preferences.eventReminders = eventReminders;
-    }
-    if (communityUpdates !== undefined) {
-      user.preferences.communityUpdates = communityUpdates;
-    }
-
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'Notification preferences updated',
-      preferences: user.preferences
-    });
-  } catch (error) {
-    console.error('Error updating notification preferences:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update preferences',
+      message: 'Failed to delete read notifications',
       error: error.message
     });
   }

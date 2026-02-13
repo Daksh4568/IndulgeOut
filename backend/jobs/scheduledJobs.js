@@ -1,266 +1,339 @@
 const cron = require('node-cron');
-const Event = require('../models/Event');
-const User = require('../models/User');
-const Ticket = require('../models/Ticket');
-const notificationService = require('../services/notificationService');
+const Event = require('../models/Event.js');
+const User = require('../models/User.js');
+const Notification = require('../models/Notification.js');
+const notificationService = require('../services/notificationService.js');
 
-// Job to send event reminders 24 hours before the event
-const sendEventReminders = cron.schedule('0 9 * * *', async () => {
-  // Runs daily at 9:00 AM
-  console.log('Running event reminder job...');
+// Store scheduled task references for cleanup if needed
+const scheduledTasks = [];
 
+/**
+ * Initialize all scheduled jobs
+ */
+function initializeScheduledJobs() {
+  console.log('🕐 Initializing scheduled notification jobs...');
+  
+  // Event reminders - runs daily at 9:00 AM
+  const eventReminderJob = cron.schedule('0 9 * * *', async () => {
+    console.log('⏰ Running event reminder job...');
+    await sendEventReminders();
+  });
+  scheduledTasks.push(eventReminderJob);
+  
+  // Post-event rating requests - runs daily at 10:00 AM
+  const ratingRequestJob = cron.schedule('0 10 * * *', async () => {
+    console.log('⭐ Running post-event rating request job...');
+    await sendRatingRequests();
+  });
+  scheduledTasks.push(ratingRequestJob);
+  
+  // Profile incomplete reminders - runs every Monday at 9:00 AM
+  const profileReminderJob = cron.schedule('0 9 * * 1', async () => {
+    console.log('👤 Running profile incomplete reminder job...');
+    await sendProfileIncompleteReminders();
+  });
+  scheduledTasks.push(profileReminderJob);
+  
+  // Draft event reminders - runs every Wednesday at 10:00 AM
+  const draftEventJob = cron.schedule('0 10 * * 3', async () => {
+    console.log('📝 Running draft event reminder job...');
+    await sendDraftEventReminders();
+  });
+  scheduledTasks.push(draftEventJob);
+  
+  // KYC pending reminders - runs every Friday at 11:00 AM
+  const kycReminderJob = cron.schedule('0 11 * * 5', async () => {
+    console.log('💳 Running KYC pending reminder job...');
+    await sendKYCPendingReminders();
+  });
+  scheduledTasks.push(kycReminderJob);
+  
+  console.log('✅ Scheduled jobs initialized:');
+  console.log('   - Event reminders: Daily at 9:00 AM');
+  console.log('   - Rating requests: Daily at 10:00 AM');
+  console.log('   - Profile reminders: Mondays at 9:00 AM');
+  console.log('   - Draft event reminders: Wednesdays at 10:00 AM');
+  console.log('   - KYC reminders: Fridays at 11:00 AM');
+}
+
+/**
+ * Send event reminders - 24 hours before event
+ */
+async function sendEventReminders() {
   try {
     const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-
-    const dayAfterTomorrow = new Date(tomorrow);
-    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-
-    // Find events happening in the next 24-48 hours
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const dayAfterTomorrow = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+    
+    // Find events happening tomorrow
     const upcomingEvents = await Event.find({
-      eventDate: {
+      date: {
         $gte: tomorrow,
         $lt: dayAfterTomorrow
       },
-      status: 'active'
-    }).populate({
-      path: 'participants.user',
-      select: 'name email emailNotifications eventReminders'
-    });
-
-    console.log(`Found ${upcomingEvents.length} events happening tomorrow`);
-
+      status: 'published'
+    }).populate('participants.user');
+    
+    console.log(`📅 Found ${upcomingEvents.length} events happening tomorrow`);
+    
     for (const event of upcomingEvents) {
-      // Notify all registered participants
+      // Check if we already sent reminder for this event today
+      const existingReminder = await Notification.findOne({
+        type: 'event_reminder',
+        relatedEvent: event._id,
+        createdAt: {
+          $gte: new Date(now.setHours(0, 0, 0, 0))
+        }
+      });
+      
+      if (existingReminder) {
+        console.log(`⏭️ Skipping event ${event.title} - reminder already sent today`);
+        continue;
+      }
+      
+      // Send reminder to all participants
       for (const participant of event.participants) {
-        if (participant.user) {
+        if (participant.user && participant.user._id) {
           try {
             await notificationService.notifyEventReminder(
               participant.user._id,
-              event,
-              event.eventDate
+              event
             );
           } catch (error) {
-            console.error(`Failed to send reminder to user ${participant.user._id}:`, error);
+            console.error(`❌ Error sending reminder to user ${participant.user._id}:`, error.message);
           }
         }
       }
+      
+      console.log(`✅ Sent reminders for event: ${event.title}`);
     }
-
-    console.log('Event reminder job completed');
+    
+    console.log('✨ Event reminder job completed');
   } catch (error) {
-    console.error('Error in event reminder job:', error);
+    console.error('❌ Error in sendEventReminders:', error);
   }
-}, {
-  scheduled: false // Don't start immediately, will be started manually
-});
+}
 
-// Job to send post-event rating requests
-const sendPostEventRatings = cron.schedule('0 10 * * *', async () => {
-  // Runs daily at 10:00 AM
-  console.log('Running post-event rating job...');
-
+/**
+ * Send post-event rating requests
+ */
+async function sendRatingRequests() {
   try {
     const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-
-    // Find events that ended yesterday
-    const completedEvents = await Event.find({
-      eventDate: {
-        $gte: yesterday,
-        $lt: today
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    
+    // Find events that happened yesterday
+    const pastEvents = await Event.find({
+      date: {
+        $gte: twoDaysAgo,
+        $lt: yesterday
       },
-      status: 'active'
-    }).populate({
-      path: 'participants.user',
-      select: 'name email emailNotifications'
-    });
-
-    console.log(`Found ${completedEvents.length} events completed yesterday`);
-
-    for (const event of completedEvents) {
-      // Notify all participants to rate their experience
+      status: 'published'
+    }).populate('participants.user');
+    
+    console.log(`⭐ Found ${pastEvents.length} events from yesterday`);
+    
+    for (const event of pastEvents) {
+      // Check if we already sent rating request for this event
+      const existingRequest = await Notification.findOne({
+        type: 'rate_experience',
+        relatedEvent: event._id
+      });
+      
+      if (existingRequest) {
+        console.log(`⏭️ Skipping event ${event.title} - rating request already sent`);
+        continue;
+      }
+      
+      // Send rating request to all participants
       for (const participant of event.participants) {
-        if (participant.user) {
+        if (participant.user && participant.user._id) {
           try {
             await notificationService.notifyRateExperience(
               participant.user._id,
               event
             );
           } catch (error) {
-            console.error(`Failed to send rating request to user ${participant.user._id}:`, error);
+            console.error(`❌ Error sending rating request to user ${participant.user._id}:`, error.message);
           }
         }
       }
+      
+      console.log(`✅ Sent rating requests for event: ${event.title}`);
     }
-
-    console.log('Post-event rating job completed');
+    
+    console.log('✨ Rating request job completed');
   } catch (error) {
-    console.error('Error in post-event rating job:', error);
+    console.error('❌ Error in sendRatingRequests:', error);
   }
-}, {
-  scheduled: false
-});
+}
 
-// Job to check for incomplete profiles and send reminders (weekly)
-const sendProfileIncompleteReminders = cron.schedule('0 9 * * 1', async () => {
-  // Runs every Monday at 9:00 AM
-  console.log('Running profile incomplete reminder job...');
-
+/**
+ * Send profile incomplete reminders
+ */
+async function sendProfileIncompleteReminders() {
   try {
+    // Find users with incomplete profiles who haven't been reminded in 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
     const users = await User.find({
       $or: [
-        { interests: { $size: 0 } },
+        { profilePicture: { $exists: false } },
         { location: { $exists: false } },
-        { phoneNumber: { $exists: false } }
+        { location: null },
+        { interests: { $size: 0 } }
       ]
     });
-
-    console.log(`Found ${users.length} users with incomplete profiles`);
-
+    
+    console.log(`👤 Found ${users.length} users with incomplete profiles`);
+    
     for (const user of users) {
+      // Check if we already sent reminder in the last 7 days
+      const recentReminder = await Notification.findOne({
+        recipient: user._id,
+        type: user.role === 'host_partner' ? 'profile_incomplete_host' : 'profile_incomplete_user',
+        createdAt: { $gte: sevenDaysAgo }
+      });
+      
+      if (recentReminder) {
+        console.log(`⏭️ Skipping user ${user.name} - already reminded recently`);
+        continue;
+      }
+      
+      // Send appropriate reminder based on role
       try {
-        const missingFields = [];
-        if (!user.interests || user.interests.length === 0) missingFields.push('interests');
-        if (!user.location) missingFields.push('location');
-        if (!user.phoneNumber) missingFields.push('phone number');
-
-        if (user.role === 'user') {
-          await notificationService.notifyProfileIncompleteUser(
-            user._id,
-            missingFields
-          );
-        } else if (user.role === 'host_partner') {
+        if (user.role === 'host_partner') {
           await notificationService.notifyProfileIncompleteHost(user._id);
+        } else {
+          const missingFields = [];
+          if (!user.profilePicture) missingFields.push('profilePicture');
+          if (!user.location) missingFields.push('location');
+          if (!user.interests || user.interests.length === 0) missingFields.push('interests');
+          
+          await notificationService.notifyProfileIncompleteUser(user._id, missingFields);
         }
+        console.log(`✅ Sent profile reminder to: ${user.name}`);
       } catch (error) {
-        console.error(`Failed to send profile reminder to user ${user._id}:`, error);
+        console.error(`❌ Error sending profile reminder to user ${user._id}:`, error.message);
       }
     }
-
-    console.log('Profile incomplete reminder job completed');
+    
+    console.log('✨ Profile reminder job completed');
   } catch (error) {
-    console.error('Error in profile incomplete reminder job:', error);
+    console.error('❌ Error in sendProfileIncompleteReminders:', error);
   }
-}, {
-  scheduled: false
-});
+}
 
-// Job to check for draft events and remind hosts (weekly)
-const sendDraftEventReminders = cron.schedule('0 10 * * 3', async () => {
-  // Runs every Wednesday at 10:00 AM
-  console.log('Running draft event reminder job...');
-
+/**
+ * Send draft event reminders to hosts
+ */
+async function sendDraftEventReminders() {
   try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Find draft events created more than 7 days ago
     const draftEvents = await Event.find({
       status: 'draft',
-      createdAt: { $lt: sevenDaysAgo }
-    }).populate('host', 'name email emailNotifications');
-
-    console.log(`Found ${draftEvents.length} draft events older than 7 days`);
-
+      createdAt: { $lte: sevenDaysAgo }
+    }).populate('host');
+    
+    console.log(`📝 Found ${draftEvents.length} draft events older than 7 days`);
+    
     for (const event of draftEvents) {
-      if (event.host) {
-        try {
-          await notificationService.notifyEventDraftIncomplete(
-            event.host._id,
-            event._id,
-            event.title || 'Untitled Event'
-          );
-        } catch (error) {
-          console.error(`Failed to send draft reminder for event ${event._id}:`, error);
-        }
+      if (!event.host) continue;
+      
+      // Check if we already sent reminder for this draft
+      const recentReminder = await Notification.findOne({
+        recipient: event.host._id,
+        type: 'event_draft_incomplete',
+        relatedEvent: event._id,
+        createdAt: { $gte: sevenDaysAgo }
+      });
+      
+      if (recentReminder) {
+        console.log(`⏭️ Skipping draft ${event.title} - already reminded recently`);
+        continue;
+      }
+      
+      try {
+        await notificationService.notifyEventDraftIncomplete(
+          event.host._id,
+          event._id,
+          event.title
+        );
+        console.log(`✅ Sent draft reminder for event: ${event.title}`);
+      } catch (error) {
+        console.error(`❌ Error sending draft reminder for event ${event._id}:`, error.message);
       }
     }
-
-    console.log('Draft event reminder job completed');
+    
+    console.log('✨ Draft event reminder job completed');
   } catch (error) {
-    console.error('Error in draft event reminder job:', error);
+    console.error('❌ Error in sendDraftEventReminders:', error);
   }
-}, {
-  scheduled: false
-});
+}
 
-// Job to check KYC pending status (weekly)
-const sendKYCPendingReminders = cron.schedule('0 11 * * 5', async () => {
-  // Runs every Friday at 11:00 AM
-  console.log('Running KYC pending reminder job...');
-
+/**
+ * Send KYC pending reminders to hosts
+ */
+async function sendKYCPendingReminders() {
   try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Find hosts with pending KYC (no payout details)
     const hosts = await User.find({
       role: 'host_partner',
       $or: [
         { 'payoutDetails.accountNumber': { $exists: false } },
-        { 'payoutDetails.ifscCode': { $exists: false } },
-        { 'payoutDetails.accountHolderName': { $exists: false } }
+        { 'payoutDetails.bankName': { $exists: false } }
       ]
     });
-
-    console.log(`Found ${hosts.length} hosts with pending KYC details`);
-
+    
+    console.log(`💳 Found ${hosts.length} hosts with pending KYC`);
+    
     for (const host of hosts) {
+      // Check if we already sent reminder in the last 7 days
+      const recentReminder = await Notification.findOne({
+        recipient: host._id,
+        type: 'kyc_pending',
+        createdAt: { $gte: sevenDaysAgo }
+      });
+      
+      if (recentReminder) {
+        console.log(`⏭️ Skipping host ${host.name} - already reminded recently`);
+        continue;
+      }
+      
       try {
         await notificationService.notifyKYCPending(host._id);
+        console.log(`✅ Sent KYC reminder to: ${host.name}`);
       } catch (error) {
-        console.error(`Failed to send KYC reminder to host ${host._id}:`, error);
+        console.error(`❌ Error sending KYC reminder to host ${host._id}:`, error.message);
       }
     }
-
-    console.log('KYC pending reminder job completed');
+    
+    console.log('✨ KYC reminder job completed');
   } catch (error) {
-    console.error('Error in KYC pending reminder job:', error);
+    console.error('❌ Error in sendKYCPendingReminders:', error);
   }
-}, {
-  scheduled: false
-});
+}
 
-// Function to start all scheduled jobs
-const startAllJobs = () => {
-  console.log('Starting all scheduled jobs...');
-  
-  sendEventReminders.start();
-  console.log('✓ Event reminders job started (daily at 9:00 AM)');
-  
-  sendPostEventRatings.start();
-  console.log('✓ Post-event ratings job started (daily at 10:00 AM)');
-  
-  sendProfileIncompleteReminders.start();
-  console.log('✓ Profile incomplete reminders job started (weekly on Monday at 9:00 AM)');
-  
-  sendDraftEventReminders.start();
-  console.log('✓ Draft event reminders job started (weekly on Wednesday at 10:00 AM)');
-  
-  sendKYCPendingReminders.start();
-  console.log('✓ KYC pending reminders job started (weekly on Friday at 11:00 AM)');
-  
-  console.log('All scheduled jobs started successfully!');
-};
-
-// Function to stop all scheduled jobs
-const stopAllJobs = () => {
-  sendEventReminders.stop();
-  sendPostEventRatings.stop();
-  sendProfileIncompleteReminders.stop();
-  sendDraftEventReminders.stop();
-  sendKYCPendingReminders.stop();
-  console.log('All scheduled jobs stopped');
-};
+/**
+ * Stop all scheduled tasks (for cleanup/testing)
+ */
+function stopAllJobs() {
+  console.log('🛑 Stopping all scheduled jobs...');
+  scheduledTasks.forEach(task => task.stop());
+  console.log('✅ All scheduled jobs stopped');
+}
 
 module.exports = {
-  startAllJobs,
+  initializeScheduledJobs,
   stopAllJobs,
+  // Export individual functions for manual testing
   sendEventReminders,
-  sendPostEventRatings,
+  sendRatingRequests,
   sendProfileIncompleteReminders,
   sendDraftEventReminders,
   sendKYCPendingReminders
