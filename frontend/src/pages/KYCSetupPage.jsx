@@ -16,9 +16,8 @@ const KYCSetupPage = () => {
     accountHolderName: '',
     accountNumber: '',
     ifscCode: '',
-    bankName: '',
-    accountType: 'savings',
-    panNumber: '',
+    billingAddress: '',
+    upiId: '',
     gstNumber: ''
   });
 
@@ -59,7 +58,7 @@ const KYCSetupPage = () => {
 
     // Validation
     if (!bankDetails.accountHolderName || !bankDetails.accountNumber || 
-        !bankDetails.ifscCode || !bankDetails.bankName || !bankDetails.panNumber) {
+        !bankDetails.ifscCode || !bankDetails.billingAddress) {
       setError('Please fill in all required fields');
       return;
     }
@@ -299,8 +298,8 @@ const KYCSetupPage = () => {
                 </label>
                 <input
                   type="text"
-                  value={bankDetails.bankName}
-                  onChange={(e) => handleBankDetailsChange('bankName', e.target.value)}
+                  value={bankDetails.billingAddress}
+                  onChange={(e) => handleBankDetailsChange('billingAddress', e.target.value)}
                   placeholder="e.g. Mukesh Ganpade"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                   required
@@ -309,7 +308,7 @@ const KYCSetupPage = () => {
 
               <div>
                 <label className="block text-sm text-gray-400 mb-2">
-                  GSTIN (optional) <span className="text-red-500">*</span>
+                  GSTIN (optional)
                 </label>
                 <input
                   type="text"
@@ -322,15 +321,14 @@ const KYCSetupPage = () => {
 
               <div>
                 <label className="block text-sm text-gray-400 mb-2">
-                  UPI ID (optional) <span className="text-red-500">*</span>
+                  UPI ID (optional)
                 </label>
                 <input
                   type="text"
-                  value={bankDetails.panNumber}
-                  onChange={(e) => handleBankDetailsChange('panNumber', e.target.value.toUpperCase())}
+                  value={bankDetails.upiId}
+                  onChange={(e) => handleBankDetailsChange('upiId', e.target.value)}
                   placeholder="e.g. Mukesh Ganpade"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
-                  required
                 />
               </div>
 

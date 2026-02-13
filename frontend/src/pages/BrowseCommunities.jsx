@@ -169,14 +169,15 @@ const BrowseCommunities = () => {
       return;
     }
     
-    // Determine proposal type based on user role
+    // Determine proposal type based on user hostPartnerType
     let proposalType;
     let proposerType;
     
-    if (user.role === 'brand') {
+    // Check hostPartnerType for host_partner role users
+    if (user.hostPartnerType === 'brand_sponsor') {
       proposalType = 'brandToCommunity';
       proposerType = 'brand';
-    } else if (user.role === 'venue') {
+    } else if (user.hostPartnerType === 'venue') {
       proposalType = 'venueToCommunity';
       proposerType = 'venue';
     } else {

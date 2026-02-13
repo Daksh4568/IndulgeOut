@@ -35,6 +35,12 @@ import BrowseCommunities from './pages/BrowseCommunities'
 import RequestCollaboration from './pages/RequestCollaboration'
 import CollaborationManagement from './pages/CollaborationManagement'
 import ProposalForm from './pages/ProposalForm'
+import VenueCounterForm from './pages/VenueCounterForm'
+import BrandCounterForm from './pages/BrandCounterForm'
+import CommunityCounterFormBrand from './pages/CommunityCounterFormBrand'
+import CommunityCounterFormVenue from './pages/CommunityCounterFormVenue'
+import CounterFormRouter from './pages/CounterFormRouter'
+import FinalTermsView from './pages/FinalTermsView'
 import AdminDashboard from './pages/AdminDashboard'
 import VenueDashboard from './pages/VenueDashboard'
 import BrandDashboard from './pages/BrandDashboard'
@@ -49,14 +55,6 @@ import RefundsCancellations from './pages/RefundsCancellations'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import NotificationCenter from './pages/NotificationCenter'
 import KYCSetupPage from './pages/KYCSetupPage'
-
-// Counter Forms
-import VenueCounterForm from './pages/counter/VenueCounterForm'
-import BrandCounterForm from './pages/counter/BrandCounterForm'
-import CommunityCounterToBrandForm from './pages/counter/CommunityCounterToBrandForm'
-import CommunityCounterToVenueForm from './pages/counter/CommunityCounterToVenueForm'
-import CounterDetailsView from './pages/CounterDetailsView'
-import FinalTermsView from './pages/FinalTermsView'
 
 // Create a toast context
 export const ToastContext = React.createContext(null)
@@ -151,12 +149,10 @@ function AppContent() {
         <Route path="/organizer/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
         <Route path="/collaborations" element={<ErrorBoundary><CollaborationManagement /></ErrorBoundary>} />
         
-        {/* Counter Forms */}
-        <Route path="/collaborations/:id/counter/venue" element={<ErrorBoundary><VenueCounterForm /></ErrorBoundary>} />
-        <Route path="/collaborations/:id/counter/brand" element={<ErrorBoundary><BrandCounterForm /></ErrorBoundary>} />
-        <Route path="/collaborations/:id/counter/community-to-brand" element={<ErrorBoundary><CommunityCounterToBrandForm /></ErrorBoundary>} />
-        <Route path="/collaborations/:id/counter/community-to-venue" element={<ErrorBoundary><CommunityCounterToVenueForm /></ErrorBoundary>} />
-        <Route path="/collaborations/:id/counter-review" element={<ErrorBoundary><CounterDetailsView /></ErrorBoundary>} />
+        {/* Counter Forms - Smart router detects collaboration type */}
+        <Route path="/collaborations/:id/counter" element={<ErrorBoundary><CounterFormRouter /></ErrorBoundary>} />
+        
+        {/* View Final Terms after collaboration is confirmed */}
         <Route path="/collaborations/:id/final-terms" element={<ErrorBoundary><FinalTermsView /></ErrorBoundary>} />
         
         <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />

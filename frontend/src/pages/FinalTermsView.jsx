@@ -87,7 +87,12 @@ const FinalTermsView = () => {
   }
 
   const original = collaboration.formData || {};
-  const counter = collaboration.latestCounterId?.counterData || collaboration.counterData || {};
+  
+  // Counter data can be in multiple places depending on data structure
+  const counter = collaboration.counterData || 
+                  collaboration.response?.counterOffer || 
+                  {};
+  
   const fieldResponses = counter.fieldResponses || {};
   
   // Convert Map to object if needed
@@ -118,7 +123,9 @@ const FinalTermsView = () => {
                   <h1 className="text-2xl font-bold">Collaboration Confirmed</h1>
                 </div>
                 <p className="text-gray-400 text-sm">
-                  Final agreed terms between you and <span className="text-white">{collaboration.recipientId?.name || collaboration.proposerId?.name}</span>
+                  Final agreed terms between you and <span className="text-white">
+                    {collaboration.recipient?.name || collaboration.recipientId?.name || collaboration.recipientId?.username || 'Unknown'}
+                  </span>
                 </p>
               </div>
               <button
@@ -170,11 +177,15 @@ const FinalTermsView = () => {
             <div className="space-y-2">
               <div>
                 <p className="text-xs text-gray-500">Name</p>
-                <p className="text-sm text-white">{collaboration.proposerId?.name || collaboration.proposerId?.username || 'Unknown'}</p>
+                <p className="text-sm text-white">
+                  {collaboration.initiator?.name || 'Unknown'}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Type</p>
-                <p className="text-sm text-white capitalize">{collaboration.proposerType}</p>
+                <p className="text-sm text-white capitalize">
+                  {collaboration.initiator?.userType?.replace('_', ' ') || collaboration.proposerType || 'Community'}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Email</p>
@@ -188,11 +199,15 @@ const FinalTermsView = () => {
             <div className="space-y-2">
               <div>
                 <p className="text-xs text-gray-500">Name</p>
-                <p className="text-sm text-white">{collaboration.recipientId?.name || collaboration.recipientId?.username || 'Unknown'}</p>
+                <p className="text-sm text-white">
+                  {collaboration.recipient?.name || 'Unknown'}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Type</p>
-                <p className="text-sm text-white capitalize">{collaboration.recipientType}</p>
+                <p className="text-sm text-white capitalize">
+                  {collaboration.recipient?.userType?.replace('_', ' ') || collaboration.recipientType || 'Venue'}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Email</p>
