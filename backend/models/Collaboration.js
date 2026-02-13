@@ -9,57 +9,98 @@ const collaborationSchema = new mongoose.Schema({
   // Request Type
   type: {
     type: String,
-    enum: ['venue_request', 'brand_sponsorship', 'community_partnership'],
+    enum: [
+      // New types (with admin review layer)
+      'venue_request', 
+      'brand_sponsorship', 
+      'community_partnership',
+      // Old types (for backward compatibility)
+      'communityToVenue',
+      'communityToBrand',
+      'venueToCommunity',
+      'brandToCommunity'
+    ],
     required: true,
     index: true
   },
   
-  // Initiator (Who sent the request)
+  // NEW STRUCTURE - Initiator (Who sent the request)
   initiator: {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
       index: true
     },
     userType: {
       type: String,
-      enum: ['community_organizer', 'venue', 'brand_sponsor'],
-      required: true
+      enum: ['community_organizer', 'venue', 'brand_sponsor']
     },
     name: String,  // Community/Venue/Brand name
     profileImage: String
   },
   
-  // Recipient (Who receives the request)
+  // NEW STRUCTURE - Recipient (Who receives the request)
   recipient: {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
       index: true
     },
     userType: {
       type: String,
-      enum: ['community_organizer', 'venue', 'brand_sponsor'],
-      required: true
+      enum: ['community_organizer', 'venue', 'brand_sponsor']
     },
     name: String,
     profileImage: String
   },
   
-  // Status Workflow - Updated to include admin review
+  // OLD STRUCTURE - For backward compatibility with existing data
+  proposerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+  proposerType: {
+    type: String,
+    enum: ['community', 'venue', 'brand']
+  },
+  recipientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+  recipientType: {
+    type: String,
+    enum: ['community', 'venue', 'brand']
+  },
+  
+  // Form data (old structure - for backward compatibility)
+  formData: mongoose.Schema.Types.Mixed,
+  
+  // Status Workflow - Updated to include admin review + backward compatibility
   status: {
     type: String,
     enum: [
+      // New statuses (with admin review layer)
       'submitted',          // Initial submission by community
       'admin_approved',     // Approved by admin, forwarded to vendor
       'admin_rejected',     // Rejected by admin
-      'vendor_accepted',    // Vendor accepted the request
+      'vendor_accepted',    // Vendor accepted/submitted counter
+      'counter_delivered',  // Admin approved counter, delivered to initiator
       'vendor_rejected',    // Vendor rejected the request
       'completed',          // Collaboration completed successfully
       'cancelled',          // Cancelled by initiator
-      'expired'             // Expired without response
+      'expired',            // Expired without response
+      
+      // Old statuses (for backward compatibility with existing data)
+      'pending',                  // Legacy - awaiting response
+      'accepted',                 // Legacy - accepted by vendor
+      'rejected',                 // Legacy - rejected
+      'pending_admin_review',     // Legacy - awaiting admin review
+      'approved_delivered',       // Legacy - approved and delivered to recipient
+      'confirmed',                // Legacy - confirmed/accepted
+      'declined',                 // Legacy - declined/rejected
+      'counter_pending_review'    // Legacy - counter awaiting review
     ],
     default: 'submitted',
     index: true

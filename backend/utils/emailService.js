@@ -22,10 +22,14 @@ const createTransporter = () => {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT) || 587,
     secure: false,
+    family: 4, // Force IPv4 (fixes ENETUNREACH IPv6 connectivity issues)
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    tls: {
+      rejectUnauthorized: false // For development
+    }
   });
 };
 
@@ -236,8 +240,135 @@ const sendEventNotificationToHost = async (hostEmail, hostName, user, event) => 
   }
 };
 
+// Send OTP email
+const sendOTPEmail = async (emailAddress, otp, userName = 'User') => {
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: emailAddress,
+      subject: 'Your IndulgeOut Login Code 🔐',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Your Login Code</h1>
+          </div>
+          
+          <div style="padding: 30px; background: #f9fafb;">
+            <h2 style="color: #333; margin-bottom: 20px;">Hi ${userName}! 👋</h2>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+              You requested to login to your IndulgeOut account. Use the code below to complete your login:
+            </p>
+            
+            <div style="background: white; padding: 30px; border-radius: 12px; text-align: center; margin: 25px 0; border: 2px solid #6366f1;">
+              <p style="color: #666; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Your OTP Code</p>
+              <p style="color: #6366f1; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 10px 0; font-family: 'Courier New', monospace;">
+                ${otp}
+              </p>
+              <p style="color: #999; font-size: 13px; margin: 10px 0 0 0;">This code expires in 10 minutes</p>
+            </div>
+            
+            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p style="color: #92400e; margin: 0; font-size: 14px;">
+                ⚠️ <strong>Security Notice:</strong> Never share this code with anyone. IndulgeOut staff will never ask for your OTP.
+              </p>
+            </div>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+              If you didn't request this code, you can safely ignore this email. Someone may have entered your email address by mistake.
+            </p>
+            
+            <p style="color: #666; line-height: 1.6; margin-top: 30px;">
+              Best regards,<br>
+              The IndulgeOut Team 🎉
+            </p>
+          </div>
+          
+          <div style="background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; font-size: 14px;">
+            <p style="margin: 0;">
+              © 2025 IndulgeOut. All rights reserved.
+            </p>
+            <p style="margin: 10px 0 0 0;">
+              Find offline experiences, join communities and connect with people
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ OTP email sent successfully to:', emailAddress);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending OTP email:', error);
+    throw error;
+  }
+};
+
+// Send general notification email
+const sendNotificationEmail = async (userEmail, title, message, actionUrl = null, actionText = null) => {
+  try {
+    const actionButton = actionUrl && actionText
+      ? `
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${actionUrl}" 
+             style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                    color: white;
+                    padding: 14px 32px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    display: inline-block;
+                    box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);">
+            ${actionText}
+          </a>
+        </div>
+      `
+      : '';
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: title,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb;">
+          <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">📬 ${title}</h1>
+          </div>
+          
+          <div style="background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              ${message}
+            </div>
+            
+            ${actionButton}
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; text-align: center;">
+              <p style="margin: 5px 0;">
+                This notification was sent from IndulgeOut
+              </p>
+              <p style="margin: 5px 0;">
+                Manage your notification preferences in your dashboard settings
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Notification email sent successfully to:', userEmail);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending notification email:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
+  sendOTPEmail,
   sendEventRegistrationEmail,
-  sendEventNotificationToHost
+  sendEventNotificationToHost,
+  sendNotificationEmail
 };

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const userAnalyticsSchema = new mongoose.Schema({
   // Event Registration Analytics
@@ -100,15 +99,6 @@ const userSchema = new mongoose.Schema({
       },
       message: 'Please provide a valid Indian mobile number (10 digits)'
     }
-  },
-  password: {
-    type: String,
-    required: true, // Password is always required now
-    minlength: 6
-  },
-  isOTPUser: {
-    type: Boolean,
-    default: false
   },
   otpVerification: {
     otp: String,
@@ -357,32 +347,5 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
-
-// Hash password before saving
-// Using 10 rounds for better performance under load while maintaining security
-// 10 rounds = ~100-150ms vs 12 rounds = ~300-500ms per hash
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
-
-// Remove password from JSON output
-userSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  return user;
-};
 
 module.exports = mongoose.model('User', userSchema);

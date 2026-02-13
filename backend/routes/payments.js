@@ -6,6 +6,7 @@ const User = require('../models/User.js');
 const { authMiddleware } = require('../utils/authUtils.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
+const ticketService = require('../services/ticketService.js');
 
 const router = express.Router();
 
@@ -227,6 +228,21 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       console.error('Failed to update analytics:', analyticsError);
     }
 
+    // Generate ticket for the registration
+    let ticket = null;
+    try {
+      ticket = await ticketService.generateTicket({
+        userId,
+        eventId: event._id,
+        amount: event.ticketPrice || event.price?.amount || 0,
+        paymentId: orderId
+      });
+      console.log(`✅ Ticket generated: ${ticket.ticketNumber}`);
+    } catch (ticketError) {
+      console.error('Failed to generate ticket:', ticketError);
+      // Continue without failing the entire registration
+    }
+
     // Send confirmation emails asynchronously
     setImmediate(async () => {
       try {
@@ -251,7 +267,12 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         id: event._id,
         title: event.title,
         date: event.date
-      }
+      },
+      ticket: ticket ? {
+        ticketNumber: ticket.ticketNumber,
+        qrCode: ticket.qrCode,
+        downloadUrl: `/api/tickets/${ticket.ticketNumber}/download`
+      } : null
     });
 
   } catch (error) {

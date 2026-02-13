@@ -5,6 +5,7 @@ const compression = require('compression');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth.js');
+const authOTPRoutes = require('./routes/authOTP.js');
 const eventRoutes = require('./routes/events.js');
 const userRoutes = require('./routes/users.js');
 const communityRoutes = require('./routes/communities.js');
@@ -21,6 +22,10 @@ const adminRoutes = require('./routes/admin.js');
 const userDashboardRoutes = require('./routes/userDashboard.js');
 const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
+const notificationRoutes = require('./routes/notifications.js');
+
+// Import scheduled jobs
+const { initializeScheduledJobs } = require('./jobs/scheduledJobs.js');
 
 const app = express();
 
@@ -103,6 +108,8 @@ app.use(async (req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', authOTPRoutes); // Mount OTP auth routes (primary OTP system)
+// Note: /api/otp routes (otpRoutes) are deprecated - use /api/auth/otp/* instead
 app.use('/api/events', eventRoutes);
 app.use('/api/events', reviewRoutes); // Review routes under /api/events
 app.use('/api/reviews', reviewRoutes); // Also accessible under /api/reviews
@@ -110,7 +117,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/users', userDashboardRoutes); // User dashboard endpoints
 app.use('/api/communities', communityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
-app.use('/api/otp', otpRoutes);
+// app.use('/api/otp', otpRoutes); // DEPRECATED - Use /api/auth/otp/* instead
 app.use('/api/explore', exploreRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -120,11 +127,13 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
   '/api/events', 
   '/api/users',
+  '/api/notifications',
   '/api/communities',
   '/api/recommendations',
   '/api/explore',
@@ -175,6 +184,13 @@ if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    
+    // Initialize scheduled jobs after server starts
+    try {
+      initializeScheduledJobs();
+    } catch (error) {
+      console.error('❌ Error initializing scheduled jobs:', error);
+    }
   });
 }
 
