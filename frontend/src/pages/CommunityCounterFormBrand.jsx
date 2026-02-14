@@ -161,40 +161,58 @@ const CommunityCounterFormBrand = () => {
     const action = response?.action;
 
     return (
-      <div className="flex gap-2 mt-3">
-        <button
-          onClick={() => handleFieldAction(fieldName, 'accept')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-            action === 'accept'
-              ? 'bg-green-600 text-white border-2 border-green-400'
-              : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-green-600'
-          }`}
-        >
-          <Check className="h-4 w-4 inline mr-2" />
-          Accept
-        </button>
-        <button
-          onClick={() => handleFieldAction(fieldName, 'modify')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-            action === 'modify'
-              ? 'bg-yellow-600 text-white border-2 border-yellow-400'
-              : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-yellow-600'
-          }`}
-        >
-          <Edit className="h-4 w-4 inline mr-2" />
-          Modify
-        </button>
-        <button
-          onClick={() => handleFieldAction(fieldName, 'decline')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-            action === 'decline'
-              ? 'bg-red-600 text-white border-2 border-red-400'
-              : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-red-600'
-          }`}
-        >
-          <X className="h-4 w-4 inline mr-2" />
-          Decline
-        </button>
+      <div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => handleFieldAction(fieldName, 'accept')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              action === 'accept'
+                ? 'bg-green-700 text-white border border-green-600'
+                : 'bg-green-900/20 text-green-400 border border-green-700 hover:bg-green-900/40'
+            }`}
+          >
+            <Check className="h-4 w-4 inline mr-2" />
+            Accept
+          </button>
+          <button
+            onClick={() => handleFieldAction(fieldName, 'modify')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              action === 'modify'
+                ? 'text-white border border-yellow-600'
+                : 'bg-yellow-900/20 text-yellow-400 border border-yellow-700 hover:bg-yellow-900/40'
+            }`}
+            style={action === 'modify' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+          >
+            <Edit className="h-4 w-4 inline mr-2" />
+            Modify
+          </button>
+          <button
+            onClick={() => handleFieldAction(fieldName, 'decline')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              action === 'decline'
+                ? 'bg-red-700 text-white border border-red-600'
+                : 'bg-red-900/20 text-red-400 border border-red-700 hover:bg-red-900/40'
+            }`}
+          >
+            <X className="h-4 w-4 inline mr-2" />
+            Decline
+          </button>
+        </div>
+        {action && (
+          <div className="mt-3">
+            <label className="block text-sm text-blue-400 mb-2">Add note (optional)</label>
+            <input
+              type="text"
+              value={fieldResponses[fieldName]?.note || ''}
+              onChange={(e) => setFieldResponses(prev => ({
+                ...prev,
+                [fieldName]: { ...prev[fieldName], note: e.target.value }
+              }))}
+              placeholder="Add any additional notes..."
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500"
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -206,7 +224,7 @@ const CommunityCounterFormBrand = () => {
 
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <h3 className="text-xl font-bold text-white mb-4">
             {currentField === 'campaignObjectives' && 'Campaign Objectives'}
             {currentField === 'targetAudience' && 'Target Audience'}
@@ -438,9 +456,9 @@ const CommunityCounterFormBrand = () => {
         </div>
 
         {/* Section 1: Campaign Objectives */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               1
             </div>
             <div>
@@ -489,9 +507,9 @@ const CommunityCounterFormBrand = () => {
         </div>
 
         {/* Section 2: Brand Offers */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               2
             </div>
             <div>
@@ -558,9 +576,9 @@ const CommunityCounterFormBrand = () => {
         </div>
 
         {/* Section 3: Brand Expectations */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               3
             </div>
             <div>
@@ -616,9 +634,9 @@ const CommunityCounterFormBrand = () => {
         </div>
 
         {/* Section 4: Community Commitments */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               4
             </div>
             <div>
@@ -689,9 +707,9 @@ const CommunityCounterFormBrand = () => {
         </div>
 
         {/* Section 5: Additional Notes */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               5
             </div>
             <div>
@@ -713,7 +731,7 @@ const CommunityCounterFormBrand = () => {
         </div>
 
         {/* Submit Button */}
-        <div className="bg-gray-900 border border-purple-600 rounded-lg p-6 text-center mb-8">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center mb-8">
           <h3 className="font-bold text-lg mb-2">READY TO RESPOND?</h3>
           <p className="text-gray-400 text-sm mb-4">
             Admin will review your response before delivering to the brand
@@ -721,10 +739,11 @@ const CommunityCounterFormBrand = () => {
           <button
             onClick={handleSubmitCounter}
             disabled={submitting}
-            className="w-full py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-4 hover:opacity-90 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
           >
             <Send className="h-5 w-5" />
-            {submitting ? 'Submitting...' : 'Submit Response to IndulgeOut'}
+            {submitting ? 'Submitting...' : 'Submit Response to Brand'}
           </button>
         </div>
       </div>

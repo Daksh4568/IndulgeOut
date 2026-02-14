@@ -173,24 +173,18 @@ const AdminDashboard = () => {
       const collaboration = res.data.data || res.data;
       setSelectedProposal(collaboration);
       
-      // If collaboration has a counter, fetch counter details
-      if (collaboration.hasCounter && collaboration.latestCounterId) {
-        try {
-          // Extract the actual ID string (handle both populated object and string ID)
-          const counterId = typeof collaboration.latestCounterId === 'object' 
-            ? collaboration.latestCounterId._id 
-            : collaboration.latestCounterId;
-          
-          console.log('Fetching counter with ID:', counterId);
-          const counterRes = await api.get(`/admin/collaborations/counters/${counterId}`);
-          const counterData = counterRes.data.data || counterRes.data;
-          console.log('Counter Data Fetched:', counterData);
-          console.log('Field Responses:', counterData.counterData?.fieldResponses);
-          setSelectedCounter(counterData);
-        } catch (counterErr) {
-          console.error('Error fetching counter details:', counterErr);
-          setSelectedCounter(null);
-        }
+      // Counter data is now included in the collaboration response
+      if (collaboration.hasCounter && collaboration.counterData) {
+        console.log('Counter Data Found in Collaboration:', collaboration.counterData);
+        // Set the counter data directly from the collaboration
+        setSelectedCounter({
+          ...collaboration,
+          counterData: collaboration.counterData,
+          responderId: collaboration.counterData.responderId || collaboration.recipient?.user || collaboration.recipientId,
+          responderType: collaboration.counterData.responderType || collaboration.recipient?.userType || collaboration.recipientType,
+          createdAt: collaboration.response?.respondedAt || collaboration.acceptedAt,
+          status: collaboration.status
+        });
       } else {
         setSelectedCounter(null);
       }
@@ -248,7 +242,7 @@ const AdminDashboard = () => {
     try {
       setActionLoading(true);
       await api.put(`/admin/collaborations/${selectedProposal._id}/reject`, {
-        rejectionReason,
+        reason: rejectionReason,
         adminNotes
       });
 
@@ -1701,19 +1695,19 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Admin Review */}
-                  {selectedProposal.adminReviewedAt && (
+                  {selectedProposal.adminReview?.reviewedAt && (
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold">
                         2
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          Admin {selectedProposal.status === 'rejected' ? 'Rejected' : 'Approved'}
+                          Admin {selectedProposal.adminReview?.decision === 'rejected' ? 'Rejected' : 'Approved'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDate(selectedProposal.adminReviewedAt)} by {selectedProposal.adminReviewedBy?.name || 'Admin'}
+                          {formatDate(selectedProposal.adminReview.reviewedAt)} by {selectedProposal.adminReview.reviewedBy?.name || 'Admin'}
                         </p>
-                        {getStatusBadge(selectedProposal.status === 'rejected' ? 'rejected' : 'approved_delivered')}
+                        {getStatusBadge(selectedProposal.adminReview.decision === 'rejected' ? 'admin_rejected' : 'admin_approved')}
                       </div>
                     </div>
                   )}
@@ -1735,17 +1729,17 @@ const AdminDashboard = () => {
                   )}
 
                   {/* Counter Admin Review */}
-                  {selectedCounter?.adminReviewedAt && (
+                  {selectedCounter?.adminReview?.reviewedAt && (
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold">
                         4
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          Counter {selectedCounter.status === 'rejected' ? 'Rejected' : 'Approved'}
+                          Counter {selectedCounter.adminReview.decision === 'rejected' ? 'Rejected' : 'Approved'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDate(selectedCounter.adminReviewedAt)} by {selectedCounter.adminReviewedBy?.name || 'Admin'}
+                          {formatDate(selectedCounter.adminReview.reviewedAt)} by {selectedCounter.adminReview.reviewedBy?.name || 'Admin'}
                         </p>
                         {getStatusBadge(selectedCounter.status)}
                       </div>

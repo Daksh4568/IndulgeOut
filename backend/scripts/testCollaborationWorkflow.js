@@ -174,7 +174,7 @@ async function testCommunityToVenue() {
 
     // Step 2: Admin approves
     console.log('\n2️⃣  Admin reviews and approves...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved proposal');
 
     // Step 3: Venue submits counter
@@ -203,7 +203,7 @@ async function testCommunityToVenue() {
 
     // Step 4: Admin approves counter
     console.log('\n4️⃣  Admin approves counter...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/counter/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/counters/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved counter');
 
     // Step 5: Community accepts counter
@@ -269,7 +269,7 @@ async function testCommunityToBrand() {
 
     // Step 2: Admin approves
     console.log('\n2️⃣  Admin approves...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved');
 
     // Step 3: Brand submits counter
@@ -299,7 +299,7 @@ async function testCommunityToBrand() {
 
     // Step 4: Admin approves counter
     console.log('\n4️⃣  Admin approves counter...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/counter/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/counters/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved counter');
 
     // Step 5: Community accepts
@@ -356,7 +356,7 @@ async function testBrandToCommunity() {
 
     // Step 2: Admin approves
     console.log('\n2️⃣  Admin approves...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved');
 
     // Step 3: Community responds
@@ -389,7 +389,7 @@ async function testBrandToCommunity() {
 
     // Step 4: Admin approves counter
     console.log('\n4️⃣  Admin approves counter...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/counter/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/counters/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved counter');
 
     // Step 5: Brand accepts
@@ -446,7 +446,7 @@ async function testVenueToCommunity() {
 
     // Step 2: Admin approves
     console.log('\n2️⃣  Admin approves...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved');
 
     // Step 3: Community responds
@@ -480,7 +480,7 @@ async function testVenueToCommunity() {
 
     // Step 4: Admin approves counter
     console.log('\n4️⃣  Admin approves counter...');
-    await apiCall('POST', `/admin/collaborations/${collabId}/counter/approve`, {}, USERS.admin.token);
+    await apiCall('PUT', `/admin/collaborations/counters/${collabId}/approve`, {}, USERS.admin.token);
     console.log('✅ Admin approved counter');
 
     // Step 5: Venue accepts

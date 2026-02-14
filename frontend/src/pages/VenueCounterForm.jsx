@@ -412,9 +412,9 @@ const VenueCounterForm = () => {
         </div>
 
         {/* Section 1: Event & Timing */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               1
             </div>
             <div>
@@ -466,9 +466,9 @@ const VenueCounterForm = () => {
         </div>
 
         {/* Section 2: What Venue Will Provide */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               2
             </div>
             <div>
@@ -502,9 +502,9 @@ const VenueCounterForm = () => {
         </div>
 
         {/* Section 3: Commercial & Cost */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               3
             </div>
             <div>
@@ -517,18 +517,18 @@ const VenueCounterForm = () => {
             <h3 className="font-semibold mb-2">Pricing Model</h3>
             <p className="text-sm text-gray-400 mb-2">COMMUNITY PROPOSED</p>
             <p className="text-white mb-1">
-              {formData.pricing?.revenueShare && `Revenue Share: ${formData.pricing.revenueShare.percentage}%`}
-              {formData.pricing?.fixedRental && `Fixed Rental: ₹${formData.pricing.fixedRental.amount}`}
-              {formData.pricing?.coverCharge && `Cover Charge: ₹${formData.pricing.coverCharge.amount} per person`}
+              {formData.pricing?.revenueShare?.selected && formData.pricing?.revenueShare?.value && `Revenue Share: ${formData.pricing.revenueShare.value}%`}
+              {formData.pricing?.fixedRental?.selected && formData.pricing?.fixedRental?.amount && `Fixed Rental: ₹${formData.pricing.fixedRental.amount}`}
+              {formData.pricing?.coverCharge?.selected && formData.pricing?.coverCharge?.amount && `Cover Charge: ₹${formData.pricing.coverCharge.amount} per person`}
             </p>
             {renderFieldActionButtons('commercialModel')}
           </div>
         </div>
 
         {/* Section 4: House Rules */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               4
             </div>
             <div>
@@ -602,9 +602,9 @@ const VenueCounterForm = () => {
         </div>
 
         {/* Section 5: Supporting Info */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
               5
             </div>
             <div>
@@ -633,7 +633,7 @@ const VenueCounterForm = () => {
         </div>
 
         {/* Submit Button */}
-        <div className="bg-gray-900 border border-purple-600 rounded-lg p-6 text-center mb-8">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center mb-8">
           <h3 className="font-bold text-lg mb-2">READY TO RESPOND?</h3>
           <p className="text-gray-400 text-sm mb-4">
             Admin will review your response before delivering to the community
@@ -641,10 +641,11 @@ const VenueCounterForm = () => {
           <button
             onClick={handleSubmitCounter}
             disabled={submitting}
-            className="w-full py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-4 hover:opacity-90 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
           >
             <Send className="h-5 w-5" />
-            {submitting ? 'Submitting...' : 'Submit Response to IndulgeOut'}
+            {submitting ? 'Submitting...' : 'Submit Response to Community'}
           </button>
         </div>
       </div>

@@ -251,10 +251,10 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
   }
 });
 
-// @route   POST /api/admin/collaborations/:id/approve
+// @route   PUT /api/admin/collaborations/:id/approve
 // @desc    Approve a collaboration request and forward to vendor
 // @access  Admin only
-router.post('/collaborations/:id/approve', requirePermission('manage_collaborations'), async (req, res) => {
+router.put('/collaborations/:id/approve', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const { id } = req.params;
     const { adminNotes } = req.body;
@@ -284,7 +284,19 @@ router.post('/collaborations/:id/approve', requirePermission('manage_collaborati
 
     await collaboration.save();
 
-    // TODO: Send notification to vendor
+    // Send notification to vendor
+    const notificationService = require('../services/notificationService');
+    await notificationService.createNotification({
+      userId: collaboration.recipient?.user || collaboration.recipientId,
+      type: 'collaboration_approved',
+      title: 'New Collaboration Request Approved',
+      message: `Your collaboration request from ${collaboration.initiator?.name || 'a community'} has been approved by admin. Please review and respond.`,
+      actionUrl: `/venue/collaborations/${collaboration._id}`,
+      metadata: {
+        collaborationId: collaboration._id,
+        initiatorId: collaboration.initiator?.user || collaboration.proposerId
+      }
+    });
 
     res.json({
       message: 'Collaboration approved and forwarded to vendor',
@@ -296,10 +308,10 @@ router.post('/collaborations/:id/approve', requirePermission('manage_collaborati
   }
 });
 
-// @route   POST /api/admin/collaborations/:id/reject
+// @route   PUT /api/admin/collaborations/:id/reject
 // @desc    Reject a collaboration request
 // @access  Admin only
-router.post('/collaborations/:id/reject', requirePermission('manage_collaborations'), async (req, res) => {
+router.put('/collaborations/:id/reject', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -335,7 +347,19 @@ router.post('/collaborations/:id/reject', requirePermission('manage_collaboratio
 
     await collaboration.save();
 
-    // TODO: Send notification to community (initiator)
+    // Send notification to community (initiator)
+    const notificationService = require('../services/notificationService');
+    await notificationService.createNotification({
+      userId: collaboration.initiator?.user || collaboration.proposerId,
+      type: 'collaboration_rejected',
+      title: 'Collaboration Request Rejected',
+      message: `Your collaboration request has been rejected by admin. Reason: ${reason.substring(0, 100)}`,
+      actionUrl: `/community/collaborations/${collaboration._id}`,
+      metadata: {
+        collaborationId: collaboration._id,
+        reason: reason
+      }
+    });
 
     res.json({
       message: 'Collaboration rejected',
@@ -347,10 +371,10 @@ router.post('/collaborations/:id/reject', requirePermission('manage_collaboratio
   }
 });
 
-// @route   POST /api/admin/collaborations/:id/counter/approve
+// @route   PUT /api/admin/collaborations/counters/:id/approve
 // @desc    Approve a counter-proposal and forward to initiator
 // @access  Admin only
-router.post('/collaborations/:id/counter/approve', requirePermission('manage_collaborations'), async (req, res) => {
+router.put('/collaborations/counters/:id/approve', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const { id } = req.params;
     const { adminNotes } = req.body;
@@ -381,7 +405,19 @@ router.post('/collaborations/:id/counter/approve', requirePermission('manage_col
 
     await collaboration.save();
 
-    // TODO: Send notification to initiator about approved counter
+    // Send notification to initiator about approved counter
+    const notificationService = require('../services/notificationService');
+    await notificationService.createNotification({
+      userId: collaboration.initiator?.user || collaboration.proposerId,
+      type: 'counter_approved',
+      title: 'Counter Proposal Approved',
+      message: `The counter proposal from ${collaboration.recipient?.name || 'vendor'} has been approved. Please review and accept/reject.`,
+      actionUrl: `/community/collaborations/${collaboration._id}/counter`,
+      metadata: {
+        collaborationId: collaboration._id,
+        recipientId: collaboration.recipient?.user || collaboration.recipientId
+      }
+    });
 
     res.json({
       message: 'Counter-proposal approved and forwarded to initiator',
@@ -393,10 +429,10 @@ router.post('/collaborations/:id/counter/approve', requirePermission('manage_col
   }
 });
 
-// @route   POST /api/admin/collaborations/:id/counter/reject
+// @route   PUT /api/admin/collaborations/counters/:id/reject
 // @desc    Reject a counter-proposal
 // @access  Admin only
-router.post('/collaborations/:id/counter/reject', requirePermission('manage_collaborations'), async (req, res) => {
+router.put('/collaborations/counters/:id/reject', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -437,7 +473,19 @@ router.post('/collaborations/:id/counter/reject', requirePermission('manage_coll
 
     await collaboration.save();
 
-    // TODO: Send notification to vendor about rejected counter
+    // Send notification to vendor about rejected counter
+    const notificationService = require('../services/notificationService');
+    await notificationService.createNotification({
+      userId: collaboration.recipient?.user || collaboration.recipientId,
+      type: 'counter_rejected',
+      title: 'Counter Proposal Rejected',
+      message: `Your counter proposal has been rejected by admin. Reason: ${reason.substring(0, 100)}`,
+      actionUrl: `/venue/collaborations/${collaboration._id}`,
+      metadata: {
+        collaborationId: collaboration._id,
+        reason: reason
+      }
+    });
 
     res.json({
       message: 'Counter-proposal rejected',
@@ -449,24 +497,51 @@ router.post('/collaborations/:id/counter/reject', requirePermission('manage_coll
   }
 });
 
-// @route   GET /api/admin/collaborations/flagged
-// @desc    Get all flagged collaboration requests
+// @route   PUT /api/admin/collaborations/:id/flag
+// @desc    Flag a collaboration for compliance review
 // @access  Admin only
-router.get('/collaborations/flagged', requirePermission('manage_collaborations'), async (req, res) => {
+router.put('/collaborations/:id/flag', requirePermission('manage_collaborations'), async (req, res) => {
   try {
-    const collaborations = await Collaboration.find({ 
-      $or: [
-        { 'adminReview.decision': 'pending_info' },
-        { tags: 'flagged' }
-      ]
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user.userId;
 
-    res.json({ data: collaborations });
+    if (!reason || reason.trim().length < 10) {
+      return res.status(400).json({ 
+        message: 'Flag reason is required (minimum 10 characters)' 
+      });
+    }
+
+    const collaboration = await Collaboration.findById(id);
+
+    if (!collaboration) {
+      return res.status(404).json({ message: 'Collaboration not found' });
+    }
+
+    // Add or update compliance flag
+    const flagEntry = {
+      flaggedBy: adminId,
+      flaggedAt: new Date(),
+      reason: reason,
+      resolved: false
+    };
+
+    if (!collaboration.complianceFlags) {
+      collaboration.complianceFlags = [];
+    }
+    
+    collaboration.complianceFlags.push(flagEntry);
+    collaboration.status = 'flagged';
+
+    await collaboration.save();
+
+    res.json({
+      message: 'Collaboration flagged for compliance review',
+      collaboration
+    });
   } catch (error) {
-    console.error('Error fetching flagged collaborations:', error);
-    res.status(500).json({ message: 'Server error while fetching flagged collaborations' });
+    console.error('Error flagging collaboration:', error);
+    res.status(500).json({ message: 'Server error while flagging collaboration' });
   }
 });
 
@@ -494,6 +569,54 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
   } catch (error) {
     console.error('Error fetching pending counters:', error);
     res.status(500).json({ message: 'Server error while fetching pending counters' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/counters/:id
+// @desc    Get counter details for review
+// @access  Admin only
+router.get('/collaborations/counters/:id', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const collaboration = await Collaboration.findById(req.params.id)
+      .populate('proposerId', 'name email hostPartnerType')
+      .populate('recipientId', 'name email hostPartnerType')
+      .populate('initiator.user', 'name email')
+      .populate('recipient.user', 'name email')
+      .lean();
+
+    if (!collaboration) {
+      return res.status(404).json({ message: 'Collaboration not found' });
+    }
+
+    if (!collaboration.counterProposal) {
+      return res.status(404).json({ message: 'No counter proposal found' });
+    }
+
+    res.json({ data: collaboration });
+  } catch (error) {
+    console.error('Error fetching counter details:', error);
+    res.status(500).json({ message: 'Server error while fetching counter details' });
+  }
+});
+
+// @route   GET /api/admin/collaborations/flagged
+// @desc    Get all flagged collaboration requests
+// @access  Admin only
+router.get('/collaborations/flagged', requirePermission('manage_collaborations'), async (req, res) => {
+  try {
+    const collaborations = await Collaboration.find({ 
+      $or: [
+        { 'adminReview.decision': 'pending_info' },
+        { tags: 'flagged' }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ data: collaborations });
+  } catch (error) {
+    console.error('Error fetching flagged collaborations:', error);
+    res.status(500).json({ message: 'Server error while fetching flagged collaborations' });
   }
 });
 
@@ -574,6 +697,18 @@ router.get('/collaborations/analytics', requirePermission('view_analytics'), asy
 
     res.json({
       data: {
+        // Flat structure for easy frontend access
+        totalProposals: totalCollaborations,
+        pendingReview: pendingReview,  // Match frontend expectation
+        pending: pendingReview,
+        approved: approved,
+        rejected: rejected,
+        completed: completed,
+        confirmed: approved,  // Alias for "confirmed" used in frontend
+        approvalRate: parseFloat(approvalRate),
+        avgReviewTime: parseFloat(avgResponseTime),  // In hours
+        
+        // Detailed breakdown
         overview: {
           total: totalCollaborations,
           pending: pendingReview,
@@ -604,15 +739,185 @@ router.get('/collaborations/analytics', requirePermission('view_analytics'), asy
 router.get('/collaborations/:id', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const collaboration = await Collaboration.findById(req.params.id)
-      .populate('initiator.user', 'name email')
-      .populate('recipient.user', 'name email')
-      .populate('proposerId', 'name email hostPartnerType')  // Old structure
-      .populate('recipientId', 'name email hostPartnerType')  // Old structure
+      .populate('initiator.user', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
+      .populate('recipient.user', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
+      .populate('proposerId', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
+      .populate('recipientId', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
+      .populate('adminReview.reviewedBy', 'name email')
       .lean();
 
     if (!collaboration) {
       return res.status(404).json({ message: 'Collaboration not found' });
     }
+
+    // Transform formData to handle nested objects better
+    if (collaboration.formData) {
+      const flattenedData = {};
+      
+      Object.entries(collaboration.formData).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          // For nested objects, flatten them with descriptive keys
+          if (key === 'eventDate' && value.date) {
+            flattenedData['Event Date'] = value.date;
+            if (value.startTime) flattenedData['Start Time'] = value.startTime;
+            if (value.endTime) flattenedData['End Time'] = value.endTime;
+          } else if (key === 'backupDate' && value.date) {
+            flattenedData['Backup Date'] = value.date;
+            if (value.startTime) flattenedData['Backup Start Time'] = value.startTime;
+            if (value.endTime) flattenedData['Backup End Time'] = value.endTime;
+          } else if (key === 'pricing' || key === 'revenueShare') {
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              flattenedData[`${key}.${subKey}`] = subValue;
+            });
+          } else if (key === 'brandDeliverables') {
+            // Handle brand deliverables object
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              if (subKey !== '__typename') {  // Skip GraphQL typename
+                flattenedData[`Brand ${subKey}`] = Array.isArray(subValue) ? subValue.join(', ') : subValue;
+              }
+            });
+          } else {
+            // For other nested objects, stringify them nicely
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              if (subValue !== null && subValue !== undefined && subKey !== '__typename') {
+                flattenedData[`${key} - ${subKey}`] = subValue;
+              }
+            });
+          }
+        } else if (Array.isArray(value)) {
+          flattenedData[key] = value.join(', ');
+        } else if (value !== null && value !== undefined) {
+          flattenedData[key] = value;
+        }
+      });
+      
+      collaboration.formData = flattenedData;
+    }
+
+    // Ensure we have proper user data from either old or new structure
+    if (collaboration.proposerId && !collaboration.initiator) {
+      collaboration.initiator = {
+        user: collaboration.proposerId,
+        userType: collaboration.proposerType
+      };
+    }
+    
+    if (collaboration.recipientId && !collaboration.recipient) {
+      collaboration.recipient = {
+        user: collaboration.recipientId,
+        userType: collaboration.recipientType
+      };
+    }
+
+    // Check if collaboration has a counter proposal
+    let hasCounter = false;
+    let counterData = null;
+    
+    if (collaboration.response && collaboration.response.counterOffer) {
+      hasCounter = true;
+      counterData = collaboration.response.counterOffer;
+      
+      // Parse counter data if it's stored as JSON string
+      if (counterData.terms && typeof counterData.terms === 'string') {
+        try {
+          const parsed = JSON.parse(counterData.terms);
+          counterData = { ...counterData, ...parsed };
+        } catch (e) {
+          console.error('Error parsing counter terms:', e);
+        }
+      }
+    }
+
+    // Add counter info to response
+    collaboration.hasCounter = hasCounter;
+    if (hasCounter) {
+      collaboration.counterData = counterData;
+      // Add responderId for display
+      collaboration.counterData.responderId = collaboration.recipient?.user || collaboration.recipientId;
+      collaboration.counterData.responderType = collaboration.recipient?.userType || collaboration.recipientType;
+    }
+
+    // Build timeline
+    const timeline = [
+      {
+        event: 'Proposal Submitted',
+        actor: collaboration.initiator?.user?.name || collaboration.proposerId?.name || 'Unknown',
+        actorType: collaboration.initiator?.userType || collaboration.proposerType,
+        timestamp: collaboration.createdAt,
+        status: 'submitted',
+        description: 'Initial proposal submitted for review'
+      }
+    ];
+
+    if (collaboration.adminReview && collaboration.adminReview.decision) {
+      timeline.push({
+        event: collaboration.adminReview.decision === 'approved' ? 'Admin Approved Proposal' : 'Admin Rejected Proposal',
+        actor: collaboration.adminReview.reviewedBy?.name || 'Admin',
+        actorType: 'admin',
+        timestamp: collaboration.adminReview.reviewedAt,
+        status: collaboration.adminReview.decision === 'approved' ? 'admin_approved' : 'admin_rejected',
+        description: collaboration.adminReview.notes || (collaboration.adminReview.decision === 'approved' ? 'Proposal approved and forwarded to vendor' : 'Proposal rejected'),
+        notes: collaboration.adminReview.notes
+      });
+    }
+
+    if (hasCounter && collaboration.acceptedAt) {
+      timeline.push({
+        event: 'Counter Proposal Submitted',
+        actor: collaboration.recipient?.user?.name || collaboration.recipientId?.name || 'Vendor',
+        actorType: collaboration.recipient?.userType || collaboration.recipientType,
+        timestamp: collaboration.acceptedAt,
+        status: 'vendor_accepted',
+        description: 'Vendor responded with counter-proposal'
+      });
+    }
+
+    if (collaboration.status === 'counter_delivered') {
+      timeline.push({
+        event: 'Counter Approved & Delivered',
+        actor: 'Admin',
+        actorType: 'admin',
+        timestamp: collaboration.updatedAt,
+        status: 'counter_delivered',
+        description: 'Counter-proposal approved and delivered to initiator'
+      });
+    }
+
+    if (collaboration.status === 'completed') {
+      timeline.push({
+        event: 'Collaboration Completed',
+        actor: 'System',
+        actorType: 'system',
+        timestamp: collaboration.updatedAt,
+        status: 'completed',
+        description: 'Collaboration successfully completed'
+      });
+    }
+
+    if (collaboration.status === 'cancelled') {
+      timeline.push({
+        event: 'Collaboration Cancelled',
+        actor: collaboration.initiator?.user?.name || 'User',
+        actorType: collaboration.initiator?.userType,
+        timestamp: collaboration.cancelledAt || collaboration.updatedAt,
+        status: 'cancelled',
+        description: 'Collaboration cancelled by initiator'
+      });
+    }
+
+    if (collaboration.status === 'vendor_rejected') {
+      timeline.push({
+        event: 'Vendor Rejected',
+        actor: collaboration.recipient?.user?.name || 'Vendor',
+        actorType: collaboration.recipient?.userType,
+        timestamp: collaboration.rejectedAt || collaboration.updatedAt,
+        status: 'vendor_rejected',
+        description: 'Vendor declined the collaboration'
+      });
+    }
+
+    // Add timeline to collaboration object
+    collaboration.timeline = timeline;
 
     res.json({ data: collaboration });
   } catch (error) {
