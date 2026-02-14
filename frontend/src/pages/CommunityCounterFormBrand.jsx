@@ -38,8 +38,17 @@ const CommunityCounterFormBrand = () => {
       const res = await api.get(`/collaborations/${id}`);
       const collab = res.data.data;
       
+      console.log('Loaded community counter form for brand proposal:', collab);
+      console.log('Form data:', collab.formData);
+      
       if (collab.type !== 'brandToCommunity') {
         setError('This form is only for community responses to brand campaign proposals');
+        return;
+      }
+      
+      if (!collab.formData) {
+        console.warn('WARNING: No formData found in collaboration');
+        setError('Proposal data is missing. Please contact support.');
         return;
       }
       
@@ -141,7 +150,7 @@ const CommunityCounterFormBrand = () => {
       
       const response = await api.post(`/collaborations/${id}/counter`, { counterData });
       
-      alert('Counter-proposal submitted successfully! Admin will review before delivery.');
+      alert('Counter-proposal submitted successfully! The brand will review your response shortly.');
       navigate('/collaborations', {
         state: {
           message: 'Counter-proposal submitted successfully',
@@ -734,7 +743,7 @@ const CommunityCounterFormBrand = () => {
         <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center mb-8">
           <h3 className="font-bold text-lg mb-2">READY TO RESPOND?</h3>
           <p className="text-gray-400 text-sm mb-4">
-            Admin will review your response before delivering to the brand
+            Your response will be delivered to the brand for their review
           </p>
           <button
             onClick={handleSubmitCounter}

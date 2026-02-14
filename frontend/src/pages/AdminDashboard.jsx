@@ -1729,17 +1729,17 @@ const AdminDashboard = () => {
                   )}
 
                   {/* Counter Admin Review */}
-                  {selectedCounter?.adminReview?.reviewedAt && (
+                  {selectedCounter?.adminReview?.counterReviewedAt && (
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold">
                         4
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          Counter {selectedCounter.adminReview.decision === 'rejected' ? 'Rejected' : 'Approved'}
+                          Counter {selectedCounter.adminReview.counterDecision === 'rejected' ? 'Rejected' : 'Approved'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDate(selectedCounter.adminReview.reviewedAt)} by {selectedCounter.adminReview.reviewedBy?.name || 'Admin'}
+                          {formatDate(selectedCounter.adminReview.counterReviewedAt)} by {selectedCounter.adminReview.counterReviewedBy?.name || 'Admin'}
                         </p>
                         {getStatusBadge(selectedCounter.status)}
                       </div>
@@ -1858,13 +1858,13 @@ const AdminDashboard = () => {
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Original Proposal</h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Type:</strong> {getCollabTypeLabel(selectedCounter.collaborationId?.type)}
+                  <strong>Type:</strong> {getCollabTypeLabel(selectedCounter.type)}
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>From:</strong> {selectedCounter.collaborationId?.proposerId?.name} ({selectedCounter.collaborationId?.proposerType})
+                  <strong>From:</strong> {selectedCounter.proposerId?.name || selectedCounter.initiator?.user?.name || 'Unknown'} ({selectedCounter.proposerType || selectedCounter.initiator?.userType || 'N/A'})
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>To:</strong> {selectedCounter.collaborationId?.recipientId?.name} ({selectedCounter.collaborationId?.recipientType})
+                  <strong>To:</strong> {selectedCounter.recipientId?.name || selectedCounter.recipient?.user?.name || 'Unknown'} ({selectedCounter.recipientType || selectedCounter.recipient?.userType || 'N/A'})
                 </p>
               </div>
 

@@ -314,7 +314,7 @@ const ProposalForm = () => {
       // Navigate to collaborations page with success message
       navigate('/collaborations', { 
         state: { 
-          message: 'Your collaboration request has been sent successfully! You can track its status in Sent Requests.',
+          message: 'Your collaboration request has been sent successfully! The partner will review and respond soon.',
           tab: 'sent'
         } 
       });

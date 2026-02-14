@@ -40,9 +40,18 @@ const VenueCounterForm = () => {
       const res = await api.get(`/collaborations/${id}`);
       const collab = res.data.data;
       
+      console.log('Loaded collaboration for counter form:', collab);
+      console.log('Form data:', collab.formData);
+      
       // Check if this is a community-to-venue request
       if (collab.type !== 'communityToVenue') {
         setError('This form is only for venue responses to community requests');
+        return;
+      }
+      
+      if (!collab.formData) {
+        console.warn('WARNING: No formData found in collaboration');
+        setError('Proposal data is missing. Please contact support.');
         return;
       }
       
@@ -427,7 +436,7 @@ const VenueCounterForm = () => {
           <div className="mb-6">
             <h3 className="font-semibold mb-2">Seating / Standing Capacity</h3>
             <p className="text-sm text-gray-400 mb-2">COMMUNITY PROPOSED</p>
-            <p className="text-white mb-1">{formData.seatingCapacity}</p>
+            <p className="text-white mb-1">{formData.seatingCapacity || formData.expectedAttendees || 'Not specified'}</p>
             {fieldResponses.seatingCapacity?.action === 'modify' && (
               <p className="text-yellow-400 text-sm mt-2">
                 Your counter: {fieldResponses.seatingCapacity?.modifiedValue}
@@ -435,6 +444,24 @@ const VenueCounterForm = () => {
             )}
             {renderFieldActionButtons('seatingCapacity')}
           </div>
+
+          {/* Expected Attendees */}
+          {formData.expectedAttendees && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Expected Attendees</h3>
+              <p className="text-sm text-gray-400 mb-2">COMMUNITY PROPOSED</p>
+              <p className="text-white mb-1">{formData.expectedAttendees}</p>
+            </div>
+          )}
+
+          {/* Event Type */}
+          {formData.eventType && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Event Type</h3>
+              <p className="text-sm text-gray-400 mb-2">COMMUNITY PROPOSED</p>
+              <p className="text-white mb-1">{formData.eventType}</p>
+            </div>
+          )}
 
           {/* Event Date & Time */}
           <div className="mb-6">
@@ -516,11 +543,20 @@ const VenueCounterForm = () => {
           <div>
             <h3 className="font-semibold mb-2">Pricing Model</h3>
             <p className="text-sm text-gray-400 mb-2">COMMUNITY PROPOSED</p>
-            <p className="text-white mb-1">
-              {formData.pricing?.revenueShare?.selected && formData.pricing?.revenueShare?.value && `Revenue Share: ${formData.pricing.revenueShare.value}%`}
-              {formData.pricing?.fixedRental?.selected && formData.pricing?.fixedRental?.amount && `Fixed Rental: ₹${formData.pricing.fixedRental.amount}`}
-              {formData.pricing?.coverCharge?.selected && formData.pricing?.coverCharge?.amount && `Cover Charge: ₹${formData.pricing.coverCharge.amount} per person`}
-            </p>
+            <div className="text-white mb-1 space-y-1">
+              {formData.pricing?.revenueShare?.selected && (formData.pricing?.revenueShare?.value || formData.pricing?.revenueShare?.percentage) && (
+                <div>Revenue Share: {formData.pricing.revenueShare.value || formData.pricing.revenueShare.percentage}%</div>
+              )}
+              {formData.pricing?.fixedRental?.selected && (formData.pricing?.fixedRental?.amount || formData.pricing?.fixedRental?.value) && (
+                <div>Fixed Rental: ₹{formData.pricing.fixedRental.amount || formData.pricing.fixedRental.value}</div>
+              )}
+              {formData.pricing?.coverCharge?.selected && (formData.pricing?.coverCharge?.amount || formData.pricing?.coverCharge?.value) && (
+                <div>Cover Charge: ₹{formData.pricing.coverCharge.amount || formData.pricing.coverCharge.value} per person</div>
+              )}
+              {!formData.pricing?.revenueShare?.selected && !formData.pricing?.fixedRental?.selected && !formData.pricing?.coverCharge?.selected && (
+                <div className="text-gray-400 text-sm">No pricing model specified</div>
+              )}
+            </div>
             {renderFieldActionButtons('commercialModel')}
           </div>
         </div>
