@@ -111,10 +111,13 @@ router.get('/', async (req, res) => {
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
     
+    // Filter out communities with deleted hosts
+    const validCommunities = communities.filter(comm => comm.host != null);
+    
     const total = await Community.countDocuments(query);
     
     res.json({
-      communities,
+      communities: validCommunities,
       totalPages: Math.ceil(total / parseInt(limit)),
       currentPage: parseInt(page),
       total
@@ -143,6 +146,14 @@ router.get('/:id', async (req, res) => {
     
     if (!community) {
       return res.status(404).json({ message: 'Community not found' });
+    }
+    
+    // Check if host user still exists
+    if (!community.host) {
+      return res.status(404).json({ 
+        message: 'Community organizer account no longer exists',
+        communityDeleted: true 
+      });
     }
     
     // Get community events

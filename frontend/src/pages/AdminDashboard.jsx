@@ -176,15 +176,24 @@ const AdminDashboard = () => {
       // Counter data is now included in the collaboration response
       if (collaboration.hasCounter && collaboration.counterData) {
         console.log('Counter Data Found in Collaboration:', collaboration.counterData);
+        console.log('🔍 AdminReview data in collaboration:', {
+          hasAdminReview: !!collaboration.adminReview,
+          reviewedAt: collaboration.adminReview?.reviewedAt,
+          counterReviewedAt: collaboration.adminReview?.counterReviewedAt,
+          counterReviewedBy: collaboration.adminReview?.counterReviewedBy,
+          counterDecision: collaboration.adminReview?.counterDecision
+        });
         // Set the counter data directly from the collaboration
-        setSelectedCounter({
+        const selectedCounterData = {
           ...collaboration,
           counterData: collaboration.counterData,
           responderId: collaboration.counterData.responderId || collaboration.recipient?.user || collaboration.recipientId,
           responderType: collaboration.counterData.responderType || collaboration.recipient?.userType || collaboration.recipientType,
           createdAt: collaboration.response?.respondedAt || collaboration.acceptedAt,
           status: collaboration.status
-        });
+        };
+        console.log('🔍 SelectedCounter adminReview after spread:', selectedCounterData.adminReview);
+        setSelectedCounter(selectedCounterData);
       } else {
         setSelectedCounter(null);
       }
@@ -1747,24 +1756,119 @@ const AdminDashboard = () => {
                   )}
 
                   {/* Final Status */}
-                  {(selectedProposal.status === 'confirmed' || selectedProposal.status === 'declined') && (
+                  {(selectedProposal.status === 'completed' || selectedProposal.status === 'confirmed' || selectedProposal.status === 'declined') && (
                     <div className="flex items-start space-x-3">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full ${
-                        selectedProposal.status === 'confirmed' ? 'bg-green-500' : 'bg-red-500'
+                        selectedProposal.status === 'completed' || selectedProposal.status === 'confirmed' ? 'bg-green-500' : 'bg-red-500'
                       } flex items-center justify-center text-white text-sm font-bold`}>
-                        ✓
+                        5
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          Collaboration {selectedProposal.status === 'confirmed' ? 'Confirmed' : 'Declined'}
+                          {selectedProposal.status === 'completed' ? 'Counter Accepted - Collaboration Complete' : 
+                           selectedProposal.status === 'confirmed' ? 'Collaboration Confirmed' : 'Collaboration Declined'}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(selectedProposal.updatedAt)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {selectedProposal.acceptedAt ? formatDate(selectedProposal.acceptedAt) : formatDate(selectedProposal.updatedAt)}
+                          {selectedProposal.status === 'completed' && ' by ' + (selectedProposal.initiator?.name || 'Initiator')}
+                        </p>
                         {getStatusBadge(selectedProposal.status)}
                       </div>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Final Agreed Terms (if completed with counter) */}
+              {selectedProposal.status === 'completed' && selectedCounter?.counterData && (
+                <div className="border-2 border-green-500 dark:border-green-600 rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <span className="text-green-600 dark:text-green-400">✓</span>
+                    Final Agreed Terms
+                  </h4>
+                  
+                  {/* Commercial Terms */}
+                  {selectedCounter.counterData.commercialCounter && (
+                    <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">💰 Commercial Terms:</h5>
+                      <p className="text-sm"><strong>Model:</strong> {selectedCounter.counterData.commercialCounter.model || 'N/A'}</p>
+                      {selectedCounter.counterData.commercialCounter.percentage && (
+                        <p className="text-sm"><strong>Revenue Share:</strong> {selectedCounter.counterData.commercialCounter.percentage}%</p>
+                      )}
+                      {selectedCounter.counterData.commercialCounter.amount && (
+                        <p className="text-sm"><strong>Amount:</strong> ₹{selectedCounter.counterData.commercialCounter.amount}</p>
+                      )}
+                      {selectedCounter.counterData.commercialCounter.note && (
+                        <p className="text-sm mt-1 text-gray-600 dark:text-gray-400 italic">{selectedCounter.counterData.commercialCounter.note}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Key Modifications */}
+                  {selectedCounter.counterData.fieldResponses && Object.entries(selectedCounter.counterData.fieldResponses).filter(([_, response]) => response.action === 'modify').length > 0 && (
+                    <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📝 Modified Terms:</h5>
+                      <div className="space-y-1">
+                        {Object.entries(selectedCounter.counterData.fieldResponses)
+                          .filter(([_, response]) => response.action === 'modify')
+                          .map(([field, response]) => {
+                            // Format modified value properly
+                            let displayValue = 'Modified';
+                            if (response.modifiedValue !== undefined && response.modifiedValue !== null) {
+                              if (typeof response.modifiedValue === 'object') {
+                                // Handle nested objects like {revenueShare: {percentage: 40}}
+                                if (response.modifiedValue.percentage) {
+                                  displayValue = `${response.modifiedValue.percentage}%`;
+                                } else if (response.modifiedValue.amount) {
+                                  displayValue = `₹${response.modifiedValue.amount}`;
+                                } else {
+                                  displayValue = JSON.stringify(response.modifiedValue, null, 2);
+                                }
+                              } else if (Array.isArray(response.modifiedValue)) {
+                                displayValue = response.modifiedValue.join(', ');
+                              } else {
+                                displayValue = String(response.modifiedValue);
+                              }
+                            } else if (response.note) {
+                              displayValue = response.note;
+                            }
+                            
+                            return (
+                              <div key={field} className="text-sm">
+                                <strong>{field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</strong>{' '}
+                                {displayValue}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Accepted Terms */}
+                  {selectedCounter.counterData.fieldResponses && Object.entries(selectedCounter.counterData.fieldResponses).filter(([_, response]) => response.action === 'accept').length > 0 && (
+                    <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">✓ Accepted Terms (As-Is):</h5>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(selectedCounter.counterData.fieldResponses)
+                          .filter(([_, response]) => response.action === 'accept')
+                          .map(([field, _]) => (
+                            <div key={field} className="text-sm text-gray-600 dark:text-gray-400">
+                              • {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* General Notes */}
+                  {selectedCounter.counterData.generalNotes && (
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Additional Notes:</h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{selectedCounter.counterData.generalNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Metadata */}
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">

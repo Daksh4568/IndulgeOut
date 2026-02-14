@@ -71,7 +71,7 @@ const RefundsCancellations = () => {
             {refundScenarios.map((scenario) => (
               <div 
                 key={scenario.number}
-                className="bg-[#999999] rounded-lg p-5 sm:p-6 border border-gray-800 hover:border-gray-700 transition-all"
+                className="bg-zinc-900 rounded-lg p-5 sm:p-6 border border-gray-800 hover:border-gray-700 transition-all"
               >
                 <div className="flex items-start gap-3 sm:gap-4">
                   {/* Number Circle */}
@@ -112,7 +112,7 @@ const RefundsCancellations = () => {
             GENERAL NOTES
           </h2>
           
-          <div className="bg-[#999999] rounded-lg p-5 sm:p-8 border border-gray-800">
+          <div className="bg-zinc-900 rounded-lg p-5 sm:p-8 border border-gray-800">
             <ul className="space-y-3 sm:space-y-4">
               {generalNotes.map((note, index) => (
                 <li 
@@ -129,7 +129,7 @@ const RefundsCancellations = () => {
         </section>
 
         {/* Contact */}
-        <div className="bg-[#999999] rounded-lg p-5 sm:p-8 border border-gray-800">
+        <div className="bg-zinc-900 rounded-lg p-5 sm:p-8 border border-gray-800">
           <p 
             className="text-xs sm:text-sm text-gray-400"
             style={{ fontFamily: 'Source Serif Pro, serif' }}

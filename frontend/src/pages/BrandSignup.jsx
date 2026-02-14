@@ -16,8 +16,8 @@ const BrandSignup = () => {
     workEmail: "",
     city: "",
     instagramLink: "",
-    photo: null,
   });
+  const [photos, setPhotos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,18 +30,17 @@ const BrandSignup = () => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        // 50MB
-        setError("File size must be less than 50MB");
-        return;
-      }
-      setFormData({
-        ...formData,
-        photo: file,
-      });
+    const files = Array.from(e.target.files);
+    if (files.length > 3) {
+      setError("You can only upload up to 3 photos");
+      return;
     }
+    setPhotos(files);
+    setError("");
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(photos.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -84,15 +83,19 @@ const BrandSignup = () => {
       formDataToSend.append("role", "host_partner");
       formDataToSend.append("hostPartnerType", "brand_sponsor");
       formDataToSend.append("brandName", formData.brandName);
-      formDataToSend.append("brandCategory", formData.brandCategory);
+      formDataToSend.append("category", formData.brandCategory);
       formDataToSend.append("city", formData.city);
-      formDataToSend.append("instagramLink", formData.instagramLink);
-      if (formData.photo) {
-        formDataToSend.append("photo", formData.photo);
+      if (formData.instagramLink) {
+        formDataToSend.append("instagramLink", formData.instagramLink);
       }
+      
+      // Append photos
+      photos.forEach((photo) => {
+        formDataToSend.append("photos", photo);
+      });
 
       const response = await axios.post(
-        `${API_URL}/api/auth/register-brand`,
+        `${API_URL}/api/auth/register`,
         formDataToSend,
         {
           headers: {
@@ -395,36 +398,48 @@ const BrandSignup = () => {
             {/* Upload Brand Logo and Product Photos */}
             <div>
               <label className="block text-white text-sm font-medium mb-2">
-                Upload brand/logo and product photos{" "}
-                <span className="text-red-500">*</span>
+                Upload brand/logo and product photos (up to 3)
               </label>
               <div className="relative">
                 <input
                   type="file"
-                  id="photo"
-                  accept="image/*,video/*"
+                  id="photos"
+                  accept="image/*"
+                  multiple
                   onChange={handleFileChange}
                   className="hidden"
                 />
                 <label
-                  htmlFor="photo"
-                  className="flex flex-col items-center justify-center w-full h-32 bg-white/5 border-2 border-dashed border-white/10 rounded-lg cursor-pointer transition-colors"
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.borderColor = "#7878E9")
-                  }
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "")}
+                  htmlFor="photos"
+                  className="flex flex-col items-center justify-center w-full h-32 bg-white/5 border-2 border-dashed border-white/10 rounded-lg cursor-pointer transition-colors hover:border-[#7878E9]"
                 >
                   <Upload className="w-8 h-8 text-gray-500 mb-2" />
                   <p className="text-gray-400 text-sm">
-                    {formData.photo
-                      ? formData.photo.name
-                      : "Choose a file or drag & drop it here"}
+                    {photos.length > 0
+                      ? `${photos.length} photo${photos.length > 1 ? 's' : ''} selected`
+                      : "Choose files or drag & drop them here"}
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
-                    JPEG, PNG, JPG, and MP4 formats, up to 50MB
+                    JPEG, PNG, JPG formats, up to 3 photos
                   </p>
                 </label>
               </div>
+              {photos.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {photos.map((photo, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-lg">
+                      <span className="text-white text-sm truncate">{photo.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="text-red-500 hover:text-red-400 ml-2"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Error Message */}

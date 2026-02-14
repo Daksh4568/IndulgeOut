@@ -10,6 +10,7 @@ const VenueSignup = () => {
   const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     venueName: "",
+    venueType: "",
     contactPersonName: "",
     phoneNumber: "",
     email: "",
@@ -17,10 +18,21 @@ const VenueSignup = () => {
     locality: "",
     capacityRange: "",
     instagramLink: "",
-    photo: null,
   });
+  const [photos, setPhotos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const venueTypeOptions = [
+    { value: "cafe", label: "Cafe" },
+    { value: "bar", label: "Bar" },
+    { value: "studio", label: "Studio" },
+    { value: "club", label: "Club" },
+    { value: "outdoor", label: "Outdoor Space" },
+    { value: "restaurant", label: "Restaurant" },
+    { value: "coworking", label: "Coworking Space" },
+    { value: "other", label: "Other" },
+  ];
 
   const capacityOptions = [
     { value: "0-20", label: "0-20 people" },
@@ -40,18 +52,17 @@ const VenueSignup = () => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        // 50MB
-        setError("File size must be less than 50MB");
-        return;
-      }
-      setFormData({
-        ...formData,
-        photo: file,
-      });
+    const files = Array.from(e.target.files);
+    if (files.length > 3) {
+      setError("You can only upload up to 3 photos");
+      return;
     }
+    setPhotos(files);
+    setError("");
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(photos.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -79,6 +90,10 @@ const VenueSignup = () => {
       setError("Please select city");
       return;
     }
+    if (!formData.venueType) {
+      setError("Please select venue type");
+      return;
+    }
     if (!formData.capacityRange) {
       setError("Please select capacity range");
       return;
@@ -94,16 +109,21 @@ const VenueSignup = () => {
       formDataToSend.append("role", "host_partner");
       formDataToSend.append("hostPartnerType", "venue");
       formDataToSend.append("venueName", formData.venueName);
+      formDataToSend.append("venueType", formData.venueType);
+      formDataToSend.append("capacityRange", formData.capacityRange);
       formDataToSend.append("city", formData.city);
       formDataToSend.append("locality", formData.locality);
-      formDataToSend.append("capacityRange", formData.capacityRange);
-      formDataToSend.append("instagramLink", formData.instagramLink);
-      if (formData.photo) {
-        formDataToSend.append("photo", formData.photo);
+      if (formData.instagramLink) {
+        formDataToSend.append("instagramLink", formData.instagramLink);
       }
+      
+      // Append photos
+      photos.forEach((photo) => {
+        formDataToSend.append("photos", photo);
+      });
 
       const response = await axios.post(
-        `${API_URL}/api/auth/register-venue`,
+        `${API_URL}/api/auth/register`,
         formDataToSend,
         {
           headers: {
@@ -202,6 +222,27 @@ const VenueSignup = () => {
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                 style={{ "--tw-ring-color": "#7878E9" }}
               />
+            </div>
+
+            {/* Venue Type */}
+            <div>
+              <label className="block text-white text-sm font-medium mb-2">
+                Venue Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="venueType"
+                value={formData.venueType}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                style={{ "--tw-ring-color": "#7878E9" }}
+              >
+                <option value="">Select venue type</option>
+                {venueTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Contact Person Name */}
@@ -353,41 +394,51 @@ const VenueSignup = () => {
               />
             </div>
 
-            {/* Upload Photo */}
+            {/* Upload Photos */}
             <div>
               <label className="block text-white text-sm font-medium mb-2">
-                Upload photo <span className="text-red-500">*</span>
+                Upload photos (up to 3)
               </label>
               <div className="relative">
                 <input
                   type="file"
-                  id="photo"
-                  accept="image/*,video/*"
+                  id="photos"
+                  accept="image/*"
+                  multiple
                   onChange={handleFileChange}
                   className="hidden"
                 />
                 <label
-                  htmlFor="photo"
-                  className="flex flex-col items-center justify-center w-full h-32 bg-white/5 border-2 border-dashed border-white/10 rounded-lg cursor-pointer transition-colors"
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.borderColor = "#7878E9")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.borderColor =
-                      "rgba(255, 255, 255, 0.1)")
-                  }
+                  htmlFor="photos"
+                  className="flex flex-col items-center justify-center w-full h-32 bg-white/5 border-2 border-dashed border-white/10 rounded-lg cursor-pointer transition-colors hover:border-[#7878E9]"
                 >
                   <Upload className="w-8 h-8 text-gray-500 mb-2" />
                   <p className="text-gray-400 text-sm">
-                    {formData.photo
-                      ? formData.photo.name
-                      : "Choose a file or drag & drop it here"}
+                    {photos.length > 0
+                      ? `${photos.length} photo${photos.length > 1 ? 's' : ''} selected`
+                      : "Choose files or drag & drop them here"}
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
-                    JPEG, PNG, JPG, and MP4 formats, up to 50MB
+                    JPEG, PNG, JPG formats, up to 3 photos
                   </p>
                 </label>
               </div>
+              {photos.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {photos.map((photo, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-lg">
+                      <span className="text-white text-sm truncate">{photo.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="text-red-500 hover:text-red-400 ml-2"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Error Message */}

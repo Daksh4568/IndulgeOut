@@ -294,6 +294,10 @@ const userSchema = new mongoose.Schema({
   communityProfile: {
     communityName: String,
     city: String,
+    category: [{
+      type: String,
+      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    }],
     primaryCategory: String,
     communityType: {
       type: String,

@@ -116,10 +116,11 @@ const VenueCounterForm = () => {
       expectedAttendees: formData.expectedAttendees,
       eventDate: formData.eventDate,
       eventType: formData.eventType,
-      audioVisual: formData.requirements?.audioVisual,
+      audioVisual: formData.requirements?.av,  // Fixed: av not audioVisual
       barFood: formData.requirements?.barFood,
-      decoration: formData.requirements?.decoration,
-      entertainment: formData.requirements?.entertainment,
+      seating: formData.requirements?.seating,
+      spaceOnly: formData.requirements?.spaceOnly,
+      production: formData.requirements?.production,
       commercialModel: formData.pricing
     };
     return fieldMap[fieldName];
@@ -505,10 +506,18 @@ const VenueCounterForm = () => {
           </div>
 
           {/* Audio/Visual Support */}
-          {formData.requirements?.audioVisual?.selected && (
+          {formData.requirements?.av?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Audio / Visual Support</h3>
-              <p className="text-sm text-gray-400 mb-2">Requested: Mic, Speakers, Projector, Lighting</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.requirements.av.subOptions && Object.keys(formData.requirements.av.subOptions).length > 0
+                  ? Object.keys(formData.requirements.av.subOptions).map(key => {
+                      const labels = { mic: 'Mic', speakers: 'Speakers', projector: 'Projector/Screen', lighting: 'Lighting' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Audio/Visual equipment required'}
+              </p>
               {fieldResponses.audioVisual?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
                   You can provide: {fieldResponses.audioVisual?.modifiedValue?.join(', ')}
@@ -522,8 +531,60 @@ const VenueCounterForm = () => {
           {formData.requirements?.barFood?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Bar / Food Service</h3>
-              <p className="text-sm text-gray-400 mb-2">Requested: Bar and food services</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.requirements.barFood.subOptions && Object.keys(formData.requirements.barFood.subOptions).length > 0
+                  ? Object.keys(formData.requirements.barFood.subOptions).map(key => {
+                      const labels = { food: 'Food', beverages: 'Beverages' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Bar and food services'}
+              </p>
               {renderFieldActionButtons('barFood')}
+            </div>
+          )}
+
+          {/* Seating */}
+          {formData.requirements?.seating?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Seating / Layout Support</h3>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.requirements.seating.subOptions && Object.keys(formData.requirements.seating.subOptions).length > 0
+                  ? Object.keys(formData.requirements.seating.subOptions).map(key => {
+                      const labels = { tables: 'Tables', chairs: 'Chairs', arrangement: 'Arrangement Help' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Seating and layout support'}
+              </p>
+              {renderFieldActionButtons('seating')}
+            </div>
+          )}
+
+          {/* Production */}
+          {formData.requirements?.production?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Production & Event Setup</h3>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.requirements.production.subOptions && Object.keys(formData.requirements.production.subOptions).length > 0
+                  ? Object.keys(formData.requirements.production.subOptions).map(key => {
+                      const labels = { stage: 'Stage', decor: 'Decor', staff: 'Staff', entry_desk: 'Entry Desk' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Production and event setup'}
+              </p>
+              {renderFieldActionButtons('production')}
+            </div>
+          )}
+
+          {/* Space Only */}
+          {formData.requirements?.spaceOnly?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Space Only</h3>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">Just the venue space, no additional services</p>
+              {renderFieldActionButtons('spaceOnly')}
             </div>
           )}
         </div>

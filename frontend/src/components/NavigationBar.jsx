@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, X, Menu, User, Building2, Sparkles, Users } from 'lucide-react';
+import { X, Menu, User, Building2, Sparkles, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
 import { useState } from 'react';
@@ -7,8 +7,6 @@ import { useState } from 'react';
 export default function NavigationBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [exploreOpen, setExploreOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -85,73 +83,21 @@ export default function NavigationBar() {
             {!user ? (
               // Logged OUT Navigation
               <>
-                {/* Explore Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setExploreOpen(!exploreOpen)}
-                    onBlur={() => setTimeout(() => setExploreOpen(false), 200)}
-                    className="flex items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    EXPLORE
-                    <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${exploreOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {exploreOpen && (
-                    <div 
-                      className="absolute left-0 mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-2"
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <Link
-                        to="/explore?tab=events"
-                        onClick={() => setExploreOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                      >
-                        Events
-                      </Link>
-                      <Link
-                        to="/explore?tab=communities"
-                        onClick={() => setExploreOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                      >
-                        Communities
-                      </Link>
-                      <Link
-                        to="/explore?tab=people"
-                        onClick={() => setExploreOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                      >
-                        People
-                      </Link>
-                    </div>
-                  )}
-                </div>
+                {/* Explore */}
+                <Link
+                  to="/explore"
+                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  EXPLORE
+                </Link>
 
-                {/* Categories Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setCategoriesOpen(!categoriesOpen)}
-                    onBlur={() => setTimeout(() => setCategoriesOpen(false), 200)}
-                    className="flex items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    CATEGORIES
-                    <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {categoriesOpen && (
-                    <div 
-                      className="absolute left-0 mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-2"
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <Link
-                        to="/categories"
-                        onClick={() => setCategoriesOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                      >
-                        All Categories
-                      </Link>
-                    </div>
-                  )}
-                </div>
+                {/* Categories */}
+                <Link
+                  to="/categories"
+                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  CATEGORIES
+                </Link>
 
                 {/* Host & Partner */}
                 <Link

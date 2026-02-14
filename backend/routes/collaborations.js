@@ -251,8 +251,9 @@ router.post('/:id/counter', authMiddleware, async (req, res) => {
     
     for (const admin of adminUsers) {
       await notificationService.createNotification({
-        userId: admin._id,
+        recipient: admin._id,
         type: 'admin_counter_review_required',
+        category: 'action_required',
         title: 'Counter-Proposal Needs Review',
         message: `A vendor has submitted a counter-proposal for collaboration ${collaboration._id}`,
         actionUrl: `/admin/collaborations/${collaboration._id}`,
@@ -387,6 +388,7 @@ router.post('/:id/counter/accept', authMiddleware, async (req, res) => {
 
     // Accept the counter and mark as completed
     collaboration.status = 'completed';
+    collaboration.acceptedAt = new Date();
     collaboration.messages.push({
       sender: userId,
       message: acceptanceMessage || 'Counter-proposal accepted. Terms agreed.',
@@ -609,8 +611,9 @@ router.post('/propose', authMiddleware, async (req, res) => {
     const adminUsers = await User.find({ role: 'admin' });
     for (const admin of adminUsers) {
       await notificationService.createNotification({
-        userId: admin._id,
+        recipient: admin._id,
         type: 'admin_review_required',
+        category: 'action_required',
         title: 'New Collaboration Request Needs Review',
         message: `${proposer.communityProfile?.communityName || proposer.name} has submitted a ${recipientType} collaboration request`,
         actionUrl: `/admin/collaborations/${collaboration._id}`,

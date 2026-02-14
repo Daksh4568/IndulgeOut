@@ -148,7 +148,7 @@ const TermsConditions = () => {
           {sections.map((section) => (
             <div 
               key={section.number}
-              className="bg-[#999999] rounded-lg p-6 sm:p-8 border border-gray-800"
+              className="bg-zinc-900 rounded-lg p-6 sm:p-8 border border-gray-800"
             >
               {/* Section Header */}
               <div className="flex items-start gap-4 mb-6">
@@ -261,7 +261,7 @@ const TermsConditions = () => {
         </div>
 
         {/* Contact Section */}
-        <div className="mt-8 bg-[#999999] rounded-lg p-6 sm:p-8 border border-gray-800">
+        <div className="mt-8 bg-zinc-900 rounded-lg p-6 sm:p-8 border border-gray-800">
           <p 
             className="text-sm text-gray-400"
             style={{ fontFamily: 'Source Serif Pro, serif' }}

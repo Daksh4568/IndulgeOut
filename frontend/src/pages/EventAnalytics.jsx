@@ -38,6 +38,7 @@ const EventAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState(null);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name");
@@ -53,12 +54,14 @@ const EventAnalytics = () => {
       } else {
         setLoading(true);
       }
+      setError(null);
 
       const response = await api.get(`/events/${eventId}/analytics`);
       setAnalytics(response.data);
       console.log("📊 Analytics data:", response.data);
     } catch (error) {
       console.error("❌ Error fetching analytics:", error);
+      setError(error.response?.data?.message || error.message || "Failed to load analytics");
       if (error.response?.status === 403) {
         alert("You are not authorized to view analytics for this event");
         navigate("/organizer/dashboard");
@@ -206,19 +209,27 @@ const EventAnalytics = () => {
     );
   }
 
-  if (!analytics) {
+  if (error || !analytics) {
     return (
       <div className="min-h-screen bg-black">
         <NavigationBar />
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <p className="text-gray-400">No analytics data available</p>
-            <button
-              onClick={() => navigate("/organizer/dashboard")}
-              className="mt-4 text-purple-500 hover:text-purple-400"
-            >
-              Back to Dashboard
-            </button>
+            <p className="text-red-400 mb-2">{error || "No analytics data available"}</p>
+            <div className="flex gap-3 justify-center mt-4">
+              <button
+                onClick={() => fetchAnalytics()}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate("/organizer/dashboard")}
+                className="px-4 py-2 text-purple-500 hover:text-purple-400 transition-colors"
+              >
+                Back to Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -247,13 +258,13 @@ const EventAnalytics = () => {
                 Live
               </div>
               <h1 className="text-4xl font-bold text-white mb-2">
-                {analytics.eventTitle}
+                {analytics.eventTitle || "Event Analytics"}
               </h1>
               <div className="flex items-center space-x-4 text-sm text-gray-400">
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1.5" />
                   {analytics.eventDate &&
-                    formatDate(analytics.eventDate)} at {analytics.eventTime}
+                    formatDate(analytics.eventDate)}{" "}at {analytics.eventTime || "TBD"}
                 </div>
                 {analytics.eventLocation?.city && (
                   <div className="flex items-center">
@@ -299,28 +310,28 @@ const EventAnalytics = () => {
             <MetricCard
               icon={Eye}
               label="Event Views"
-              value={analytics.coreMetrics.eventViews.toLocaleString()}
+              value={(analytics.coreMetrics?.eventViews || 0).toLocaleString()}
               subValue="Total page views"
               iconColor="text-blue-500"
             />
             <MetricCard
               icon={Users}
               label="Attendees"
-              value={analytics.coreMetrics.totalBookings.toLocaleString()}
+              value={(analytics.coreMetrics?.totalBookings || 0).toLocaleString()}
               subValue="Total registrations"
               iconColor="text-green-500"
             />
             <MetricCard
               icon={Target}
               label="Bookings"
-              value={analytics.coreMetrics.bookingsVsCapacity}
-              subValue={`${analytics.coreMetrics.fillPercentage}% filled`}
+              value={analytics.coreMetrics?.bookingsVsCapacity || "0/0"}
+              subValue={`${analytics.coreMetrics?.fillPercentage || 0}% filled`}
               iconColor="text-yellow-500"
             />
             <MetricCard
               icon={TrendingUp}
               label="Conversion Rate"
-              value={`${analytics.coreMetrics.conversionRate}%`}
+              value={`${analytics.coreMetrics?.conversionRate || 0}%`}
               subValue="Views to bookings"
               iconColor="text-purple-500"
             />
@@ -342,7 +353,7 @@ const EventAnalytics = () => {
                 <span className="text-sm text-gray-400">Total Revenue</span>
               </div>
               <div className="text-3xl font-bold text-white mb-1">
-                ₹{analytics.revenue.totalRevenue.toLocaleString()}
+                ₹{(analytics.revenue?.totalRevenue || 0).toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
@@ -351,7 +362,7 @@ const EventAnalytics = () => {
                 <span className="text-sm text-gray-400">Avg per Attendee</span>
               </div>
               <div className="text-3xl font-bold text-white mb-1">
-                ₹{analytics.revenue.avgPerAttendee.toLocaleString()}
+                ₹{(analytics.revenue?.avgPerAttendee || 0).toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
@@ -359,7 +370,7 @@ const EventAnalytics = () => {
                 Revenue by Ticket Type
               </div>
               <div className="space-y-2">
-                {analytics.revenue.revenueByTicketType.map((type, idx) => (
+                {(analytics.revenue?.revenueByTicketType || []).map((type, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <div
@@ -371,13 +382,21 @@ const EventAnalytics = () => {
                               : "bg-green-500"
                         }`}
                       ></div>
-                      <span className="text-sm text-gray-300">{type.type}</span>
+                      <span className="text-sm text-gray-300 capitalize">{type.type}</span>
                     </div>
-                    <span className="text-sm font-semibold text-white">
-                      {type.count} tickets
-                    </span>
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-white">
+                        ₹{(type.revenue || 0).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {type.count} tickets
+                      </div>
+                    </div>
                   </div>
                 ))}
+                {(analytics.revenue?.revenueByTicketType || []).length === 0 && (
+                  <p className="text-sm text-gray-500">No ticket sales yet</p>
+                )}
               </div>
             </div>
           </div>
@@ -395,33 +414,34 @@ const EventAnalytics = () => {
             <MetricCard
               icon={Users}
               label="Tickets Sold"
-              value={analytics.attendance.ticketsSold}
+              value={analytics.attendance?.ticketsSold || 0}
               iconColor="text-cyan-500"
             />
             <MetricCard
               icon={UserCheck}
               label="Actual Check-ins"
-              value={analytics.attendance.actualCheckIns}
-              subValue={`${analytics.attendance.showUpRate}% arrival`}
+              value={analytics.attendance?.actualCheckIns || 0}
+              subValue={`${analytics.attendance?.showUpRate || 0}% arrival`}
               iconColor="text-green-500"
             />
             <MetricCard
               icon={TrendingUp}
               label="Show-up Rate"
-              value={`${analytics.attendance.showUpRate}%`}
+              value={`${analytics.attendance?.showUpRate || 0}%`}
               iconColor="text-green-500"
             />
             <MetricCard
               icon={UserX}
               label="No-shows"
-              value={analytics.attendance.noShows}
-              subValue={`${analytics.attendance.ticketsSold - analytics.attendance.noShows} attended`}
+              value={analytics.attendance?.noShows || 0}
+              subValue={`${(analytics.attendance?.ticketsSold || 0) - (analytics.attendance?.noShows || 0)} attended`}
               iconColor="text-orange-500"
             />
           </div>
         </div>
 
         {/* Demand Timing & Sales Velocity */}
+        {analytics.demandTiming && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
@@ -438,7 +458,7 @@ const EventAnalytics = () => {
                 </span>
               </div>
               <div className="text-xl font-semibold text-white">
-                {analytics.demandTiming.firstBookingDate
+                {analytics.demandTiming?.firstBookingDate
                   ? formatDate(analytics.demandTiming.firstBookingDate)
                   : "N/A"}
               </div>
@@ -450,7 +470,7 @@ const EventAnalytics = () => {
                 <span className="text-sm text-gray-400">Peak Booking Date</span>
               </div>
               <div className="text-xl font-semibold text-white">
-                {analytics.demandTiming.peakBookingMessage || "Steady bookings"}
+                {analytics.demandTiming?.peakBookingMessage || "Steady bookings"}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Last minute surge
@@ -462,7 +482,7 @@ const EventAnalytics = () => {
                 <span className="text-sm text-gray-400">Booking Period</span>
               </div>
               <div className="text-xl font-semibold text-white">
-                {analytics.demandTiming.bookingPeriodDays} days
+                {analytics.demandTiming?.bookingPeriodDays || 0} days
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Active sales window
@@ -470,8 +490,10 @@ const EventAnalytics = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Audience Quality Snapshot */}
+        {analytics.audienceQuality && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
@@ -488,7 +510,7 @@ const EventAnalytics = () => {
                 </span>
               </div>
               <div className="text-3xl font-bold text-white mb-1">
-                {analytics.audienceQuality.firstTimeAttendees}%
+                {analytics.audienceQuality?.firstTimeAttendees || 0}%
               </div>
               <div className="text-xs text-gray-500">New to platform</div>
             </div>
@@ -498,7 +520,7 @@ const EventAnalytics = () => {
                 <span className="text-sm text-gray-400">Repeat Attendees</span>
               </div>
               <div className="text-3xl font-bold text-white mb-1">
-                {analytics.audienceQuality.repeatAttendees}%
+                {analytics.audienceQuality?.repeatAttendees || 0}%
               </div>
               <div className="text-xs text-gray-500">Returning members</div>
             </div>
@@ -510,7 +532,7 @@ const EventAnalytics = () => {
                 </span>
               </div>
               <div className="text-3xl font-bold text-white mb-1">
-                {analytics.audienceQuality.interestConversion}%
+                {analytics.audienceQuality?.interestConversion || 0}%
               </div>
               <div className="text-xs text-gray-500">Matched preferences</div>
             </div>
@@ -522,14 +544,16 @@ const EventAnalytics = () => {
                 </span>
               </div>
               <div className="text-3xl font-bold text-white mb-1">
-                {analytics.audienceQuality.localDistribution}%
+                {analytics.audienceQuality?.localDistribution || 0}%
               </div>
               <div className="text-xs text-gray-500">From same city</div>
             </div>
           </div>
         </div>
+        )}
 
         {/* Event Outcome & Feedback */}
+        {analytics.feedback && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
@@ -546,12 +570,12 @@ const EventAnalytics = () => {
               </div>
               <div className="flex items-end space-x-2 mb-1">
                 <div className="text-5xl font-bold text-white">
-                  {analytics.feedback.avgRating}
+                  {analytics.feedback?.avgRating || 0}
                 </div>
                 <div className="text-2xl text-gray-400 mb-2">/5.0</div>
               </div>
               <div className="text-sm text-gray-400">
-                Based on {analytics.feedback.totalReviews} reviews
+                Based on {analytics.feedback?.totalReviews || 0} reviews
               </div>
             </div>
 
@@ -580,8 +604,8 @@ const EventAnalytics = () => {
                         }`}
                         style={{
                           width: `${
-                            analytics.feedback.totalReviews > 0
-                              ? (analytics.feedback.ratingBreakdown[rating] /
+                            (analytics.feedback?.totalReviews || 0) > 0
+                              ? ((analytics.feedback?.ratingBreakdown?.[rating] || 0) /
                                   analytics.feedback.totalReviews) *
                                 100
                               : 0
@@ -590,7 +614,7 @@ const EventAnalytics = () => {
                       />
                     </div>
                     <span className="text-sm text-gray-400 w-10 text-right">
-                      {analytics.feedback.ratingBreakdown[rating]}
+                      {analytics.feedback?.ratingBreakdown?.[rating] || 0}
                     </span>
                   </div>
                 ))}
@@ -601,14 +625,14 @@ const EventAnalytics = () => {
             <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm text-gray-400">Recent Reviews</div>
-                {analytics.feedback.totalReviews > 0 && (
+                {(analytics.feedback?.totalReviews || 0) > 0 && (
                   <button className="text-xs text-purple-400 hover:text-purple-300">
                     View All {analytics.feedback.totalReviews}
                   </button>
                 )}
               </div>
               <div className="space-y-3 max-h-40 overflow-y-auto">
-                {analytics.feedback.recentReviews.length > 0 ? (
+                {(analytics.feedback?.recentReviews?.length || 0) > 0 ? (
                   analytics.feedback.recentReviews.slice(0, 3).map((review) => (
                     <div
                       key={review.id}
@@ -646,6 +670,7 @@ const EventAnalytics = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Attendee Check-ins */}
         <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
@@ -700,7 +725,7 @@ const EventAnalytics = () => {
             </div>
 
             <div className="mt-4 text-sm text-gray-400">
-              Showing {filteredAttendees.length} of {analytics.attendees.length}{" "}
+              Showing {filteredAttendees.length} of {analytics.attendees?.length || 0}{" "}
               attendees
             </div>
           </div>

@@ -527,8 +527,13 @@ const CommunityCounterFormVenue = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Space & Infrastructure</h3>
               <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
-              <p className="text-white mb-1">
-                {formData.venueOfferings.space.options?.join(', ')}
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.space.subOptions && Object.keys(formData.venueOfferings.space.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.space.subOptions).map(key => {
+                      const labels = { indoor: 'Indoor Space', outdoor: 'Outdoor Space', stage: 'Stage Area' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Venue space included'}
               </p>
               {renderFieldActionButtons('spaceOffering')}
             </div>
@@ -538,8 +543,13 @@ const CommunityCounterFormVenue = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">AV Equipment</h3>
               <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
-              <p className="text-white mb-1">
-                {formData.venueOfferings.av.options?.join(', ')}
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.av.subOptions && Object.keys(formData.venueOfferings.av.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.av.subOptions).map(key => {
+                      const labels = { mic: 'Microphones', speakers: 'Speakers', projector: 'Projector', lighting: 'Lighting' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'AV equipment included'}
               </p>
               {renderFieldActionButtons('avOffering')}
             </div>
@@ -549,8 +559,13 @@ const CommunityCounterFormVenue = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Furniture & Seating</h3>
               <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
-              <p className="text-white mb-1">
-                {formData.venueOfferings.furniture.options?.join(', ')}
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.furniture.subOptions && Object.keys(formData.venueOfferings.furniture.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.furniture.subOptions).map(key => {
+                      const labels = { tables: 'Tables', chairs: 'Chairs', bar_stools: 'Bar Stools' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Furniture included'}
               </p>
               {renderFieldActionButtons('furnitureOffering')}
             </div>
@@ -560,8 +575,93 @@ const CommunityCounterFormVenue = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">F&B Services</h3>
               <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
-              <p className="text-white mb-1">
-                {formData.venueOfferings.fnb.options?.join(', ')}
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.fnb.subOptions && Object.keys(formData.venueOfferings.fnb.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.fnb.subOptions).map(key => {
+                      const labels = { catering: 'Catering', bar_service: 'Bar Service', kitchen_access: 'Kitchen Access' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'F&B services included'}
+              </p>
+              {renderFieldActionButtons('fnbOffering')}
+            </div>
+          )}
+
+          {formData.venueOfferings?.staff?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Staff Support</h3>
+              <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.staff.subOptions && Object.keys(formData.venueOfferings.staff.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.staff.subOptions).map(key => {
+                      const labels = { service_staff: 'Service Staff', security: 'Security', tech_support: 'Technical Support' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Staff support included'}
+              </p>
+              {renderFieldActionButtons('staffOffering')}
+            </div>
+          )}
+
+          {formData.venueOfferings?.marketing?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Marketing Support</h3>
+              <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.marketing.subOptions && Object.keys(formData.venueOfferings.marketing.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.marketing.subOptions).map(key => {
+                      const labels = { social_media: 'Social Media Promotion', venue_listing: 'Venue Website Listing', email_blast: 'Email to Customers' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Marketing support included'}
+              </p>
+              {renderFieldActionButtons('marketingOffering')}
+            </div>
+          )}
+
+          {formData.venueOfferings?.storage?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Storage / Parking</h3>
+              <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.storage.subOptions && Object.keys(formData.venueOfferings.storage.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.storage.subOptions).map(key => {
+                      const labels = { equipment_storage: 'Equipment Storage', parking: 'Parking' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Storage/Parking included'}
+              </p>
+              {renderFieldActionButtons('storageOffering')}
+            </div>
+          )}
+
+          {formData.venueOfferings?.ticketing?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Ticketing Support</h3>
+              <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.ticketing.subOptions && Object.keys(formData.venueOfferings.ticketing.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.ticketing.subOptions).map(key => {
+                      const labels = { ticket_platform: 'Ticket Platform', box_office: 'Box Office', payment_handling: 'Payment Handling' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Ticketing support included'}
+              </p>
+              {renderFieldActionButtons('ticketingOffering')}
+            </div>
+          )}
+
+          {formData.venueOfferings?.fnb?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">F&B Services</h3>
+              <p className="text-sm text-gray-400 mb-2">INCLUDED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.venueOfferings.fnb.subOptions && Object.keys(formData.venueOfferings.fnb.subOptions).length > 0
+                  ? Object.keys(formData.venueOfferings.fnb.subOptions).map(key => {
+                      const labels = { catering: 'Catering', bar_service: 'Bar Service', kitchen_access: 'Kitchen Access' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'F&B services included'}
               </p>
               {renderFieldActionButtons('fnbOffering')}
             </div>

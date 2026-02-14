@@ -255,7 +255,7 @@ async function notifyProfileIncompleteUser(userId, missingFields) {
 async function notifyProfileIncompleteHost(userId) {
   return createNotification({
     recipient: userId,
-    type: 'profile_incomplete_host',
+    type: 'profile_incomplete_community_organizer',
     category: 'action_required',
     priority: 'high',
     title: '🎯 Complete Your Host Profile',
@@ -525,7 +525,7 @@ async function notifyRespondToFeedback(userId, eventId, eventTitle) {
 async function notifyProfileIncompleteBrand(userId) {
   return createNotification({
     recipient: userId,
-    type: 'profile_incomplete_brand',
+    type: 'profile_incomplete_brand_sponsor',
     category: 'action_required',
     priority: 'high',
     title: '🏢 Complete Your Brand Profile',

@@ -287,8 +287,9 @@ router.put('/collaborations/:id/approve', requirePermission('manage_collaboratio
     // Send notification to vendor
     const notificationService = require('../services/notificationService');
     await notificationService.createNotification({
-      userId: collaboration.recipient?.user || collaboration.recipientId,
+      recipient: collaboration.recipient?.user || collaboration.recipientId,
       type: 'collaboration_approved',
+      category: 'status_update',
       title: 'New Collaboration Request Approved',
       message: `Your collaboration request from ${collaboration.initiator?.name || 'a community'} has been approved by admin. Please review and respond.`,
       actionUrl: `/venue/collaborations/${collaboration._id}`,
@@ -350,8 +351,9 @@ router.put('/collaborations/:id/reject', requirePermission('manage_collaboration
     // Send notification to community (initiator)
     const notificationService = require('../services/notificationService');
     await notificationService.createNotification({
-      userId: collaboration.initiator?.user || collaboration.proposerId,
+      recipient: collaboration.initiator?.user || collaboration.proposerId,
       type: 'collaboration_rejected',
+      category: 'status_update',
       title: 'Collaboration Request Rejected',
       message: `Your collaboration request has been rejected by admin. Reason: ${reason.substring(0, 100)}`,
       actionUrl: `/community/collaborations/${collaboration._id}`,
@@ -404,12 +406,20 @@ router.put('/collaborations/counters/:id/approve', requirePermission('manage_col
     collaboration.adminReview.counterNotes = adminNotes || '';
 
     await collaboration.save();
+    
+    console.log('✅ Counter approval saved:', {
+      collaborationId: collaboration._id,
+      counterReviewedBy: collaboration.adminReview.counterReviewedBy,
+      counterReviewedAt: collaboration.adminReview.counterReviewedAt,
+      counterDecision: collaboration.adminReview.counterDecision
+    });
 
     // Send notification to initiator about approved counter
     const notificationService = require('../services/notificationService');
     await notificationService.createNotification({
-      userId: collaboration.initiator?.user || collaboration.proposerId,
+      recipient: collaboration.initiator?.user || collaboration.proposerId,
       type: 'counter_approved',
+      category: 'action_required',
       title: 'Counter Proposal Approved',
       message: `The counter proposal from ${collaboration.recipient?.name || 'vendor'} has been approved. Please review and accept/reject.`,
       actionUrl: `/community/collaborations/${collaboration._id}/counter`,
@@ -476,8 +486,9 @@ router.put('/collaborations/counters/:id/reject', requirePermission('manage_coll
     // Send notification to vendor about rejected counter
     const notificationService = require('../services/notificationService');
     await notificationService.createNotification({
-      userId: collaboration.recipient?.user || collaboration.recipientId,
+      recipient: collaboration.recipient?.user || collaboration.recipientId,
       type: 'counter_rejected',
+      category: 'status_update',
       title: 'Counter Proposal Rejected',
       message: `Your counter proposal has been rejected by admin. Reason: ${reason.substring(0, 100)}`,
       actionUrl: `/venue/collaborations/${collaboration._id}`,
@@ -773,6 +784,7 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
       .populate('proposerId', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
       .populate('recipientId', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
       .populate('adminReview.reviewedBy', 'name email')
+      .populate('adminReview.counterReviewedBy', 'name email')
       .lean();
 
     if (!collaboration) {
@@ -865,6 +877,16 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
       collaboration.counterData.responderId = collaboration.recipient?.user || collaboration.recipientId;
       collaboration.counterData.responderType = collaboration.recipient?.userType || collaboration.recipientType;
     }
+    
+    // Debug: Log adminReview data
+    console.log('📋 GET /collaborations/:id - adminReview data:', {
+      collaborationId: collaboration._id,
+      hasAdminReview: !!collaboration.adminReview,
+      reviewedAt: collaboration.adminReview?.reviewedAt,
+      counterReviewedAt: collaboration.adminReview?.counterReviewedAt,
+      counterReviewedBy: collaboration.adminReview?.counterReviewedBy,
+      counterDecision: collaboration.adminReview?.counterDecision
+    });
 
     // Build timeline
     const timeline = [
@@ -898,6 +920,19 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
         timestamp: collaboration.acceptedAt,
         status: 'vendor_accepted',
         description: 'Vendor responded with counter-proposal'
+      });
+    }
+
+    // Add counter admin review step if it exists
+    if (collaboration.adminReview && collaboration.adminReview.counterReviewedAt) {
+      timeline.push({
+        event: collaboration.adminReview.counterDecision === 'approved' ? 'Counter Admin Approved' : 'Counter Admin Rejected',
+        actor: collaboration.adminReview.counterReviewedBy?.name || 'Admin',
+        actorType: 'admin',
+        timestamp: collaboration.adminReview.counterReviewedAt,
+        status: collaboration.adminReview.counterDecision === 'approved' ? 'counter_admin_approved' : 'counter_admin_rejected',
+        description: collaboration.adminReview.counterDecision === 'approved' ? 'Counter-proposal approved and delivered to initiator' : 'Counter-proposal rejected',
+        notes: collaboration.adminReview.counterNotes
       });
     }
 

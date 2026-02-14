@@ -28,6 +28,7 @@ const CommunityDetail = () => {
   const [community, setCommunity] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [newPost, setNewPost] = useState('');
   const [newTestimonial, setNewTestimonial] = useState({ content: '', rating: 5 });
@@ -59,6 +60,7 @@ const CommunityDetail = () => {
   const fetchCommunityData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get(`/communities/${id}`);
       
       if (response.data.community) {
@@ -72,6 +74,11 @@ const CommunityDetail = () => {
       }
     } catch (error) {
       console.error('Error fetching community:', error);
+      if (error.response?.status === 404) {
+        setError(error.response?.data?.message || 'Community not found');
+      } else {
+        setError('Failed to load community details');
+      }
     } finally {
       setLoading(false);
     }
@@ -227,16 +234,19 @@ const CommunityDetail = () => {
     );
   }
 
-  if (!community) {
+  if (error || !community) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md px-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Community not found
+            {error || 'Community not found'}
           </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            This community may have been removed or the organizer account no longer exists.
+          </p>
           <button
-            onClick={() => navigate(-1)}
-            className="text-blue-600 hover:text-blue-700"
+            onClick={() => navigate('/explore?tab=communities')}
+            className="text-blue-600 hover:text-blue-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium"
           >
             Back to Communities
           </button>

@@ -569,25 +569,182 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     const notCheckedIn = tickets.filter(t => t.status === 'active').length;
     const cancelled = tickets.filter(t => t.status === 'cancelled').length;
     
-    // Format attendee data
-    const attendees = tickets.map(ticket => ({
-      ticketId: ticket._id, // Unique ticket ID for React key
-      userId: ticket.user._id,
-      name: ticket.user.name,
-      email: ticket.user.email,
-      phoneNumber: ticket.user.phoneNumber,
-      profilePicture: ticket.user.profilePicture,
-      ticketNumber: ticket.ticketNumber,
-      ticketType: ticket.metadata?.ticketType || 'general',
-      quantity: ticket.quantity || 1,
-      status: ticket.status,
-      purchaseDate: ticket.purchaseDate,
-      checkInTime: ticket.checkInTime,
-      checkInBy: ticket.checkInBy?.name || null
-    }));
+    // Format attendee data - filter out tickets with null users (deleted accounts)
+    const attendees = tickets
+      .filter(ticket => ticket.user != null) // Skip tickets with deleted users
+      .map(ticket => ({
+        ticketId: ticket._id, // Unique ticket ID for React key
+        userId: ticket.user._id,
+        name: ticket.user.name,
+        email: ticket.user.email,
+        phoneNumber: ticket.user.phoneNumber,
+        profilePicture: ticket.user.profilePicture,
+        ticketNumber: ticket.ticketNumber,
+        ticketType: ticket.metadata?.ticketType || 'general',
+        quantity: ticket.quantity || 1,
+        status: ticket.status,
+        purchaseDate: ticket.purchaseDate,
+        checkInTime: ticket.checkInTime,
+        checkInBy: ticket.checkInBy?.name || null
+      }));
     
     // Calculate total slots (sum of all quantities)
     const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
+    
+    // Calculate revenue metrics (price.amount * quantity for each ticket)
+    const totalRevenue = tickets
+      .filter(t => t.status !== 'cancelled')
+      .reduce((sum, ticket) => {
+        const ticketRevenue = (ticket.price?.amount || 0) * (ticket.quantity || 1);
+        return sum + ticketRevenue;
+      }, 0);
+    
+    const avgPerAttendee = totalRegistered > 0 ? (totalRevenue / totalRegistered).toFixed(2) : 0;
+    
+    // Group revenue by ticket type
+    const revenueByType = {};
+    tickets.forEach(ticket => {
+      if (ticket.status !== 'cancelled') {
+        const ticketType = ticket.metadata?.ticketType || 'general';
+        if (!revenueByType[ticketType]) {
+          revenueByType[ticketType] = { type: ticketType, count: 0, revenue: 0 };
+        }
+        revenueByType[ticketType].count += ticket.quantity || 1;
+        const ticketRevenue = (ticket.price?.amount || 0) * (ticket.quantity || 1);
+        revenueByType[ticketType].revenue += ticketRevenue;
+      }
+    });
+    
+    // Calculate fill percentage
+    const fillPercentage = event.maxParticipants > 0 
+      ? ((totalRegistered / event.maxParticipants) * 100).toFixed(1) 
+      : 0;
+    
+    // Calculate conversion rate
+    const views = event.analytics?.views || 0;
+    const conversionRate = views > 0 ? ((totalRegistered / views) * 100).toFixed(2) : 0;
+    
+    // Calculate show-up rate and no-shows
+    const showUpRate = totalRegistered > 0 ? ((checkedIn / totalRegistered) * 100).toFixed(1) : 0;
+    const noShows = totalRegistered - checkedIn;
+    
+    // Calculate Demand Timing & Sales Velocity
+    let demandTiming = null;
+    if (tickets.length > 0) {
+      const sortedByPurchase = [...tickets].sort((a, b) => 
+        new Date(a.purchaseDate) - new Date(b.purchaseDate)
+      );
+      const firstBookingDate = sortedByPurchase[0].purchaseDate;
+      const lastBookingDate = sortedByPurchase[sortedByPurchase.length - 1].purchaseDate;
+      
+      // Calculate booking period in days
+      const bookingPeriodMs = new Date(lastBookingDate) - new Date(firstBookingDate);
+      const bookingPeriodDays = Math.ceil(bookingPeriodMs / (1000 * 60 * 60 * 24));
+      
+      // Check if there was a last-minute surge (>30% in last 72 hours before event)
+      const eventDate = new Date(event.date);
+      const last72Hours = new Date(eventDate.getTime() - (72 * 60 * 60 * 1000));
+      const lastMinuteBookings = tickets.filter(t => 
+        new Date(t.purchaseDate) >= last72Hours
+      ).length;
+      const lastMinutePercentage = totalRegistered > 0 ? (lastMinuteBookings / totalRegistered) * 100 : 0;
+      
+      demandTiming = {
+        firstBookingDate,
+        bookingPeriodDays: bookingPeriodDays || 0,
+        peakBookingMessage: lastMinutePercentage > 30 
+          ? `${Math.round(lastMinutePercentage)}% bookings in last 72 hrs`
+          : 'Steady bookings'
+      };
+    }
+    
+    // Calculate Audience Quality Snapshot
+    let audienceQuality = null;
+    if (totalRegistered > 0) {
+      // Get all attendees' user IDs
+      const attendeeUserIds = tickets
+        .filter(t => t.user != null)
+        .map(t => t.user._id);
+      
+      // Count how many are first-time vs repeat attendees
+      // First-time: users who have only been to this event
+      // Repeat: users who have been to other events on the platform
+      const Ticket = require('../models/Ticket');
+      const userEventCounts = await Ticket.aggregate([
+        {
+          $match: {
+            user: { $in: attendeeUserIds },
+            event: { $ne: event._id }
+          }
+        },
+        {
+          $group: {
+            _id: '$user',
+            eventCount: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      const repeatAttendeeIds = new Set(userEventCounts.map(u => u._id.toString()));
+      const repeatCount = attendeeUserIds.filter(id => 
+        repeatAttendeeIds.has(id.toString())
+      ).length;
+      const firstTimeCount = totalRegistered - repeatCount;
+      
+      // Calculate interest conversion (users whose interests match event categories)
+      const attendeeUsers = await User.find({ _id: { $in: attendeeUserIds } })
+        .select('interests location');
+      
+      const matchingInterests = attendeeUsers.filter(user => 
+        user.interests && user.interests.some(interest => 
+          event.categories.includes(interest)
+        )
+      ).length;
+      
+      // Calculate local distribution (users from same city as event)
+      const localAttendees = attendeeUsers.filter(user => 
+        user.location?.city && user.location.city.toLowerCase() === event.location.city.toLowerCase()
+      ).length;
+      
+      audienceQuality = {
+        firstTimeAttendees: Math.round((firstTimeCount / totalRegistered) * 100),
+        repeatAttendees: Math.round((repeatCount / totalRegistered) * 100),
+        interestConversion: Math.round((matchingInterests / totalRegistered) * 100),
+        localDistribution: Math.round((localAttendees / totalRegistered) * 100)
+      };
+    }
+    
+    // Get Event Feedback & Reviews
+    const Review = require('../models/Review');
+    const reviews = await Review.find({ event: eventId })
+      .populate('user', 'name profilePicture')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    const totalReviews = reviews.length;
+    let avgRating = 0;
+    let ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    
+    if (totalReviews > 0) {
+      avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
+      reviews.forEach(r => {
+        ratingBreakdown[r.rating] = (ratingBreakdown[r.rating] || 0) + 1;
+      });
+    }
+    
+    const feedback = {
+      avgRating: parseFloat(avgRating.toFixed(1)),
+      totalReviews,
+      ratingBreakdown,
+      recentReviews: reviews.slice(0, 3).map(r => ({
+        id: r._id,
+        userName: r.user?.name || 'Anonymous',
+        userAvatar: r.user?.profilePicture,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt
+      }))
+    };
     
     console.log(`✅ Analytics fetched for event: ${event.title} - ${checkedIn}/${totalRegistered} tickets, ${totalSlots} total slots`);
     
@@ -598,6 +755,28 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       eventDate: event.date,
       eventTime: event.time,
       eventLocation: event.location,
+      coreMetrics: {
+        eventViews: views,
+        uniqueViews: event.analytics?.uniqueViews || 0,
+        totalBookings: totalRegistered,
+        bookingsVsCapacity: `${totalRegistered}/${event.maxParticipants}`,
+        fillPercentage: parseFloat(fillPercentage),
+        conversionRate: parseFloat(conversionRate)
+      },
+      revenue: {
+        totalRevenue,
+        avgPerAttendee: parseFloat(avgPerAttendee),
+        revenueByTicketType: Object.values(revenueByType)
+      },
+      attendance: {
+        ticketsSold: totalRegistered,
+        actualCheckIns: checkedIn,
+        showUpRate: parseFloat(showUpRate),
+        noShows: noShows
+      },
+      demandTiming,
+      audienceQuality,
+      feedback,
       statistics: {
         totalTickets: totalRegistered,
         totalSlots,

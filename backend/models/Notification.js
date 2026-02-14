@@ -65,8 +65,16 @@ const notificationSchema = new mongoose.Schema({
       'brandToCommunity_received',
       'venueToCommunity_received',
       'counter_proposal_received',
+      'counter_approved',
+      'counter_rejected',
+      'collaboration_approved',
+      'collaboration_rejected',
       'collaboration_confirmed',
       'collaboration_declined',
+      
+      // Admin-specific
+      'admin_review_required',
+      'admin_counter_review_required',
       
       // Generic
       'subscription_payment_pending',

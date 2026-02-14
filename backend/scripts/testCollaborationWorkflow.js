@@ -14,7 +14,11 @@
  * - Admin review of counter
  * - Final acceptance
  * 
- * Run: node backend/scripts/testCollaborationWorkflow.js
+ * Prerequisites:
+ * - Run: node scripts/setupTestUsers.js (to create test accounts)
+ * - Backend server running on port 5000
+ * 
+ * Run: node scripts/testCollaborationWorkflow.js
  */
 
 const mongoose = require('mongoose');
@@ -27,37 +31,33 @@ const API_BASE = process.env.API_BASE_URL || 'http://localhost:5000/api';
 // Helper to add delays between operations
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Test credentials - Updated with actual test users
+// Test credentials - Updated for OTP authentication
 const USERS = {
   admin: {
-    phone: '9999999999',
-    email: 'admin@indulgeout.com',
-    password: 'admin123',
-    name: 'Admin User',
+    email: 'testadmin@indulgeout.com',
+    phone: '8888888801',
+    name: 'Test Admin',
     token: null,
     userId: null
   },
   community: {
-    phone: '9999999991',
-    email: 'community@test.com',
-    password: 'test123',
-    name: 'Test Community',
+    email: 'testcommunity@indulgeout.com',
+    phone: '8888888802',
+    name: 'Test Community Organizer',
     token: null,
     userId: null
   },
   venue: {
-    phone: '9999999992',
-    email: 'venue@test.com',
-    password: 'test123',
-    name: 'Test Venue',
+    email: 'testvenue@indulgeout.com',
+    phone: '8888888803',
+    name: 'Test Venue Partner',
     token: null,
     userId: null
   },
   brand: {
-    phone: '9999999993',
-    email: 'brand@test.com',
-    password: 'test123',
-    name: 'Test Brand',
+    email: 'testbrand@indulgeout.com',
+    phone: '8888888804',
+    name: 'Test Brand Sponsor',
     token: null,
     userId: null
   }
@@ -84,21 +84,34 @@ async function apiCall(method, endpoint, data, token) {
   }
 }
 
-// Authenticate user and get token
+// Authenticate user via OTP email
 async function authenticateUser(userKey) {
   const user = USERS[userKey];
-  console.log(`   Authenticating ${userKey}... (${user.phone})`);
+  console.log(`   Authenticating ${userKey}... (${user.email})`);
   
   try {
-    // Try login with password
-    const loginResponse = await axios.post(`${API_BASE}/auth/login`, {
-      phone: user.phone,
-      password: user.password
+    // Request OTP via email
+    const otpRequest = await axios.post(`${API_BASE}/auth/otp/send`, {
+      identifier: user.email,
+      method: 'email'
     });
 
-    if (loginResponse.data.token) {
-      user.token = loginResponse.data.token;
-      user.userId = loginResponse.data.user._id || loginResponse.data.user.id;
+    // For test accounts (@indulgeout.com), OTP is returned in response
+    const otp = otpRequest.data.otp || '123456';
+    
+    // Small delay to ensure OTP is processed
+    await delay(500);
+
+    // Verify OTP and get token
+    const verifyResponse = await axios.post(`${API_BASE}/auth/otp/verify`, {
+      identifier: user.email,
+      otp: otp,
+      method: 'email'
+    });
+
+    if (verifyResponse.data.token) {
+      user.token = verifyResponse.data.token;
+      user.userId = verifyResponse.data.user._id || verifyResponse.data.user.id;
       console.log(`   ✅ ${userKey} authenticated (userId: ${user.userId})`);
       return true;
     }
@@ -122,7 +135,7 @@ async function authenticateAllUsers() {
 
   if (!results.every(r => r)) {
     console.error('\n❌ AUTHENTICATION FAILED: Not all users could authenticate');
-    console.error('   Please ensure test users exist. Run: node backend/scripts/setupTestUsers.js');
+    console.error('   Please ensure test users exist. Run: node scripts/setupTestUsers.js');
     process.exit(1);
   }
 
@@ -150,21 +163,23 @@ async function testCommunityToVenue() {
           startTime: '18:00',
           endTime: '21:00'
         },
+        showBackupDate: false,
+        backupDate: { date: '', startTime: '', endTime: '' },
         requirements: {
           spaceOnly: { selected: true },
           barFood: { selected: true },
-          audioVisual: { 
+          av: { 
             selected: true,
-            options: ['mic', 'speakers', 'lighting']
+            suboptions: ['mic', 'speakers', 'lighting']
           }
         },
         pricing: {
           revenueShare: {
             selected: true,
-            venueShare: 30
+            percentage: 30
           }
         },
-        message: 'Test venue request for music event'
+        supportingInfo: { images: [], note: 'Test venue request for music event' }
       }
     };
 
@@ -182,17 +197,23 @@ async function testCommunityToVenue() {
     const counterData = {
       counterData: {
         fieldResponses: {
-          eventType: { action: 'accept', originalValue: 'Music & Concerts' },
-          seatingCapacity: { action: 'accept', originalValue: '100-250' },
-          eventDate: { action: 'modify', originalValue: '2026-03-15', modifiedValue: '2026-03-16', note: 'Backup date preferred' },
+          eventType: { action: 'accept' },
+          seatingCapacity: { action: 'accept' },
+          eventDate: { action: 'modify', modifiedValue: '2026-03-16', note: 'Backup date preferred' },
           requirements: { action: 'accept' },
-          commercialModel: { action: 'modify', originalValue: '30%', modifiedValue: '40%', note: 'Weekend premium pricing' }
+          pricing: { action: 'modify', modifiedValue: { revenueShare: { percentage: 40 } }, note: 'Weekend premium pricing' }
         },
         houseRules: {
-          alcohol: 'Allowed',
+          alcohol: { allowed: true, note: 'Licensed bar service available' },
           soundLimit: '85dB after 10 PM',
-          ageRestriction: '21+ only',
-          setupWindow: 'Access from 4 PM'
+          ageRestriction: '21+',
+          setupWindow: 'Access from 4 PM',
+          additionalRules: 'No outside food or beverages'
+        },
+        commercialCounter: {
+          model: 'Revenue Share',
+          percentage: 40,
+          note: 'Weekend premium pricing'
         },
         generalNotes: 'Counter-proposal with modified date and pricing'
       }
@@ -238,15 +259,15 @@ async function testCommunityToBrand() {
         brandDeliverables: {
           logoPlacement: { 
             selected: true, 
-            options: ['posters', 'banners', 'social_media'] 
+            suboptions: ['posters', 'banners', 'social_posts'] 
           },
           digitalShoutouts: { 
             selected: true, 
-            options: ['instagram_posts', 'stories'] 
+            suboptions: ['instagram_posts', 'stories'] 
           },
           leadCapture: { 
             selected: true, 
-            options: ['registration_data'] 
+            suboptions: ['registration_data'] 
           }
         },
         pricing: {
@@ -259,7 +280,7 @@ async function testCommunityToBrand() {
             description: 'Product hampers worth ₹25,000'
           }
         },
-        message: 'Test brand sponsorship request'
+        supportingInfo: { images: [], note: 'Test brand sponsorship request' }
       }
     };
 
@@ -279,16 +300,18 @@ async function testCommunityToBrand() {
         fieldResponses: {
           eventCategory: { action: 'accept' },
           expectedAttendees: { action: 'modify', modifiedValue: '200-300', note: 'Realistic reach' },
-          logoPlacement: { action: 'accept' },
-          digitalShoutouts: { action: 'accept' },
-          leadCapture: { action: 'accept' },
-          commercialModel: { action: 'modify', modifiedValue: '₹40,000 cash + ₹20,000 barter' }
+          brandDeliverables: { action: 'accept' },
+          pricing: { action: 'modify', modifiedValue: { cashSponsorship: { amount: 40000 }, barter: { description: '₹20,000 barter' } } }
         },
         brandTerms: {
-          activationTypes: ['Product Sampling', 'Booth Setup'],
+          activationTypes: 'Product Sampling, Booth Setup',
           deliveryTimeline: 'Assets 7 days before event',
           exclusivityTerms: 'No competing F&B brands',
           contentRights: 'Usage rights for 6 months'
+        },
+        commercialCounter: {
+          model: 'Cash + Barter',
+          note: 'Revised budget: ₹40,000 cash + ₹20,000 barter (realistic targets)'
         },
         generalNotes: 'Counter with revised budget'
       }
@@ -331,7 +354,11 @@ async function testBrandToCommunity() {
       recipientId: USERS.community.userId,
       recipientType: 'community',
       formData: {
-        campaignObjectives: ['Brand Awareness', 'Product Trials', 'Engagement'],
+        campaignObjectives: {
+          brandAwareness: { selected: true },
+          productTrials: { selected: true },
+          engagement: { selected: true }
+        },
         targetAudience: 'Young professionals aged 25-35, tech-savvy',
         preferredFormats: ['Event Sponsorship', 'Social Campaign', 'Contest'],
         brandOffers: {
@@ -345,8 +372,8 @@ async function testBrandToCommunity() {
           leadCapture: { selected: true, description: 'Attendee emails & phone numbers' },
           exclusivity: { selected: true, description: 'No competing brands for 3 months' }
         },
-        timeline: 'Launch within 4 weeks',
-        message: 'Test brand campaign proposal'
+        additionalTerms: 'Launch within 4 weeks',
+        supportingInfo: { images: [], note: 'Test brand campaign proposal' }
       }
     };
 
@@ -367,20 +394,16 @@ async function testBrandToCommunity() {
           campaignObjectives: { action: 'accept' },
           targetAudience: { action: 'modify', modifiedValue: '2000 active members, 70% aged 22-32' },
           preferredFormats: { action: 'accept' },
-          cashOffer: { action: 'accept' },
-          barterOffer: { action: 'modify', modifiedValue: '₹20,000 worth vouchers' },
-          contentOffer: { action: 'accept' },
-          brandingExpectation: { action: 'accept' },
-          leadCaptureExpectation: { action: 'modify', modifiedValue: 'Emails only, no phone numbers' },
-          exclusivityExpectation: { action: 'decline', note: 'Cannot guarantee category exclusivity' }
+          brandOffers: { action: 'modify', modifiedValue: { barter: { description: '₹20,000 worth vouchers' } }, note: 'Increased barter value' },
+          brandExpectations: { action: 'partial', note: 'Accepting branding & digital, modifying lead capture, declining exclusivity' }
         },
         communityCommitments: {
-          deliverables: ['Social Posts', 'Event Feature', 'Email Blast'],
+          deliverables: 'Social Posts, Event Feature, Email Blast',
           audienceEngagement: 'Will promote across 3 social platforms',
           contentCreation: 'Event photos, 2 reels, community story',
           timeline: 'Can launch in 3 weeks'
         },
-        generalNotes: 'Counter with modified terms'
+        generalNotes: 'Counter with modified terms - emails only, no exclusivity'
       }
     };
 
@@ -422,21 +445,22 @@ async function testVenueToCommunity() {
       recipientType: 'community',
       formData: {
         venueType: 'Rooftop',
-        capacityRange: '250-500',
-        preferredEventFormats: ['Concert/Music', 'Networking', 'Exhibition'],
+        capacityRange: '150-300',
+        preferredFormats: ['Concert/Music', 'Networking', 'Exhibition'],
         venueOfferings: {
-          space: { selected: true, options: ['indoor', 'outdoor', 'stage'] },
-          av: { selected: true, options: ['mic', 'speakers', 'projector', 'lighting'] },
-          furniture: { selected: true, options: ['tables', 'chairs'] },
-          fnb: { selected: true, options: ['catering', 'bar_service'] },
-          staff: { selected: true, options: ['service_staff', 'security'] },
-          marketing: { selected: true, options: ['social_media', 'venue_listing'] }
+          space: { selected: true, suboptions: ['indoor', 'outdoor', 'stage'] },
+          av: { selected: true, suboptions: ['mic', 'speakers', 'projector', 'lighting'] },
+          furniture: { selected: true, suboptions: ['tables', 'chairs'] },
+          fnb: { selected: true, suboptions: ['catering', 'bar'] },
+          staff: { selected: true, suboptions: ['service_staff', 'security'] },
+          marketing: { selected: true, suboptions: ['social_media', 'listing'] }
         },
         commercialModels: {
           rental: { selected: true, amount: 25000 },
           revenueShare: { selected: true, percentage: 30 }
         },
-        message: 'Test venue partnership proposal'
+        additionalTerms: 'Flexible booking terms',
+        supportingInfo: { images: [], note: 'Test venue partnership proposal' }
       }
     };
 
@@ -456,14 +480,9 @@ async function testVenueToCommunity() {
         fieldResponses: {
           venueType: { action: 'accept' },
           capacityRange: { action: 'accept' },
-          preferredEventFormats: { action: 'modify', modifiedValue: ['Concert/Music', 'Networking'] },
-          spaceOffering: { action: 'accept' },
-          avOffering: { action: 'accept' },
-          furnitureOffering: { action: 'accept' },
-          fnbOffering: { action: 'modify', modifiedValue: 'Bar service only, no catering' },
-          staffOffering: { action: 'accept' },
-          marketingOffering: { action: 'accept' },
-          commercialModels: { action: 'modify', modifiedValue: 'Revenue share only: 60-40 split with ₹10k minimum guarantee' }
+          preferredFormats: { action: 'modify', modifiedValue: ['Concert/Music', 'Networking'] },
+          venueOfferings: { action: 'partial', note: 'Bar service only, no catering' },
+          commercialModels: { action: 'modify', modifiedValue: { revenueShare: { percentage: 60 } }, note: '60-40 split with ₹10k minimum guarantee' }
         },
         communityTerms: {
           expectedCapacity: '150-200 per event',
@@ -471,7 +490,7 @@ async function testVenueToCommunity() {
           marketingCommitment: 'Will promote on community socials, email list',
           additionalRequirements: 'Need parking for 50 cars'
         },
-        generalNotes: 'Counter with modified commercial model'
+        generalNotes: 'Counter with modified commercial model - revenue share only'
       }
     };
 

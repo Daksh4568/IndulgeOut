@@ -108,6 +108,7 @@ const collaborationSchema = new mongoose.Schema({
   
   // Admin Review (New - IndulgeOut admin review)
   adminReview: {
+    // Initial proposal review
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'  // Admin user
@@ -118,7 +119,19 @@ const collaborationSchema = new mongoose.Schema({
       enum: ['approved', 'rejected', 'pending_info']
       // No default - will be undefined until admin reviews
     },
-    notes: String  // Admin's internal notes or reason for rejection
+    notes: String,  // Admin's internal notes or reason for rejection
+    
+    // Counter proposal review (separate from initial review)
+    counterReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'  // Admin user who reviewed counter
+    },
+    counterReviewedAt: Date,
+    counterDecision: {
+      type: String,
+      enum: ['approved', 'rejected']
+    },
+    counterNotes: String  // Admin's notes on counter review
   },
   
   // Request Details

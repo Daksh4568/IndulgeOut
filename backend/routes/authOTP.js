@@ -87,7 +87,7 @@ router.post('/otp/register', async (req, res) => {
       console.log(`SMS OTP for ${phoneNumber}: ${otp}`);
     }
 
-    // Create user account (unverified)
+    // Create user account (unverified) - B2C only
     const newUser = new User({
       name,
       email: email.toLowerCase(),
@@ -109,7 +109,7 @@ router.post('/otp/register', async (req, res) => {
 
     await newUser.save();
 
-    console.log(`✅ New user registered and OTP sent to ${method === 'email' ? email : phoneNumber} via ${method}`);
+    console.log(`✅ New B2C user registered and OTP sent to ${method === 'email' ? email : phoneNumber} via ${method}`);
 
     res.status(201).json({
       message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,

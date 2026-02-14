@@ -286,16 +286,37 @@ const CommunityOrganizerDashboard = () => {
               ))}
             </div>
           </div>
-          <button
-            onClick={() => navigate('/create-event')}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
-            style={{ 
-              fontFamily: 'Oswald, sans-serif'
-            }}
-          >
-            <Plus className="h-5 w-5" />
-            <span>Create Event</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            {/* Carousel Navigation - Only show when there are enough events */}
+            {currentEvents.length > cardsPerView && (
+              <div className="hidden md:flex items-center space-x-2">
+                <button
+                  onClick={handlePrevious}
+                  disabled={carouselIndex === 0}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-400" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={carouselIndex === maxIndex}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => navigate('/create-event')}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
+              style={{ 
+                fontFamily: 'Oswald, sans-serif'
+              }}
+            >
+              <Plus className="h-5 w-5" />
+              <span>Create Event</span>
+            </button>
+          </div>
         </div>
 
         {/* Events Display - Carousel for All tab, Grid for others */}
@@ -330,32 +351,6 @@ const CommunityOrganizerDashboard = () => {
         ) : activeTab === 'all' ? (
           /* Carousel for All Tab */
           <div className="relative">
-            {/* Carousel Navigation */}
-            {currentEvents.length > cardsPerView && (
-              <>
-                <button
-                  onClick={handlePrevious}
-                  disabled={carouselIndex === 0}
-                  className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                  style={carouselIndex > 0 ? {
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                  } : {}}
-                >
-                  <ChevronLeft className={`h-6 w-6 ${carouselIndex > 0 ? 'text-white' : 'text-gray-400'}`} />
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={carouselIndex === maxIndex}
-                  className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                  style={carouselIndex < maxIndex ? {
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                  } : {}}
-                >
-                  <ChevronRight className={`h-6 w-6 ${carouselIndex < maxIndex ? 'text-white' : 'text-gray-400'}`} />
-                </button>
-              </>
-            )}
-
             {/* Carousel Container */}
             <div className="overflow-hidden" ref={carouselRef}>
               {/* Mobile: Horizontal Scroll */}
@@ -369,10 +364,10 @@ const CommunityOrganizerDashboard = () => {
                       return (
                         <div
                           key={event._id}
-                          className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors"
+                          className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
                         >
                       {/* Event Header */}
-                      <div className="p-4">
+                      <div className="p-4 flex flex-col flex-grow">
                         <div className="flex items-start justify-between mb-3">
                           <h3 
                             className="font-bold text-white text-lg flex-1 line-clamp-2"
@@ -432,7 +427,7 @@ const CommunityOrganizerDashboard = () => {
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
                           {/* View Button */}
                           <button
                             onClick={() => navigate(`/events/${event._id}`)}
@@ -475,11 +470,14 @@ const CommunityOrganizerDashboard = () => {
                             </button>
                           )}
 
-                          {/* Duplicate Button */}
+                          {/* Copy Button */}
                           <button
-                            onClick={() => handleDuplicateEvent(event._id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyEvent(event);
+                            }}
                             className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Duplicate"
+                            title="Copy Event Details"
                           >
                             <Copy className="h-4 w-4" />
                           </button>
@@ -512,10 +510,10 @@ const CommunityOrganizerDashboard = () => {
                         return (
                           <div
                             key={event._id}
-                            className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors"
+                            className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
                           >
                       {/* Event Header */}
-                      <div className="p-4">
+                      <div className="p-4 flex flex-col flex-grow h-full">
                         <div className="flex items-start justify-between mb-3">
                           <h3 
                             className="font-bold text-white text-lg flex-1 line-clamp-2"
@@ -575,7 +573,7 @@ const CommunityOrganizerDashboard = () => {
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
                           {/* View Button */}
                           <button
                             onClick={() => navigate(`/events/${event._id}`)}
@@ -618,11 +616,14 @@ const CommunityOrganizerDashboard = () => {
                             </button>
                           )}
 
-                          {/* Duplicate Button */}
+                          {/* Copy Button */}
                           <button
-                            onClick={() => handleDuplicateEvent(event._id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyEvent(event);
+                            }}
                             className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Duplicate"
+                            title="Copy Event Details"
                           >
                             <Copy className="h-4 w-4" />
                           </button>
@@ -658,32 +659,6 @@ const CommunityOrganizerDashboard = () => {
         ) : (
           /* Carousel for Other Tabs */
           <div className="relative">
-            {/* Carousel Navigation */}
-            {currentEvents.length > cardsPerView && (
-              <>
-                <button
-                  onClick={handlePrevious}
-                  disabled={carouselIndex === 0}
-                  className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                  style={carouselIndex > 0 ? {
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                  } : {}}
-                >
-                  <ChevronLeft className={`h-6 w-6 ${carouselIndex > 0 ? 'text-white' : 'text-gray-400'}`} />
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={carouselIndex === maxIndex}
-                  className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                  style={carouselIndex < maxIndex ? {
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                  } : {}}
-                >
-                  <ChevronRight className={`h-6 w-6 ${carouselIndex < maxIndex ? 'text-white' : 'text-gray-400'}`} />
-                </button>
-              </>
-            )}
-
             {/* Carousel Container */}
             <div className="overflow-hidden">
               <div 
@@ -706,10 +681,10 @@ const CommunityOrganizerDashboard = () => {
                       return (
                         <div
                           key={event._id}
-                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors"
+                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
                         >
                       {/* Event Header */}
-                      <div className="p-4">
+                      <div className="p-4 flex flex-col flex-grow h-full">
                         <div className="flex items-start justify-between mb-3">
                           <h3 
                             className="font-bold text-white text-lg flex-1 line-clamp-2"
@@ -769,7 +744,7 @@ const CommunityOrganizerDashboard = () => {
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
                           {/* View Button */}
                           <button
                             onClick={() => navigate(`/events/${event._id}`)}
@@ -812,11 +787,14 @@ const CommunityOrganizerDashboard = () => {
                             </button>
                           )}
 
-                          {/* Duplicate Button */}
+                          {/* Copy Button */}
                           <button
-                            onClick={() => handleDuplicateEvent(event._id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyEvent(event);
+                            }}
                             className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Duplicate"
+                            title="Copy Event Details"
                           >
                             <Copy className="h-4 w-4" />
                           </button>
@@ -862,6 +840,34 @@ const CommunityOrganizerDashboard = () => {
       fetchDashboardData();
     } catch (error) {
       console.error('Error duplicating event:', error);
+    }
+  };
+
+  const handleCopyEvent = async (event) => {
+    try {
+      const eventDetails = `
+Event: ${event.title}
+Date: ${new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+Time: ${event.time || '7:00 PM - 10:00 PM'}
+Location: ${event.location?.address || ''}, ${event.location?.city || ''}
+Capacity: ${event.maxParticipants || '0'}
+Price: ₹${event.price?.amount || 0}
+Description: ${event.description || ''}
+Categories: ${event.categories?.join(', ') || 'N/A'}
+      `.trim();
+      
+      await navigator.clipboard.writeText(eventDetails);
+      
+      // Show success feedback (you can replace with a toast notification if available)
+      const btn = document.activeElement;
+      const originalTitle = btn.getAttribute('title');
+      btn.setAttribute('title', 'Copied!');
+      setTimeout(() => {
+        btn.setAttribute('title', originalTitle || 'Copy Event Details');
+      }, 2000);
+    } catch (error) {
+      console.error('Error copying event details:', error);
+      alert('Failed to copy event details');
     }
   };
 

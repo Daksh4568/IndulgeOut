@@ -513,7 +513,15 @@ const BrandCounterForm = () => {
           {formData.brandDeliverables?.logoPlacement?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Logo Placement</h3>
-              <p className="text-sm text-gray-400 mb-2">Community will provide logo placement</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.brandDeliverables.logoPlacement.subOptions && Object.keys(formData.brandDeliverables.logoPlacement.subOptions).length > 0
+                  ? Object.keys(formData.brandDeliverables.logoPlacement.subOptions).map(key => {
+                      const labels = { posters: 'Posters', banners: 'Banners', tickets: 'Tickets', social_media: 'Social Media' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Logo placement on event materials'}
+              </p>
               {renderFieldActionButtons('logoPlacement')}
             </div>
           )}
@@ -521,7 +529,15 @@ const BrandCounterForm = () => {
           {formData.brandDeliverables?.onGroundBranding?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">On-Ground Branding</h3>
-              <p className="text-sm text-gray-400 mb-2">Community will provide on-ground branding</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.brandDeliverables.onGroundBranding.subOptions && Object.keys(formData.brandDeliverables.onGroundBranding.subOptions).length > 0
+                  ? Object.keys(formData.brandDeliverables.onGroundBranding.subOptions).map(key => {
+                      const labels = { stage_backdrop: 'Stage Backdrop', standees: 'Standees', booth: 'Booth Space' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Physical branding at venue'}
+              </p>
               {renderFieldActionButtons('onGroundBranding')}
             </div>
           )}
@@ -529,7 +545,15 @@ const BrandCounterForm = () => {
           {formData.brandDeliverables?.sampling?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Sampling / Product Demo</h3>
-              <p className="text-sm text-gray-400 mb-2">Space for product sampling/demo</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.brandDeliverables.sampling.subOptions && Object.keys(formData.brandDeliverables.sampling.subOptions).length > 0
+                  ? Object.keys(formData.brandDeliverables.sampling.subOptions).map(key => {
+                      const labels = { product_samples: 'Product Samples', demo_booth: 'Demo Booth' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Space for product sampling/demo'}
+              </p>
               {renderFieldActionButtons('sampling')}
             </div>
           )}
@@ -537,7 +561,15 @@ const BrandCounterForm = () => {
           {formData.brandDeliverables?.sponsoredSegments?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Sponsored Segments</h3>
-              <p className="text-sm text-gray-400 mb-2">Dedicated segments during event</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.brandDeliverables.sponsoredSegments.subOptions && Object.keys(formData.brandDeliverables.sponsoredSegments.subOptions).length > 0
+                  ? Object.keys(formData.brandDeliverables.sponsoredSegments.subOptions).map(key => {
+                      const labels = { speaking_slot: 'Speaking Slot', game_activity: 'Game/Activity', performance: 'Performance' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Dedicated segments during event'}
+              </p>
               {renderFieldActionButtons('sponsoredSegments')}
             </div>
           )}
@@ -545,7 +577,15 @@ const BrandCounterForm = () => {
           {formData.brandDeliverables?.digitalShoutouts?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Digital Shoutouts</h3>
-              <p className="text-sm text-gray-400 mb-2">Online promotion and mentions</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.brandDeliverables.digitalShoutouts.subOptions && Object.keys(formData.brandDeliverables.digitalShoutouts.subOptions).length > 0
+                  ? Object.keys(formData.brandDeliverables.digitalShoutouts.subOptions).map(key => {
+                      const labels = { instagram_posts: 'Instagram Posts', stories: 'Stories', reels: 'Reels', email_mention: 'Email Mention' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Online promotion and mentions'}
+              </p>
               {renderFieldActionButtons('digitalShoutouts')}
             </div>
           )}
@@ -553,7 +593,15 @@ const BrandCounterForm = () => {
           {formData.brandDeliverables?.leadCapture?.selected && (
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Lead Capture</h3>
-              <p className="text-sm text-gray-400 mb-2">Attendee information collection</p>
+              <p className="text-sm text-gray-400 mb-2">REQUESTED</p>
+              <p className="text-white text-sm mb-2">
+                {formData.brandDeliverables.leadCapture.subOptions && Object.keys(formData.brandDeliverables.leadCapture.subOptions).length > 0
+                  ? Object.keys(formData.brandDeliverables.leadCapture.subOptions).map(key => {
+                      const labels = { registration_data: 'Registration Data', booth_signup: 'Booth Signup', survey: 'Survey' };
+                      return labels[key] || key;
+                    }).join(', ')
+                  : 'Attendee information collection'}
+              </p>
               {renderFieldActionButtons('leadCapture')}
             </div>
           )}

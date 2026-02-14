@@ -2,10 +2,26 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const User = require('../models/User.js');
 const { sendWelcomeEmail } = require('../utils/emailService.js');
+const { uploadToCloudinary } = require('../config/cloudinary.js');
 
 const router = express.Router();
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Rate limiter for registration - prevent bot signups
 // Allows 3 registrations per 15 minutes per IP
@@ -42,23 +58,55 @@ const loginLimiter = rateLimit({
 
 // B2B Registration - For Host Partners (Venue/Organizer/Brand)
 // Note: B2C users should use /api/auth/otp/register instead
-router.post('/register', registrationLimiter, [
-  body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('phoneNumber').matches(/^[6-9]\d{9}$/).withMessage('Please provide a valid 10-digit Indian mobile number'),
-  body('role').equals('host_partner').withMessage('This endpoint is for host partners only'),
-  body('hostPartnerType').isIn(['community_organizer', 'venue', 'brand_sponsor']).withMessage('Invalid host partner type')
-], async (req, res) => {
+router.post('/register', registrationLimiter, upload.array('photos', 3), async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    const { 
+      name, 
+      email, 
+      phoneNumber, 
+      role, 
+      hostPartnerType, 
+      interests, 
+      location,
+      // Community Organizer fields
+      communityName,
+      // Venue fields
+      venueName,
+      venueType,
+      // Brand fields
+      brandName,
+      // Common fields
+      category,
+      city,
+      locality,
+      instagramLink
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !phoneNumber || !hostPartnerType) {
       return res.status(400).json({ 
-        message: 'Validation failed', 
-        errors: errors.array() 
+        message: 'Name, email, phone number, and host partner type are required' 
       });
     }
 
-    const { name, email, phoneNumber, role, hostPartnerType, interests, location } = req.body;
+    // Validate hostPartnerType
+    if (!['community_organizer', 'venue', 'brand_sponsor'].includes(hostPartnerType)) {
+      return res.status(400).json({ 
+        message: 'Invalid host partner type' 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email' });
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return res.status(400).json({ message: 'Please provide a valid 10-digit Indian mobile number' });
+    }
 
     // Check if user already exists with email or phone
     const existingUser = await User.findOne({ 
@@ -74,14 +122,32 @@ router.post('/register', registrationLimiter, [
       }
     }
 
-    // Create new host partner user
-    const user = new User({
+    // Upload photos to Cloudinary (if any)
+    const photoUrls = [];
+    if (req.files && req.files.length > 0) {
+      try {
+        for (const file of req.files) {
+          const result = await uploadToCloudinary(file.buffer, {
+            folder: `${hostPartnerType}/${email}`,
+            resource_type: 'image'
+          });
+          photoUrls.push(result.secure_url);
+        }
+        console.log(`✅ Uploaded ${photoUrls.length} photos to Cloudinary`);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({ message: 'Failed to upload photos. Please try again.' });
+      }
+    }
+
+    // Build user data
+    const userData = {
       name,
       email,
       phoneNumber,
       role: 'host_partner',
       hostPartnerType,
-      interests: interests || [],
+      interests: interests ? (Array.isArray(interests) ? interests : [interests]) : [],
       location: location || {},
       otpVerification: {
         isPhoneVerified: false
@@ -91,8 +157,54 @@ router.post('/register', registrationLimiter, [
         registrationMethod: 'b2b_registration',
         lastLogin: new Date()
       }
-    });
+    };
 
+    // Add profile-specific fields based on hostPartnerType
+    if (hostPartnerType === 'community_organizer' && communityName) {
+      userData.communityProfile = {
+        communityName,
+        category: category ? (Array.isArray(category) ? category : [category]) : [],
+        city: city || '',
+        contactPerson: {
+          name: name,
+          email: email,
+          phone: phoneNumber
+        },
+        instagram: instagramLink || '',
+        pastEventPhotos: photoUrls
+      };
+    } else if (hostPartnerType === 'venue' && venueName) {
+      userData.venueProfile = {
+        venueName,
+        venueType: venueType || '',
+        capacityRange: req.body.capacityRange || '',
+        city: city || '',
+        locality: locality || '',
+        contactPerson: {
+          name: name,
+          phone: phoneNumber,
+          email: email
+        },
+        instagram: instagramLink || '',
+        photos: photoUrls
+      };
+    } else if (hostPartnerType === 'brand_sponsor' && brandName) {
+      userData.brandProfile = {
+        brandName,
+        brandCategory: category || '',
+        targetCity: city ? [city] : [],
+        contactPerson: {
+          name: name,
+          workEmail: email,
+          phone: phoneNumber
+        },
+        instagram: instagramLink || '',
+        brandAssets: photoUrls
+      };
+    }
+
+    // Create new host partner user
+    const user = new User(userData);
     await user.save();
 
     // Generate JWT token
@@ -109,6 +221,8 @@ router.post('/register', registrationLimiter, [
       console.error('Failed to send welcome email:', emailError);
     }
 
+    console.log(`✅ New B2B ${hostPartnerType} registered: ${email}`);
+
     res.status(201).json({
       message: 'Host partner registered successfully',
       token,
@@ -118,12 +232,14 @@ router.post('/register', registrationLimiter, [
         email: user.email,
         role: user.role,
         hostPartnerType: user.hostPartnerType,
-        interests: user.interests
+        communityProfile: user.communityProfile,
+        venueProfile: user.venueProfile,
+        brandProfile: user.brandProfile
       }
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
