@@ -558,14 +558,21 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
         { 'hasCounter': true }  // Old structure flag
       ]
     })
-      .populate('initiator.user', 'name email')
-      .populate('recipient.user', 'name email')
-      .populate('proposerId', 'name email')  // Old structure
-      .populate('recipientId', 'name email')  // Old structure
+      .populate('initiator.user', 'name email communityProfile venueProfile brandProfile')
+      .populate('recipient.user', 'name email communityProfile venueProfile brandProfile')
+      .populate('proposerId', 'name email communityProfile venueProfile brandProfile')  // Old structure
+      .populate('recipientId', 'name email communityProfile venueProfile brandProfile')  // Old structure
       .sort({ 'response.respondedAt': -1 })
       .lean();
 
-    res.json({ data: counters });
+    // Add responderId for each counter (recipient is the one who submitted counter)
+    const enhancedCounters = counters.map(counter => ({
+      ...counter,
+      responderId: counter.recipient?.user || counter.recipientId,
+      responderType: counter.recipient?.userType || counter.recipientType
+    }));
+
+    res.json({ data: enhancedCounters });
   } catch (error) {
     console.error('Error fetching pending counters:', error);
     res.status(500).json({ message: 'Server error while fetching pending counters' });
@@ -578,19 +585,41 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
 router.get('/collaborations/counters/:id', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const collaboration = await Collaboration.findById(req.params.id)
-      .populate('proposerId', 'name email hostPartnerType')
-      .populate('recipientId', 'name email hostPartnerType')
-      .populate('initiator.user', 'name email')
-      .populate('recipient.user', 'name email')
+      .populate('proposerId', 'name email hostPartnerType communityProfile venueProfile brandProfile')
+      .populate('recipientId', 'name email hostPartnerType communityProfile venueProfile brandProfile')
+      .populate('initiator.user', 'name email communityProfile venueProfile brandProfile')
+      .populate('recipient.user', 'name email communityProfile venueProfile brandProfile')
+      .populate('adminReview.reviewedBy', 'name email')
+      .populate('adminReview.counterReviewedBy', 'name email')
       .lean();
 
     if (!collaboration) {
       return res.status(404).json({ message: 'Collaboration not found' });
     }
 
-    if (!collaboration.counterProposal) {
+    // Check if there's a counter proposal (stored in response.counterOffer)
+    if (!collaboration.response?.counterOffer) {
       return res.status(404).json({ message: 'No counter proposal found' });
     }
+
+    // Parse counter data from JSON string
+    let counterData = collaboration.response.counterOffer;
+    if (counterData.terms && typeof counterData.terms === 'string') {
+      try {
+        const parsed = JSON.parse(counterData.terms);
+        counterData = { ...counterData, ...parsed };
+      } catch (e) {
+        console.error('Error parsing counter terms:', e);
+      }
+    }
+
+    // Add parsed counter data to response
+    collaboration.counterData = counterData;
+    collaboration.hasCounter = true;
+
+    // Add responderId as the recipient (who submitted the counter)
+    collaboration.responderId = collaboration.recipient?.user || collaboration.recipientId;
+    collaboration.responderType = collaboration.recipient?.userType || collaboration.recipientType;
 
     res.json({ data: collaboration });
   } catch (error) {
