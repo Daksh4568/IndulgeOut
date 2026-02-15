@@ -37,6 +37,9 @@ const VenueDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
   const [activeSidebarItem, setActiveSidebarItem] = useState("all");
+  const [activeCollabTab, setActiveCollabTab] = useState('all');
+  const [collabCarouselIndex, setCollabCarouselIndex] = useState(0);
+  const [collaborations, setCollaborations] = useState({ all: [], upcoming: [], live: [], completed: [] });
 
   useEffect(() => {
     if (authLoading) return;
@@ -55,9 +58,21 @@ const VenueDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/venues/dashboard");
-      setDashboardData(response.data);
+      const [dashboardRes, sentCollabsRes, receivedCollabsRes] = await Promise.all([
+        api.get("/venues/dashboard"),
+        api.get("/collaborations/sent"),
+        api.get("/collaborations/received")
+      ]);
+      setDashboardData(dashboardRes.data);
       setError(null);
+
+      // Organize collaborations by status
+      const allCollabs = [...(sentCollabsRes.data.data || []), ...(receivedCollabsRes.data.data || [])];
+      const upcoming = allCollabs.filter(c => ['submitted', 'admin_approved', 'pending', 'vendor_accepted', 'accepted'].includes(c.status));
+      const liveCollabs = allCollabs.filter(c => ['confirmed', 'approved_delivered'].includes(c.status));
+      const completed = allCollabs.filter(c => ['completed'].includes(c.status));
+
+      setCollaborations({ all: allCollabs, upcoming, live: liveCollabs, completed });
     } catch (err) {
       console.error("Error fetching venue dashboard:", err);
       setError("Failed to load dashboard data");
@@ -92,6 +107,358 @@ const VenueDashboard = () => {
     }
   };
 
+  // ==================== MANAGE COLLABORATIONS SECTION ====================
+  const ManageCollaborationsSection = () => {
+    const currentCollabs = collaborations[activeCollabTab] || [];
+    const cardsPerView = 4;
+    const maxIndex = Math.max(0, Math.ceil(currentCollabs.length / cardsPerView) - 1);
+
+    const handlePrevious = () => {
+      setCollabCarouselIndex(prev => Math.max(0, prev - 1));
+    };
+
+    const handleNext = () => {
+      setCollabCarouselIndex(prev => Math.min(maxIndex, prev + 1));
+    };
+
+    const getStatusBadge = (status) => {
+      const badges = {
+        submitted: { text: 'Submitted', bg: 'bg-yellow-600' },
+        admin_approved: { text: 'Approved', bg: 'bg-blue-600' },
+        vendor_accepted: { text: 'Accepted', bg: 'bg-green-600' },
+        accepted: { text: 'Accepted', bg: 'bg-green-600' },
+        confirmed: { text: 'Live', bg: 'bg-green-600' },
+        approved_delivered: { text: 'Live', bg: 'bg-green-600' },
+        completed: { text: 'Completed', bg: 'bg-gray-600' },
+        rejected: { text: 'Rejected', bg: 'bg-red-600' },
+        vendor_rejected: { text: 'Rejected', bg: 'bg-red-600' },
+        cancelled: { text: 'Cancelled', bg: 'bg-gray-600' },
+        pending: { text: 'Pending', bg: 'bg-yellow-600' }
+      };
+      return badges[status] || { text: status, bg: 'bg-gray-600' };
+    };
+
+    const getCollaborationType = (collab) => {
+      if (collab.requestDetails?.venueRequest) return { text: 'Venue', color: 'bg-purple-600' };
+      if (collab.requestDetails?.brandSponsorship) {
+        const types = collab.requestDetails.brandSponsorship.sponsorshipType || [];
+        if (types.includes('product_sampling')) return { text: 'Sampling', color: 'bg-green-600' };
+        if (types.includes('paid_monetary')) return { text: 'Sponsorship', color: 'bg-blue-600' };
+        return { text: 'Brand', color: 'bg-blue-600' };
+      }
+      return { text: 'Partnership', color: 'bg-indigo-600' };
+    };
+
+    const getPartnerInfo = (collab) => {
+      const currentUserId = user?.userId || user?._id;
+      const isInitiator = collab.initiator?.user?.toString() === currentUserId?.toString() || 
+                          collab.proposerId?.toString() === currentUserId?.toString();
+      
+      if (isInitiator) {
+        return {
+          name: collab.recipient?.name || 'Partner',
+          location: collab.requestDetails?.venueRequest?.specialRequirements || 'Location N/A',
+          type: collab.recipient?.userType || collab.recipientType || 'Partner'
+        };
+      } else {
+        return {
+          name: collab.initiator?.name || 'Partner',
+          location: collab.initiator?.name || 'Location N/A',
+          type: collab.initiator?.userType || collab.proposerType || 'Partner'
+        };
+      }
+    };
+
+    return (
+      <div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide">
+            <div className="flex space-x-2 pb-2 sm:pb-0">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'upcoming', label: `Upcoming (${collaborations.upcoming?.length || 0})` },
+                { key: 'live', label: `Live (${collaborations.live?.length || 0})` },
+                { key: 'completed', label: `Completed (${collaborations.completed?.length || 0})` }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveCollabTab(tab.key)}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
+                    activeCollabTab === tab.key
+                      ? 'bg-white dark:bg-white text-black'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            {currentCollabs.length > cardsPerView && (
+              <div className="hidden md:flex items-center space-x-2">
+                <button
+                  onClick={handlePrevious}
+                  disabled={collabCarouselIndex === 0}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-400" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={collabCarouselIndex === maxIndex}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {currentCollabs.length === 0 ? (
+          <div className="text-center py-12 bg-gray-900 rounded-lg border border-gray-800">
+            <Building2 className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              No {activeCollabTab} collaborations
+            </h3>
+            <p className="text-gray-400 mb-4">
+              {activeCollabTab === 'upcoming' 
+                ? 'No upcoming collaborations at the moment'
+                : activeCollabTab === 'live'
+                ? 'No active collaborations'
+                : activeCollabTab === 'completed'
+                ? 'No completed collaborations to show'
+                : 'No collaborations yet'}
+            </p>
+          </div>
+        ) : (
+          <div className="relative">
+            <div 
+              className="md:hidden flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" 
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {currentCollabs.map((collab) => {
+                const statusBadge = getStatusBadge(collab.status);
+                const collabType = getCollaborationType(collab);
+                const partner = getPartnerInfo(collab);
+
+                return (
+                  <div
+                    key={collab._id}
+                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                  >
+                    <div className="p-4 flex flex-col flex-grow">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 
+                          className="font-bold text-white text-lg flex-1 line-clamp-2"
+                          style={{ fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          {collab.requestDetails?.eventName || 'Collaboration Request'}
+                        </h3>
+                        <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
+                          {statusBadge.text}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-gray-400 mb-3">
+                        {partner.name}
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Building2 className="h-4 w-4 mr-2" />
+                          <span>{partner.location}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Users className="h-4 w-4 mr-2" />
+                          <span>Music & Social</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-400">Collaboration Type</span>
+                          <span className={`${collabType.color} text-white px-2 py-1 rounded text-xs font-medium`}>
+                            {collabType.text}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                          <span className="text-sm text-gray-400">Event Date</span>
+                          <span className="text-sm text-white font-medium">
+                            {collab.requestDetails?.eventDate 
+                              ? new Date(collab.requestDetails.eventDate).toLocaleDateString('en-IN', { 
+                                  day: 'numeric', 
+                                  month: 'short', 
+                                  year: 'numeric' 
+                                })
+                              : 'Date TBD'}
+                          </span>
+                        </div>
+
+                        {collab.requestDetails?.venueRequest?.expectedAttendees && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Est. Attendees</span>
+                            <span className="text-sm text-white font-medium">
+                              {collab.requestDetails.venueRequest.expectedAttendees}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                        <button
+                          onClick={() => navigate(`/collaborations/${collab._id}`)}
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View Details</span>
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/collaborations/${collab._id}/contact`)}
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>Contact</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block overflow-hidden">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: `translateX(-${collabCarouselIndex * 100}%)`
+                }}
+              >
+                {Array.from({ length: Math.ceil(currentCollabs.length / cardsPerView) }).map((_, pageIndex) => (
+                  <div 
+                    key={pageIndex} 
+                    className="grid grid-cols-4 gap-4 flex-shrink-0 w-full"
+                  >
+                    {currentCollabs.slice(pageIndex * cardsPerView, (pageIndex + 1) * cardsPerView).map((collab) => {
+                      const statusBadge = getStatusBadge(collab.status);
+                      const collabType = getCollaborationType(collab);
+                      const partner = getPartnerInfo(collab);
+
+                      return (
+                        <div
+                          key={collab._id}
+                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                        >
+                          <div className="p-4 flex flex-col flex-grow h-full">
+                            <div className="flex items-start justify-between mb-3">
+                              <h3 
+                                className="font-bold text-white text-lg flex-1 line-clamp-2"
+                                style={{ fontFamily: 'Oswald, sans-serif' }}
+                              >
+                                {collab.requestDetails?.eventName || 'Collaboration Request'}
+                              </h3>
+                              <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
+                                {statusBadge.text}
+                              </span>
+                            </div>
+
+                            <div className="text-sm text-gray-400 mb-3">
+                              {partner.name}
+                            </div>
+
+                            <div className="space-y-2 mb-4">
+                              <div className="flex items-center text-sm text-gray-400">
+                                <Building2 className="h-4 w-4 mr-2" />
+                                <span>{partner.location}</span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-400">
+                                <Users className="h-4 w-4 mr-2" />
+                                <span>Music & Social</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3 mb-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-400">Collaboration Type</span>
+                                <span className={`${collabType.color} text-white px-2 py-1 rounded text-xs font-medium`}>
+                                  {collabType.text}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                                <span className="text-sm text-gray-400">Event Date</span>
+                                <span className="text-sm text-white font-medium">
+                                  {collab.requestDetails?.eventDate 
+                                    ? new Date(collab.requestDetails.eventDate).toLocaleDateString('en-IN', { 
+                                        day: 'numeric', 
+                                        month: 'short', 
+                                        year: 'numeric' 
+                                      })
+                                    : 'Date TBD'}
+                                </span>
+                              </div>
+
+                              {collab.requestDetails?.venueRequest?.expectedAttendees && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-400">Est. Attendees</span>
+                                  <span className="text-sm text-white font-medium">
+                                    {collab.requestDetails.venueRequest.expectedAttendees}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                              <button
+                                onClick={() => navigate(`/collaborations/${collab._id}`)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span>View Details</span>
+                              </button>
+
+                              <button
+                                onClick={() => navigate(`/collaborations/${collab._id}/contact`)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                              >
+                                <Users className="h-4 w-4" />
+                                <span>Contact</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {currentCollabs.length > 1 && (
+              <div className="hidden md:flex justify-center mt-6 space-x-2">
+                {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCollabCarouselIndex(idx)}
+                    className={`h-2 rounded-full transition-all ${
+                      idx === collabCarouselIndex ? 'w-8' : 'w-2'
+                    }`}
+                    style={idx === collabCarouselIndex ? {
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    } : { background: '#374151' }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-black">
@@ -112,7 +479,7 @@ const VenueDashboard = () => {
 
       <div className="flex overflow-x-hidden">
         {/* Sidebar */}
-        <aside className="hidden lg:block w-20 bg-black border-r border-gray-800 min-h-screen pt-8">
+        <aside className="hidden lg:block w-20 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-gray-800 min-h-screen pt-8">
           <nav className="flex flex-col items-center space-y-6">
             {/* Dashboard/All */}
             <button
@@ -428,6 +795,20 @@ const VenueDashboard = () => {
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Collaborations Section */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2
+                  className="text-xl font-semibold text-white flex items-center"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
+                  <Building2 className="h-6 w-6 mr-2" />
+                  Collaborations
+                </h2>
+              </div>
+              <ManageCollaborationsSection />
             </div>
 
             {/* Performance & Insights Section */}

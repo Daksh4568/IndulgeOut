@@ -117,73 +117,144 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
 
     console.log('✅ [Dashboard] User verified as community organizer');
 
-    // Fetch action_required notifications and deduplicate by type
+    // ========== GENERATE ACTION ITEMS ==========
+    const actionsRequired = [];
+
+    // 1. Check for draft events not published
+    const draftEvents = await Event.find({
+      host: userId,
+      status: 'draft'
+    }).select('title date');
+    console.log(`📝 [Dashboard] Found ${draftEvents.length} draft events`);
+
+    draftEvents.forEach(event => {
+      const daysUntil = Math.ceil((new Date(event.date) - new Date()) / (1000 * 60 * 60 * 24));
+      if (daysUntil <= 30 && daysUntil > 0) {
+        actionsRequired.push({
+          id: `draft_${event._id}`,
+          type: 'draft_event',
+          priority: daysUntil <= 7 ? 'high' : 'medium',
+          title: 'Draft Event Not Published',
+          description: `"${event.title}" is scheduled in ${daysUntil} days but still in draft mode.`,
+          ctaText: 'Publish Now',
+          itemId: event._id,
+          metadata: {
+            eventName: event.title,
+            daysUntil
+          }
+        });
+      }
+    });
+
+    // 2. Check for low-fill alerts (events with <40% booking within 7 days)
+    const upcomingEventsForAlert = await Event.find({
+      host: userId,
+      status: { $in: ['published', 'live'] },
+      date: { $gte: new Date(), $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }
+    }).select('title date maxParticipants currentParticipants');
+    console.log(`🎯 [Dashboard] Found ${upcomingEventsForAlert.length} upcoming events for low-fill check`);
+
+    upcomingEventsForAlert.forEach(event => {
+      if (event.maxParticipants > 0) {
+        const fillPercentage = (event.currentParticipants / event.maxParticipants) * 100;
+        if (fillPercentage < 40) {
+          const daysUntil = Math.ceil((new Date(event.date) - new Date()) / (1000 * 60 * 60 * 24));
+          actionsRequired.push({
+            id: `lowfill_${event._id}`,
+            type: 'low_fill',
+            priority: daysUntil <= 3 ? 'high' : 'medium',
+            title: 'Low Booking Alert',
+            description: `Your event "${event.title}" is only ${Math.round(fillPercentage)}% filled with ${daysUntil} days to go.`,
+            ctaText: 'Promote Event',
+            itemId: event._id,
+            metadata: {
+              eventName: event.title,
+              daysUntil,
+              fillPercentage: Math.round(fillPercentage)
+            }
+          });
+        }
+      }
+    });
+
+    // 3. Check for incomplete profile
+    const profileCheck = {
+      missingFields: []
+    };
+    if (!community.communityProfile?.communityName) profileCheck.missingFields.push('communityName');
+    if (!community.communityProfile?.city) profileCheck.missingFields.push('city');
+    if (!community.communityProfile?.eventExperience) profileCheck.missingFields.push('eventExperience');
+    if (!community.communityProfile?.description) profileCheck.missingFields.push('description');
+    if (!community.communityProfile?.eventCategories || community.communityProfile?.eventCategories.length === 0) {
+      profileCheck.missingFields.push('eventCategories');
+    }
+
+    if (profileCheck.missingFields.length > 0) {
+      console.log(`👤 [Dashboard] Profile incomplete, missing: ${profileCheck.missingFields.join(', ')}`);
+      actionsRequired.push({
+        id: 'profile_incomplete',
+        type: 'profile_incomplete',
+        priority: 'high',
+        title: 'Complete Your Profile',
+        description: `Complete your profile to attract more attendees. Missing: ${profileCheck.missingFields.join(', ')}.`,
+        ctaText: 'Complete Profile',
+        itemId: null,
+        metadata: {
+          missingFields: profileCheck.missingFields
+        }
+      });
+    }
+
+    // 4. Check for missing KYC/Payout details
+    const hasPayoutDetails = community.payoutDetails?.accountHolderName && 
+                            community.payoutDetails?.accountNumber && 
+                            community.payoutDetails?.ifscCode &&
+                            community.payoutDetails?.billingAddress;
+    
+    if (!hasPayoutDetails) {
+      console.log('💳 [Dashboard] Payout details missing');
+      actionsRequired.push({
+        id: 'missing_kyc',
+        type: 'missing_kyc',
+        priority: 'high',
+        title: 'Add Payout Details',
+        description: 'Add your payout details to receive revenue from ticket sales.',
+        ctaText: 'Add Payout Details',
+        itemId: null
+      });
+    }
+
+    // 5. Fetch collaboration-related notifications (from Notification model)
     const notifications = await Notification.find({
       recipient: userId,
       category: 'action_required',
+      type: { $in: ['venue_response_received', 'communityToVenue_received', 'brand_response_received', 'communityToBrand_received', 'venue_counter_received', 'brand_counter_received', 'counter_proposal_received'] },
       isRead: false
     })
     .sort({ createdAt: -1 })
     .lean();
     
-    console.log(`📊 [Dashboard] Found ${notifications.length} action_required notifications`);
-    console.log('📋 [Dashboard] Notification types:', notifications.map(n => n.type));
+    console.log(`📊 [Dashboard] Found ${notifications.length} collaboration notifications`);
 
-    // Group notifications by type to remove duplicates
-    const uniqueNotifications = [];
-    const seenTypes = new Set();
-    
-    for (const notif of notifications) {
-      if (!seenTypes.has(notif.type)) {
-        seenTypes.add(notif.type);
-        uniqueNotifications.push(notif);
-      }
-    }
-
-    // Map notifications to dashboard action format
-    const actionsRequired = uniqueNotifications.map(notif => {
-      let actionType = notif.type;
-      let ctaText = 'Take Action';
-      
-      // Map notification types to action types and CTA text
-      if (notif.type === 'kyc_pending') {
-        actionType = 'missing_kyc';
-        ctaText = 'Add Payout Details';
-      } else if (notif.type === 'profile_incomplete_community_organizer') {
-        actionType = 'profile_incomplete';
-        ctaText = 'Complete Profile';
-      } else if (notif.type === 'event_draft_incomplete') {
-        actionType = 'draft_event';
-        ctaText = 'Complete Event';
-      } else if (notif.type === 'low_booking_alert') {
-        actionType = 'low_fill';
-        ctaText = 'Promote Event';
-      } else if (notif.type === 'venue_response_received' || notif.type === 'communityToVenue_received') {
-        actionType = 'collaboration_request';
-        ctaText = 'Review Response';
-      } else if (notif.type === 'brand_response_received' || notif.type === 'communityToBrand_received') {
-        actionType = 'collaboration_request';
-        ctaText = 'Review Response';
-      } else if (notif.type === 'venue_counter_received' || notif.type === 'brand_counter_received' || notif.type === 'counter_proposal_received') {
-        actionType = 'counter_received';
+    // Add collaboration notifications to action items
+    notifications.forEach(notif => {
+      let ctaText = 'Review Response';
+      if (notif.type.includes('counter')) {
         ctaText = 'Review Counter';
-      } else if (notif.type === 'subscription_payment_pending') {
-        actionType = 'subscription_pending';
-        ctaText = 'Complete Payment';
       }
-
-      return {
-        id: notif._id.toString(), // Add id field for frontend key
-        type: actionType,
+      
+      actionsRequired.push({
+        id: notif._id.toString(),
+        type: 'collaboration_request',
         title: notif.title,
         description: notif.message,
         ctaText: notif.actionText || ctaText,
         itemId: notif.relatedCollaboration || notif.relatedEvent || null,
         priority: notif.priority || 'medium'
-      };
+      });
     });
     
-    console.log(`✅ [Dashboard] Mapped ${actionsRequired.length} actions with ids:`, actionsRequired.map(a => a.id));
+    console.log(`✅ [Dashboard] Total action items: ${actionsRequired.length}`);
 
     // Get upcoming events
     const upcomingEvents = await Event.find({
@@ -396,69 +467,108 @@ router.post('/events/:eventId/duplicate', authMiddleware, async (req, res) => {
  */
 router.get('/earnings', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId || req.user.id;
+    console.log('💰 [Earnings] Fetching earnings for userId:', userId);
 
-    // TODO: This requires an Earnings/Transactions model
-    // For now, calculating from events
-    const completedEvents = await Event.find({
-      host: userId,
-      status: { $in: ['completed', 'published'] },
-      date: { $lt: new Date() }
-    }).select('currentParticipants ticketPrice date');
-    console.log('[Earnings] Completed events found:', completedEvents.length);
+    // Fetch ALL events (including future ones for total lifetime calculation)
+    const allEvents = await Event.find({
+      host: userId
+    }).select('currentParticipants maxParticipants price ticketPrice date status').lean();
+    
+    console.log(`💰 [Earnings] Total events found: ${allEvents.length}`);
 
-    // Calculate total lifetime earnings
-    const totalLifetime = completedEvents.reduce((sum, event) => {
-      return sum + (event.currentParticipants * event.ticketPrice);
+    // Helper function to get event price
+    const getEventPrice = (event) => {
+      // Try price.amount first (newer structure), fallback to ticketPrice
+      return event.price?.amount || event.ticketPrice || 0;
+    };
+
+    // Helper function to calculate revenue for an event
+    const calculateEventRevenue = (event) => {
+      const participants = event.currentParticipants || 0;
+      const price = getEventPrice(event);
+      return participants * price;
+    };
+
+    // Calculate total lifetime earnings (from ALL events with participants)
+    const eventsWithRevenue = allEvents.filter(e => (e.currentParticipants || 0) > 0);
+    const totalLifetime = eventsWithRevenue.reduce((sum, event) => {
+      return sum + calculateEventRevenue(event);
     }, 0);
+    console.log(`💰 [Earnings] Total Lifetime: ₹${totalLifetime} from ${eventsWithRevenue.length} events`);
 
-    // Calculate this month's earnings
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // Calculate this month's earnings (events that happened this month)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const thisMonthEvents = completedEvents.filter(event => 
-      new Date(event.date) >= startOfMonth
-    );
+    const thisMonthEvents = allEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate >= startOfMonth && eventDate <= endOfMonth;
+    });
 
     const thisMonth = thisMonthEvents.reduce((sum, event) => {
-      return sum + (event.currentParticipants * event.ticketPrice);
+      return sum + calculateEventRevenue(event);
     }, 0);
+    console.log(`💰 [Earnings] This Month: ₹${thisMonth} from ${thisMonthEvents.length} events`);
 
     // Calculate last month for growth percentage
-    const startOfLastMonth = new Date(startOfMonth);
-    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
-    const lastMonthEvents = completedEvents.filter(event => {
+    const lastMonthEvents = allEvents.filter(event => {
       const eventDate = new Date(event.date);
-      return eventDate >= startOfLastMonth && eventDate < startOfMonth;
+      return eventDate >= startOfLastMonth && eventDate <= endOfLastMonth;
     });
 
     const lastMonth = lastMonthEvents.reduce((sum, event) => {
-      return sum + (event.currentParticipants * event.ticketPrice);
+      return sum + calculateEventRevenue(event);
     }, 0);
+    console.log(`💰 [Earnings] Last Month: ₹${lastMonth} from ${lastMonthEvents.length} events`);
 
-    const monthGrowth = lastMonth > 0 
-      ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100)
-      : 0;
+    // Calculate month-over-month growth
+    let monthGrowth = 0;
+    if (lastMonth > 0) {
+      monthGrowth = Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
+    } else if (thisMonth > 0) {
+      monthGrowth = 100; // 100% growth if no revenue last month but revenue this month
+    }
+    console.log(`📈 [Earnings] Month Growth: ${monthGrowth}%`);
 
-    // TODO: Implement actual payout system
-    const pendingPayout = totalLifetime * 0.15; // Example: 15% platform fee, rest is pending
-    const lastPayoutAmount = 0; // TODO: Get from Payout model
-    const lastPayoutDate = null; // TODO: Get from Payout model
-    const nextPayoutDate = null; // TODO: Calculate based on payout schedule
+    // Calculate pending payout (assuming 85% payout after 15% platform fee)
+    // Only from completed/past events
+    const pastEvents = allEvents.filter(event => new Date(event.date) < now);
+    const totalRevenue = pastEvents.reduce((sum, event) => {
+      return sum + calculateEventRevenue(event);
+    }, 0);
+    
+    const platformFeePercentage = 15; // 15% platform fee
+    const pendingPayout = Math.round(totalRevenue * (1 - platformFeePercentage / 100));
+    console.log(`💵 [Earnings] Pending Payout: ₹${pendingPayout} (${100 - platformFeePercentage}% of ₹${totalRevenue})`);
+
+    // Calculate next payout date (example: 1st of next month)
+    const nextPayoutDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    // Fetch user to check if they have payout details
+    const user = await User.findById(userId).select('payoutDetails').lean();
+    const hasPayoutDetails = !!(user?.payoutDetails?.accountNumber && user?.payoutDetails?.ifscCode);
 
     res.json({
       totalLifetime,
       thisMonth,
       monthGrowth,
       pendingPayout,
-      lastPayoutAmount,
-      lastPayoutDate,
-      nextPayoutDate
+      lastPayoutAmount: 0, // TODO: Get from Payout model when implemented
+      lastPayoutDate: null, // TODO: Get from Payout model when implemented
+      nextPayoutDate: hasPayoutDetails ? nextPayoutDate : null,
+      totalEvents: allEvents.length,
+      eventsWithRevenue: eventsWithRevenue.length,
+      thisMonthEventCount: thisMonthEvents.length,
+      lastMonthEventCount: lastMonthEvents.length,
+      hasPayoutDetails
     });
   } catch (error) {
-    console.error('Error fetching earnings:', error);
+    console.error('❌ [Earnings] Error fetching earnings:', error);
     res.status(500).json({ message: 'Server error fetching earnings' });
   }
 });

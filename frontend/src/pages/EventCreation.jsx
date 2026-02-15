@@ -934,7 +934,7 @@ const EventCreation = () => {
                   value={formData.title}
                   onChange={handleInputChange}
                   placeholder="Enter event title"
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   required
                 />
               </div>
@@ -950,7 +950,7 @@ const EventCreation = () => {
                   onChange={handleInputChange}
                   placeholder="Describe your event..."
                   rows={4}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent resize-none"
                   required
                 />
               </div>
@@ -963,7 +963,7 @@ const EventCreation = () => {
                 <button
                   type="button"
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent flex items-center justify-between"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent flex items-center justify-between"
                 >
                   <span
                     className={
@@ -997,7 +997,8 @@ const EventCreation = () => {
                               formData.categories.length >= 3 &&
                               !formData.categories.includes(category.name)
                             }
-                            className="h-4 w-4 text-purple-600 rounded focus:ring-purple-500 border-gray-600 bg-white/5 accent-purple-600"
+                            className="h-4 w-4 rounded focus:ring-[#7878E9] border-gray-600 bg-white/5"
+                            style={{ accentColor: '#7878E9' }}
                           />
                           <span className="ml-3 text-sm text-white">
                             {category.emoji} {category.name}
@@ -1013,7 +1014,11 @@ const EventCreation = () => {
                     {formData.categories.map((category) => (
                       <span
                         key={category}
-                        className="px-3 py-1 bg-purple-600/20 text-purple-300 rounded-full text-xs border border-purple-500/30"
+                        className="px-3 py-1 text-white rounded-full text-xs"
+                        style={{
+                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          border: '1px solid rgba(120, 120, 233, 0.3)'
+                        }}
                       >
                         {category}
                       </span>
@@ -1033,7 +1038,7 @@ const EventCreation = () => {
                     name="date"
                     value={formData.date}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                     required
                   />
                 </div>
@@ -1046,7 +1051,7 @@ const EventCreation = () => {
                     name="time"
                     value={formData.time}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                     required
                   />
                 </div>
@@ -1063,17 +1068,21 @@ const EventCreation = () => {
                     value={locationQuery || formData.location.address || ""}
                     onChange={handleLocationSearch}
                     placeholder="Search cafe, venue, or area in Bangalore... (e.g., 'Third Wave Coffee' or 'Indiranagar')"
-                    className="w-full px-4 py-3 pr-32 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 pr-32 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   />
                   <button
                     type="button"
                     onClick={useCurrentLocation}
                     disabled={isSearchingLocation}
-                    className="absolute right-3 top-3 text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50 flex items-center gap-1"
+                    className="absolute right-3 top-3 text-xs hover:opacity-80 disabled:opacity-50 flex items-center gap-1"
+                    style={{ color: '#7878E9' }}
                   >
                     {isSearchingLocation ? (
                       <>
-                        <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div 
+                          className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                          style={{ borderColor: '#7878E9' }}
+                        ></div>
                         <span>Locating...</span>
                       </>
                     ) : (
@@ -1095,7 +1104,7 @@ const EventCreation = () => {
                             className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
                           >
                             <div className="flex items-start gap-3">
-                              <MapPin className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: '#7878E9' }} />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="text-sm font-medium text-white truncate">
@@ -1110,7 +1119,12 @@ const EventCreation = () => {
                                     </span>
                                   )}
                                   {suggestion.venueType && (
-                                    <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                    <span 
+                                      className="text-xs text-white px-2 py-0.5 rounded-full whitespace-nowrap"
+                                      style={{
+                                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                                      }}
+                                    >
                                       {suggestion.venueType}
                                     </span>
                                   )}
@@ -1132,7 +1146,7 @@ const EventCreation = () => {
                   value={formData.location.address}
                   onChange={handleInputChange}
                   placeholder="Complete address (Street, Area, Landmark)"
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                 />
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1143,7 +1157,7 @@ const EventCreation = () => {
                     onChange={handleInputChange}
                     placeholder="City *"
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   />
                   <input
                     type="text"
@@ -1152,7 +1166,7 @@ const EventCreation = () => {
                     onChange={handleInputChange}
                     placeholder="State *"
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   />
                 </div>
 
@@ -1163,7 +1177,7 @@ const EventCreation = () => {
                   onChange={handleInputChange}
                   placeholder="Zip/Postal Code (Optional)"
                   maxLength="10"
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                 />
               </div>
 
@@ -1180,7 +1194,7 @@ const EventCreation = () => {
                     onChange={handleInputChange}
                     placeholder="10"
                     min="1"
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                     required
                   />
                 </div>
@@ -1196,7 +1210,7 @@ const EventCreation = () => {
                     placeholder="₹0"
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1209,7 +1223,7 @@ const EventCreation = () => {
                 <button
                   type="button"
                   onClick={() => setShowCoHostDropdown(!showCoHostDropdown)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent flex items-center justify-between"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent flex items-center justify-between"
                 >
                   <span>Select Co-host</span>
                   <ChevronDown className="h-5 w-5" />

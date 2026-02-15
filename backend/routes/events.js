@@ -164,16 +164,25 @@ router.post('/', authMiddleware, [
       });
     }
 
-    // Check if user is community member
-    const user = await User.findById(req.user.id);
-    if (!user || user.role !== 'community_member') {
-      return res.status(403).json({ message: 'Only community members can create events' });
+    // Check if user is regular user or community organizer
+    const userId = req.user.userId || req.user.id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Allow regular users (role: 'user') and community organizers (role: 'host_partner' with hostPartnerType: 'community_organizer') to create events
+    const isAllowed = user.role === 'user' || 
+                     (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer');
+    
+    if (!isAllowed) {
+      return res.status(403).json({ message: 'Only users and community organizers can create events' });
     }
 
     const eventData = {
       ...req.body,
-      host: req.user.id,
-      createdBy: req.user.id
+      host: userId,
+      createdBy: userId
     };
 
     const event = new Event(eventData);

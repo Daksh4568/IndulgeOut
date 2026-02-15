@@ -177,7 +177,7 @@ const UserDashboard = () => {
             icon: <Heart className="h-16 w-16 text-gray-400 dark:text-gray-600 mb-4" />,
             title: "No saved events",
             message: "Save events to plan later",
-            cta: "Discover Events",
+            cta: <span>Discover Events</span>,
             action: () => navigate('/explore')
           };
         default:
@@ -791,7 +791,7 @@ const UserDashboard = () => {
         </div>
 
         {/* Referral Progress */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Referral Progress
@@ -820,7 +820,7 @@ const UserDashboard = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow text-left">
+          <button className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow text-left">
             <div className="flex items-center justify-between mb-2">
               <div className="bg-green-100 dark:bg-green-900 p-3 rounded-lg">
                 <Gift className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -835,7 +835,7 @@ const UserDashboard = () => {
             </p>
           </button>
 
-          <button className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow text-left">
+          <button className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow text-left">
             <div className="flex items-center justify-between mb-2">
               <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-lg">
                 <Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />

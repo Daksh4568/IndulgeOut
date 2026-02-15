@@ -1,3 +1,4 @@
+// @ts-nocheck
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
@@ -207,16 +208,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
 });
 
 // Update user payout details (KYC)
-router.put('/profile/payout', authenticateToken, async (req, res) => {
+// Update payout information with KYC document
+router.put('/profile/payout', authenticateToken, upload.single('idProof'), async (req, res) => {
   try {
-    const {
-      accountHolderName,
-      accountNumber,
-      ifscCode,
-      billingAddress,
-      upiId,
-      gstNumber
-    } = req.body;
+    const { accountHolderName, accountNumber, ifscCode, billingAddress, upiId, gstNumber } = req.body;
 
     // Validation - only required fields
     if (!accountHolderName || !accountNumber || !ifscCode || !billingAddress) {
@@ -238,14 +233,47 @@ router.put('/profile/payout', authenticateToken, async (req, res) => {
       });
     }
 
+    // Handle ID proof file upload if present
+    let idProofDocument = user.payoutDetails?.idProofDocument; // Keep existing if no new file
+    if (req.file) {
+      try {
+        // Upload to Cloudinary
+        const uploadPromise = new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'kyc_documents',
+              resource_type: 'auto',
+              allowed_formats: ['jpg', 'jpeg', 'png', 'pdf']
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+
+        const uploadResult = await uploadPromise;
+        idProofDocument = uploadResult.secure_url;
+        console.log('📄 ID proof uploaded successfully:', idProofDocument);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({
+          message: 'Failed to upload ID proof document',
+          error: uploadError.message
+        });
+      }
+    }
+
     // Update payout details
     user.payoutDetails = {
       accountHolderName,
       accountNumber,
       ifscCode,
       billingAddress,
-      upiId: upiId || undefined,
-      gstNumber: gstNumber || undefined,
+      upiId: upiId || user.payoutDetails?.upiId || undefined,
+      gstNumber: gstNumber || user.payoutDetails?.gstNumber || undefined,
+      idProofDocument: idProofDocument || undefined,
       isVerified: false, // Admin needs to verify
       lastUpdated: new Date()
     };
@@ -254,12 +282,25 @@ router.put('/profile/payout', authenticateToken, async (req, res) => {
 
     console.log(`✅ Payout details updated for ${user.name} (${user.hostPartnerType})`);
 
+    // Remove any existing KYC pending notifications since payout info is now complete
+    await Notification.deleteMany({
+      recipient: req.user.userId,
+      type: 'kyc_pending',
+      category: 'action_required'
+    });
+    console.log('🗑️ Removed KYC pending notifications');
+
     res.json({
       success: true,
       message: 'Payout details submitted successfully. Admin will verify shortly.',
       payoutDetails: {
         accountHolderName: user.payoutDetails.accountHolderName,
+        accountNumber: user.payoutDetails.accountNumber?.slice(-4), // Only last 4 digits
+        ifscCode: user.payoutDetails.ifscCode,
         billingAddress: user.payoutDetails.billingAddress,
+        upiId: user.payoutDetails.upiId,
+        gstNumber: user.payoutDetails.gstNumber,
+        idProofDocument: user.payoutDetails.idProofDocument,
         isVerified: user.payoutDetails.isVerified
       }
     });
@@ -420,87 +461,6 @@ router.put('/profile/hosting-preferences', authenticateToken, async (req, res) =
   }
 });
 
-// Update payout information
-router.put('/profile/payout', authenticateToken, upload.single('idProof'), async (req, res) => {
-  try {
-    const { accountNumber, ifscCode, accountHolderName, bankName, accountType, panNumber, gstNumber } = req.body;
-
-    const user = await User.findById(req.user.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    if (user.role !== 'host_partner') {
-      return res.status(400).json({ message: 'Payout information only available for host partners' });
-    }
-
-    // Handle ID proof file upload if present
-    let idProofUrl = user.payoutInfo?.idProofUrl; // Keep existing URL if no new file
-    if (req.file) {
-      try {
-        // Upload to Cloudinary
-        const uploadPromise = new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: 'kyc_documents',
-              resource_type: 'auto', // Handles images, PDFs, videos
-              allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'mp4']
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          uploadStream.end(req.file.buffer);
-        });
-
-        const uploadResult = await uploadPromise;
-        idProofUrl = uploadResult.secure_url;
-      } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
-        return res.status(500).json({
-          message: 'Failed to upload ID proof document',
-          error: uploadError.message
-        });
-      }
-    }
-
-    // Update only specific fields without replacing the entire object
-    if (!user.payoutInfo) user.payoutInfo = {};
-    if (accountNumber !== undefined) user.payoutInfo.accountNumber = accountNumber;
-    if (ifscCode !== undefined) user.payoutInfo.ifscCode = ifscCode;
-    if (accountHolderName !== undefined) user.payoutInfo.accountHolderName = accountHolderName;
-    if (bankName !== undefined) user.payoutInfo.bankName = bankName;
-    if (accountType !== undefined) user.payoutInfo.accountType = accountType;
-    if (panNumber !== undefined) user.payoutInfo.panNumber = panNumber;
-    if (gstNumber !== undefined) user.payoutInfo.gstNumber = gstNumber;
-    if (idProofUrl) user.payoutInfo.idProofUrl = idProofUrl; // Save ID proof URL
-    if (!user.payoutInfo.addedAt) user.payoutInfo.addedAt = new Date();
-
-    await user.save();
-
-    // Remove any existing KYC pending notifications since payout info is now complete
-    await Notification.deleteMany({
-      recipient: req.user.userId,
-      type: 'kyc_pending',
-      category: 'action_required'
-    });
-
-    // Re-check for any other action required items
-    await checkAndGenerateActionRequiredNotifications(req.user.userId);
-
-    res.json({
-      success: true,
-      message: 'Payout information updated successfully',
-      user
-    });
-  } catch (error) {
-    console.error('Update payout info error:', error);
-    res.status(500).json({ message: 'Failed to update payout information', error: error.message });
-  }
-});
-
 // Update venue details (for venue partners only)
 router.put('/profile/venue-details', authenticateToken, async (req, res) => {
   try {
@@ -513,7 +473,7 @@ router.put('/profile/venue-details', authenticateToken, async (req, res) => {
     if (user.hostPartnerType !== 'venue') {
       return res.status(400).json({ message: 'Venue details only available for venue partners' });
     }
-
+    
     const { capacityRange, rules, pricing, availability, amenities } = req.body;
 
     // Update only specific fields without replacing the entire object

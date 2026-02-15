@@ -156,13 +156,13 @@ const ProfileNew = () => {
       }
     } else if (section === 'payout') {
       setPayoutForm({
-        accountNumber: profileData.payoutInfo?.accountNumber || '',
-        ifscCode: profileData.payoutInfo?.ifscCode || '',
-        accountHolderName: profileData.payoutInfo?.accountHolderName || '',
-        bankName: profileData.payoutInfo?.bankName || '',
-        accountType: profileData.payoutInfo?.accountType || 'savings',
-        panNumber: profileData.payoutInfo?.panNumber || '',
-        gstNumber: profileData.payoutInfo?.gstNumber || ''
+        accountNumber: profileData.payoutDetails?.accountNumber || '',
+        ifscCode: profileData.payoutDetails?.ifscCode || '',
+        accountHolderName: profileData.payoutDetails?.accountHolderName || '',
+        bankName: profileData.payoutDetails?.bankName || '',
+        accountType: profileData.payoutDetails?.accountType || 'savings',
+        panNumber: profileData.payoutDetails?.panNumber || '',
+        gstNumber: profileData.payoutDetails?.gstNumber || ''
       })
     } else if (section === 'venue') {
       setVenueDetailsForm({
@@ -225,6 +225,19 @@ const ProfileNew = () => {
       setMessage({ type: 'error', text: 'Failed to update hosting preferences' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleRemoveInterest = async (interestToRemove) => {
+    try {
+      const updatedInterests = profileData.interests.filter(i => i !== interestToRemove)
+      const response = await api.put('/users/profile', { interests: updatedInterests })
+      setProfileData(response.data.user)
+      setMessage({ type: 'success', text: 'Interest removed!' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 2000)
+    } catch (error) {
+      console.error('Error removing interest:', error)
+      setMessage({ type: 'error', text: 'Failed to remove interest' })
     }
   }
 
@@ -346,6 +359,62 @@ const ProfileNew = () => {
     }
   }
 
+  // Calculate profile completion percentage and get missing fields
+  const getProfileCompletionDetails = () => {
+    if (!profileData) return { percentage: 0, missingFields: [] }
+    
+    const fields = []
+    
+    // Common fields for all users
+    fields.push({ name: 'Name', value: !!profileData.name })
+    fields.push({ name: 'Email', value: !!profileData.email })
+    fields.push({ name: 'Phone Number', value: !!profileData.phoneNumber })
+    fields.push({ name: 'City', value: !!profileData.location?.city })
+    fields.push({ name: 'Profile Picture', value: !!profileData.profilePicture })
+    
+    if (isHostPartner) {
+      // KYC/Payout details (important for all host partners)
+      fields.push({ name: 'Account Holder Name', value: !!profileData.payoutDetails?.accountHolderName })
+      fields.push({ name: 'Bank Account Number', value: !!profileData.payoutDetails?.accountNumber })
+      fields.push({ name: 'IFSC Code', value: !!profileData.payoutDetails?.ifscCode })
+      fields.push({ name: 'Billing Address', value: !!profileData.payoutDetails?.billingAddress })
+      
+      if (isCommunityOrganizer) {
+        // Community Organizer specific fields
+        fields.push({ name: 'Community Name', value: !!profileData.communityProfile?.communityName })
+        fields.push({ name: 'Past Event Experience', value: !!profileData.communityProfile?.pastEventExperience })
+        fields.push({ name: 'Community Description', value: !!profileData.communityProfile?.communityDescription })
+        fields.push({ name: 'Event Categories (min 1)', value: (profileData.communityProfile?.category?.length > 0) || (profileData.communityProfile?.eventCategories?.length > 0) })
+        fields.push({ name: 'Past Event Photos (min 1)', value: profileData.communityProfile?.pastEventPhotos?.length > 0 })
+      } else if (isVenue) {
+        // Venue specific fields
+        fields.push({ name: 'Venue Name', value: !!profileData.venueProfile?.venueName })
+        fields.push({ name: 'Venue Type', value: !!profileData.venueProfile?.venueType })
+        fields.push({ name: 'Capacity Range', value: !!profileData.venueProfile?.capacityRange })
+        fields.push({ name: 'Locality', value: !!profileData.venueProfile?.locality })
+        fields.push({ name: 'Venue Photos (min 1)', value: profileData.venueProfile?.photos?.length > 0 })
+      } else if (isBrandSponsor) {
+        // Brand Sponsor specific fields
+        fields.push({ name: 'Brand Name', value: !!profileData.brandProfile?.brandName })
+        fields.push({ name: 'Brand Category', value: !!profileData.brandProfile?.brandCategory })
+        fields.push({ name: 'Collaboration Intent (min 1)', value: profileData.brandProfile?.collaborationIntent?.length > 0 })
+        fields.push({ name: 'Brand Description', value: !!profileData.brandProfile?.brandDescription })
+      }
+    }
+    
+    const completed = fields.filter(f => f.value).length
+    const total = fields.length
+    const percentage = Math.round((completed / total) * 100)
+    const missingFields = fields.filter(f => !f.value).map(f => f.name)
+    
+    return { percentage, missingFields, completed, total }
+  }
+
+  // Wrapper for backward compatibility
+  const calculateProfileCompletion = () => {
+    return getProfileCompletionDetails().percentage
+  }
+
   const getUserInitials = () => {
     if (!profileData?.name) return '?'
     return profileData.name
@@ -441,138 +510,230 @@ const ProfileNew = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
         {/* B2C User Layout */}
         {profileData.role === 'user' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Interests Column */}
-            <div className="space-y-6">
-              <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                <h2 className="text-xl font-bold text-white mb-4">My Interests</h2>
-                {profileData.interests && profileData.interests.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {profileData.interests.map((interest, idx) => (
-                      <span key={idx} className="px-3 py-1.5 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
-                        {interest}
-                      </span>
-                    ))}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Profile Card (Spans 2 columns) */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Profile Card with Purple Gradient Header */}
+              <div className="bg-[#171717] rounded-lg overflow-hidden transition-card">
+                {/* Purple gradient header */}
+                <div className="bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] p-6 relative">
+                  <button 
+                    onClick={() => handleEditSection('profile')}
+                    className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm font-medium"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                  
+                  <div className="flex items-start gap-6">
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      {profileData.profilePicture ? (
+                        <img 
+                          src={profileData.profilePicture} 
+                          alt="Profile" 
+                          className="h-24 w-24 rounded-xl object-cover border-2 border-white/30"
+                        />
+                      ) : (
+                        <div className="h-24 w-24 rounded-xl bg-white/20 flex items-center justify-center text-white text-3xl font-bold border-2 border-white/30">
+                          {getUserInitials()}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 -right-2 bg-white text-purple-600 rounded-lg p-2 hover:bg-gray-100 transition-colors shadow-lg"
+                      >
+                        <Camera className="h-4 w-4" />
+                      </button>
+                      <input 
+                        ref={fileInputRef}
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleProfilePictureUpload}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {/* Profile Info */}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
+                        {profileData.name}
+                      </h2>
+                      <p className="text-white/80 text-sm mb-4">Member</p>
+                      
+                      {profileData.bio && (
+                        <p className="text-white/90 text-sm leading-relaxed mb-4">
+                          {profileData.bio}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-sm italic">No interests added yet. Update your profile to add interests.</p>
-                )}
+                </div>
+
+                {/* Contact Information - Below gradient */}
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Phone */}
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">Phone</p>
+                        <p className="text-sm font-medium truncate">{profileData.phoneNumber || 'Not specified'}</p>
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">Email</p>
+                        <p className="text-sm font-medium truncate">{profileData.email}</p>
+                      </div>
+                    </div>
+
+                    {/* Instagram */}
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                        <svg className="h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">Instagram</p>
+                        <p className="text-sm font-medium truncate">
+                          {profileData.socialLinks?.instagram || 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Edit Form */}
+                  {editingSection === 'profile' && (
+                    <div className="mt-6 pt-6 border-t border-gray-800 space-y-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Name</label>
+                        <input 
+                          type="text"
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Bio</label>
+                        <textarea 
+                          value={profileForm.bio}
+                          onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                          rows="3"
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          placeholder="Tell us about yourself..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Phone Number</label>
+                        <input 
+                          type="tel"
+                          value={profileForm.phoneNumber}
+                          onChange={(e) => setProfileForm({ ...profileForm, phoneNumber: e.target.value })}
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Instagram</label>
+                        <input 
+                          type="text"
+                          value={profileForm.instagram}
+                          onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
+                          placeholder="@username"
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveProfile}
+                          disabled={saving}
+                          className="flex-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                        >
+                          {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          onClick={() => setEditingSection(null)}
+                          className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Logout Button */}
+                  <div className="mt-6 pt-6 border-t border-gray-800">
+                    <button
+                      onClick={() => {
+                        logout();
+                        navigate('/login');
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Profile Column */}
+            {/* Right Column - Interests & Support */}
             <div className="space-y-6">
-              {/* Profile Card */}
+              {/* Interests Card */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">Profile</h2>
-                  {editingSection !== 'profile' && (
-                    <button 
-                      onClick={() => handleEditSection('profile')}
-                      className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                    >
-                      <Edit2 className="h-4 w-4 text-gray-400" />
-                    </button>
-                  )}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-400" />
+                    Interest
+                  </h3>
+                  <button 
+                    onClick={() => handleEditSection('interests')}
+                    className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="h-3.5 w-3.5 text-gray-400" />
+                  </button>
                 </div>
-
-                {/* Profile Picture */}
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative">
-                    {profileData.profilePicture ? (
-                      <img 
-                        src={profileData.profilePicture} 
-                        alt="Profile" 
-                        className="h-20 w-20 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-20 w-20 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center text-white text-2xl font-bold">
-                        {getUserInitials()}
+                
+                {profileData.interests && profileData.interests.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profileData.interests.map((interest, idx) => (
+                      <div key={idx} className="group relative">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/30">
+                          {interest}
+                          {editingSection === 'interests' && (
+                            <button 
+                              onClick={() => handleRemoveInterest(interest)}
+                              className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </span>
                       </div>
-                    )}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 bg-purple-600 rounded-full p-1.5 hover:bg-purple-700 transition-colors"
-                    >
-                      <Camera className="h-3 w-3 text-white" />
-                    </button>
-                    <input 
-                      ref={fileInputRef}
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleProfilePictureUpload}
-                      className="hidden"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">{profileData.name}</h3>
-                    <p className="text-gray-400 text-sm">{profileData.email}</p>
-                  </div>
-                </div>
-
-                {editingSection === 'profile' ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Name</label>
-                      <input 
-                        type="text"
-                        value={profileForm.name}
-                        onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Bio</label>
-                      <textarea 
-                        value={profileForm.bio}
-                        onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                        rows="3"
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSaveProfile}
-                        disabled={saving}
-                        className="flex-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                      >
-                        {saving ? 'Saving...' : 'Apply'}
-                      </button>
-                      <button
-                        onClick={() => setEditingSection(null)}
-                        className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {profileData.bio && (
-                      <p className="text-gray-300">{profileData.bio}</p>
-                    )}
-                    <div className="flex items-center text-gray-400 text-sm">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {profileData.location?.city || 'Not specified'}
-                    </div>
-                    <div className="flex items-center text-gray-400 text-sm">
-                      <Phone className="h-4 w-4 mr-2" />
-                      {profileData.phoneNumber || 'Not specified'}
-                    </div>
-                    
-                    {/* Logout Button */}
-                    <div className="pt-4 border-t border-gray-800">
-                      <button
-                        onClick={() => {
-                          logout();
-                          navigate('/login');
-                        }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                      </button>
-                    </div>
+                  <p className="text-gray-500 text-sm italic">No interests added yet</p>
+                )}
+                
+                {editingSection === 'interests' && (
+                  <div className="mt-4 pt-4 border-t border-gray-800">
+                    <button
+                      onClick={() => setEditingSection(null)}
+                      className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                    >
+                      Done
+                    </button>
                   </div>
                 )}
               </div>
@@ -580,27 +741,30 @@ const ProfileNew = () => {
               {/* Help & Support Section */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <HelpCircle className="h-5 w-5 text-purple-500" />
+                  <HelpCircle className="h-5 w-5 text-purple-400" />
                   <h3 className="text-white font-semibold">Help & Support</h3>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <button
                     onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
-                    Help Center
+                    Help center
+                    <p className="text-gray-500 text-xs mt-0.5">Browse our knowledge base</p>
                   </button>
                   <button
                     onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
-                    Contact Support
+                    Contact support
+                    <p className="text-gray-500 text-xs mt-0.5">Get in touch with our team</p>
                   </button>
                   <button
                     onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
-                    Terms & Privacy
+                    Terms & privacy
+                    <p className="text-gray-500 text-xs mt-0.5">Review our policies</p>
                   </button>
                 </div>
               </div>
@@ -610,64 +774,98 @@ const ProfileNew = () => {
 
         {/* B2B Partner Layout (Community, Venue, Brand) */}
         {isHostPartner && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* LEFT COLUMN */}
-            <div className="space-y-6">
-              {/* Profile Card with Purple Gradient */}
-              <div className="bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] rounded-lg p-6 transition-card">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    {profileData.profilePicture ? (
-                      <img 
-                        src={profileData.profilePicture} 
-                        alt="Profile" 
-                        className="h-16 w-16 rounded-full object-cover border-2 border-white/30"
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* LEFT COLUMN - Spans 2 columns */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Profile Card with Purple Gradient Header */}
+              <div className="bg-[#171717] rounded-lg overflow-hidden transition-card">
+                {/* Purple gradient header */}
+                <div 
+                  className="p-6 relative"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                >
+                  <button 
+                    onClick={() => handleEditSection('profile')}
+                    className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm font-medium"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                  
+                  <div className="flex items-start gap-6">
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      {profileData.profilePicture ? (
+                        <img 
+                          src={profileData.profilePicture} 
+                          alt="Profile" 
+                          className="h-20 w-20 rounded-xl object-cover border-2 border-white/30"
+                        />
+                      ) : (
+                        <div className="h-20 w-20 rounded-xl bg-white/20 flex items-center justify-center text-white text-2xl font-bold border-2 border-white/30">
+                          {getUserInitials()}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 -right-2 bg-white text-purple-600 rounded-lg p-2 hover:bg-gray-100 transition-colors shadow-lg"
+                      >
+                        <Camera className="h-4 w-4" />
+                      </button>
+                      <input 
+                        ref={fileInputRef}
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleProfilePictureUpload}
+                        className="hidden"
                       />
-                    ) : (
-                      <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center text-white text-2xl font-bold border-2 border-white/30">
-                        {getUserInitials()}
-                      </div>
-                    )}
-                    <div>
-                      <h2 className="text-xl font-bold text-white">
+                    </div>
+
+                    {/* Profile Info */}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
                         {isCommunityOrganizer && profileData.communityProfile?.communityName}
                         {isVenue && profileData.venueProfile?.venueName}
                         {isBrandSponsor && profileData.brandProfile?.brandName}
                       </h2>
-                      <p className="text-white/80 text-sm">
+                      
+                      {/* Tags for Venue */}
+                      {isVenue && profileData.venueProfile?.venueType && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {profileData.venueProfile.venueType.split(',').map((tag, idx) => (
+                            <span key={idx} className="px-2.5 py-1 bg-white/20 text-white text-xs rounded-md font-medium">
+                              {tag.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="text-white/80 text-sm mb-4">
                         {isCommunityOrganizer && 'Community Organizer'}
                         {isVenue && 'Venue Partner'}
                         {isBrandSponsor && 'Brand Partner'}
                       </p>
+                      
+                      {(isCommunityOrganizer || isBrandSponsor) && (
+                        <p className="text-white/90 text-sm leading-relaxed">
+                          {isCommunityOrganizer && profileData.communityProfile?.communityDescription}
+                          {isBrandSponsor && profileData.brandProfile?.brandDescription}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-                  >
-                    <Camera className="h-4 w-4 text-white" />
-                  </button>
-                  <input 
-                    ref={fileInputRef}
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleProfilePictureUpload}
-                    className="hidden"
-                  />
+                  </div>
                 </div>
-                <p className="text-white/90">
-                  {isCommunityOrganizer && profileData.communityProfile?.communityDescription}
-                  {isBrandSponsor && profileData.brandProfile?.brandDescription}
-                </p>
-              </div>
 
-              {/* Community Photos / Venue Photos (5 slots) */}
-              {(isCommunityOrganizer || isVenue) && (
+              {/* Community Photos / Venue Photos / Brand Photos */}
+              {(isCommunityOrganizer || isVenue || isBrandSponsor) && (
                 <div className="bg-[#171717] rounded-lg p-6 transition-card">
                   <h3 className="text-white font-semibold mb-4">
-                    {isCommunityOrganizer ? 'Community Photos' : 'Venue Photos'} ({photos.length}/5)
+                    {isCommunityOrganizer && `Community Photos (${photos.length}/5)`}
+                    {isVenue && `Venue Photos (${photos.length}/5)`}
+                    {isBrandSponsor && `Brand Photos (${photos.length}/5)`}
                   </h3>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-5 gap-3">
                     {photos.map((photo, idx) => (
                       <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-800">
                         <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
@@ -686,7 +884,7 @@ const ProfileNew = () => {
                         disabled={isUploading}
                         className="aspect-square rounded-lg bg-gray-800 border-2 border-dashed border-gray-600 hover:border-purple-600 transition-colors flex items-center justify-center"
                       >
-                        <Plus className="h-8 w-8 text-gray-500" />
+                        <Upload className="h-6 w-6 text-gray-500" />
                       </button>
                     )}
                   </div>
@@ -700,10 +898,12 @@ const ProfileNew = () => {
                 </div>
               )}
 
-              {/* Contact Information */}
+              {/* Contact Links Section */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-white font-semibold">Contact Information</h3>
+                  <h3 className="text-white font-semibold">
+                    {isBrandSponsor ? 'Brand manager contact details' : 'Contact Information'}
+                  </h3>
                   {editingSection !== 'profile' && (
                     <button 
                       onClick={() => handleEditSection('profile')}
@@ -735,30 +935,30 @@ const ProfileNew = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">City</label>
+                      <label className="block text-sm text-gray-400 mb-2">Email</label>
                       <input 
-                        type="text"
-                        value={profileForm.city}
-                        onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                        type="email"
+                        value={profileData.email}
+                        disabled
+                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-gray-500 cursor-not-allowed"
                       />
                     </div>
                     
-                    {/* Social Links for All Users */}
-                    <>
-                      <div className="border-t border-gray-700 my-3 pt-3">
-                        <p className="text-gray-400 text-xs font-semibold mb-2">SOCIAL LINKS</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Instagram</label>
-                        <input 
-                          type="text"
-                          value={profileForm.instagram}
-                          onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
-                          placeholder="@yourusername or profile URL"
-                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                        />
-                      </div>
+                    {/* Social Links */}
+                    <div className="border-t border-gray-700 my-3 pt-3">
+                      <p className="text-gray-400 text-xs font-semibold mb-2">SOCIAL LINKS</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Instagram</label>
+                      <input 
+                        type="text"
+                        value={profileForm.instagram}
+                        onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
+                        placeholder="@yourusername"
+                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                      />
+                    </div>
+                    {!isBrandSponsor && (
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Facebook</label>
                         <input 
@@ -769,219 +969,451 @@ const ProfileNew = () => {
                           className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
                         />
                       </div>
+                    )}
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Website</label>
+                      <input 
+                        type="text"
+                        value={profileForm.website}
+                        onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
+                        placeholder="https://yourwebsite.com"
+                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                      />
+                    </div>
+                    {isBrandSponsor && (
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Website</label>
+                        <label className="block text-sm text-gray-400 mb-2">LinkedIn</label>
                         <input 
                           type="text"
-                          value={profileForm.website}
-                          onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
-                          placeholder="https://yourwebsite.com"
+                          value={profileForm.linkedin}
+                          onChange={(e) => setProfileForm({ ...profileForm, linkedin: e.target.value })}
+                          placeholder="LinkedIn company URL"
                           className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
                         />
                       </div>
-                      {isBrandSponsor && (
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">LinkedIn</label>
-                          <input 
-                            type="text"
-                            value={profileForm.linkedin}
-                            onChange={(e) => setProfileForm({ ...profileForm, linkedin: e.target.value })}
-                            placeholder="LinkedIn company URL"
-                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                          />
-                        </div>
-                      )}
-                    </>
+                    )}
                     
                     <div className="flex gap-2">
                       <button
                         onClick={handleSaveProfile}
                         disabled={saving}
-                        className="flex-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                        className="flex-1 text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                       >
-                        {saving ? 'Saving...' : 'Apply'}
+                        {saving ? 'Saving...' : 'Save Changes'}
                       </button>
                       <button
                         onClick={() => setEditingSection(null)}
-                        className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
                       >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-300">
-                      <User className="h-4 w-4 mr-3 text-gray-500" />
-                      {profileData.name}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Phone */}
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">Phone</p>
+                        <p className="text-sm font-medium truncate">{profileData.phoneNumber || 'Not specified'}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center text-gray-300">
-                      <Mail className="h-4 w-4 mr-3 text-gray-500" />
-                      {profileData.email}
+
+                    {/* Email */}
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">Email</p>
+                        <p className="text-sm font-medium truncate">{profileData.email}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center text-gray-300">
-                      <Phone className="h-4 w-4 mr-3 text-gray-500" />
-                      {profileData.phoneNumber || 'Not specified'}
-                    </div>
-                    <div className="flex items-center text-gray-300">
-                      <MapPin className="h-4 w-4 mr-3 text-gray-500" />
-                      {profileData.location?.city || 'Not specified'}
-                    </div>
-                    
-                    {/* Social Links for All Users */}
+
+                    {/* Instagram */}
                     {(() => {
-                      // Get social links based on user type
-                      let socialLinks = {};
-                      if (isCommunityOrganizer) {
-                        socialLinks = profileData.communityProfile || {};
-                      } else if (isVenue) {
-                        socialLinks = profileData.venueProfile || {};
-                      } else if (isBrandSponsor) {
-                        socialLinks = profileData.brandProfile || {};
-                      } else {
-                        socialLinks = profileData.socialLinks || {};
-                      }
-                      
-                      return (
-                        <>
-                          <div className="border-t border-gray-700 my-3 pt-3">
-                            <p className="text-gray-400 text-xs font-semibold mb-2">SOCIAL LINKS</p>
+                      const socialLinks = isCommunityOrganizer ? profileData.communityProfile : 
+                                         isVenue ? profileData.venueProfile : 
+                                         profileData.brandProfile;
+                      return socialLinks?.instagram && (
+                        <div className="flex items-center gap-3 text-gray-300">
+                          <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                            <svg className="h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
                           </div>
-                          <div className="space-y-2">
-                            <div>
-                              <p className="text-gray-500 text-xs">Instagram</p>
-                              <p className="text-gray-300 text-sm break-all">
-                                {socialLinks?.instagram || <span className="text-gray-500 italic">Not specified</span>}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500 text-xs">Facebook</p>
-                              <p className="text-gray-300 text-sm break-all">
-                                {socialLinks?.facebook || <span className="text-gray-500 italic">Not specified</span>}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500 text-xs">Website</p>
-                              <p className="text-gray-300 text-sm break-all">
-                                {socialLinks?.website || <span className="text-gray-500 italic">Not specified</span>}
-                              </p>
-                            </div>
-                            {isBrandSponsor && (
-                              <div>
-                                <p className="text-gray-500 text-xs">LinkedIn</p>
-                                <p className="text-gray-300 text-sm break-all">
-                                  {socialLinks?.linkedin || <span className="text-gray-500 italic">Not specified</span>}
-                                </p>
-                              </div>
-                            )}
+                          <div className="min-w-0">
+                            <p className="text-xs text-gray-500">Instagram</p>
+                            <p className="text-sm font-medium truncate">{socialLinks.instagram}</p>
                           </div>
-                        </>
+                        </div>
                       );
                     })()}
-                  </div>
-                )}
-              </div>
 
-              {/* Payout/KYC Section */}
-              <div ref={payoutSectionRef} className="bg-[#171717] rounded-lg p-6 transition-card">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-purple-400" />
-                    <h3 className="text-white font-semibold">Payout & KYC</h3>
-                  </div>
-                  {editingSection !== 'payout' && (
-                    <button 
-                      onClick={() => handleEditSection('payout')}
-                      className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                    >
-                      <Edit2 className="h-4 w-4 text-gray-400" />
-                    </button>
-                  )}
-                </div>
+                    {/* Website */}
+                    {(() => {
+                      const socialLinks = isCommunityOrganizer ? profileData.communityProfile : 
+                                         isVenue ? profileData.venueProfile : 
+                                         profileData.brandProfile;
+                      return socialLinks?.website && (
+                        <div className="flex items-center gap-3 text-gray-300">
+                          <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-gray-500">Website</p>
+                            <p className="text-sm font-medium truncate">{socialLinks.website}</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                {editingSection === 'payout' ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Account Number</label>
-                      <input 
-                        type="text"
-                        value={payoutForm.accountNumber}
-                        onChange={(e) => setPayoutForm({ ...payoutForm, accountNumber: e.target.value })}
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">IFSC Code</label>
-                      <input 
-                        type="text"
-                        value={payoutForm.ifscCode}
-                        onChange={(e) => setPayoutForm({ ...payoutForm, ifscCode: e.target.value })}
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Account Holder Name</label>
-                      <input 
-                        type="text"
-                        value={payoutForm.accountHolderName}
-                        onChange={(e) => setPayoutForm({ ...payoutForm, accountHolderName: e.target.value })}
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">PAN Number</label>
-                      <input 
-                        type="text"
-                        value={payoutForm.panNumber}
-                        onChange={(e) => setPayoutForm({ ...payoutForm, panNumber: e.target.value })}
-                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSavePayout}
-                        disabled={saving}
-                        className="flex-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                      >
-                        {saving ? 'Saving...' : 'Apply'}
-                      </button>
-                      <button
-                        onClick={() => setEditingSection(null)}
-                        className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {profileData.payoutInfo?.accountNumber ? (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Account</span>
-                          <span className="text-gray-300">••••{profileData.payoutInfo.accountNumber.slice(-4)}</span>
+                    {/* LinkedIn for Brand */}
+                    {isBrandSponsor && profileData.brandProfile?.linkedin && (
+                      <div className="flex items-center gap-3 text-gray-300">
+                        <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          <svg className="h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                          </svg>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">IFSC</span>
-                          <span className="text-gray-300">{profileData.payoutInfo.ifscCode}</span>
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500">LinkedIn</p>
+                          <p className="text-sm font-medium truncate">{profileData.brandProfile.linkedin}</p>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">PAN</span>
-                          <span className="text-gray-300">{profileData.payoutInfo.panNumber || 'Not provided'}</span>
+                      </div>
+                    )}
+
+                    {/* Google Maps for Venue/Community */}
+                    {(isVenue || isCommunityOrganizer) && (
+                      <div className="flex items-center gap-3 text-gray-300">
+                        <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          <MapPin className="h-4 w-4 text-gray-400" />
                         </div>
-                        <div className="mt-3 flex items-center text-green-400 text-sm">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          KYC Details Added
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500">Location</p>
+                          <p className="text-sm font-medium truncate">{profileData.location?.city || 'View on Google Maps'}</p>
                         </div>
-                      </>
-                    ) : (
-                      <p className="text-gray-400 text-sm">No payout details added yet</p>
+                      </div>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Logout Section */}
+              {/* Payout/KYC Section (Community Organizer Only) */}
+              {isCommunityOrganizer && (
+                <div ref={payoutSectionRef} className="bg-[#171717] rounded-lg p-6 transition-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-purple-400" />
+                      <h3 className="text-white font-semibold">Payouts, KYC & Compliance</h3>
+                    </div>
+                    {editingSection !== 'payout' && (
+                      <button 
+                        onClick={() => handleEditSection('payout')}
+                        className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="h-4 w-4 text-gray-400" />
+                      </button>
+                    )}
+                  </div>
+
+                  {editingSection === 'payout' ? (
+                    <div className="space-y-4">
+                      <p className="text-xs text-gray-500 uppercase font-semibold mb-3">Manage your payment and tax information</p>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Account Holder Name</label>
+                          <input 
+                            type="text"
+                            value={payoutForm.accountHolderName}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, accountHolderName: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Account Number</label>
+                          <input 
+                            type="text"
+                            value={payoutForm.accountNumber}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, accountNumber: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">IFSC Code</label>
+                          <input 
+                            type="text"
+                            value={payoutForm.ifscCode}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, ifscCode: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Billing Address</label>
+                          <input 
+                            type="text"
+                            value={payoutForm.billingAddress || ''}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, billingAddress: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">GSTIN (Optional)</label>
+                          <input 
+                            type="text"
+                            value={payoutForm.gstNumber}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, gstNumber: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">UPI (Optional)</label>
+                          <input 
+                            type="text"
+                            value={payoutForm.upiId || ''}
+                            onChange={(e) => setPayoutForm({ ...payoutForm, upiId: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-4">
+                        <button
+                          onClick={handleSavePayout}
+                          disabled={saving}
+                          className="flex-1 text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        >
+                          {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          onClick={() => setEditingSection(null)}
+                          className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {profileData.payoutDetails?.accountNumber ? (
+                        <>
+                          <p className="text-xs text-gray-500 uppercase font-semibold mb-3">Manage your payment and tax information</p>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
+                              <span className="text-gray-400">Account Holder</span>
+                              <span className="text-gray-200 font-medium text-right">{profileData.payoutDetails.accountHolderName}</span>
+                            </div>
+                            <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
+                              <span className="text-gray-400">Account Number</span>
+                              <span className="text-gray-200 font-mono">••••{profileData.payoutDetails.accountNumber.slice(-4)}</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
+                              <span className="text-gray-400">IFSC</span>
+                              <span className="text-gray-200 font-mono">{profileData.payoutDetails.ifscCode}</span>
+                            </div>
+                            <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
+                              <span className="text-gray-400">GSTIN</span>
+                              <span className="text-gray-200 font-mono">{profileData.payoutDetails.gstNumber || 'Not provided'}</span>
+                            </div>
+                          </div>
+
+                          {profileData.payoutDetails.upiId && (
+                            <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
+                              <span className="text-gray-400">UPI</span>
+                              <span className="text-gray-200">{profileData.payoutDetails.upiId}</span>
+                            </div>
+                          )}
+
+                          <div className="mt-4 pt-3 flex items-center justify-between">
+                            <div className="flex items-center">
+                              {profileData.payoutDetails.isVerified ? (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
+                                  <span className="text-green-400 text-sm font-medium">Verified</span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="h-4 w-4 mr-2 rounded-full border-2 border-yellow-400 flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-yellow-400 rounded-full"></div>
+                                  </div>
+                                  <span className="text-yellow-400 text-sm font-medium">Pending Verification</span>
+                                </>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => navigate('/kyc-setup')}
+                              className="text-xs text-purple-400 hover:text-purple-300 underline"
+                            >
+                              Update KYC
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-gray-400 text-sm">No payout details added yet</p>
+                          <button
+                            onClick={() => navigate('/kyc-setup')}
+                            className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+                            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                          >
+                            Add KYC Details
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Venue Details Section (Venue Only) */}
+              {isVenue && (
+                <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-semibold">Venue Details</h3>
+                    {editingSection !== 'venue' && (
+                      <button 
+                        onClick={() => handleEditSection('venue')}
+                        className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="h-4 w-4 text-gray-400" />
+                      </button>
+                    )}
+                  </div>
+
+                  {editingSection === 'venue' ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Capacity</label>
+                          <select
+                            value={venueDetailsForm.capacityRange}
+                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, capacityRange: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          >
+                            <option value="">Select capacity</option>
+                            <option value="0-20">0-20</option>
+                            <option value="20-40">20-40</option>
+                            <option value="40-80">40-80</option>
+                            <option value="80-150">80-150</option>
+                            <option value="150-300">150-300</option>
+                            <option value="300+">300+</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Age Limit</label>
+                          <select
+                            value={venueDetailsForm.ageLimit}
+                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, ageLimit: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          >
+                            <option value="18+">18+</option>
+                            <option value="21+">21+</option>
+                            <option value="All ages">All ages</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={venueDetailsForm.alcoholAllowed}
+                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, alcoholAllowed: e.target.checked })}
+                            className="w-4 h-4 rounded"
+                          />
+                          <label className="text-sm text-gray-300">Alcohol Allowed</label>
+                        </div>
+                        <div className="flex items-center gap-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={venueDetailsForm.smokingAllowed}
+                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, smokingAllowed: e.target.checked })}
+                            className="w-4 h-4 rounded"
+                          />
+                          <label className="text-sm text-gray-300">Smoking Allowed</label>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleSaveVenueDetails}
+                          disabled={saving}
+                          className="flex-1 text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        >
+                          {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          onClick={() => setEditingSection(null)}
+                          className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1 p-3 bg-gray-800/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="h-4 w-4 text-purple-400" />
+                          <span className="text-xs text-gray-500">Capacity</span>
+                        </div>
+                        <span className="text-white font-medium">
+                          {profileData.venueProfile?.capacityRange || 'Not specified'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-1 p-3 bg-gray-800/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Shield className="h-4 w-4 text-purple-400" />
+                          <span className="text-xs text-gray-500">Restrictions</span>
+                        </div>
+                        <span className="text-white font-medium">
+                          {profileData.venueProfile?.ageLimit || 'Not specified'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-1 p-3 bg-gray-800/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-500">Entry cutoff</span>
+                        </div>
+                        <span className="text-white font-medium">
+                          {profileData.venueProfile?.entryCutoffTime || 'Not specified'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-1 p-3 bg-gray-800/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-500">Age limit</span>
+                        </div>
+                        <span className="text-white font-medium">
+                          18+ for all events
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Logout Button */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <button
                   onClick={() => {
@@ -994,61 +1426,25 @@ const ProfileNew = () => {
                   Logout
                 </button>
               </div>
-
-              {/* Help & Support Section */}
-              <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                <div className="flex items-center gap-2 mb-4">
-                  <HelpCircle className="h-5 w-5 text-purple-500" />
-                  <h3 className="text-white font-semibold">Help & Support</h3>
-                </div>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                  >
-                    Help Center
-                  </button>
-                  <button
-                    onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                  >
-                    Contact Support
-                  </button>
-                  <button
-                    onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                  >
-                    Terms & Privacy
-                  </button>
-                </div>
-              </div>
             </div>
 
-            {/* RIGHT COLUMN */}
+            {/* RIGHT COLUMN - Hosting Preferences & Help */}
             <div className="space-y-6">
-              {/* Hosting Preferences & Venue Details - Scrollable */}
-              {(isCommunityOrganizer || isVenue) && (
-                <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                  <h3 className="text-white font-semibold mb-4">
-                    {isVenue ? 'Hosting Preferences & Venue Details' : 'Hosting Preferences'}
-                  </h3>
-                  
-                  <div className="max-h-[700px] overflow-y-auto space-y-6 pr-2">
-                    {/* Hosting Preferences Subsection */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-gray-300 font-medium">Preferences</h4>
-                        {editingSection !== 'hosting' && (
-                          <button 
-                            onClick={() => handleEditSection('hosting')}
-                            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                          >
-                            <Edit2 className="h-4 w-4 text-gray-400" />
-                          </button>
-                        )}
-                      </div>
+              {/* Hosting Preferences */}
+              <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold">Hosting Preferences</h3>
+                  {editingSection !== 'hosting' && (
+                    <button 
+                      onClick={() => handleEditSection('hosting')}
+                      className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      <Edit2 className="h-4 w-4 text-gray-400" />
+                    </button>
+                  )}
+                </div>
 
-                      {editingSection === 'hosting' ? (
+                <div className="max-h-[800px] overflow-y-auto space-y-5 pr-2">{editingSection === 'hosting' ? (
                         <div className="space-y-4">
                           <div>
                         <label className="block text-sm text-gray-400 mb-2">Preferred Cities</label>
@@ -1146,333 +1542,184 @@ const ProfileNew = () => {
                         <button
                           onClick={handleSaveHostingPreferences}
                           disabled={saving}
-                          className="flex-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                          className="flex-1 text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                         >
-                          {saving ? 'Saving...' : 'Apply'}
+                          {saving ? 'Saving...' : 'Save Changes'}
                         </button>
                         <button
                           onClick={() => setEditingSection(null)}
-                          className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                          className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
+                      {/* Preferred Cities */}
                       <div>
-                        <p className="text-gray-400 text-sm mb-2">Preferred Cities</p>
-                        {(isCommunityOrganizer ? profileData.communityProfile?.preferredCities : profileData.venueProfile?.preferredCities)?.length > 0 ? (
+                        <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Cities</p>
+                        {(isCommunityOrganizer ? profileData.communityProfile?.preferredCities : 
+                          isVenue ? profileData.venueProfile?.preferredCities : 
+                          profileData.brandProfile?.preferredCities)?.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
-                            {(isCommunityOrganizer ? profileData.communityProfile.preferredCities : profileData.venueProfile.preferredCities).map((city, idx) => (
-                              <span key={idx} className="px-3 py-1 bg-gray-800 text-gray-300 rounded-full text-sm">
+                            {(isCommunityOrganizer ? profileData.communityProfile.preferredCities : 
+                              isVenue ? profileData.venueProfile.preferredCities : 
+                              profileData.brandProfile.preferredCities).map((city, idx) => (
+                              <span key={idx} className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
                                 {city}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-gray-500 text-sm italic">Not specified</p>
+                          <p className="text-gray-500 text-xs italic">Not specified</p>
                         )}
                       </div>
 
+                      {/* Preferred Categories */}
                       <div>
-                        <p className="text-gray-400 text-sm mb-2">Preferred Categories</p>
-                        {(isCommunityOrganizer ? profileData.communityProfile?.preferredCategories : profileData.venueProfile?.preferredCategories)?.length > 0 ? (
+                        <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Categories</p>
+                        {(isCommunityOrganizer ? profileData.communityProfile?.preferredCategories : 
+                          isVenue ? profileData.venueProfile?.preferredCategories : 
+                          profileData.brandProfile?.targetCategories)?.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
-                            {(isCommunityOrganizer ? profileData.communityProfile.preferredCategories : profileData.venueProfile.preferredCategories).map((cat, idx) => (
-                              <span key={idx} className="px-3 py-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
+                            {(isCommunityOrganizer ? profileData.communityProfile.preferredCategories : 
+                              isVenue ? profileData.venueProfile.preferredCategories : 
+                              profileData.brandProfile.targetCategories).map((cat, idx) => (
+                              <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                 {cat}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-gray-500 text-sm italic">Not specified</p>
+                          <p className="text-gray-500 text-xs italic">Not specified</p>
                         )}
                       </div>
 
-                      {(isCommunityOrganizer || isVenue) && (
-                        <>
-                          <div>
-                            <p className="text-gray-400 text-sm mb-2">Preferred Event Formats</p>
-                            {(isCommunityOrganizer ? profileData.communityProfile?.preferredEventFormats : profileData.venueProfile?.preferredEventFormats)?.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {(isCommunityOrganizer ? profileData.communityProfile.preferredEventFormats : profileData.venueProfile.preferredEventFormats).map((format, idx) => (
-                                  <span key={idx} className="px-3 py-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
-                                    {format}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-gray-500 text-sm italic">Not specified</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <p className="text-gray-400 text-sm mb-2">Preferred Audience Types</p>
-                            {(isCommunityOrganizer ? profileData.communityProfile?.preferredAudienceTypes : profileData.venueProfile?.preferredAudienceTypes)?.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {(isCommunityOrganizer ? profileData.communityProfile.preferredAudienceTypes : profileData.venueProfile.preferredAudienceTypes).map((type, idx) => (
-                                  <span key={idx} className="px-3 py-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
-                                    {type}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-gray-500 text-sm italic">Not specified</p>
-                            )}
-                          </div>
-
-                          {isCommunityOrganizer && (
-                            <div>
-                              <p className="text-gray-400 text-sm mb-2">Niche Description</p>
-                              <p className="text-gray-300 text-sm">
-                                {profileData.communityProfile?.nicheCommunityDescription || <span className="text-gray-500 italic">Not specified</span>}
-                              </p>
+                      {/* Attendee Event Size (Community Only) */}
+                      {isCommunityOrganizer && (
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Attendee Event Size</p>
+                          {profileData.communityProfile?.averageEventSize ? (
+                            <div className="flex gap-2">
+                              <span className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
+                                {profileData.communityProfile.averageEventSize}
+                              </span>
                             </div>
+                          ) : (
+                            <p className="text-gray-500 text-xs italic">Not specified</p>
                           )}
-                        </>
+                        </div>
+                      )}
+
+                      {/* Preferred Event Formats */}
+                      {(isCommunityOrganizer || isVenue) && (
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Event Formats</p>
+                          {(isCommunityOrganizer ? profileData.communityProfile?.preferredEventFormats : 
+                            profileData.venueProfile?.preferredEventFormats)?.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {(isCommunityOrganizer ? profileData.communityProfile.preferredEventFormats : 
+                                profileData.venueProfile.preferredEventFormats).map((format, idx) => (
+                                <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                                  {format}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-xs italic">Not specified</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Collaboration Types (Brand Only) */}
+                      {isBrandSponsor && (
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Collaboration Types</p>
+                          {profileData.brandProfile?.preferredCollaborationTypes?.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {profileData.brandProfile.preferredCollaborationTypes.map((type, idx) => (
+                                <span key={idx} className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
+                                  {type}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-xs italic">Not specified</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Preferred Audience Types */}
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Audience Types</p>
+                        {(isCommunityOrganizer ? profileData.communityProfile?.preferredAudienceTypes : 
+                          isVenue ? profileData.venueProfile?.preferredAudienceTypes : 
+                          profileData.brandProfile?.targetAudience)?.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {(isCommunityOrganizer ? profileData.communityProfile.preferredAudienceTypes : 
+                              isVenue ? profileData.venueProfile.preferredAudienceTypes : 
+                              profileData.brandProfile.targetAudience).map((type, idx) => (
+                              <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 text-xs italic">Not specified</p>
+                        )}
+                      </div>
+
+                      {/* Niche Description */}
+                      {(isCommunityOrganizer || isBrandSponsor) && (
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">
+                            {isCommunityOrganizer ? 'Niche Community:' : 'Niche Community'}
+                          </p>
+                          <p className="text-gray-300 text-xs leading-relaxed">
+                            {isCommunityOrganizer 
+                              ? (profileData.communityProfile?.nicheCommunityDescription || <span className="text-gray-500 italic">Not specified</span>)
+                              : (profileData.brandProfile?.nicheCommunityDescription || <span className="text-gray-500 italic">Not specified</span>)
+                            }
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
-                
-                {/* Venue Details Subsection (Venue Only) */}
-                {isVenue && (
-                  <div className="border-t border-gray-700 pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-gray-300 font-medium">Venue Details</h4>
-                      {editingSection !== 'venue' && (
-                        <button 
-                          onClick={() => handleEditSection('venue')}
-                          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="h-4 w-4 text-gray-400" />
-                        </button>
-                      )}
-                    </div>
-
-                    {editingSection === 'venue' ? (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Capacity Range</label>
-                          <select
-                            value={venueDetailsForm.capacityRange}
-                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, capacityRange: e.target.value })}
-                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                          >
-                            <option value="">Select capacity</option>
-                            <option value="0-20">0-20</option>
-                            <option value="20-40">20-40</option>
-                            <option value="40-80">40-80</option>
-                            <option value="80-150">80-150</option>
-                            <option value="150-300">150-300</option>
-                            <option value="300+">300+</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Age Limit</label>
-                          <select
-                            value={venueDetailsForm.ageLimit}
-                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, ageLimit: e.target.value })}
-                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                          >
-                            <option value="All Ages">All Ages</option>
-                            <option value="18+">18+</option>
-                            <option value="21+">21+</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Entry Cutoff Time</label>
-                          <input 
-                            type="text"
-                            value={venueDetailsForm.entryCutoffTime}
-                            onChange={(e) => setVenueDetailsForm({ ...venueDetailsForm, entryCutoffTime: e.target.value })}
-                            placeholder="e.g., 11:00 PM"
-                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-sm">Alcohol Allowed</span>
-                          <button
-                            onClick={() => setVenueDetailsForm({ ...venueDetailsForm, alcoholAllowed: !venueDetailsForm.alcoholAllowed })}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              venueDetailsForm.alcoholAllowed ? 'bg-purple-600' : 'bg-gray-700'
-                            }`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              venueDetailsForm.alcoholAllowed ? 'translate-x-6' : 'translate-x-1'
-                            }`} />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-sm">Smoking Allowed</span>
-                          <button
-                            onClick={() => setVenueDetailsForm({ ...venueDetailsForm, smokingAllowed: !venueDetailsForm.smokingAllowed })}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              venueDetailsForm.smokingAllowed ? 'bg-purple-600' : 'bg-gray-700'
-                            }`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              venueDetailsForm.smokingAllowed ? 'translate-x-6' : 'translate-x-1'
-                            }`} />
-                          </button>
-                        </div>
-
-                        <div className="flex gap-2 pt-4">
-                          <button
-                            onClick={handleSaveVenueDetails}
-                            disabled={saving}
-                            className="flex-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                          >
-                            {saving ? 'Saving...' : 'Apply'}
-                          </button>
-                          <button
-                            onClick={() => setEditingSection(null)}
-                            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gradient-to-br from-[#7878E9]/20 via-[#5858DB]/15 to-[#3D3DD4]/20 border border-purple-500/30 rounded-lg p-4 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
-                          <p className="text-gray-400 text-xs mb-1">Capacity</p>
-                          <p className="text-white font-medium">{profileData.venueProfile?.capacityRange || 'Not set'}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-[#7878E9]/20 via-[#5858DB]/15 to-[#3D3DD4]/20 border border-purple-500/30 rounded-lg p-4 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
-                          <p className="text-gray-400 text-xs mb-1">Age Limit</p>
-                          <p className="text-white font-medium">{profileData.venueProfile?.rules?.ageLimit || '18+'}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-[#7878E9]/20 via-[#5858DB]/15 to-[#3D3DD4]/20 border border-purple-500/30 rounded-lg p-4 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
-                          <p className="text-gray-400 text-xs mb-1">Entry Cutoff</p>
-                          <p className="text-white font-medium">{profileData.venueProfile?.rules?.entryCutoffTime || 'Not set'}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-[#7878E9]/20 via-[#5858DB]/15 to-[#3D3DD4]/20 border border-purple-500/30 rounded-lg p-4 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
-                          <p className="text-gray-400 text-xs mb-1">Restrictions</p>
-                          <p className="text-white font-medium">
-                            {profileData.venueProfile?.rules?.alcoholAllowed ? '🍺' : '🚫'} 
-                            {profileData.venueProfile?.rules?.smokingAllowed ? ' 🚬' : ' 🚭'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
-            </div>
-          )}
 
-              {/* Brand Preferences Section */}
-              {isBrandSponsor && (
-                <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-semibold">Brand Preferences</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-gray-400 text-sm mb-2">Target Cities</p>
-                      {profileData.brandProfile?.targetCity?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {profileData.brandProfile.targetCity.map((city, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gray-800 text-gray-300 rounded-full text-sm">
-                              {city}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm italic">Not specified</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-gray-400 text-sm mb-2">Brand Category</p>
-                      {profileData.brandProfile?.brandCategory ? (
-                        <span className="inline-block px-3 py-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
-                          {profileData.brandProfile.brandCategory.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
-                      ) : (
-                        <p className="text-gray-500 text-sm italic">Not specified</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-gray-400 text-sm mb-2">Collaboration Intent</p>
-                      {profileData.brandProfile?.collaborationIntent?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {profileData.brandProfile.collaborationIntent.map((intent, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
-                              {intent.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm italic">Not specified</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-gray-400 text-sm mb-2">Sponsorship Types</p>
-                      {profileData.brandProfile?.sponsorshipType?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {profileData.brandProfile.sponsorshipType.map((type, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/50">
-                              {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm italic">Not specified</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Help & Support */}
+              {/* Help & Support Section */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center gap-2 mb-4">
                   <HelpCircle className="h-5 w-5 text-purple-400" />
                   <h3 className="text-white font-semibold">Help & Support</h3>
                 </div>
-                <div className="space-y-3">
-                  <button 
+                <div className="space-y-2">
+                  <button
                     onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300"
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
-                    Help Center
+                    Help center
+                    <p className="text-gray-500 text-xs mt-0.5">Browse our knowledge base</p>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300"
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
-                    Contact Support
+                    Contact support
+                    <p className="text-gray-500 text-xs mt-0.5">Get in touch with our team</p>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setSupportModalOpen(true)}
-                    className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300 flex items-center gap-2"
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
-                    <Shield className="h-4 w-4" />
-                    Terms & Privacy
+                    Terms & privacy
+                    <p className="text-gray-500 text-xs mt-0.5">Review our policies</p>
                   </button>
                 </div>
               </div>
-
-              {/* Logout Button */}
-              <button
-                onClick={async () => {
-                  await logout()
-                  navigate('/login')
-                }}
-                className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 font-semibold"
-              >
-                <LogOut className="h-5 w-5" />
-                Logout
-              </button>
             </div>
           </div>
         )}

@@ -100,55 +100,88 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Venue account required.' });
     }
 
-    // Fetch action_required notifications and deduplicate by type
+    // ========== GENERATE ACTION ITEMS ==========
+    const actionsRequired = [];
+
+    // 1. Check for incomplete profile
+    const profileCheck = {
+      missingFields: []
+    };
+    if (!venue.venueProfile?.venueName) profileCheck.missingFields.push('venueName');
+    if (!venue.venueProfile?.venueType) profileCheck.missingFields.push('venueType');
+    if (!venue.venueProfile?.capacityRange) profileCheck.missingFields.push('capacityRange');
+    if (!venue.venueProfile?.city) profileCheck.missingFields.push('city');
+    if (!venue.venueProfile?.locality) profileCheck.missingFields.push('locality');
+    if (!venue.venueProfile?.photos || venue.venueProfile?.photos.length === 0) {
+      profileCheck.missingFields.push('photos');
+    }
+
+    if (profileCheck.missingFields.length > 0) {
+      console.log(`👤 [Venue Dashboard] Profile incomplete, missing: ${profileCheck.missingFields.join(', ')}`);
+      actionsRequired.push({
+        id: 'profile_incomplete',
+        type: 'profile_incomplete',
+        priority: 'high',
+        title: 'Complete Your Venue Profile',
+        description: `Complete your profile to attract more events. Missing: ${profileCheck.missingFields.join(', ')}.`,
+        ctaText: 'Complete Profile',
+        itemId: null,
+        metadata: {
+          missingFields: profileCheck.missingFields
+        }
+      });
+    }
+
+    // 2. Check for missing KYC/Payout details
+    const hasPayoutDetails = venue.payoutDetails?.accountHolderName && 
+                            venue.payoutDetails?.accountNumber && 
+                            venue.payoutDetails?.ifscCode &&
+                            venue.payoutDetails?.billingAddress;
+    
+    if (!hasPayoutDetails) {
+      console.log('💳 [Venue Dashboard] Payout details missing');
+      actionsRequired.push({
+        id: 'missing_kyc',
+        type: 'missing_kyc',
+        priority: 'high',
+        title: 'Add Payout Details',
+        description: 'Add your payout details to receive revenue from venue bookings.',
+        ctaText: 'Add Payout Details',
+        itemId: null
+      });
+    }
+
+    // 3. Fetch collaboration-related notifications (from Notification model)
     const notifications = await Notification.find({
       recipient: userId,
       category: 'action_required',
+      type: { $in: ['hosting_request_received', 'community_proposal_received', 'subscription_payment_pending'] },
       isRead: false
     })
     .sort({ createdAt: -1 })
     .lean();
-
-    // Group notifications by type to remove duplicates
-    const uniqueNotifications = [];
-    const seenTypes = new Set();
     
-    for (const notif of notifications) {
-      if (!seenTypes.has(notif.type)) {
-        seenTypes.add(notif.type);
-        uniqueNotifications.push(notif);
-      }
-    }
+    console.log(`📊 [Venue Dashboard] Found ${notifications.length} collaboration notifications`);
 
-    // Map notifications to dashboard action format
-    const actionsRequired = uniqueNotifications.map(notif => {
-      let actionType = notif.type;
-      let ctaText = 'Take Action';
-      
-      // Map notification types to action types and CTA text
-      if (notif.type === 'kyc_pending') {
-        actionType = 'missing_kyc';
-        ctaText = 'Add Payout Details';
-      } else if (notif.type === 'profile_incomplete_venue') {
-        actionType = 'profile_incomplete';
-        ctaText = 'Complete Profile';
-      } else if (notif.type === 'hosting_request_received') {
-        actionType = 'collaboration_request';
-        ctaText = 'Review Request';
-      } else if (notif.type === 'subscription_payment_pending') {
-        actionType = 'subscription_pending';
+    // Add collaboration notifications to action items
+    notifications.forEach(notif => {
+      let ctaText = 'Review Request';
+      if (notif.type === 'subscription_payment_pending') {
         ctaText = 'Complete Payment';
       }
-
-      return {
-        type: actionType,
+      
+      actionsRequired.push({
+        id: notif._id.toString(),
+        type: notif.type === 'subscription_payment_pending' ? 'subscription_pending' : 'collaboration_request',
         title: notif.title,
         description: notif.message,
         ctaText: notif.actionText || ctaText,
         itemId: notif.relatedCollaboration || notif.relatedEvent || null,
         priority: notif.priority || 'medium'
-      };
+      });
     });
+    
+    console.log(`✅ [Venue Dashboard] Total action items: ${actionsRequired.length}`);
 
     // Get upcoming events at this venue
     const upcomingEvents = await Event.find({

@@ -17,14 +17,18 @@ const CommunityOrganizerDashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // Changed from 'draft' to 'all'
+  const [activeCollabTab, setActiveCollabTab] = useState('all'); // For collaborations
   const [selectedDateRange, setSelectedDateRange] = useState('30days');
   const [activeSidebarItem, setActiveSidebarItem] = useState('all'); // For sidebar navigation
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [collabCarouselIndex, setCollabCarouselIndex] = useState(0);
   const carouselRef = useRef(null);
+  const mobileScrollRef = useRef(null);
   
   // Dashboard Data States
   const [actionItems, setActionItems] = useState([]);
   const [events, setEvents] = useState({ draft: [], live: [], past: [] });
+  const [collaborations, setCollaborations] = useState({ all: [], upcoming: [], live: [], completed: [] });
   const [earnings, setEarnings] = useState({
     totalLifetime: 0,
     thisMonth: 0,
@@ -43,6 +47,18 @@ const CommunityOrganizerDashboard = () => {
     setCarouselIndex(0);
   }, [activeTab]);
 
+  // Reset collaboration carousel when tab changes
+  useEffect(() => {
+    setCollabCarouselIndex(0);
+  }, [activeCollabTab]);
+
+  // Track mobile scroll to update indicator
+  const handleMobileScroll = (e) => {
+    const width = e.target.clientWidth || 1;
+    const idx = Math.round(e.target.scrollLeft / width);
+    setCarouselIndex(Math.max(0, idx));
+  };
+
   // Refetch analytics when date range changes
   useEffect(() => {
     if (selectedDateRange) {
@@ -55,14 +71,16 @@ const CommunityOrganizerDashboard = () => {
       setLoading(true);
       
       // Fetch all dashboard data in parallel
-      const [dashboardRes, eventsRes, earningsRes, analyticsRes, insightsRes] = await Promise.all([
+      const [dashboardRes, eventsRes, earningsRes, analyticsRes, insightsRes, sentCollabsRes, receivedCollabsRes] = await Promise.all([
         api.get('/organizer/dashboard'),
         api.get('/organizer/events'),
         api.get('/organizer/earnings'),
         api.get('/organizer/analytics', {
           params: { dateRange: selectedDateRange }
         }),
-        api.get('/organizer/insights')
+        api.get('/organizer/insights'),
+        api.get('/collaborations/sent'),
+        api.get('/collaborations/received')
       ]);
 
       console.log('🔍 [Frontend] Dashboard response received:', dashboardRes.data);
@@ -76,6 +94,14 @@ const CommunityOrganizerDashboard = () => {
       setEarnings(earningsRes.data);
       setAnalytics(analyticsRes.data);
       setInsights(insightsRes.data);
+
+      // Organize collaborations by status
+      const allCollabs = [...(sentCollabsRes.data.data || []), ...(receivedCollabsRes.data.data || [])];
+      const upcoming = allCollabs.filter(c => ['submitted', 'admin_approved', 'pending', 'vendor_accepted', 'accepted'].includes(c.status));
+      const liveCollabs = allCollabs.filter(c => ['confirmed', 'approved_delivered'].includes(c.status));
+      const completed = allCollabs.filter(c => ['completed'].includes(c.status));
+
+      setCollaborations({ all: allCollabs, upcoming, live: liveCollabs, completed });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -360,6 +386,7 @@ const CommunityOrganizerDashboard = () => {
                         ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                         : 0;
                       const statusBadge = getStatusBadge(event.date);
+                      const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
 
                       return (
                         <div
@@ -396,38 +423,35 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Bookings Progress */}
-                        {event.status !== 'draft' && (
-                          <div className="mb-4">
+                        {/* Bookings & Revenue */}
+                        <div className="space-y-4">
+                          <div>
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-400">Bookings</span>
                               <span className="text-white font-bold">
-                                {event.currentParticipants || 0}/{event.maxParticipants}
+                                {event.currentParticipants || 0}/{event.maxParticipants || 0}
                               </span>
                             </div>
                             <div className="w-full bg-gray-800 rounded-full h-2">
                               <div 
                                 className={`${getProgressBarColor(fillPercentage)} h-2 rounded-full transition-all`}
-                                style={{ width: `${fillPercentage}%` }}
+                                style={{ width: `${Math.min(fillPercentage, 100)}%` }}
                               ></div>
                             </div>
                           </div>
-                        )}
 
-                        {/* Revenue - Only for live/past events */}
-                        {event.status !== 'draft' && (
-                          <div className="mb-4 pt-3 border-t border-gray-800">
+                          <div className="pt-3 border-t border-gray-800">
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-400">Revenue</span>
                               <span className="text-lg font-bold text-white">
-                                ₹{event.revenue?.toLocaleString('en-IN') || ((event.currentParticipants || 0) * (event.price?.amount || 0)).toLocaleString('en-IN')}
+                                ₹{revenueValue.toLocaleString('en-IN')}
                               </span>
                             </div>
                           </div>
-                        )}
+                        </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
                           {/* View Button */}
                           <button
                             onClick={() => navigate(`/events/${event._id}`)}
@@ -506,6 +530,7 @@ const CommunityOrganizerDashboard = () => {
                           ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                           : 0;
                         const statusBadge = getStatusBadge(event.date);
+                        const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
 
                         return (
                           <div
@@ -542,38 +567,35 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Bookings Progress */}
-                        {event.status !== 'draft' && (
-                          <div className="mb-4">
+                        {/* Bookings & Revenue */}
+                        <div className="space-y-4">
+                          <div>
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-400">Bookings</span>
                               <span className="text-white font-bold">
-                                {event.currentParticipants || 0}/{event.maxParticipants}
+                                {event.currentParticipants || 0}/{event.maxParticipants || 0}
                               </span>
                             </div>
                             <div className="w-full bg-gray-800 rounded-full h-2">
                               <div 
                                 className={`${getProgressBarColor(fillPercentage)} h-2 rounded-full transition-all`}
-                                style={{ width: `${fillPercentage}%` }}
+                                style={{ width: `${Math.min(fillPercentage, 100)}%` }}
                               ></div>
                             </div>
                           </div>
-                        )}
 
-                        {/* Revenue - Only for live/past events */}
-                        {event.status !== 'draft' && (
-                          <div className="mb-4 pt-3 border-t border-gray-800">
+                          <div className="pt-3 border-t border-gray-800">
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-400">Revenue</span>
                               <span className="text-lg font-bold text-white">
-                                ₹{event.revenue?.toLocaleString('en-IN') || ((event.currentParticipants || 0) * (event.price?.amount || 0)).toLocaleString('en-IN')}
+                                ₹{revenueValue.toLocaleString('en-IN')}
                               </span>
                             </div>
                           </div>
-                        )}
+                        </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
                           {/* View Button */}
                           <button
                             onClick={() => navigate(`/events/${event._id}`)}
@@ -638,9 +660,9 @@ const CommunityOrganizerDashboard = () => {
               </div>
             </div>
 
-            {/* Carousel Indicators */}
-            {currentEvents.length > cardsPerView && (
-              <div className="flex justify-center mt-6 space-x-2">
+            {/* Carousel Indicators - desktop only */}
+            {currentEvents.length > 1 && (
+              <div className="hidden md:flex justify-center mt-6 space-x-2">
                 {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
                   <button
                     key={idx}
@@ -659,8 +681,144 @@ const CommunityOrganizerDashboard = () => {
         ) : (
           /* Carousel for Other Tabs */
           <div className="relative">
-            {/* Carousel Container */}
-            <div className="overflow-hidden">
+            {/* Mobile: Horizontal Scroll */}
+            <div 
+              className="md:hidden flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" 
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {currentEvents.map((event) => {
+                const fillPercentage = event.maxParticipants > 0 
+                  ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
+                  : 0;
+                const statusBadge = getStatusBadge(event.date);
+                const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
+
+                return (
+                  <div
+                    key={event._id}
+                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                  >
+                    {/* Event Header */}
+                    <div className="p-4 flex flex-col flex-grow">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 
+                          className="font-bold text-white text-lg flex-1 line-clamp-2"
+                          style={{ fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          {event.title}
+                        </h3>
+                        <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
+                          {statusBadge.text}
+                        </span>
+                      </div>
+
+                      {/* Date & Time */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>{new Date(event.date).toLocaleDateString('en-IN', { 
+                            day: 'numeric', 
+                            month: 'short', 
+                            year: 'numeric' 
+                          })}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>{event.time || '7:00 PM - 10:00 PM'}</span>
+                        </div>
+                      </div>
+
+                      {/* Bookings & Revenue */}
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between text-sm mb-2">
+                            <span className="text-gray-400">Bookings</span>
+                            <span className="text-white font-bold">
+                              {event.currentParticipants || 0}/{event.maxParticipants || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-800 rounded-full h-2">
+                            <div 
+                              className={`${getProgressBarColor(fillPercentage)} h-2 rounded-full transition-all`}
+                              style={{ width: `${Math.min(fillPercentage, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-gray-800">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Revenue</span>
+                            <span className="text-lg font-bold text-white">
+                              ₹{revenueValue.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
+                        {/* View Button */}
+                        <button
+                          onClick={() => navigate(`/events/${event._id}`)}
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View</span>
+                        </button>
+
+                        {/* Edit Button - Not for past events */}
+                        {event.status !== 'completed' && (
+                          <button
+                            onClick={() => navigate(`/edit-event/${event._id}`)}
+                            className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+
+                        {/* Analytics Button - For events with bookings */}
+                        {event.currentParticipants > 0 && (
+                          <button
+                            onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
+                            className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                            title="Analytics"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        {/* Scan Button - For live events with bookings */}
+                        {event.status === 'live' && event.currentParticipants > 0 && (
+                          <button
+                            onClick={() => navigate(`/scan-tickets?eventId=${event._id}`)}
+                            className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                            title="Scan Tickets"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        {/* Copy Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyEvent(event);
+                          }}
+                          className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                          title="Copy Event Details"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Carousel Container */}
+            <div className="hidden md:block overflow-hidden">
               <div 
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ 
@@ -677,6 +835,8 @@ const CommunityOrganizerDashboard = () => {
                         ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                         : 0;
                       const statusBadge = getStatusBadge(event.date);
+
+                      const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
 
                       return (
                         <div
@@ -713,38 +873,35 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Bookings Progress */}
-                        {event.status !== 'draft' && (
-                          <div className="mb-4">
+                        {/* Bookings & Revenue */}
+                        <div className="space-y-4">
+                          <div>
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-400">Bookings</span>
                               <span className="text-white font-bold">
-                                {event.currentParticipants || 0}/{event.maxParticipants}
+                                {event.currentParticipants || 0}/{event.maxParticipants || 0}
                               </span>
                             </div>
                             <div className="w-full bg-gray-800 rounded-full h-2">
                               <div 
                                 className={`${getProgressBarColor(fillPercentage)} h-2 rounded-full transition-all`}
-                                style={{ width: `${fillPercentage}%` }}
+                                style={{ width: `${Math.min(fillPercentage, 100)}%` }}
                               ></div>
                             </div>
                           </div>
-                        )}
 
-                        {/* Revenue - Only for live/past events */}
-                        {event.status !== 'draft' && (
-                          <div className="mb-4 pt-3 border-t border-gray-800">
+                          <div className="pt-3 border-t border-gray-800">
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-400">Revenue</span>
                               <span className="text-lg font-bold text-white">
-                                ₹{event.revenue?.toLocaleString('en-IN') || ((event.currentParticipants || 0) * (event.price?.amount || 0)).toLocaleString('en-IN')}
+                                ₹{revenueValue.toLocaleString('en-IN')}
                               </span>
                             </div>
                           </div>
-                        )}
+                        </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
                           {/* View Button */}
                           <button
                             onClick={() => navigate(`/events/${event._id}`)}
@@ -808,9 +965,9 @@ const CommunityOrganizerDashboard = () => {
                 </div>
               </div>
 
-            {/* Carousel Indicators */}
-            {currentEvents.length > cardsPerView && (
-              <div className="flex justify-center mt-6 space-x-2">
+            {/* Carousel Indicators - desktop only */}
+            {currentEvents.length > 1 && (
+              <div className="hidden md:flex justify-center mt-6 space-x-2">
                 {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
                   <button
                     key={idx}
@@ -869,6 +1026,374 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
       console.error('Error copying event details:', error);
       alert('Failed to copy event details');
     }
+  };
+
+  // ==================== MANAGE COLLABORATIONS SECTION ====================
+  const ManageCollaborationsSection = () => {
+    const currentCollabs = collaborations[activeCollabTab] || [];
+    const cardsPerView = 4;
+    const maxIndex = Math.max(0, Math.ceil(currentCollabs.length / cardsPerView) - 1);
+
+    const handlePrevious = () => {
+      setCollabCarouselIndex(prev => Math.max(0, prev - 1));
+    };
+
+    const handleNext = () => {
+      setCollabCarouselIndex(prev => Math.min(maxIndex, prev + 1));
+    };
+
+    const getStatusBadge = (status) => {
+      const badges = {
+        submitted: { text: 'Submitted', bg: 'bg-yellow-600' },
+        admin_approved: { text: 'Approved', bg: 'bg-blue-600' },
+        vendor_accepted: { text: 'Accepted', bg: 'bg-green-600' },
+        accepted: { text: 'Accepted', bg: 'bg-green-600' },
+        confirmed: { text: 'Live', bg: 'bg-green-600' },
+        approved_delivered: { text: 'Live', bg: 'bg-green-600' },
+        completed: { text: 'Completed', bg: 'bg-gray-600' },
+        rejected: { text: 'Rejected', bg: 'bg-red-600' },
+        vendor_rejected: { text: 'Rejected', bg: 'bg-red-600' },
+        cancelled: { text: 'Cancelled', bg: 'bg-gray-600' },
+        pending: { text: 'Pending', bg: 'bg-yellow-600' }
+      };
+      return badges[status] || { text: status, bg: 'bg-gray-600' };
+    };
+
+    const getCollaborationType = (collab) => {
+      if (collab.requestDetails?.venueRequest) return { text: 'Venue', color: 'bg-purple-600' };
+      if (collab.requestDetails?.brandSponsorship) {
+        const types = collab.requestDetails.brandSponsorship.sponsorshipType || [];
+        if (types.includes('sampling')) return { text: 'Sampling', color: 'bg-green-600' };
+        if (types.includes('paid_monetary')) return { text: 'Sponsorship', color: 'bg-blue-600' };
+        return { text: 'Brand', color: 'bg-blue-600' };
+      }
+      return { text: 'Partnership', color: 'bg-indigo-600' };
+    };
+
+    const getPartnerInfo = (collab) => {
+      const currentUserId = user?.userId || user?._id;
+      // Check if current user is initiator or recipient
+      const isInitiator = collab.initiator?.user?.toString() === currentUserId?.toString() || 
+                          collab.proposerId?.toString() === currentUserId?.toString();
+      
+      if (isInitiator) {
+        return {
+          name: collab.recipient?.name || 'Partner',
+          location: collab.requestDetails?.venueRequest?.location || 'Location N/A',
+          type: collab.recipient?.userType || collab.recipientType || 'Partner'
+        };
+      } else {
+        return {
+          name: collab.initiator?.name || 'Partner',
+          location: collab.requestDetails?.venueRequest?.location || 'Location N/A',
+          type: collab.initiator?.userType || collab.proposerType || 'Partner'
+        };
+      }
+    };
+
+    return (
+      <div>
+        {/* Tabs and Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          {/* Tabs */}
+          <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide">
+            <div className="flex space-x-2 pb-2 sm:pb-0">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'upcoming', label: `Upcoming (${collaborations.upcoming?.length || 0})` },
+                { key: 'live', label: `Live (${collaborations.live?.length || 0})` },
+                { key: 'completed', label: `Completed (${collaborations.completed?.length || 0})` }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveCollabTab(tab.key)}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
+                    activeCollabTab === tab.key
+                      ? 'bg-white dark:bg-white text-black'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            {/* Carousel Navigation */}
+            {currentCollabs.length > cardsPerView && (
+              <div className="hidden md:flex items-center space-x-2">
+                <button
+                  onClick={handlePrevious}
+                  disabled={collabCarouselIndex === 0}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-400" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={collabCarouselIndex === maxIndex}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Collaborations Display */}
+        {currentCollabs.length === 0 ? (
+          <div className="text-center py-12 bg-gray-900 rounded-lg border border-gray-800">
+            <Building2 className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              No {activeCollabTab} collaborations
+            </h3>
+            <p className="text-gray-400 mb-4">
+              {activeCollabTab === 'upcoming' 
+                ? 'No upcoming collaborations at the moment'
+                : activeCollabTab === 'live'
+                ? 'No active collaborations'
+                : activeCollabTab === 'completed'
+                ? 'No completed collaborations to show'
+                : 'No collaborations yet'}
+            </p>
+          </div>
+        ) : (
+          <div className="relative">
+            {/* Mobile: Horizontal Scroll */}
+            <div 
+              className="md:hidden flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" 
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {currentCollabs.map((collab) => {
+                const statusBadge = getStatusBadge(collab.status);
+                const collabType = getCollaborationType(collab);
+                const partner = getPartnerInfo(collab);
+
+                return (
+                  <div
+                    key={collab._id}
+                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                  >
+                    <div className="p-4 flex flex-col flex-grow">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 
+                          className="font-bold text-white text-lg flex-1 line-clamp-2"
+                          style={{ fontFamily: 'Oswald, sans-serif' }}
+                        >
+                          {collab.requestDetails?.eventName || 'Collaboration Request'}
+                        </h3>
+                        <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
+                          {statusBadge.text}
+                        </span>
+                      </div>
+
+                      {/* Partner Info */}
+                      <div className="text-sm text-gray-400 mb-3">
+                        {partner.name}
+                      </div>
+
+                      {/* Location & Type */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Building2 className="h-4 w-4 mr-2" />
+                          <span>{partner.location}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Users className="h-4 w-4 mr-2" />
+                          <span>Music & Social</span>
+                        </div>
+                      </div>
+
+                      {/* Collaboration Type & Date */}
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-400">Collaboration Type</span>
+                          <span className={`${collabType.color} text-white px-2 py-1 rounded text-xs font-medium`}>
+                            {collabType.text}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                          <span className="text-sm text-gray-400">Event Date</span>
+                          <span className="text-sm text-white font-medium">
+                            {collab.requestDetails?.eventDate 
+                              ? new Date(collab.requestDetails.eventDate).toLocaleDateString('en-IN', { 
+                                  day: 'numeric', 
+                                  month: 'short', 
+                                  year: 'numeric' 
+                                })
+                              : 'Date TBD'}
+                          </span>
+                        </div>
+
+                        {collab.requestDetails?.venueRequest?.expectedAttendees && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Est. Attendees</span>
+                            <span className="text-sm text-white font-medium">
+                              {collab.requestDetails.venueRequest.expectedAttendees}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                        <button
+                          onClick={() => navigate(`/collaborations/${collab._id}`)}
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View Details</span>
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/collaborations/${collab._id}/contact`)}
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>Contact</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Carousel Container */}
+            <div className="hidden md:block overflow-hidden">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: `translateX(-${collabCarouselIndex * 100}%)`
+                }}
+              >
+                {Array.from({ length: Math.ceil(currentCollabs.length / cardsPerView) }).map((_, pageIndex) => (
+                  <div 
+                    key={pageIndex} 
+                    className="grid grid-cols-4 gap-4 flex-shrink-0 w-full"
+                  >
+                    {currentCollabs.slice(pageIndex * cardsPerView, (pageIndex + 1) * cardsPerView).map((collab) => {
+                      const statusBadge = getStatusBadge(collab.status);
+                      const collabType = getCollaborationType(collab);
+                      const partner = getPartnerInfo(collab);
+
+                      return (
+                        <div
+                          key={collab._id}
+                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                        >
+                          <div className="p-4 flex flex-col flex-grow h-full">
+                            <div className="flex items-start justify-between mb-3">
+                              <h3 
+                                className="font-bold text-white text-lg flex-1 line-clamp-2"
+                                style={{ fontFamily: 'Oswald, sans-serif' }}
+                              >
+                                {collab.requestDetails?.eventName || 'Collaboration Request'}
+                              </h3>
+                              <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
+                                {statusBadge.text}
+                              </span>
+                            </div>
+
+                            {/* Partner Info */}
+                            <div className="text-sm text-gray-400 mb-3">
+                              {partner.name}
+                            </div>
+
+                            {/* Location & Type */}
+                            <div className="space-y-2 mb-4">
+                              <div className="flex items-center text-sm text-gray-400">
+                                <Building2 className="h-4 w-4 mr-2" />
+                                <span>{partner.location}</span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-400">
+                                <Users className="h-4 w-4 mr-2" />
+                                <span>Music & Social</span>
+                              </div>
+                            </div>
+
+                            {/* Collaboration Type & Date */}
+                            <div className="space-y-3 mb-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-400">Collaboration Type</span>
+                                <span className={`${collabType.color} text-white px-2 py-1 rounded text-xs font-medium`}>
+                                  {collabType.text}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                                <span className="text-sm text-gray-400">Event Date</span>
+                                <span className="text-sm text-white font-medium">
+                                  {collab.requestDetails?.eventDate 
+                                    ? new Date(collab.requestDetails.eventDate).toLocaleDateString('en-IN', { 
+                                        day: 'numeric', 
+                                        month: 'short', 
+                                        year: 'numeric' 
+                                      })
+                                    : 'Date TBD'}
+                                </span>
+                              </div>
+
+                              {collab.requestDetails?.venueRequest?.expectedAttendees && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-400">Est. Attendees</span>
+                                  <span className="text-sm text-white font-medium">
+                                    {collab.requestDetails.venueRequest.expectedAttendees}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                              <button
+                                onClick={() => navigate(`/collaborations/${collab._id}`)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span>View Details</span>
+                              </button>
+
+                              <button
+                                onClick={() => navigate(`/collaborations/${collab._id}/contact`)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                              >
+                                <Users className="h-4 w-4" />
+                                <span>Contact</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Carousel Indicators - desktop only */}
+            {currentCollabs.length > 1 && (
+              <div className="hidden md:flex justify-center mt-6 space-x-2">
+                {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCollabCarouselIndex(idx)}
+                    className={`h-2 rounded-full transition-all ${
+                      idx === collabCarouselIndex ? 'w-8' : 'w-2'
+                    }`}
+                    style={idx === collabCarouselIndex ? {
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    } : { background: '#374151' }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // ==================== EARNINGS OVERVIEW SECTION ====================
@@ -1137,43 +1662,60 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
             <div className="p-4 border-b border-gray-700">
               <h4 className="font-semibold text-white">Event Breakdown</h4>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-black">
+                <thead className="bg-black sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Event</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Views</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Bookings</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Fill %</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Conversion</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Retention</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {analytics.eventBreakdown.map((event) => (
-                    <tr key={event.eventId} className="hover:bg-gray-800">
-                      <td className="px-4 py-3 text-sm font-medium text-white">
-                        {event.eventName}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">
-                        {event.views}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">
-                        {event.bookings}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`font-medium ${
-                          event.fillPercentage >= 80 ? 'text-green-400' :
-                          event.fillPercentage >= 50 ? 'text-yellow-400' :
-                          'text-red-400'
-                        }`}>
-                          {event.fillPercentage}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">
-                        {event.conversionRate}%
-                      </td>
-                    </tr>
-                  ))}
+                  {analytics.eventBreakdown.map((event) => {
+                    // Calculate retention rate (example: bookings / views * 100)
+                    const retentionRate = event.views > 0 
+                      ? ((event.bookings / event.views) * 100).toFixed(1)
+                      : 0;
+                    
+                    return (
+                      <tr key={event.eventId} className="hover:bg-gray-800">
+                        <td className="px-4 py-3 text-sm font-medium text-white">
+                          {event.eventName}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">
+                          {event.views}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">
+                          {event.bookings}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`font-medium ${
+                            event.fillPercentage >= 80 ? 'text-green-400' :
+                            event.fillPercentage >= 50 ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {event.fillPercentage}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">
+                          {event.conversionRate}%
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`font-medium ${
+                            retentionRate >= 15 ? 'text-green-400' :
+                            retentionRate >= 5 ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {retentionRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1259,7 +1801,7 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
 
         {/* Community Stats */}
         {insights.communityStats && (
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+          <div className="bg-black dark:bg-zinc-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
             <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Your Community at a Glance</h4>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -1306,7 +1848,7 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
       
       <div className="flex overflow-x-hidden">
         {/* Sidebar */}
-        <aside className="hidden lg:block w-20 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 min-h-screen pt-8">
+        <aside className="hidden lg:block w-20 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-gray-800 min-h-screen pt-8">
           <nav className="flex flex-col items-center space-y-6">
             {/* All */}
             <button
@@ -1484,6 +2026,18 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                     Manage Events
                   </h2>
                   <ManageEventsSection />
+                </section>
+              )}
+
+              {(activeSidebarItem === 'all' || activeSidebarItem === 'events') && (
+                <section>
+                  <h2 
+                    className="text-xl font-bold text-gray-900 dark:text-white mb-4"
+                    style={{ fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    Collaborations
+                  </h2>
+                  <ManageCollaborationsSection />
                 </section>
               )}
 

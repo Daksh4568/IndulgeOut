@@ -104,54 +104,83 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Only brands can access this dashboard.' });
     }
 
-    // Fetch action_required notifications and deduplicate by type
+    // ========== GENERATE ACTION ITEMS ==========
+    const actionsRequired = [];
+
+    // 1. Check for incomplete profile
+    const profileCheck = {
+      missingFields: []
+    };
+    if (!brand.brandProfile?.brandName) profileCheck.missingFields.push('brandName');
+    if (!brand.brandProfile?.industry) profileCheck.missingFields.push('industry');
+    if (!brand.brandProfile?.targetAudience) profileCheck.missingFields.push('targetAudience');
+    if (!brand.brandProfile?.city) profileCheck.missingFields.push('city');
+    if (!brand.brandProfile?.brandDescription) profileCheck.missingFields.push('brandDescription');
+
+    if (profileCheck.missingFields.length > 0) {
+      console.log(`👤 [Brand Dashboard] Profile incomplete, missing: ${profileCheck.missingFields.join(', ')}`);
+      actionsRequired.push({
+        id: 'profile_incomplete',
+        type: 'profile_incomplete',
+        priority: 'high',
+        title: 'Complete Your Brand Profile',
+        description: `Complete your profile to maximize collaboration opportunities. Missing: ${profileCheck.missingFields.join(', ')}.`,
+        ctaText: 'Complete Profile',
+        actionUrl: '/brand/profile/edit',
+        itemId: null,
+        metadata: {
+          missingFields: profileCheck.missingFields
+        }
+      });
+    }
+
+    // 2. Check for missing KYC/Payout details
+    const hasPayoutDetails = brand.payoutDetails?.accountHolderName && 
+                            brand.payoutDetails?.accountNumber && 
+                            brand.payoutDetails?.ifscCode &&
+                            brand.payoutDetails?.billingAddress;
+    
+    if (!hasPayoutDetails) {
+      console.log('💳 [Brand Dashboard] Payout details missing');
+      actionsRequired.push({
+        id: 'missing_kyc',
+        type: 'missing_kyc',
+        priority: 'high',
+        title: 'Add Payout Details',
+        description: 'Add your payout details to receive revenue from brand collaborations.',
+        ctaText: 'Add Payout Details',
+        actionUrl: '/kyc-setup',
+        itemId: null
+      });
+    }
+
+    // 3. Fetch collaboration-related notifications (from Notification model)
     const notifications = await Notification.find({
       recipient: userId,
       category: 'action_required',
+      type: { $in: ['community_proposal_received', 'venue_proposal_received', 'subscription_payment_pending'] },
       isRead: false
     })
     .sort({ createdAt: -1 })
     .lean();
-
-    // Group notifications by type to remove duplicates
-    const uniqueNotifications = [];
-    const seenTypes = new Set();
     
-    for (const notif of notifications) {
-      if (!seenTypes.has(notif.type)) {
-        seenTypes.add(notif.type);
-        uniqueNotifications.push(notif);
-      }
-    }
+    console.log(`📊 [Brand Dashboard] Found ${notifications.length} collaboration notifications`);
 
-    // Map notifications to dashboard action format
-    const actionsRequired = uniqueNotifications.map(notif => {
-      let actionType = notif.type;
+    // Add collaboration notifications to action items
+    notifications.forEach(notif => {
+      let ctaText = 'Review Request';
       let actionUrl = '/collaborations';
-      let ctaText = 'Take Action';
       
-      // Map notification types to action types, URLs, and CTA text
-      if (notif.type === 'kyc_pending') {
-        actionType = 'missing_kyc';
-        actionUrl = '/kyc-setup';
-        ctaText = 'Add Payout Details';
-      } else if (notif.type === 'profile_incomplete_brand') {
-        actionType = 'profile_incomplete';
-        actionUrl = '/brand/profile/edit';
-        ctaText = 'Complete Profile';
-      } else if (notif.type === 'community_proposal_received') {
-        actionType = 'collaboration_request';
-        actionUrl = notif.relatedCollaboration ? `/collaborations/${notif.relatedCollaboration}` : '/collaborations';
-        ctaText = 'Review Request';
-      } else if (notif.type === 'subscription_payment_pending') {
-        actionType = 'subscription_pending';
-        actionUrl = '/subscription';
+      if (notif.type === 'subscription_payment_pending') {
         ctaText = 'Complete Payment';
+        actionUrl = '/subscription';
+      } else if (notif.relatedCollaboration) {
+        actionUrl = `/collaborations/${notif.relatedCollaboration}`;
       }
-
-      return {
-        id: notif._id,
-        type: actionType,
+      
+      actionsRequired.push({
+        id: notif._id.toString(),
+        type: notif.type === 'subscription_payment_pending' ? 'subscription_pending' : 'collaboration_request',
         title: notif.title,
         description: notif.message,
         ctaText: notif.actionText || ctaText,
@@ -159,8 +188,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         itemId: notif.relatedCollaboration || notif.relatedEvent || null,
         priority: notif.priority || 'medium',
         createdAt: notif.createdAt
-      };
+      });
     });
+    
+    console.log(`✅ [Brand Dashboard] Total action items: ${actionsRequired.length}`);
 
     // 2. Active Collaborations
     const activeCollaborations = await Collaboration.find({

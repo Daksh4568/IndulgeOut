@@ -98,15 +98,18 @@ ticketSchema.methods.checkIn = async function(staffUserId) {
   return this;
 };
 
-// Method to cancel ticket
+// Method to cancel ticket (DISABLED - Feature will be added later for B2C users)
+// Kept for future implementation but currently not updating participant counts
 ticketSchema.methods.cancel = async function() {
-  if (this.status === 'checked_in') {
-    throw new Error('Cannot cancel checked-in ticket');
-  }
+  throw new Error('Ticket cancellation is currently not available. This feature will be added soon.');
   
-  this.status = 'cancelled';
-  await this.save();
-  return this;
+  // Future implementation:
+  // if (this.status === 'checked_in') {
+  //   throw new Error('Cannot cancel checked-in ticket');
+  // }
+  // this.status = 'cancelled';
+  // await this.save();
+  // return this;
 };
 
 // Static method to generate unique ticket number

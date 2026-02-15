@@ -212,12 +212,12 @@ async function createTestEvent() {
 
 /**
  * Test notification creation
- */
+  */
 async function testNotificationCreation() {
   log.section('TESTING NOTIFICATION CREATION');
   
   const attendee = testData.users.find(u => u.role === 'user');
-  const organizer = testData.users.find(u => u.role === 'organizer');
+  const organizer = testData.users.find(u => u.role === 'host_partner' && u.hostPartnerType === 'community_organizer');
   const event = testData.event;
 
   const tests = [

@@ -162,7 +162,7 @@ const KYCSetupPage = () => {
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <img 
-              src="/images/LogoFinal2.jpg" 
+              src="/images/LogoOrbital.png" 
               alt="IndulgeOut" 
               className="h-20 w-auto object-contain" 
             />

@@ -57,7 +57,14 @@ const eventSchema = new mongoose.Schema({
   },
   currentParticipants: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'Current participants cannot be negative'],
+    validate: {
+      validator: function(value) {
+        return value >= 0 && value <= this.maxParticipants;
+      },
+      message: 'Current participants must be between 0 and maxParticipants'
+    }
   },
   participants: [{
     user: {
@@ -236,9 +243,13 @@ eventSchema.post('save', async function(doc) {
   // Category analytics are now aggregated from events in real-time
 });
 
-// Update current participants count
+// Update current participants count (recalculate from participants array)
 eventSchema.methods.updateParticipantCount = function() {
-  this.currentParticipants = this.participants.filter(p => p.status === 'registered').length;
+  // Sum up quantities from all registered participants
+  // Note: Cancellation feature disabled, so only 'registered' status is used
+  this.currentParticipants = this.participants
+    .filter(p => p.status === 'registered')
+    .reduce((sum, p) => sum + (p.quantity || 1), 0);
   return this.save();
 };
 

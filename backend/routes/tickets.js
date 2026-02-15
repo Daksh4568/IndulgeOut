@@ -190,8 +190,10 @@ router.post('/generate', authMiddleware, async (req, res) => {
 });
 
 // @route   POST /api/tickets/:ticketId/cancel
-// @desc    Cancel a ticket
+// @desc    Cancel a ticket (DISABLED - Feature will be added later for B2C users)
 // @access  Private
+// DISABLED: Ticket cancellation feature removed for now
+/*
 router.post('/:ticketId/cancel', authMiddleware, async (req, res) => {
   try {
     const { ticketId } = req.params;
@@ -211,6 +213,7 @@ router.post('/:ticketId/cancel', authMiddleware, async (req, res) => {
     });
   }
 });
+*/
 
 // @route   GET /api/tickets/info/:ticketNumber
 // @desc    Get ticket information without checking in (organizer/staff only)
