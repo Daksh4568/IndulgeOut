@@ -102,8 +102,8 @@ router.post('/otp/register', async (req, res) => {
       },
       analytics: {
         registrationDate: new Date(),
-        registrationMethod: 'otp',
-        lastLogin: new Date()
+        registrationMethod: 'otp'
+        // lastLogin will be set on first successful OTP verification
       }
     });
 
@@ -306,17 +306,16 @@ router.post('/otp/verify', async (req, res) => {
       });
     }
 
-    // Check if this is a new user (first-time verification)
-    const isNewUser = !user.analytics?.lastLogin || 
-                       user.analytics?.registrationMethod === 'otp' && 
-                       user.otpVerification?.otpAttempts === 1;
+    // Check if this is a new user (first-time login - no lastLogin recorded)
+    // This ensures welcome email is only sent once, when user first successfully logs in
+    const isNewUser = !user.analytics?.lastLogin;
 
     // Mark phone as verified
     user.otpVerification.isPhoneVerified = true;
     user.otpVerification.otp = undefined; // Clear OTP after successful verification
     user.otpVerification.otpExpiry = undefined;
 
-    // Update last login
+    // Update last login (this marks the user as having logged in at least once)
     if (!user.analytics) {
       user.analytics = {};
     }

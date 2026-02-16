@@ -72,16 +72,9 @@ const Categories = () => {
       {/* Navigation Bar */}
       <NavigationBar />
 
-      {/* Hero Section */}
-      <div className="pt-24 pb-8 text-center">
-        <div className="inline-block mb-4">
-        </div>
-        <p className="text-gray-400 text-sm uppercase tracking-wider mb-2">CATEGORIES</p>
-      </div>
-
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {/* Upcoming Events Section - Horizontal Carousel */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-24">
+        {/* Upcoming Events Section - Commented out until we have trending and famous events
         {!loading && upcomingEvents.length > 0 && (
           <section className="mb-16 py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden rounded-2xl p-6 sm:p-8">
             <div className="text-center mb-8">
@@ -100,7 +93,6 @@ const Categories = () => {
             </div>
 
             <div className="relative">
-              {/* Left Arrow */}
               <button
                 onClick={() => scrollCarousel('left')}
                 className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hidden sm:block"
@@ -108,7 +100,6 @@ const Categories = () => {
                 <ChevronLeft className="h-6 w-6 text-gray-800" />
               </button>
 
-              {/* Carousel */}
               <div 
                 ref={carouselRef}
                 className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth px-4 sm:px-0"
@@ -122,13 +113,10 @@ const Categories = () => {
                       animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
                     }}
                   >
-                    {/* Horizontal Event Card */}
                     <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all">
                       <div className="flex flex-row min-h-[280px] max-h-[320px]">
-                        {/* Left Side - Content */}
                         <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
                           <div>
-                            {/* Date */}
                             <div className="flex items-center gap-2 text-gray-700 mb-3">
                               <Calendar className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm font-bold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
@@ -136,17 +124,14 @@ const Categories = () => {
                               </span>
                             </div>
                             
-                            {/* Title */}
                             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
                               {event.title}
                             </h3>
                             
-                            {/* Category/Type */}
                             <p className="text-sm text-gray-700 mb-3 font-semibold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                               {event.category || 'Live Performances'} · {event.type || 'Music'} · {event.genre || 'Alternative'}
                             </p>
                             
-                            {/* Location */}
                             <div className="flex items-start gap-2 text-gray-700 mb-3">
                               <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                               <span className="text-sm font-bold line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
@@ -154,7 +139,6 @@ const Categories = () => {
                               </span>
                             </div>
                             
-                            {/* Price */}
                             <div className="mb-3">
                               <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                 ₹{event.price?.amount || 499} onwards
@@ -162,7 +146,6 @@ const Categories = () => {
                             </div>
                           </div>
                           
-                          {/* Button */}
                           <button
                             onClick={() => navigate(`/event/${event._id}`)}
                             className="w-full text-white px-8 py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-xl"
@@ -172,13 +155,10 @@ const Categories = () => {
                           </button>
                         </div>
 
-                        {/* Right Side - Framed Image */}
                         <div className="w-[45%] p-4 flex items-center justify-center">
                           <div className="relative w-full max-w-[250px]">
-                            {/* Frame/Shadow effect */}
                             <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-2xl"></div>
                             
-                            {/* Image container */}
                             <div className="relative bg-white rounded-lg overflow-hidden shadow-xl aspect-[3/4]">
                               {event.images && event.images.length > 0 ? (
                                 <img
@@ -200,7 +180,6 @@ const Categories = () => {
                 ))}
               </div>
 
-              {/* Right Arrow */}
               <button
                 onClick={() => scrollCarousel('right')}
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hidden sm:block"
@@ -210,9 +189,19 @@ const Categories = () => {
             </div>
           </section>
         )}
+        */}
 
         {/* Section Title */}
         <div className="mb-8">
+          {/* Categories Pill */}
+          <div className="inline-block mb-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-full px-6 py-2">
+              <p className="text-gray-300 text-sm uppercase tracking-wider font-medium" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                CATEGORIES
+              </p>
+            </div>
+          </div>
+          
           <h1 
             className="text-4xl md:text-5xl font-bold mb-2"
             style={{ fontFamily: 'Oswald, sans-serif' }}

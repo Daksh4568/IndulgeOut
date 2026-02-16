@@ -109,8 +109,8 @@ const BrandSignup = () => {
       localStorage.setItem("user", JSON.stringify(response.data.user));
       // Refresh auth context to update navbar
       await refreshUser();
-      // Redirect to organizer dashboard
-      navigate("/organizer/dashboard");
+      // Redirect to brand dashboard
+      navigate("/brand/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {

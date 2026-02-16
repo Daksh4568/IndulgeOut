@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Sparkles, ChevronLeft, ChevronRight, MapPin, Calendar, Lock } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, MapPin, Calendar, Lock, X, TrendingUp, DollarSign, Navigation, Smile } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import SearchBar from '../components/SearchBar';
 import FilterBar from '../components/FilterBar';
@@ -33,6 +33,12 @@ export default function ExplorePage() {
   const [lockedCommunities, setLockedCommunities] = useState([]);
   const [communitiesPage, setCommunitiesPage] = useState(1);
   const [communitiesPagination, setCommunitiesPagination] = useState(null);
+  const [communityFilters, setCommunityFilters] = useState({
+    interest: 'all',
+    sort: 'recommended',
+    city: 'all',
+    rating: 'all'
+  });
 
   // Modal state
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -86,7 +92,7 @@ export default function ExplorePage() {
     } else if (tab === 'communities') {
       fetchCommunities();
     }
-  }, [tab, searchQuery, filters]); // Removed eventsPage and communitiesPage from dependencies
+  }, [tab, searchQuery, filters, communityFilters]); // Added communityFilters dependency
 
   // Handle events pagination client-side when page changes
   useEffect(() => {
@@ -135,6 +141,7 @@ export default function ExplorePage() {
   const fetchEvents = async () => {
     console.log('🔄 Fetching events... Query:', searchQuery, 'Filters:', filters, 'Page:', eventsPage);
     setLoading(true);
+    const now = new Date(); // Declare once at function scope
     try {
       // Fetch top events (recommended if logged in, popular if not)
       const topEndpoint = user
@@ -149,7 +156,6 @@ export default function ExplorePage() {
       console.log('✅ Top events received:', topData.events?.length || 0, 'events');
       
       // Filter to only show upcoming events (future dates)
-      const now = new Date();
       const upcomingEvents = (topData.events || []).filter(event => {
         const eventDate = new Date(event.date);
         return eventDate >= now;
@@ -171,8 +177,88 @@ export default function ExplorePage() {
       const eventsData = await eventsResponse.json();
       console.log('✅ Main events received:', eventsData.events?.length || 0, 'events');
       
-      // Store all events for client-side pagination
-      const fetchedEvents = eventsData.events || [];
+      // Store all events for client-side pagination and filtering
+      let fetchedEvents = eventsData.events || [];
+      
+      // Apply genre filter
+      if (filters.genres && filters.genres.length > 0) {
+        fetchedEvents = fetchedEvents.filter(event => {
+          const eventCategory = event.category?.toLowerCase() || '';
+          return filters.genres.some(genre => eventCategory.includes(genre.toLowerCase()));
+        });
+      }
+      
+      // Apply price filter
+      if (filters.price && filters.price !== 'all') {
+        fetchedEvents = fetchedEvents.filter(event => {
+          const price = event.price?.amount || 0;
+          if (filters.price === 'free') return price === 0;
+          if (filters.price === 'under500') return price > 0 && price < 500;
+          if (filters.price === '500-2000') return price >= 500 && price <= 2000;
+          if (filters.price === 'over2000') return price > 2000;
+          return true;
+        });
+      }
+      
+      // Apply city filter
+      if (filters.city && filters.city !== 'all') {
+        fetchedEvents = fetchedEvents.filter(event => {
+          const eventCity = event.location?.city || '';
+          return eventCity.toLowerCase() === filters.city.toLowerCase();
+        });
+      }
+      
+      // Apply date filters
+      if (filters.showToday) {
+        fetchedEvents = fetchedEvents.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate.toDateString() === now.toDateString();
+        });
+      }
+      
+      if (filters.showTomorrow) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        fetchedEvents = fetchedEvents.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate.toDateString() === tomorrow.toDateString();
+        });
+      }
+      
+      if (filters.showWeekend) {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
+        const saturday = new Date(today);
+        saturday.setDate(today.getDate() + daysUntilSaturday);
+        const sunday = new Date(saturday);
+        sunday.setDate(saturday.getDate() + 1);
+        
+        fetchedEvents = fetchedEvents.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate.toDateString() === saturday.toDateString() || 
+                 eventDate.toDateString() === sunday.toDateString();
+        });
+      }
+      
+      // Apply sorting
+      if (filters.sortBy) {
+        if (filters.sortBy === 'price-low-high') {
+          fetchedEvents.sort((a, b) => (a.price?.amount || 0) - (b.price?.amount || 0));
+        } else if (filters.sortBy === 'price-high-low') {
+          fetchedEvents.sort((a, b) => (b.price?.amount || 0) - (a.price?.amount || 0));
+        } else if (filters.sortBy === 'date') {
+          fetchedEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+        } else if (filters.sortBy === 'distance' && filters.userLocation) {
+          // Sort by distance if geolocation is available
+          fetchedEvents.sort((a, b) => {
+            const distA = a.distance || 999999;
+            const distB = b.distance || 999999;
+            return distA - distB;
+          });
+        }
+      }
+      
       setAllEvents(fetchedEvents);
       
       // Client-side pagination (8 events per page)
@@ -217,7 +303,35 @@ export default function ExplorePage() {
       const featuredResponse = await fetch(featuredEndpoint);
       const featuredData = await featuredResponse.json();
       console.log('✅ Communities received:', featuredData.communities?.length || 0);
-      setFeaturedCommunities(featuredData.communities || []);
+      
+      let communities = featuredData.communities || [];
+      
+      // Apply community filters
+      if (communityFilters.city && communityFilters.city !== 'all') {
+        communities = communities.filter(community => 
+          community.location?.city?.toLowerCase() === communityFilters.city.toLowerCase()
+        );
+      }
+      
+      if (communityFilters.rating && communityFilters.rating !== 'all') {
+        const minRating = parseFloat(communityFilters.rating);
+        communities = communities.filter(community => 
+          (community.rating || 0) >= minRating
+        );
+      }
+      
+      if (communityFilters.interest && communityFilters.interest !== 'all') {
+        communities = communities.filter(community => 
+          community.category?.toLowerCase().includes(communityFilters.interest.toLowerCase())
+        );
+      }
+      
+      // Apply sorting
+      if (communityFilters.sort === 'recommended') {
+        // Already sorted by recommended from API
+      }
+      
+      setFeaturedCommunities(communities);
       setCommunitiesPagination(featuredData.pagination);
 
       // Generate locked placeholder communities only if not searching
@@ -577,6 +691,156 @@ export default function ExplorePage() {
                       activeFilters={filters}
                     />
                   </div>
+                  
+                  {/* Permanent Filter Chips */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {/* Trending */}
+                    <button
+                      onClick={() => setFilters({...filters, sortBy: filters.sortBy === 'popularity' ? 'date' : 'popularity'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.sortBy && filters.sortBy !== 'popularity'
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.sortBy && filters.sortBy !== 'popularity' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      <span>Trending</span>
+                    </button>
+                    
+                    {/* City */}
+                    <button
+                      onClick={() => setFilters({...filters, city: filters.city === 'all' ? 'Bengaluru' : 'all'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.city && filters.city !== 'all'
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.city && filters.city !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <MapPin className="h-4 w-4" />
+                      <span>{filters.city && filters.city !== 'all' ? filters.city : 'All Cities'}</span>
+                    </button>
+                    
+                    {/* Today */}
+                    <button
+                      onClick={() => setFilters({...filters, showToday: !filters.showToday, showWeekend: false})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.showToday
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.showToday ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <Calendar className="h-4 w-4" />
+                      <span>Today</span>
+                    </button>
+                    
+                    {/* Tomorrow */}
+                    <button
+                      onClick={() => {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        setFilters({...filters, showTomorrow: !filters.showTomorrow, showToday: false, showWeekend: false});
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.showTomorrow
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.showTomorrow ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <Calendar className="h-4 w-4" />
+                      <span>Tomorrow</span>
+                    </button>
+                    
+                    {/* This Weekend */}
+                    <button
+                      onClick={() => setFilters({...filters, showWeekend: !filters.showWeekend, showToday: false, showTomorrow: false})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.showWeekend
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.showWeekend ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <Calendar className="h-4 w-4" />
+                      <span>This Weekend</span>
+                    </button>
+                    
+                    {/* Mood */}
+                    <button
+                      onClick={() => setFilters({...filters, mood: filters.mood === 'all' ? 'social' : 'all'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.mood && filters.mood !== 'all'
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.mood && filters.mood !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <Smile className="h-4 w-4" />
+                      <span>Mood</span>
+                    </button>
+                    
+                    {/* Near Me */}
+                    <button
+                      onClick={() => {
+                        if (filters.useGeolocation) {
+                          setFilters({...filters, useGeolocation: false, userLocation: null});
+                        } else {
+                          if ('geolocation' in navigator) {
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                setFilters({
+                                  ...filters,
+                                  useGeolocation: true,
+                                  userLocation: {
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                  }
+                                });
+                              },
+                              (error) => {
+                                console.error('Error getting location:', error);
+                                alert('Unable to get your location. Please enable location services.');
+                              }
+                            );
+                          } else {
+                            alert('Geolocation is not supported by your browser.');
+                          }
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        filters.useGeolocation
+                          ? 'text-white'
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                      style={filters.useGeolocation ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <Navigation className="h-4 w-4" />
+                      <span>Near Me</span>
+                    </button>
+                    
+                    {/* Clear Filters Button - only show if any filter is active */}
+                    {(filters.sortBy !== 'popularity' && filters.sortBy || filters.city !== 'all' && filters.city || filters.showToday || filters.showTomorrow || filters.showWeekend || filters.mood !== 'all' && filters.mood || filters.useGeolocation) && (
+                      <button
+                        onClick={() => setFilters({sortBy: 'popularity', city: 'all', showToday: false, showTomorrow: false, showWeekend: false, mood: 'all', useGeolocation: false, userLocation: null, price: 'all', genres: []})}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-700 text-gray-300 hover:border-red-500 hover:text-red-400 text-sm font-medium transition-all"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>Clear ({
+                          (filters.sortBy && filters.sortBy !== 'popularity' ? 1 : 0) +
+                          (filters.city && filters.city !== 'all' ? 1 : 0) +
+                          (filters.showToday ? 1 : 0) +
+                          (filters.showTomorrow ? 1 : 0) +
+                          (filters.showWeekend ? 1 : 0) +
+                          (filters.mood && filters.mood !== 'all' ? 1 : 0) +
+                          (filters.useGeolocation ? 1 : 0)
+                        })</span>
+                      </button>
+                    )}
+                  </div>
+                  
                   {events.length > 0 ? (
                     <>
                       {/* Mobile: Horizontal Carousel */}
@@ -757,6 +1021,75 @@ export default function ExplorePage() {
                     </p>
                   </div>
                   
+                  {/* Community Filter Chips */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {/* Interest Filter */}
+                    <button
+                      onClick={() => setCommunityFilters({...communityFilters, interest: communityFilters.interest === 'all' ? 'tech' : 'all'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        communityFilters.interest !== 'all'
+                          ? 'text-white'
+                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
+                      }`}
+                      style={communityFilters.interest !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Interest</span>
+                    </button>
+                    
+                    {/* Recommended Filter */}
+                    <button
+                      onClick={() => setCommunityFilters({...communityFilters, sort: communityFilters.sort === 'recommended' ? 'all' : 'recommended'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        communityFilters.sort === 'recommended'
+                          ? 'text-white'
+                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
+                      }`}
+                      style={communityFilters.sort === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      <span>Recommended</span>
+                    </button>
+                    
+                    {/* City Filter */}
+                    <button
+                      onClick={() => setCommunityFilters({...communityFilters, city: communityFilters.city === 'all' ? 'Bengaluru' : 'all'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        communityFilters.city !== 'all'
+                          ? 'text-white'
+                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
+                      }`}
+                      style={communityFilters.city !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>{communityFilters.city !== 'all' ? communityFilters.city : 'All Cities'}</span>
+                    </button>
+                    
+                    {/* Rating Filter */}
+                    <button
+                      onClick={() => setCommunityFilters({...communityFilters, rating: communityFilters.rating === 'all' ? '4+' : 'all'})}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        communityFilters.rating !== 'all'
+                          ? 'text-white'
+                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
+                      }`}
+                      style={communityFilters.rating !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                    >
+                      <span>⭐</span>
+                      <span>{communityFilters.rating !== 'all' ? `${communityFilters.rating} Rating` : 'Rating'}</span>
+                    </button>
+                    
+                    {/* Clear all filters */}
+                    {(communityFilters.interest !== 'all' || communityFilters.sort !== 'recommended' || communityFilters.city !== 'all' || communityFilters.rating !== 'all') && (
+                      <button
+                        onClick={() => setCommunityFilters({ interest: 'all', sort: 'recommended', city: 'all', rating: 'all' })}
+                        className="px-3 py-1.5 rounded-full border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 text-sm font-medium transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  
                   <div className="relative">
                     {/* Calculate pagination for locked communities */}
                     {(() => {
@@ -891,18 +1224,39 @@ export default function ExplorePage() {
                   {/* Filter Pills */}
                   <div className="hidden md:flex gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
                     <button 
-                      onClick={() => setPeopleFilter('recommended')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium hover:opacity-90 transition-all whitespace-nowrap ${peopleFilter === 'recommended' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
-                      style={peopleFilter === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                      onClick={() => setPeopleFilter('interest')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium hover:opacity-90 transition-all whitespace-nowrap ${peopleFilter === 'interest' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'interest' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
-                      Recommended
+                      Interest
                     </button>
                     <button 
-                      onClick={() => setPeopleFilter('nearby')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'nearby' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
-                      style={peopleFilter === 'nearby' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                      onClick={() => setPeopleFilter('recommended')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'recommended' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
-                      Nearby
+                     Recommended
+                    </button>
+                    <button 
+                      onClick={() => setPeopleFilter('city')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'city' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'city' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
+                      City
+                    </button>
+                    <button 
+                      onClick={() => setPeopleFilter('activenow')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'activenow' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'activenow' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
+                      Active Now
+                    </button>
+                    <button 
+                      onClick={() => setPeopleFilter('nearme')}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'nearme' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      style={peopleFilter === 'nearme' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
+                    >
+                      Near Me
                     </button>
                     <button 
                       onClick={() => setPeopleFilter('new')}
@@ -910,20 +1264,6 @@ export default function ExplorePage() {
                       style={peopleFilter === 'new' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                       New
-                    </button>
-                    <button 
-                      onClick={() => setPeopleFilter('active')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'active' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
-                      style={peopleFilter === 'active' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      Active Now
-                    </button>
-                    <button 
-                      onClick={() => setPeopleFilter('under10km')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'under10km' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
-                      style={peopleFilter === 'under10km' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      Under 10km
                     </button>
                   </div>
 

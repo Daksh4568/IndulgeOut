@@ -785,14 +785,6 @@ function Homepage() {
             YOUR GO-TO FOR<br /><span style={{ color: '#5656D3' }}>OFFLINE EXPERIENCES</span>
           </h1>
         </div>
-        
-        {/* Scroll Indicator - Hidden on mobile */}
-        <div className="hidden md:block absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
-          <div className="text-white text-sm font-semibold">SCROLL</div>
-          <div className="w-6 h-10 border-2 border-white rounded-full mx-auto mt-2 flex justify-center">
-            <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
-          </div>
-        </div>
       </section>
               
       {/* Stats Section */}
@@ -1073,7 +1065,7 @@ function Homepage() {
             <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden">
               {/* Central IndulgeOut Logo */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full bg-zinc-900 backdrop-blur-sm flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full backdrop-blur-sm flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
                   <img 
                     src="/images/LogoOrbital.png"
                     alt="IndulgeOut Logo" 

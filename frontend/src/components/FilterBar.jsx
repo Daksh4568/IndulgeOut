@@ -64,22 +64,7 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
     { value: 'distance', label: 'Distance : Near to Far' }
   ];
 
-  const genreOptions = [
-    'Acoustic', 'Art & Craft Workshops', 'Art Exhibitions', 'Artist Showcase',
-    'Attractions', 'Beverage Tastings', 'Bollywood Films', 'Bollywood Music',
-    'Bollywood Night', 'Book Readings', 'Brewery Experiences', 'Brunch',
-    'Cafe Hopping', 'Charity & Social Cause', 'Cocktail Masterclass',
-    'Comedy Nights', 'Cooking Workshop', 'Dance Workshops', 'Design & Architecture',
-    'EDM', 'Film Festivals', 'Food Festivals', 'Gaming Tournaments',
-    'Hiking & Trekking', 'Hip Hop', 'Historical Tours', 'Indie Music',
-    'Jazz', 'Live Performances', 'Music Festivals', 'Nature Walks',
-    'Networking Events', 'Open Mic', 'Painting & Drawing', 'Photography Walks',
-    'Pottery', 'Pub Crawls', 'Restaurant Experiences', 'Rock Music',
-    'Rooftop Parties', 'Sailing', 'Speed Dating', 'Spiritual & Wellness',
-    'Stand-up Comedy', 'Storytelling Sessions', 'Street Food Tours',
-    'Tech & Innovation', 'Theater & Drama', 'Trivia Nights', 'Wine Tasting',
-    'Yoga & Meditation'
-  ];
+  const genreOptions = ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'];
 
   // Get user's location
   const handleNearMe = () => {

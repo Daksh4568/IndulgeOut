@@ -53,8 +53,8 @@ zIndex: 0,
 
 ### Primary CTA Button (Active State)
 ```css
-/* Gradient Background */
-background: linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%);
+/* Gradient Background */%);
+background: linear-gradient(180deg, #7878E9 11%, #3D3DD4 146);
 
 /* Tailwind Classes */
 className="text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"

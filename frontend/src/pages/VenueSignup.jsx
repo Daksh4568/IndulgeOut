@@ -137,8 +137,8 @@ const VenueSignup = () => {
       localStorage.setItem("user", JSON.stringify(response.data.user));
       // Refresh auth context to update navbar
       await refreshUser();
-      // Redirect to organizer dashboard
-      navigate("/organizer/dashboard");
+      // Redirect to venue dashboard
+      navigate("/venue/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
