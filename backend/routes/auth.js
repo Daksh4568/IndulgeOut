@@ -6,6 +6,7 @@ const multer = require('multer');
 const User = require('../models/User.js');
 const { sendWelcomeEmail } = require('../utils/emailService.js');
 const { uploadToCloudinary } = require('../config/cloudinary.js');
+const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
 
 const router = express.Router();
 
@@ -115,17 +116,22 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
     
     if (existingUser) {
       if (existingUser.email === email) {
+        console.log(`⚠️ Duplicate registration attempt for email: ${email}`);
         return res.status(409).json({ message: 'User with this email already exists' });
       }
       if (existingUser.phoneNumber === phoneNumber) {
+        console.log(`⚠️ Duplicate registration attempt for phone: ${phoneNumber}`);
         return res.status(409).json({ message: 'User with this phone number already exists' });
       }
     }
+
+    console.log(`📝 Starting registration for: ${email} (${hostPartnerType})`);
 
     // Upload photos to Cloudinary (if any)
     const photoUrls = [];
     if (req.files && req.files.length > 0) {
       try {
+        console.log(`📤 Uploading ${req.files.length} photos to Cloudinary...`);
         for (const file of req.files) {
           const result = await uploadToCloudinary(file.buffer, {
             folder: `${hostPartnerType}/${email}`,
@@ -205,7 +211,20 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
 
     // Create new host partner user
     const user = new User(userData);
-    await user.save();
+    
+    try {
+      await user.save();
+      console.log(`✅ User saved to database: ${email}`);
+    } catch (saveError) {
+      // Handle duplicate key error (race condition where two requests try to create same user)
+      if (saveError.code === 11000) {
+        console.log(`⚠️ Duplicate key error during save for: ${email} - User may have been created by concurrent request`);
+        return res.status(409).json({ 
+          message: 'User with this email or phone number already exists. If you just registered, please check your email for the confirmation.' 
+        });
+      }
+      throw saveError; // Re-throw other errors
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -219,6 +238,15 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
       await sendWelcomeEmail(user.email, user.name);
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
+    }
+
+    // Generate action required notifications (profile incomplete, KYC pending)
+    try {
+      await checkAndGenerateActionRequiredNotifications(user._id);
+      console.log(`📬 Action required notifications generated for ${hostPartnerType}: ${email}`);
+    } catch (notifError) {
+      console.error('Failed to generate action required notifications:', notifError);
+      // Don't fail registration if notification generation fails
     }
 
     console.log(`✅ New B2B ${hostPartnerType} registered: ${email}`);

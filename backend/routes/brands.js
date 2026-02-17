@@ -6,6 +6,7 @@ const Collaboration = require('../models/Collaboration');
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
+const notificationService = require('../services/notificationService');
 
 // @route   GET /api/brands/browse
 // @desc    Get all brands with optional filters
@@ -132,6 +133,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
           missingFields: profileCheck.missingFields
         }
       });
+      
+      // Create notification for profile incomplete
+      try {
+        await notificationService.notifyProfileIncompleteBrand(userId);
+        console.log('📬 [Brand Dashboard] Profile incomplete notification created');
+      } catch (notifError) {
+        console.error('Failed to create brand profile incomplete notification:', notifError);
+      }
     }
 
     // 2. Check for missing KYC/Payout details
@@ -152,6 +161,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         actionUrl: '/kyc-setup',
         itemId: null
       });
+      
+      // Create notification for KYC pending
+      try {
+        await notificationService.notifyKYCPending(userId);
+        console.log('📬 [Brand Dashboard] KYC pending notification created');
+      } catch (notifError) {
+        console.error('Failed to create brand KYC pending notification:', notifError);
+      }
     }
 
     // 3. Fetch collaboration-related notifications (from Notification model)

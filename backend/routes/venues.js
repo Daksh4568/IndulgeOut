@@ -6,6 +6,7 @@ const Collaboration = require('../models/Collaboration');
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
 const { authMiddleware } = require('../utils/authUtils');
+const notificationService = require('../services/notificationService');
 
 // @route   GET /api/venues/browse
 // @desc    Get all venues with optional filters
@@ -130,6 +131,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
           missingFields: profileCheck.missingFields
         }
       });
+      
+      // Create notification for profile incomplete
+      try {
+        await notificationService.notifyProfileIncompleteVenue(userId);
+        console.log('📬 [Venue Dashboard] Profile incomplete notification created');
+      } catch (notifError) {
+        console.error('Failed to create venue profile incomplete notification:', notifError);
+      }
     }
 
     // 2. Check for missing KYC/Payout details
@@ -149,6 +158,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         ctaText: 'Add Payout Details',
         itemId: null
       });
+      
+      // Create notification for KYC pending
+      try {
+        await notificationService.notifyKYCPending(userId);
+        console.log('📬 [Venue Dashboard] KYC pending notification created');
+      } catch (notifError) {
+        console.error('Failed to create venue KYC pending notification:', notifError);
+      }
     }
 
     // 3. Fetch collaboration-related notifications (from Notification model)

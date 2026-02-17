@@ -115,24 +115,24 @@ const HostPartnerPage = () => {
 
   const faqs = [
     {
-      question: "Who Can Host?",
-      answer: "Anyone Looking To Meet Like-Minded People And Engage In Activities They're Passionate About."
+      question: "Who can host an event?",
+      answer: "A community owner, event curator, event organiser, brand, venue or any individual who would like to host interest/hobby-led events."
     },
     {
-      question: "Do I Need A Big Community?",
-      answer: "No! You can start with any community size. IndulgeOut helps you grow and connect with like-minded people."
+      question: "Can venues and brands host events?",
+      answer: "Yes, even venues and brands can host events. You'll need a separate account to list events."
     },
     {
-      question: "How Do Venues Get Paid?",
-      answer: "Venues receive payments directly through our secure platform after successful events."
+      question: "Do I need a big community to host events?",
+      answer: "No, whether you're established or just starting a community, the platform is completely supportive of every event organiser."
     },
     {
-      question: "How Do Brands Collaborate?",
-      answer: "Brands can sponsor events, provide products for trials, and engage with target audiences authentically."
+      question: "Is there any fee to host events?",
+      answer: "No, list all your events- free or ticketed without any listing fee."
     },
     {
-      question: "Is This Curated Or Open?",
-      answer: "We maintain a curated ecosystem to ensure quality experiences and meaningful connections."
+      question: "What kind of brand collaborations are available?",
+      answer: "Each brand specifies the kind of collaboration based on their objective- product trials, giveaways, sales, stall setup etc."
     }
   ];
 
@@ -168,7 +168,7 @@ const HostPartnerPage = () => {
 
                 {/* Perfect For */}
                 <div className="mb-6 text-left">
-                  <p className="text-xs font-semibold text-purple-400 mb-2">PERFECT FOR:</p>
+                  <p className="text-xs font-semibold mb-2" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>PERFECT FOR:</p>
                   <div className="flex flex-wrap gap-2">
                     {role.perfectFor.map((item, idx) => (
                       <span
@@ -183,11 +183,11 @@ const HostPartnerPage = () => {
 
                 {/* What You Can Do */}
                 <div className="mb-8 text-left flex-1">
-                  <p className="text-xs font-semibold text-purple-400 mb-3">WHAT YOU CAN DO:</p>
+                  <p className="text-xs font-semibold mb-3" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>WHAT YOU CAN DO:</p>
                   <ul className="space-y-2">
                     {role.whatYouCanDo.map((item, idx) => (
                       <li key={idx} className="text-sm text-gray-300 flex items-start">
-                        <span className="text-purple-500 mr-2">•</span>
+                        <span className="mr-2" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>•</span>
                         {item}
                       </li>
                     ))}

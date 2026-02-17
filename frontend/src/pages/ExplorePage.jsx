@@ -684,16 +684,14 @@ export default function ExplorePage() {
                     </h2>
                   </div>
                   
-                  {/* FilterBar Component */}
-                  <div className="mb-6">
+                  {/* Filter Chips - Filters button first, then permanent chips, Clear button last */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {/* Filters Button */}
                     <FilterBar
                       onFilterChange={handleFilterChange}
                       activeFilters={filters}
                     />
-                  </div>
-                  
-                  {/* Permanent Filter Chips */}
-                  <div className="flex flex-wrap gap-2 mb-6">
+                    
                     {/* Trending */}
                     <button
                       onClick={() => setFilters({...filters, sortBy: filters.sortBy === 'popularity' ? 'date' : 'popularity'})}
@@ -821,24 +819,36 @@ export default function ExplorePage() {
                       <span>Near Me</span>
                     </button>
                     
-                    {/* Clear Filters Button - only show if any filter is active */}
-                    {(filters.sortBy !== 'popularity' && filters.sortBy || filters.city !== 'all' && filters.city || filters.showToday || filters.showTomorrow || filters.showWeekend || filters.mood !== 'all' && filters.mood || filters.useGeolocation) && (
-                      <button
-                        onClick={() => setFilters({sortBy: 'popularity', city: 'all', showToday: false, showTomorrow: false, showWeekend: false, mood: 'all', useGeolocation: false, userLocation: null, price: 'all', genres: []})}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-700 text-gray-300 hover:border-red-500 hover:text-red-400 text-sm font-medium transition-all"
-                      >
-                        <X className="h-4 w-4" />
-                        <span>Clear ({
-                          (filters.sortBy && filters.sortBy !== 'popularity' ? 1 : 0) +
-                          (filters.city && filters.city !== 'all' ? 1 : 0) +
-                          (filters.showToday ? 1 : 0) +
-                          (filters.showTomorrow ? 1 : 0) +
-                          (filters.showWeekend ? 1 : 0) +
-                          (filters.mood && filters.mood !== 'all' ? 1 : 0) +
-                          (filters.useGeolocation ? 1 : 0)
-                        })</span>
-                      </button>
-                    )}
+                    
+                    {/* Clear Filters Button - always visible, shows count when filters are active */}
+                    {(() => {
+                      const activeFilterCount = 
+                        (filters.sortBy && filters.sortBy !== 'popularity' ? 1 : 0) +
+                        (filters.city && filters.city !== 'all' ? 1 : 0) +
+                        (filters.showToday ? 1 : 0) +
+                        (filters.showTomorrow ? 1 : 0) +
+                        (filters.showWeekend ? 1 : 0) +
+                        (filters.mood && filters.mood !== 'all' ? 1 : 0) +
+                        (filters.useGeolocation ? 1 : 0) +
+                        (filters.genres && filters.genres.length > 0 ? filters.genres.length : 0);
+                      
+                      const hasActiveFilters = activeFilterCount > 0;
+                      
+                      return (
+                        <button
+                          onClick={() => setFilters({sortBy: 'popularity', city: 'all', showToday: false, showTomorrow: false, showWeekend: false, mood: 'all', useGeolocation: false, userLocation: null, price: 'all', genres: []})}
+                          disabled={!hasActiveFilters}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                            hasActiveFilters
+                              ? 'border border-red-500 text-red-400 hover:bg-red-500 hover:text-white cursor-pointer'
+                              : 'border border-gray-800 text-gray-600 cursor-not-allowed opacity-50'
+                          }`}
+                        >
+                          <X className="h-4 w-4" />
+                          <span>Clear{hasActiveFilters ? ` (${activeFilterCount})` : ''}</span>
+                        </button>
+                      );
+                    })()}
                   </div>
                   
                   {events.length > 0 ? (
@@ -1225,42 +1235,66 @@ export default function ExplorePage() {
                   <div className="hidden md:flex gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
                     <button 
                       onClick={() => setPeopleFilter('interest')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium hover:opacity-90 transition-all whitespace-nowrap ${peopleFilter === 'interest' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
+                        peopleFilter === 'interest' 
+                          ? 'text-white shadow-lg' 
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
                       style={peopleFilter === 'interest' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                       Interest
                     </button>
                     <button 
                       onClick={() => setPeopleFilter('recommended')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'recommended' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
+                        peopleFilter === 'recommended' 
+                          ? 'text-white shadow-lg' 
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
                       style={peopleFilter === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                      Recommended
                     </button>
                     <button 
                       onClick={() => setPeopleFilter('city')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'city' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
+                        peopleFilter === 'city' 
+                          ? 'text-white shadow-lg' 
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
                       style={peopleFilter === 'city' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                       City
                     </button>
                     <button 
                       onClick={() => setPeopleFilter('activenow')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'activenow' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
+                        peopleFilter === 'activenow' 
+                          ? 'text-white shadow-lg' 
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
                       style={peopleFilter === 'activenow' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                       Active Now
                     </button>
                     <button 
                       onClick={() => setPeopleFilter('nearme')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'nearme' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
+                        peopleFilter === 'nearme' 
+                          ? 'text-white shadow-lg' 
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
                       style={peopleFilter === 'nearme' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                       Near Me
                     </button>
                     <button 
                       onClick={() => setPeopleFilter('new')}
-                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${peopleFilter === 'new' ? 'text-white shadow-lg' : 'bg-[#3A3A52] text-white hover:bg-[#4A4A62]'}`}
+                      className={`px-4 sm:px-5 py-2 rounded-full text-sm sm:text-base font-medium transition-all whitespace-nowrap ${
+                        peopleFilter === 'new' 
+                          ? 'text-white shadow-lg' 
+                          : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
                       style={peopleFilter === 'new' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                     >
                       New

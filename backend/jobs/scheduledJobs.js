@@ -48,12 +48,20 @@ function initializeScheduledJobs() {
   });
   scheduledTasks.push(kycReminderJob);
   
+  // Low booking alerts - runs daily at 8:00 AM
+  const lowBookingAlertJob = cron.schedule('0 8 * * *', async () => {
+    console.log('⚠️ Running low booking alert job...');
+    await sendLowBookingAlerts();
+  });
+  scheduledTasks.push(lowBookingAlertJob);
+  
   console.log('✅ Scheduled jobs initialized:');
   console.log('   - Event reminders: Daily at 9:00 AM');
   console.log('   - Rating requests: Daily at 10:00 AM');
   console.log('   - Profile reminders: Mondays at 9:00 AM');
   console.log('   - Draft event reminders: Wednesdays at 10:00 AM');
   console.log('   - KYC reminders: Fridays at 11:00 AM');
+  console.log('   - Low booking alerts: Daily at 8:00 AM');
 }
 
 /**
@@ -402,6 +410,78 @@ async function sendKYCPendingReminders() {
 }
 
 /**
+ * Send low booking alerts to hosts for events within 7 days with <40% capacity
+ */
+async function sendLowBookingAlerts() {
+  try {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    // Find upcoming events within 7 days
+    const upcomingEvents = await Event.find({
+      date: {
+        $gte: now,
+        $lte: sevenDaysFromNow
+      },
+      status: { $in: ['published', 'live'] },
+      maxParticipants: { $gt: 0 } // Only events with capacity limits
+    }).populate('host');
+    
+    console.log(`⚠️ Found ${upcomingEvents.length} upcoming events to check for low bookings`);
+    
+    let alertsSent = 0;
+    
+    for (const event of upcomingEvents) {
+      if (!event.host) continue;
+      
+      // Calculate fill percentage
+      const currentParticipants = event.currentParticipants || 0;
+      const fillPercentage = Math.round((currentParticipants / event.maxParticipants) * 100);
+      
+      // Only alert if booking is below 40%
+      if (fillPercentage >= 40) {
+        continue;
+      }
+      
+      // Calculate days until event
+      const daysLeft = Math.ceil((new Date(event.date) - now) / (1000 * 60 * 60 * 24));
+      
+      // Check if we already sent alert for this event in the last 3 days
+      const recentAlert = await Notification.findOne({
+        recipient: event.host._id,
+        type: 'low_booking_alert',
+        relatedEvent: event._id,
+        createdAt: {
+          $gte: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+        }
+      });
+      
+      if (recentAlert) {
+        console.log(`⏭️ Skipping ${event.title} - alert sent within last 3 days`);
+        continue;
+      }
+      
+      try {
+        await notificationService.notifyLowBookingAlert(
+          event.host._id,
+          event,
+          fillPercentage,
+          daysLeft
+        );
+        alertsSent++;
+        console.log(`✅ Low booking alert sent for: ${event.title} (${fillPercentage}% filled, ${daysLeft} days left)`);
+      } catch (error) {
+        console.error(`❌ Error sending low booking alert for event ${event._id}:`, error.message);
+      }
+    }
+    
+    console.log(`✨ Low booking alert job completed - Sent ${alertsSent} alerts`);
+  } catch (error) {
+    console.error('❌ Error in sendLowBookingAlerts:', error);
+  }
+}
+
+/**
  * Stop all scheduled tasks (for cleanup/testing)
  */
 function stopAllJobs() {
@@ -418,5 +498,6 @@ module.exports = {
   sendRatingRequests,
   sendProfileIncompleteReminders,
   sendDraftEventReminders,
-  sendKYCPendingReminders
+  sendKYCPendingReminders,
+  sendLowBookingAlerts
 };

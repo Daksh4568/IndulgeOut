@@ -242,27 +242,7 @@ router.post('/:id/counter', authMiddleware, async (req, res) => {
 
     await collaboration.save();
 
-    console.log('[COUNTER] Counter saved, notifying admin for review');
-
-    // Notify admin to review counter-proposal (NOT initiator yet)
-    const notificationService = require('../services/notificationService');
-    const User = require('../models/User');
-    const adminUsers = await User.find({ role: 'admin' });
-    
-    for (const admin of adminUsers) {
-      await notificationService.createNotification({
-        recipient: admin._id,
-        type: 'admin_counter_review_required',
-        category: 'action_required',
-        title: 'Counter-Proposal Needs Review',
-        message: `A vendor has submitted a counter-proposal for collaboration ${collaboration._id}`,
-        actionUrl: `/admin/collaborations/${collaboration._id}`,
-        metadata: {
-          collaborationId: collaboration._id,
-          responderId: userId
-        }
-      });
-    }
+    console.log('[COUNTER] Counter saved successfully');
 
     res.json({
       success: true,
@@ -306,7 +286,28 @@ router.post('/:id/reject', authMiddleware, async (req, res) => {
     // Reject the collaboration
     await collaboration.reject(responseMessage);
 
-    // TODO: Send notification email to initiator
+    // Notify initiator of rejection
+    try {
+      const notificationService = require('../services/notificationService');
+      const recipientName = collaboration.recipient?.name || 'Vendor';
+      await notificationService.createNotification({
+        recipient: collaboration.initiator.user,
+        type: 'collaboration_rejected',
+        category: 'status_update',
+        priority: 'high',
+        title: 'Collaboration Request Rejected',
+        message: `${recipientName} has declined your collaboration request. ${responseMessage ? `Reason: ${responseMessage.substring(0, 100)}` : ''}`,
+        actionUrl: `/dashboard/collaborations/${collaboration._id}`,
+        metadata: {
+          collaborationId: collaboration._id,
+          recipientName,
+          responseMessage
+        }
+      });
+      console.log(`✅ Rejection notification sent to initiator`);
+    } catch (notifError) {
+      console.error('Failed to send rejection notification:', notifError);
+    }
 
     res.json({
       message: 'Collaboration request rejected',
@@ -601,8 +602,6 @@ router.post('/propose', authMiddleware, async (req, res) => {
 
     await collaboration.save();
 
-    console.log('[PROPOSE] Collaboration created:', collaboration._id);
-
     // DO NOT notify recipient yet - admin must review first
     // Notify admin instead
     const notificationService = require('../services/notificationService');
@@ -614,8 +613,8 @@ router.post('/propose', authMiddleware, async (req, res) => {
         recipient: admin._id,
         type: 'admin_review_required',
         category: 'action_required',
-        title: 'New Collaboration Request Needs Review',
-        message: `${proposer.communityProfile?.communityName || proposer.name} has submitted a ${recipientType} collaboration request`,
+        title: 'New Collaboration Request',
+        message: `${proposer.communityProfile?.communityName || proposer.name} submitted a ${recipientType} collaboration request`,
         actionUrl: `/admin/collaborations/${collaboration._id}`,
         metadata: {
           collaborationId: collaboration._id,

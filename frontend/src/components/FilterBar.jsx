@@ -296,115 +296,23 @@ const FilterBar = ({ onFilterChange, activeFilters = {} }) => {
         </div>
       )}
 
-      <div className="w-full bg-black py-4">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Filters Button */}
-            <button
-              onClick={openFilterModal}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.sortBy !== 'popularity' || filters.genres.length > 0
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
-                  : 'border-gray-700 hover:border-purple-600 text-white'
-              }`}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span className="text-sm font-medium">Filters</span>
-              {(filters.sortBy !== 'popularity' || filters.genres.length > 0) && (
-                <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
-                  {(filters.sortBy !== 'popularity' ? 1 : 0) + filters.genres.length}
-                </span>
-              )}
-            </button>
-
-            {/* Today Toggle */}
-            <button
-              onClick={() => updateFilter('showToday', !filters.showToday)}
-              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.showToday
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
-                  : 'border-gray-700 hover:border-purple-600 text-white'
-              }`}
-            >
-              <Calendar className="h-4 w-4" />
-              <span className="text-sm font-medium">Today</span>
-            </button>
-
-            {/* Weekend Toggle */}
-            <button
-              onClick={() => updateFilter('showWeekend', !filters.showWeekend)}
-              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.showWeekend
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
-                  : 'border-gray-700 hover:border-purple-600 text-white'
-              }`}
-            >
-              <Calendar className="h-4 w-4" />
-              <span className="text-sm font-medium">This Weekend</span>
-            </button>
-
-            {/* Under 10km */}
-            <button
-              onClick={handleNearMe}
-              disabled={isGettingLocation}
-              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                filters.useGeolocation
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
-                  : 'border-gray-700 hover:border-purple-600 text-white'
-              } ${isGettingLocation ? 'opacity-50 cursor-wait' : ''}`}
-            >
-              <Navigation className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {isGettingLocation ? 'Getting location...' : 'Under 10km'}
-              </span>
-            </button>
-
-            {/* City Filter */}
-            <div className="hidden sm:block relative">
-              <button
-                onClick={() => setShowCityDropdown(!showCityDropdown)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                  filters.city !== 'all'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
-                    : 'border-gray-700 hover:border-purple-600 text-white'
-                }`}
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  {cityOptions.find(o => o.value === filters.city)?.label}
-                </span>
-              </button>
-              {showCityDropdown && (
-                <div className="absolute z-10 mt-2 w-48 bg-zinc-800 rounded-lg shadow-xl border border-gray-700 max-h-64 overflow-y-auto">
-                  {cityOptions.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        updateFilter('city', option.value);
-                        setShowCityDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-sm text-white"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Clear Filters */}
-            {activeFilterCount > 0 && (
-              <button
-                onClick={clearFilters}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700 hover:border-red-500 hover:text-red-500 transition-all text-sm font-medium text-white"
-              >
-                <X className="h-4 w-4" />
-                Clear ({activeFilterCount})
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Filters Button - Inline without wrapper */}
+      <button
+        onClick={openFilterModal}
+        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+          filters.sortBy !== 'popularity' || filters.genres.length > 0
+            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-600'
+            : 'border-gray-700 hover:border-purple-600 text-white'
+        }`}
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        <span className="text-sm font-medium">Filters</span>
+        {(filters.sortBy !== 'popularity' || filters.genres.length > 0) && (
+          <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
+            {(filters.sortBy !== 'popularity' ? 1 : 0) + filters.genres.length}
+          </span>
+        )}
+      </button>
     </>
   );
 };

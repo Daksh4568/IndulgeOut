@@ -5,7 +5,7 @@ const multer = require('multer');
 const User = require('../models/User.js');
 const Community = require('../models/Community.js');
 const Notification = require('../models/Notification.js');
-const cloudinary = require('../config/cloudinary.js');
+const { cloudinary } = require('../config/cloudinary.js');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
 
 const router = express.Router();

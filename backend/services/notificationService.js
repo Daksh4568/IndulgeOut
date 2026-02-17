@@ -306,6 +306,31 @@ async function notifyEventDraftIncomplete(userId, eventTitle, eventId) {
 }
 
 /**
+ * Notify host of low booking alert
+ */
+async function notifyLowBookingAlert(userId, event, fillPercentage, daysLeft) {
+  return createNotification({
+    recipient: userId,
+    type: 'low_booking_alert',
+    category: 'action_required',
+    priority: 'high',
+    title: '⚠️ Low Booking Alert',
+    message: `"${event.title}" is ${daysLeft} days away with only ${fillPercentage}% tickets sold. Consider promoting to boost bookings!`,
+    actionUrl: `/dashboard/events/${event._id}/promote`,
+    actionText: 'Promote Event',
+    relatedEvent: event._id,
+    metadata: {
+      eventTitle: event.title,
+      eventDate: event.date,
+      fillPercentage,
+      daysLeft,
+      currentParticipants: event.currentParticipants,
+      maxParticipants: event.maxParticipants
+    }
+  });
+}
+
+/**
  * Notify host that event is published
  */
 async function notifyEventPublished(userId, event) {
@@ -675,6 +700,7 @@ module.exports = {
   notifyProfileIncompleteHost,
   notifyKYCPending,
   notifyEventDraftIncomplete,
+  notifyLowBookingAlert,
   notifyEventPublished,
   notifyFirstBookingReceived,
   notifyMilestoneReached,

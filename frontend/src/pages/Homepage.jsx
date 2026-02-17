@@ -54,31 +54,31 @@ function Homepage() {
 
   // Partner cards content
   const partnerCards = [
+    // {
+    //   title: "Start Something You Love",
+    //   description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally.",
+    //   buttonText: "EXPLORE THE EVENT",
+    //   buttonAction: () => navigate('/explore'),
+    //   image: "/images/Media (5).jpg"
+    // },
     {
-      title: "Start Something You Love",
-      description: "Every great community starts with one idea. Whether it's art, wellness, learning, or just meeting like-minded people, create a space where connections grow naturally.",
-      buttonText: "EXPLORE THE EVENT",
-      buttonAction: () => navigate('/explore'),
-      image: "/images/Media (5).jpg"
-    },
-    {
-      title: "Start Something You Love",
+      title: "Curated Offline Experiences",
       description: "If you're a community host who loves bringing people together, we help you list your community & events, access relevant brand and venue partners to enhance your experiences for your attendees.",
-      buttonText: "CREATE NOW",
+      buttonText: "LIST YOUR EVENTS",
       buttonAction: () => navigate('/register?role=community_organizer'),
       image: "/images/Media (5).jpg"
     },
     {
       title: "Collaborate as a Brand",
       description: "If you’re a brand owner with a product or service offering, we help you with experiential marketing, sales and trials through community led events and meetups.",
-      buttonText: "COLLABORATE NOW",
+      buttonText: "LIST YOUR BRAND",
       buttonAction: () => navigate('/register?role=brand'),
       image: "/images/brand.jpg"
     },
     {
-      title: "Partner as a Venue",
+      title: "Your Space for Events",
       description: "If you have a restaurant, cafe or a space that is open for community led events, we’ll help you with access these curated experiences hosted by communities to bring newer audience and additional revenue.",
-      buttonText: "PARTNER NOW",
+      buttonText: "LIST YOUR VENUE",
       buttonAction: () => navigate('/register?role=venue'),
       image: "/images/venue.jpg"
     }
@@ -577,6 +577,18 @@ function Homepage() {
           }
         }
         
+        @keyframes orbitalFadeIn {
+          0% {
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        
         @media (min-width: 640px) {
           @keyframes orbitalMove {
             0% {
@@ -916,13 +928,13 @@ function Homepage() {
                 </div>
                 
                 {/* VIEW ALL Button at Bottom */}
-                <button
+                {/* <button
                   onClick={() => navigate('/explore')}
                   className="hidden sm:block text-white px-4 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide transition-all hover:opacity-90"
                   style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                 >
                   VIEW ALL
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
@@ -1062,7 +1074,7 @@ function Homepage() {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left Side - Orbital Animation */}
-            <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden">
+            <div className="relative flex items-center justify-center h-[400px] sm:h-[500px] lg:h-[600px]">
               {/* Central IndulgeOut Logo */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full backdrop-blur-sm flex items-center justify-center shadow-2xl p-2 sm:p-3 lg:p-4">
@@ -1077,36 +1089,38 @@ function Homepage() {
               {/* Orbiting Icons with Images and Text Inside Circles */}
               {[
                 { 
-                  label: 'Want to list your venue?', 
+                  label: 'Want to<br/>list <br/> your<br/>venue?', 
           
                   delay: '0s'
                 },
                 { 
-                  label: 'List your brand as collaborator?', 
+                  label: 'List your<br/>brand <br/>as<br/>collaborator?', 
                  
-                  delay: '8.33s'
+                  delay: '5.33s'
                 },
                 { 
-                  label: 'Want to list your events?', 
+                  label: 'Want to<br/>list <br/> your<br/>events?', 
                  
-                  delay: '16.67s'
+                  delay: '10.67s'
                 }
               ].map((item, index) => (
                 <div
                   key={index}
-                  className="absolute inset-0 flex items-center justify-center"
+                  className="absolute inset-0 flex items-center justify-center z-30"
                   style={{
-                    animation: `orbitalMove 25s linear infinite`,
-                    animationDelay: item.delay
+                    animation: `orbitalMove 16s linear infinite, orbitalFadeIn 2s ease-out forwards`,
+                    animationDelay: item.delay,
+                    opacity: 0
                   }}
                 >
                   <div className="relative w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full overflow-hidden shadow-2xl bg-zinc-800/60 backdrop-blur-sm">
                     {/* Content */}
                     <div className="relative z-10 h-full flex flex-col items-center justify-center p-2 sm:p-3 text-center">
                       <div className="text-2xl sm:text-3xl lg:text-4xl mb-1 sm:mb-2">{item.icon}</div>
-                      <p className="text-white text-[10px] sm:text-xs font-semibold leading-tight drop-shadow-lg">
-                        {item.label}
-                      </p>
+                      <p 
+                        className="text-white text-[10px] sm:text-sm font-bold leading-tight drop-shadow-lg"
+                        dangerouslySetInnerHTML={{ __html: item.label }}
+                      />
                     </div>
                   </div>
                 </div>

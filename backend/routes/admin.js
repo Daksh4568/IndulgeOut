@@ -284,18 +284,37 @@ router.put('/collaborations/:id/approve', requirePermission('manage_collaboratio
 
     await collaboration.save();
 
-    // Send notification to vendor
+    // Send notification to recipient - hide admin review, make it look like direct proposal
     const notificationService = require('../services/notificationService');
+    const initiatorName = collaboration.initiator?.name || 'A community';
+    const recipientType = collaboration.recipient?.userType || collaboration.recipientType;
+    
+    let notificationType = 'hosting_request_received';
+    let notificationTitle = '🎪 Hosting Request Received';
+    let notificationMessage = `${initiatorName} wants to host an event at your venue. Review the request!`;
+    let actionUrl = `/dashboard/collaborations/${collaboration._id}`;
+    
+    if (recipientType === 'brand' || recipientType === 'brand_sponsor') {
+      notificationType = 'community_proposal_received';
+      notificationTitle = '🎁 Partnership Proposal Received';
+      notificationMessage = `${initiatorName} sent you a collaboration proposal. Review and respond!`;
+      actionUrl = `/brand/collaborations/${collaboration._id}`;
+    } else if (recipientType === 'venue') {
+      actionUrl = `/venue/collaborations/${collaboration._id}`;
+    }
+    
     await notificationService.createNotification({
       recipient: collaboration.recipient?.user || collaboration.recipientId,
-      type: 'collaboration_approved',
-      category: 'status_update',
-      title: 'New Collaboration Request Approved',
-      message: `Your collaboration request from ${collaboration.initiator?.name || 'a community'} has been approved by admin. Please review and respond.`,
-      actionUrl: `/venue/collaborations/${collaboration._id}`,
+      type: notificationType,
+      category: 'action_required',
+      priority: 'high',
+      title: notificationTitle,
+      message: notificationMessage,
+      actionUrl: actionUrl,
       metadata: {
         collaborationId: collaboration._id,
-        initiatorId: collaboration.initiator?.user || collaboration.proposerId
+        initiatorId: collaboration.initiator?.user || collaboration.proposerId,
+        initiatorName
       }
     });
 
@@ -414,18 +433,33 @@ router.put('/collaborations/counters/:id/approve', requirePermission('manage_col
       counterDecision: collaboration.adminReview.counterDecision
     });
 
-    // Send notification to initiator about approved counter
+    // Send notification to initiator - hide admin review, make it look like direct counter
     const notificationService = require('../services/notificationService');
+    const recipientName = collaboration.recipient?.name || 'Vendor';
+    const recipientType = collaboration.recipient?.userType || collaboration.recipientType;
+    
+    let notificationType = 'venue_counter_received';
+    let notificationTitle = '🏪 Venue Counter Received';
+    let notificationMessage = `${recipientName} sent you a counter-proposal. Review and accept/reject.`;
+    
+    if (recipientType === 'brand' || recipientType === 'brand_sponsor') {
+      notificationType = 'brand_counter_received';
+      notificationTitle = '🎯 Brand Counter Received';
+      notificationMessage = `${recipientName} responded with a counter-proposal. Review their terms!`;
+    }
+    
     await notificationService.createNotification({
       recipient: collaboration.initiator?.user || collaboration.proposerId,
-      type: 'counter_approved',
+      type: notificationType,
       category: 'action_required',
-      title: 'Counter Proposal Approved',
-      message: `The counter proposal from ${collaboration.recipient?.name || 'vendor'} has been approved. Please review and accept/reject.`,
+      priority: 'high',
+      title: notificationTitle,
+      message: notificationMessage,
       actionUrl: `/community/collaborations/${collaboration._id}/counter`,
       metadata: {
         collaborationId: collaboration._id,
-        recipientId: collaboration.recipient?.user || collaboration.recipientId
+        recipientId: collaboration.recipient?.user || collaboration.recipientId,
+        recipientName
       }
     });
 
@@ -545,6 +579,9 @@ router.put('/collaborations/:id/flag', requirePermission('manage_collaborations'
     collaboration.status = 'flagged';
 
     await collaboration.save();
+
+    // Don't notify initiator about rejection (admin review is hidden)
+    // They simply won't see the collaboration appear
 
     res.json({
       message: 'Collaboration flagged for compliance review',

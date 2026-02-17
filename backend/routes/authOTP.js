@@ -71,6 +71,7 @@ router.post('/otp/register', async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
+    console.log(`🔐 [OTP] Generated OTP for ${email}: ${otp}`);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Send OTP via email (SMS temporarily disabled)
@@ -107,7 +108,19 @@ router.post('/otp/register', async (req, res) => {
       }
     });
 
-    await newUser.save();
+    try {
+      await newUser.save();
+      console.log(`✅ B2C user saved to database: ${email}`);
+    } catch (saveError) {
+      // Handle duplicate key error (race condition where two requests try to create same user)
+      if (saveError.code === 11000) {
+        console.log(`⚠️ Duplicate key error during B2C registration for: ${email} - User may have been created by concurrent request`);
+        return res.status(409).json({ 
+          message: 'An account with this email or phone number already exists. If you just registered, please check your email for the OTP.' 
+        });
+      }
+      throw saveError; // Re-throw other errors
+    }
 
     console.log(`✅ New B2C user registered and OTP sent to ${method === 'email' ? email : phoneNumber} via ${method}`);
 
@@ -185,6 +198,7 @@ router.post('/otp/send', async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
+    console.log(`🔐 [OTP] Generated OTP for ${identifier}: ${otp}`);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Send OTP via email (SMS temporarily disabled)
@@ -428,6 +442,7 @@ router.post('/otp/resend', async (req, res) => {
 
     // Generate new OTP
     const otp = generateOTP();
+    console.log(`🔐 [OTP] Resend - Generated OTP for ${identifier}: ${otp}`);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Send OTP via email (SMS temporarily disabled)

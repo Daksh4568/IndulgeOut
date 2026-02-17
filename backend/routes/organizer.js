@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const Collaboration = require('../models/Collaboration');
 const { authMiddleware } = require('../utils/authUtils');
+const notificationService = require('../services/notificationService');
 
 // ==================== ACTION REQUIRED ====================
 /**
@@ -203,6 +204,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
           missingFields: profileCheck.missingFields
         }
       });
+      
+      // Create notification for profile incomplete
+      try {
+        await notificationService.notifyProfileIncompleteHost(userId);
+        console.log('📬 [Dashboard] Profile incomplete notification created');
+      } catch (notifError) {
+        console.error('Failed to create profile incomplete notification:', notifError);
+      }
     }
 
     // 4. Check for missing KYC/Payout details
@@ -222,6 +231,14 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         ctaText: 'Add Payout Details',
         itemId: null
       });
+      
+      // Create notification for KYC pending
+      try {
+        await notificationService.notifyKYCPending(userId);
+        console.log('📬 [Dashboard] KYC pending notification created');
+      } catch (notifError) {
+        console.error('Failed to create KYC pending notification:', notifError);
+      }
     }
 
     // 5. Fetch collaboration-related notifications (from Notification model)

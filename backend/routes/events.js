@@ -378,6 +378,16 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       }
     });
 
+    // Send in-app booking confirmation notification to user
+    setImmediate(async () => {
+      try {
+        await notificationService.notifyBookingConfirmed(userId, event, ticket);
+        console.log(`✅ Booking confirmation notification sent to user ${userId}`);
+      } catch (notifError) {
+        console.error('Failed to send booking confirmation notification:', notifError);
+      }
+    });
+
     res.json({
       message: 'Successfully registered for event',
       ticket: ticket ? {
