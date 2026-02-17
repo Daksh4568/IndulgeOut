@@ -134,12 +134,22 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         }
       });
       
-      // Create notification for profile incomplete
-      try {
-        await notificationService.notifyProfileIncompleteBrand(userId);
-        console.log('📬 [Brand Dashboard] Profile incomplete notification created');
-      } catch (notifError) {
-        console.error('Failed to create brand profile incomplete notification:', notifError);
+      // Check if notification was already created within last 24 hours before creating a new one
+      const recentProfileNotif = await Notification.findOne({
+        recipient: userId,
+        type: 'profile_incomplete_brand_sponsor',
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      });
+      
+      if (!recentProfileNotif) {
+        try {
+          await notificationService.notifyProfileIncompleteBrand(userId);
+          console.log('📬 [Brand Dashboard] Profile incomplete notification created');
+        } catch (notifError) {
+          console.error('Failed to create brand profile incomplete notification:', notifError);
+        }
+      } else {
+        console.log('⏭️ [Brand Dashboard] Skipping profile notification - already sent within 24h');
       }
     }
 
@@ -162,12 +172,22 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         itemId: null
       });
       
-      // Create notification for KYC pending
-      try {
-        await notificationService.notifyKYCPending(userId);
-        console.log('📬 [Brand Dashboard] KYC pending notification created');
-      } catch (notifError) {
-        console.error('Failed to create brand KYC pending notification:', notifError);
+      // Check if notification was already created within last 24 hours before creating a new one
+      const recentKYCNotif = await Notification.findOne({
+        recipient: userId,
+        type: 'kyc_pending',
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      });
+      
+      if (!recentKYCNotif) {
+        try {
+          await notificationService.notifyKYCPending(userId);
+          console.log('📬 [Brand Dashboard] KYC pending notification created');
+        } catch (notifError) {
+          console.error('Failed to create brand KYC pending notification:', notifError);
+        }
+      } else {
+        console.log('⏭️ [Brand Dashboard] Skipping KYC notification - already sent within 24h');
       }
     }
 

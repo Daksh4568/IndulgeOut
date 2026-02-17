@@ -1,13 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { X, Menu, User, Building2, Sparkles, Users } from 'lucide-react';
+import { X, Menu, User, Building2, Sparkles, Users, ChevronDown, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import NotificationBell from './NotificationBell';
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 
 export default function NavigationBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const toast = useContext(ToastContext);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [browseDropdownOpen, setBrowseDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -23,6 +26,27 @@ export default function NavigationBar() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  // Check if KYC is complete
+  const checkKYCComplete = () => {
+    if (user?.role === 'host_partner' && user?.hostPartnerType === 'community_organizer') {
+      if (!user?.payoutDetails?.accountHolderName || 
+          !user?.payoutDetails?.accountNumber || 
+          !user?.payoutDetails?.ifscCode) {
+        toast?.error('Please complete your KYC details before creating an event');
+        navigate('/kyc-setup');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleCreateEvent = (e) => {
+    e.preventDefault();
+    if (checkKYCComplete()) {
+      navigate('/create-event');
+    }
   };
 
   // Get appropriate dashboard route based on user role
@@ -118,50 +142,118 @@ export default function NavigationBar() {
             ) : (
               // Logged IN Navigation
               <>
-                <Link
-                  to={getDashboardRoute()}
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  DASHBOARD
-                </Link>
-                <Link
-                  to="/explore"
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  EXPLORE
-                </Link>
-                
-                {/* Browse Communities - For Venues and Brands */}
-                {canBrowseCommunities() && (
-                  <Link
-                    to="/browse/communities"
-                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    <Users className="h-4 w-4" />
-                    <span>COMMUNITIES</span>
-                  </Link>
-                )}
-                
-                {/* Browse Venues - For Community Organizers and Brands */}
-                {canBrowseVenues() && (
-                  <Link
-                    to="/browse/venues"
-                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    <Building2 className="h-4 w-4" />
-                    <span>VENUES</span>
-                  </Link>
-                )}
-                
-                {/* Browse Sponsors - For Community Organizers and Venues */}
-                {canBrowseSponsors() && (
-                  <Link
-                    to="/browse/sponsors"
-                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    <span>SPONSORS</span>
-                  </Link>
+                {/* Community Organizer Navigation */}
+                {user.role === 'host_partner' && user.hostPartnerType === 'community_organizer' ? (
+                  <>
+                    {/* Create Event Button - Primary Action */}
+                    <button
+                      onClick={handleCreateEvent}
+                      className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-bold uppercase transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>CREATE EVENT</span>
+                    </button>
+                    
+                    {/* Dashboard */}
+                    <Link
+                      to={getDashboardRoute()}
+                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      DASHBOARD
+                    </Link>
+                    
+                    {/* Browse Dropdown - Venues & Sponsors */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setBrowseDropdownOpen(!browseDropdownOpen)}
+                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <span>BROWSE</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                      
+                      {browseDropdownOpen && (
+                        <>
+                          {/* Backdrop to close dropdown */}
+                          <div 
+                            className="fixed inset-0 z-40" 
+                            onClick={() => setBrowseDropdownOpen(false)}
+                          />
+                          <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60]">
+                            <Link
+                              to="/browse/venues"
+                              onClick={() => setBrowseDropdownOpen(false)}
+                              className="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300 first:rounded-t-lg"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <Building2 className="h-4 w-4" />
+                                <span className="text-sm font-medium">Venues</span>
+                              </div>
+                            </Link>
+                            <Link
+                              to="/browse/sponsors"
+                              onClick={() => setBrowseDropdownOpen(false)}
+                              className="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300 last:rounded-b-lg"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <Sparkles className="h-4 w-4" />
+                                <span className="text-sm font-medium">Sponsors</span>
+                              </div>
+                            </Link>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Other User Types Navigation */}
+                    <Link
+                      to={getDashboardRoute()}
+                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      DASHBOARD
+                    </Link>
+                    <Link
+                      to="/explore"
+                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      EXPLORE
+                    </Link>
+                    
+                    {/* Browse Communities - For Venues and Brands */}
+                    {canBrowseCommunities() && (
+                      <Link
+                        to="/browse/communities"
+                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <Users className="h-4 w-4" />
+                        <span>COMMUNITIES</span>
+                      </Link>
+                    )}
+                    
+                    {/* Browse Venues - For Brands */}
+                    {canBrowseVenues() && !canBrowseSponsors() && (
+                      <Link
+                        to="/browse/venues"
+                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <Building2 className="h-4 w-4" />
+                        <span>VENUES</span>
+                      </Link>
+                    )}
+                    
+                    {/* Browse Sponsors - For Venues */}
+                    {canBrowseSponsors() && !canBrowseVenues() && (
+                      <Link
+                        to="/browse/sponsors"
+                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        <span>SPONSORS</span>
+                      </Link>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -186,24 +278,32 @@ export default function NavigationBar() {
             ) : (
               // Logged IN Actions
               <>
-                <NotificationBell />
-                <Link
-                  to="/profile"
-                  className="hidden sm:block relative group"
-                  title="Profile Settings"
-                >
-                  {user.profilePicture ? (
-                    <img
-                      src={user.profilePicture}
-                      alt={user.name}
-                      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all duration-200 shadow-md hover:shadow-lg"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg">
-                      {getUserInitials()}
-                    </div>
-                  )}
-                </Link>
+                {/* Desktop: Show notification bell and profile */}
+                <div className="hidden md:flex items-center space-x-4">
+                  <NotificationBell />
+                  <Link
+                    to="/profile"
+                    className="relative group"
+                    title="Profile Settings"
+                  >
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user.name}
+                        className="h-10 w-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all duration-200 shadow-md hover:shadow-lg"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg">
+                        {getUserInitials()}
+                      </div>
+                    )}
+                  </Link>
+                </div>
+                
+                {/* Mobile: Show notification bell before hamburger menu */}
+                <div className="md:hidden">
+                  <NotificationBell />
+                </div>
               </>
             )}
           </div>
@@ -259,6 +359,18 @@ export default function NavigationBar() {
                     </div>
                   </Link>
 
+                  {/* Categories Card */}
+                  <Link
+                    to="/categories"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">📂</span>
+                      <span className="text-white font-semibold text-lg">Categories</span>
+                    </div>
+                  </Link>
+
                   {/* Host & Partner Card */}
                   <Link
                     to="/host-partner"
@@ -301,70 +413,128 @@ export default function NavigationBar() {
                 ) : (
                   // Logged IN Mobile Menu
                   <>
-                    {/* Dashboard Card */}
-                    <Link
-                      to={getDashboardRoute()}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">🏠</span>
-                        <span className="text-white font-semibold text-lg">Dashboard</span>
-                      </div>
-                    </Link>
+                    {/* Community Organizer Mobile Menu */}
+                    {user.role === 'host_partner' && user.hostPartnerType === 'community_organizer' ? (
+                      <>
+                        {/* Create Event Card - Primary Action */}
+                        <button
+                          onClick={(e) => {
+                            setMobileMenuOpen(false);
+                            handleCreateEvent(e);
+                          }}
+                          className="w-full text-left block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Plus className="h-6 w-6 text-white" />
+                            <span className="text-white font-semibold text-lg">Create Event</span>
+                          </div>
+                        </button>
 
-                    {/* Explore Card */}
-                    <Link
-                      to="/explore"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">🔍</span>
-                        <span className="text-white font-semibold text-lg">Explore</span>
-                      </div>
-                    </Link>
-                    
-                    {/* Browse Venues - Only for Community Organizers and Brands */}
-                    {canBrowseVenues() && (
-                      <Link
-                        to="/browse/venues"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Building2 className="h-6 w-6 text-white" />
-                          <span className="text-white font-semibold text-lg">Browse Venues</span>
-                        </div>
-                      </Link>
-                    )}
+                        {/* Dashboard Card */}
+                        <Link
+                          to={getDashboardRoute()}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">🏠</span>
+                            <span className="text-white font-semibold text-lg">Dashboard</span>
+                          </div>
+                        </Link>
 
-                    {/* Browse Communities - Only for Venues and Brands */}
-                    {canBrowseCommunities() && (
-                      <Link
-                        to="/browse/communities"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Users className="h-6 w-6 text-white" />
-                          <span className="text-white font-semibold text-lg">Browse Communities</span>
-                        </div>
-                      </Link>
-                    )}
+                        {/* Browse Venues Card */}
+                        <Link
+                          to="/browse/venues"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Building2 className="h-6 w-6 text-white" />
+                            <span className="text-white font-semibold text-lg">Browse Venues</span>
+                          </div>
+                        </Link>
 
-                    {/* Browse Sponsors - Only for Community Organizers and Venues */}
-                    {canBrowseSponsors() && (
-                      <Link
-                        to="/browse/sponsors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Sparkles className="h-6 w-6 text-white" />
-                          <span className="text-white font-semibold text-lg">Browse Sponsors</span>
-                        </div>
-                      </Link>
+                        {/* Browse Sponsors Card */}
+                        <Link
+                          to="/browse/sponsors"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Sparkles className="h-6 w-6 text-white" />
+                            <span className="text-white font-semibold text-lg">Browse Sponsors</span>
+                          </div>
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        {/* Other User Types Mobile Menu */}
+                        {/* Dashboard Card */}
+                        <Link
+                          to={getDashboardRoute()}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">🏠</span>
+                            <span className="text-white font-semibold text-lg">Dashboard</span>
+                          </div>
+                        </Link>
+
+                        {/* Explore Card */}
+                        <Link
+                          to="/explore"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">🔍</span>
+                            <span className="text-white font-semibold text-lg">Explore</span>
+                          </div>
+                        </Link>
+                        
+                        {/* Browse Venues - Only for Brands */}
+                        {canBrowseVenues() && (
+                          <Link
+                            to="/browse/venues"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Building2 className="h-6 w-6 text-white" />
+                              <span className="text-white font-semibold text-lg">Browse Venues</span>
+                            </div>
+                          </Link>
+                        )}
+
+                        {/* Browse Communities - Only for Venues and Brands */}
+                        {canBrowseCommunities() && (
+                          <Link
+                            to="/browse/communities"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Users className="h-6 w-6 text-white" />
+                              <span className="text-white font-semibold text-lg">Browse Communities</span>
+                            </div>
+                          </Link>
+                        )}
+
+                        {/* Browse Sponsors - Only for Venues */}
+                        {canBrowseSponsors() && (
+                          <Link
+                            to="/browse/sponsors"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Sparkles className="h-6 w-6 text-white" />
+                              <span className="text-white font-semibold text-lg">Browse Sponsors</span>
+                            </div>
+                          </Link>
+                        )}
+                      </>
                     )}
 
                     {/* Profile Settings Card */}

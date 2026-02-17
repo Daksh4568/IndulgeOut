@@ -2,6 +2,7 @@ const QRCode = require('qrcode');
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 /**
  * Generate a ticket for an event registration
@@ -15,6 +16,8 @@ const User = require('../models/User');
  */
 const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType = 'general', quantity = 1, metadata = {} }) => {
   try {
+    console.log(`🎫 [TicketService] generateTicket called with userId: ${userId}, eventId: ${eventId}`);
+    
     // Check if ticket already exists for this user and event
     const existingTicket = await Ticket.findOne({
       user: userId,
@@ -26,22 +29,46 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
 
     if (existingTicket) {
       console.log(`⚠️ Ticket already exists for user ${userId} and event ${eventId}: ${existingTicket.ticketNumber}`);
-      return existingTicket;
+      console.log(`🎫 [Existing Ticket] Has QR Code: ${!!existingTicket.qrCode}, QR URL: ${!!existingTicket.qrCodeUrl}, QR Length: ${existingTicket.qrCode?.length}`);
+      // Return explicit object with all fields including qrCode
+      return {
+        _id: existingTicket._id,
+        ticketNumber: existingTicket.ticketNumber,
+        qrCode: existingTicket.qrCode,
+        qrCodeUrl: existingTicket.qrCodeUrl,
+        event: existingTicket.event,
+        user: existingTicket.user,
+        status: existingTicket.status,
+        price: existingTicket.price,
+        quantity: existingTicket.quantity,
+        metadata: existingTicket.metadata,
+        createdAt: existingTicket.createdAt
+      };
     }
+    
+    console.log(`🎫 [TicketService] No existing ticket found, creating new one...`);
 
     // Validate event and user
+    console.log(`🎫 [TicketService] Validating event ${eventId}...`);
     const event = await Event.findById(eventId).populate('host', 'name email');
     if (!event) {
+      console.error(`❌ [TicketService] Event not found: ${eventId}`);
       throw new Error('Event not found');
     }
+    console.log(`✅ [TicketService] Event found: ${event.title}`);
 
+    console.log(`🎫 [TicketService] Validating user ${userId}...`);
     const user = await User.findById(userId);
     if (!user) {
+      console.error(`❌ [TicketService] User not found: ${userId}`);
       throw new Error('User not found');
     }
+    console.log(`✅ [TicketService] User found: ${user.name}`);
 
     // Generate unique ticket number
+    console.log(`🎫 [TicketService] Generating ticket number...`);
     const ticketNumber = await Ticket.generateTicketNumber();
+    console.log(`✅ [TicketService] Ticket number generated: ${ticketNumber}`);
 
     // Create QR code data (JSON string with ticket info)
     const qrData = JSON.stringify({
@@ -55,6 +82,7 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
     });
 
     // Generate QR code as base64 image
+    console.log(`🎫 [TicketService] Generating QR code...`);
     const qrCodeImage = await QRCode.toDataURL(qrData, {
       errorCorrectionLevel: 'H',
       type: 'image/png',
@@ -65,13 +93,34 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
         light: '#FFFFFF'
       }
     });
-
+    console.log(`✅ [TicketService] QR code generated, length: ${qrCodeImage.length}`);
+    // Upload QR code to Cloudinary for better email compatibility
+    let qrCodeUrl = null;
+    try {
+      console.log(`\ud83c\udf10 [TicketService] Uploading QR code to Cloudinary...`);
+      // Convert base64 to buffer
+      const base64Data = qrCodeImage.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      const cloudinaryResult = await uploadToCloudinary(buffer, {
+        folder: `tickets/${ticketNumber}`,
+        resource_type: 'image',
+        public_id: `qr_${ticketNumber}`
+      });
+      
+      qrCodeUrl = cloudinaryResult.secure_url;
+      console.log(`\u2705 [TicketService] QR code uploaded to Cloudinary: ${qrCodeUrl}`);
+    } catch (uploadError) {
+      console.error('\u26a0\ufe0f [TicketService] Failed to upload QR to Cloudinary, will use base64:', uploadError.message);
+      // Continue with base64 if Cloudinary upload fails
+    }
     // Create ticket in database
     const ticket = new Ticket({
       ticketNumber,
       event: eventId,
       user: userId,
       qrCode: qrCodeImage,
+      qrCodeUrl: qrCodeUrl,  // Cloudinary URL for email
       status: 'active',
       quantity: quantity || 1,
       price: {
@@ -95,9 +144,30 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
       { path: 'user', select: 'name email phoneNumber' }
     ]);
 
-    return ticket;
+    console.log(`✅ [New Ticket] Created ticket ${ticket.ticketNumber} with QR code (length: ${ticket.qrCode?.length})`);
+    console.log(`🎫 [QR Data Check] First 100 chars: ${ticket.qrCode?.substring(0, 100)}`);
+    
+    // Return explicit object with all fields to ensure qrCode is preserved
+    const ticketData = {
+      _id: ticket._id,
+      ticketNumber: ticket.ticketNumber,
+      qrCode: ticket.qrCode,  // Base64 for dashboard/download
+      qrCodeUrl: ticket.qrCodeUrl,  // Cloudinary URL for email
+      event: ticket.event,
+      user: ticket.user,
+      status: ticket.status,
+      price: ticket.price,
+      quantity: ticket.quantity,
+      metadata: ticket.metadata,
+      createdAt: ticket.createdAt
+    };
+    
+    console.log(`🎫 [Return Data] Returning ticket with QR code: ${!!ticketData.qrCode}, QR URL: ${!!ticketData.qrCodeUrl}, Length: ${ticketData.qrCode?.length}`);
+    return ticketData;
   } catch (error) {
-    console.error('Error generating ticket:', error);
+    console.error('❌ [TicketService ERROR] Error generating ticket:', error.message);
+    console.error('❌ [TicketService ERROR STACK]:', error.stack);
+    console.error('❌ [TicketService ERROR] Details - userId:', userId, 'eventId:', eventId);
     throw error;
   }
 };

@@ -138,47 +138,47 @@ const CollaborationManagement = () => {
     // Map user-facing status to badge styling
     const badges = {
       // User-facing statuses
-      'Draft': { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' },
-      'Under Review': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-      'Sent to Recipient': { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
-      'New Proposal': { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
-      'Needs Revision': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
-      'Processing Response': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300' },
-      'Response Received': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-      'Response Sent': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-      'Confirmed': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
-      'Declined': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+      'Draft': { bg: 'bg-gray-800', text: 'text-gray-300' },
+      'Under Review': { bg: 'bg-blue-900/30', text: 'text-blue-300' },
+      'Sent to Recipient': { bg: 'bg-purple-900/30', text: 'text-purple-300' },
+      'New Proposal': { bg: 'bg-purple-900/30', text: 'text-purple-300' },
+      'Needs Revision': { bg: 'bg-yellow-900/30', text: 'text-yellow-300' },
+      'Processing Response': { bg: 'bg-orange-900/30', text: 'text-orange-300' },
+      'Response Received': { bg: 'bg-blue-900/30', text: 'text-blue-300' },
+      'Response Sent': { bg: 'bg-blue-900/30', text: 'text-blue-300' },
+      'Confirmed': { bg: 'bg-green-900/30', text: 'text-green-300' },
+      'Declined': { bg: 'bg-red-900/30', text: 'text-red-300' },
       
       // Legacy fallback for internal statuses
-      draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' },
-      pending_admin_review: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-      approved_delivered: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
-      rejected: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
-      counter_pending_review: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300' },
-      counter_delivered: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-      confirmed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
-      declined: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
-      flagged: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+      draft: { bg: 'bg-gray-800', text: 'text-gray-300' },
+      pending_admin_review: { bg: 'bg-blue-900/30', text: 'text-blue-300' },
+      approved_delivered: { bg: 'bg-purple-900/30', text: 'text-purple-300' },
+      rejected: { bg: 'bg-yellow-900/30', text: 'text-yellow-300' },
+      counter_pending_review: { bg: 'bg-orange-900/30', text: 'text-orange-300' },
+      counter_delivered: { bg: 'bg-blue-900/30', text: 'text-blue-300' },
+      confirmed: { bg: 'bg-green-900/30', text: 'text-green-300' },
+      declined: { bg: 'bg-red-900/30', text: 'text-red-300' },
+      flagged: { bg: 'bg-red-900/30', text: 'text-red-300' },
       
       // Legacy support
-      submitted: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Pending' },
+      submitted: { bg: 'bg-blue-900/30', text: 'text-blue-300', label: 'Pending' },
       admin_approved: { 
-        bg: 'bg-purple-100 dark:bg-purple-900/30', 
-        text: 'text-purple-700 dark:text-purple-300', 
+        bg: 'bg-purple-900/30', 
+        text: 'text-purple-300', 
         label: isReceived ? 'Awaiting Your Response' : 'Delivered'
       },
-      admin_rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Not Approved' },
-      vendor_accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Accepted' },
-      vendor_rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Rejected' },
-      completed: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', label: 'Completed' },
-      cancelled: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Cancelled' },
-      expired: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300' },
-      pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
-      accepted: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' }
+      admin_rejected: { bg: 'bg-red-900/30', text: 'text-red-300', label: 'Not Approved' },
+      vendor_accepted: { bg: 'bg-green-900/30', text: 'text-green-300', label: 'Accepted' },
+      vendor_rejected: { bg: 'bg-red-900/30', text: 'text-red-300', label: 'Rejected' },
+      completed: { bg: 'bg-emerald-900/30', text: 'text-emerald-300', label: 'Completed' },
+      cancelled: { bg: 'bg-gray-800', text: 'text-gray-300', label: 'Cancelled' },
+      expired: { bg: 'bg-gray-800', text: 'text-gray-300' },
+      pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-300' },
+      accepted: { bg: 'bg-green-900/30', text: 'text-green-300' }
     };
-    const badge = badges[displayStatus] || badges[collab.status] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+    const badge = badges[displayStatus] || badges[collab.status] || { bg: 'bg-gray-800', text: 'text-gray-300' };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`} style={{ fontFamily: 'Source Serif Pro, serif' }}>
         {displayStatus}
       </span>
     );
@@ -186,13 +186,13 @@ const CollaborationManagement = () => {
 
   const getPriorityBadge = (priority) => {
     const badges = {
-      high: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'High Priority' },
-      medium: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', label: 'Medium' },
-      low: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Low' }
+      high: { bg: 'bg-red-900/30', text: 'text-red-300', label: 'High Priority' },
+      medium: { bg: 'bg-orange-900/30', text: 'text-orange-300', label: 'Medium' },
+      low: { bg: 'bg-blue-900/30', text: 'text-blue-300', label: 'Low' }
     };
     const badge = badges[priority] || badges.low;
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${badge.bg} ${badge.text}`}>
+      <span className={`px-2 py-1 rounded text-xs font-medium ${badge.bg} ${badge.text}`} style={{ fontFamily: 'Source Serif Pro, serif' }}>
         {badge.label}
       </span>
     );
@@ -249,7 +249,7 @@ const CollaborationManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black">
+    <div className="min-h-screen bg-black">
       <NavigationBar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -257,37 +257,38 @@ const CollaborationManagement = () => {
         <div className="mb-8">
           <button
             onClick={() => navigate('/organizer/dashboard')}
-            className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
+            className="flex items-center space-x-2 text-gray-400 hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
             <span>Back to Dashboard</span>
           </button>
 
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
             Collaboration Requests
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
             Manage your venue and brand partnership requests
           </p>
 
           {/* Success Message */}
           {successMessage && (
-            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+            <div className="mt-4 p-4 bg-green-900/20 border border-green-800 rounded-lg">
+              <p className="text-green-200">{successMessage}</p>
             </div>
           )}
         </div>
 
         {/* Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-6">
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-zinc-900 rounded-lg shadow-sm mb-6">
+          <div className="flex border-b border-gray-800">
             <button
               onClick={() => setActiveTab('received')}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === 'received'
-                  ? 'border-b-2 border-primary-600 text-primary-600'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'border-b-2 text-white'
+                  : 'text-gray-400 hover:text-white'
               }`}
+              style={activeTab === 'received' ? { borderColor: '#7878E9', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
             >
               Received Requests
             </button>
@@ -295,18 +296,19 @@ const CollaborationManagement = () => {
               onClick={() => setActiveTab('sent')}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === 'sent'
-                  ? 'border-b-2 border-primary-600 text-primary-600'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'border-b-2 text-white'
+                  : 'text-gray-400 hover:text-white'
               }`}
+              style={activeTab === 'sent' ? { borderColor: '#7878E9', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
             >
               Sent Requests
             </button>
           </div>
 
           {/* Filter */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-800">
             <div className="flex items-center space-x-2 overflow-x-auto">
-              <span className="text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">Filter by:</span>
+              <span className="text-sm text-gray-400 flex-shrink-0" style={{ fontFamily: 'Source Serif Pro, serif' }}>Filter by:</span>
               <div className="flex space-x-2">
                 {[
                   { value: 'all', label: 'All' },
@@ -322,9 +324,10 @@ const CollaborationManagement = () => {
                     onClick={() => setFilterStatus(value)}
                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                       filterStatus === value
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        ? 'text-white'
+                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                     }`}
+                    style={filterStatus === value ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                   >
                     {label}
                   </button>
@@ -340,12 +343,12 @@ const CollaborationManagement = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
         ) : filteredCollaborations.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-zinc-900 rounded-lg shadow-sm p-12 text-center">
             <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
               No requests found
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-gray-400 mb-6" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               {filterStatus === 'all' 
                 ? `You haven't ${activeTab === 'received' ? 'received' : 'sent'} any collaboration requests yet.`
                 : `No requests with status "${getStatusLabel(filterStatus)}" to show.`}
@@ -354,13 +357,15 @@ const CollaborationManagement = () => {
               <div className="flex items-center justify-center space-x-3">
                 <button
                   onClick={() => navigate('/browse/venues')}
-                  className="px-6 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg"
+                  className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  style={{ fontFamily: 'Source Serif Pro, serif' }}
                 >
                   Browse Venues
                 </button>
                 <button
                   onClick={() => navigate('/browse/sponsors')}
-                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg"
+                  className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-all"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' }}
                 >
                   Browse Sponsors
                 </button>
@@ -388,7 +393,7 @@ const CollaborationManagement = () => {
               return (
                 <div
                   key={collab._id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+                  className="bg-zinc-900 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start space-x-4 flex-1">
@@ -401,29 +406,31 @@ const CollaborationManagement = () => {
                             className="w-16 h-16 rounded-lg object-cover"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gradient-to-br from-primary-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center">
-                            {getTypeIcon(collab.type)}
+                          <div className="w-16 h-16 bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg flex items-center justify-center">
+                            <div className="text-gray-400">
+                              {getTypeIcon(collab.type)}
+                            </div>
                           </div>
                         )}
                       </div>
 
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <h3 className="text-lg font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
                             {partner?.name || 'Unknown Partner'}
                           </h3>
                           {getStatusBadge(collab, isReceived)}
                           {getPriorityBadge(collab.priority)}
                           {/* Counter Indicator */}
                           {collab.hasCounter && collab.latestCounterId && (
-                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded flex items-center">
+                            <span className="px-2 py-1 bg-purple-900/30 text-purple-300 text-xs font-medium rounded flex items-center" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                               <FileText className="h-3 w-3 mr-1" />
                               Has Counter
                             </span>
                           )}
                         </div>
 
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 capitalize">
+                        <p className="text-sm text-gray-400 mb-3 capitalize" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                           {formatCollaborationType(collab.type)} • {isReceived ? 'From' : 'To'} {partner?.name || 'Unknown'}
                         </p>
 
@@ -433,7 +440,7 @@ const CollaborationManagement = () => {
                             {(collab.formData?.eventName || collab.requestDetails?.eventName) && (
                               <div className="flex items-center space-x-2 text-sm">
                                 <Calendar className="h-4 w-4 text-gray-400" />
-                                <span className="text-gray-700 dark:text-gray-300">
+                                <span className="text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                   {collab.formData?.eventName || collab.requestDetails?.eventName}
                                 </span>
                               </div>
@@ -441,7 +448,7 @@ const CollaborationManagement = () => {
                             {(collab.formData?.eventDate || collab.requestDetails?.eventDate) && (
                               <div className="flex items-center space-x-2 text-sm">
                                 <Clock className="h-4 w-4 text-gray-400" />
-                                <span className="text-gray-700 dark:text-gray-300">
+                                <span className="text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                   {formatDate(collab.formData?.eventDate || collab.requestDetails?.eventDate)}
                                   {eventDays !== null && eventDays >= 0 && (
                                     <span className={`ml-1 ${eventDays < 7 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
@@ -463,18 +470,18 @@ const CollaborationManagement = () => {
                         {collab.venueRequest && (
                           <div className="flex flex-wrap gap-2 text-xs">
                             {collab.venueRequest.expectedAttendees && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
+                              <span className="flex items-center space-x-1 px-2 py-1 bg-blue-900/20 text-blue-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                 <Users className="h-3 w-3" />
                                 <span>{collab.venueRequest.expectedAttendees} guests</span>
                               </span>
                             )}
                             {collab.venueRequest.timeSlot && (
-                              <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded capitalize">
+                              <span className="px-2 py-1 bg-purple-900/20 text-purple-300 rounded capitalize" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                 {collab.venueRequest.timeSlot.replace('_', ' ')}
                               </span>
                             )}
                             {collab.venueRequest.budgetRange && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
+                              <span className="flex items-center space-x-1 px-2 py-1 bg-green-900/20 text-green-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                 <DollarSign className="h-3 w-3" />
                                 <span>{collab.venueRequest.budgetRange}</span>
                               </span>
@@ -485,13 +492,13 @@ const CollaborationManagement = () => {
                         {collab.brandSponsorship && (
                           <div className="flex flex-wrap gap-2 text-xs">
                             {collab.brandSponsorship.expectedReach && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
+                              <span className="flex items-center space-x-1 px-2 py-1 bg-blue-900/20 text-blue-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                 <Users className="h-3 w-3" />
                                 <span>{collab.brandSponsorship.expectedReach.toLocaleString()} reach</span>
                               </span>
                             )}
                             {collab.brandSponsorship.budgetProposed && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
+                              <span className="flex items-center space-x-1 px-2 py-1 bg-green-900/20 text-green-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                 <DollarSign className="h-3 w-3" />
                                 <span>₹{(collab.brandSponsorship.budgetProposed / 1000).toFixed(0)}K</span>
                               </span>
@@ -501,9 +508,9 @@ const CollaborationManagement = () => {
 
                         {/* Response */}
                         {collab.response && collab.response.message && (
-                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Response:</p>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">{collab.response.message}</p>
+                          <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
+                            <p className="text-xs text-gray-400 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>Response:</p>
+                            <p className="text-sm text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>{collab.response.message}</p>
                           </div>
                         )}
                       </div>
@@ -523,7 +530,8 @@ const CollaborationManagement = () => {
                             // Navigate to counter form
                             navigate(`/collaborations/${collab._id}/counter`);
                           }}
-                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"
+                          className="px-4 py-2 text-white rounded-lg transition-all hover:opacity-90 flex items-center"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' }}
                           title="Respond to proposal"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
@@ -531,7 +539,7 @@ const CollaborationManagement = () => {
                         </button>
                         <button
                           onClick={() => handleOpenResponse(collab, 'reject')}
-                          className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors"
+                          className="p-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg transition-colors"
                           title="Decline proposal"
                         >
                           <X className="h-5 w-5" />
@@ -544,7 +552,8 @@ const CollaborationManagement = () => {
                       <div className="flex items-center space-x-2 ml-4">
                         <button
                           onClick={() => navigate(`/collaborations/${collab._id}/counter-review`)}
-                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center font-medium"
+                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all flex items-center font-medium"
+                          style={{ fontFamily: 'Source Serif Pro, serif' }}
                           title="Review counter-proposal"
                         >
                           <FileText className="h-4 w-4 mr-2" />
@@ -558,7 +567,8 @@ const CollaborationManagement = () => {
                       <div className="flex items-center space-x-2 ml-4">
                         <button
                           onClick={() => navigate(`/collaborations/${collab._id}/final-terms`)}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center"
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all flex items-center"
+                          style={{ fontFamily: 'Source Serif Pro, serif' }}
                           title="View final confirmed terms"
                         >
                           <FileText className="h-4 w-4 mr-2" />
@@ -569,7 +579,7 @@ const CollaborationManagement = () => {
                     
                     {/* Show info message for pending states - hide admin review mention */}
                     {(collab.status === 'pending_admin_review' || collab.status === 'submitted') && (
-                      <div className="ml-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs flex items-center">
+                      <div className="ml-4 px-3 py-2 bg-blue-900/20 text-blue-300 rounded-lg text-xs flex items-center" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                         <Clock className="h-4 w-4 mr-1" />
                         <span>{isReceived ? 'Processing' : 'Pending'}</span>
                       </div>
@@ -577,16 +587,16 @@ const CollaborationManagement = () => {
 
                     {/* Show info for counter pending */}
                     {collab.status === 'counter_pending_review' && (
-                      <div className="ml-4 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-lg text-xs flex items-center">
+                      <div className="ml-4 px-3 py-2 bg-yellow-900/20 text-yellow-300 rounded-lg text-xs flex items-center" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                         <Clock className="h-4 w-4 mr-1" />
                         <span>Processing counter</span>
                       </div>
                     )}
                     
                     {collab.status === 'admin_rejected' && collab.adminReview?.notes && (
-                      <div className="ml-4 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-xs max-w-xs">
-                        <p className="font-medium mb-1">Request not approved</p>
-                        <p className="text-xs">{collab.adminReview.notes}</p>
+                      <div className="ml-4 px-3 py-2 bg-red-900/20 text-red-300 rounded-lg text-xs max-w-xs">
+                        <p className="font-medium mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>Request not approved</p>
+                        <p className="text-xs" style={{ fontFamily: 'Source Serif Pro, serif' }}>{collab.adminReview.notes}</p>
                       </div>
                     )}
                   </div>
@@ -608,38 +618,39 @@ const CollaborationManagement = () => {
       {/* Response Modal */}
       {showResponseModal && selectedCollaboration && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
                 {responseAction === 'accept' ? 'Accept' : 'Reject'} Collaboration Request
               </h2>
 
-              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">From:</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <div className="mb-4 p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-gray-400 mb-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>From:</p>
+                <p className="text-lg font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
                   {selectedCollaboration.initiator?.name || 'Unknown Partner'}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <p className="text-sm text-gray-400 mt-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                   {selectedCollaboration.formData?.message || selectedCollaboration.requestDetails?.message}
                 </p>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                   Your Response Message *
                 </label>
                 <textarea
                   value={responseMessage}
                   onChange={(e) => setResponseMessage(e.target.value)}
                   rows="6"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-[#7878E9]"
+                  style={{ fontFamily: 'Source Serif Pro, serif' }}
                   placeholder={
                     responseAction === 'accept'
                       ? "Great! I'd love to collaborate. Let me know the next steps..."
                       : 'Thank you for your interest, but at this time...'
                   }
                 />
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-2 text-sm text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                   {responseMessage.length} / 1000 characters
                 </p>
               </div>
@@ -651,7 +662,8 @@ const CollaborationManagement = () => {
                     setSelectedCollaboration(null);
                     setResponseMessage('');
                   }}
-                  className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-6 py-2 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+                  style={{ fontFamily: 'Source Serif Pro, serif' }}
                   disabled={submitting}
                 >
                   Cancel
@@ -659,11 +671,12 @@ const CollaborationManagement = () => {
                 <button
                   onClick={handleSubmitResponse}
                   disabled={!responseMessage.trim() || submitting}
-                  className={`flex items-center space-x-2 px-6 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`flex items-center space-x-2 px-6 py-2 rounded-lg text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     responseAction === 'accept'
-                      ? 'bg-green-600 hover:bg-green-700'
+                      ? 'hover:opacity-90'
                       : 'bg-red-600 hover:bg-red-700'
                   }`}
+                  style={responseAction === 'accept' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' } : { fontFamily: 'Source Serif Pro, serif' }}
                 >
                   {submitting ? (
                     <>

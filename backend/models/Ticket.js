@@ -21,6 +21,10 @@ const ticketSchema = new mongoose.Schema({
     type: String, // Base64 encoded QR code image
     required: true
   },
+  qrCodeUrl: {
+    type: String, // Cloudinary URL for QR code (better for emails)
+    required: false
+  },
   status: {
     type: String,
     enum: ['active', 'checked_in', 'cancelled', 'refunded'],

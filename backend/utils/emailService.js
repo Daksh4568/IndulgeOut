@@ -97,6 +97,18 @@ const sendWelcomeEmail = async (userEmail, userName) => {
 // Send event registration confirmation email to user
 const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = null) => {
   try {
+    console.log(`📧 [Email Service] Received ticket data:`, {
+      hasTicket: !!ticket,
+      ticketNumber: ticket?.ticketNumber,
+      hasQrCode: !!ticket?.qrCode,
+      hasQrCodeUrl: !!ticket?.qrCodeUrl,
+      qrCodeType: typeof ticket?.qrCode,
+      qrCodeLength: ticket?.qrCode?.length,
+      qrCodeUrlValue: ticket?.qrCodeUrl,
+      qrCodePrefix: ticket?.qrCode?.substring(0, 50),
+      ticketKeys: ticket ? Object.keys(ticket) : []
+    });
+
     const eventDate = new Date(event.date).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -104,16 +116,27 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
       day: 'numeric'
     });
 
+    // Prefer Cloudinary URL over base64 for better email client compatibility
+    const qrCodeSrc = ticket?.qrCodeUrl || ticket?.qrCode;
+    
+    console.log(`🎫 [Email QR] Using ${ticket?.qrCodeUrl ? 'Cloudinary URL' : 'base64'} for QR code`);
+
     // Build ticket section HTML if ticket is provided
-    const ticketSection = ticket ? `
+    // Use max-width and display:block for better email client compatibility
+    const ticketSection = ticket && qrCodeSrc ? `
       <div style="background: white; padding: 25px; border-radius: 12px; border: 2px dashed #22c55e; margin: 25px 0; text-align: center;">
         <h3 style="color: #22c55e; margin: 0 0 15px 0;">🎫 Your Event Ticket</h3>
+        <p style="color: #333; font-size: 22px; font-weight: bold; margin: 10px 0; letter-spacing: 1px;">
+          Ticket ID: ${ticket.ticketNumber}
+        </p>
+        ${ticket.quantity && ticket.quantity > 1 ? `
+        <p style="color: #666; font-size: 16px; margin: 10px 0; background: #f3f4f6; padding: 8px 16px; border-radius: 6px; display: inline-block;">
+          <strong>👥 Spots Booked:</strong> ${ticket.quantity}
+        </p>
+        ` : ''}
         <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
-          <img src="${ticket.qrCode}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px auto; display: block;" />
-          <p style="color: #333; font-size: 18px; font-weight: bold; margin: 15px 0;">
-            Ticket #${ticket.ticketNumber}
-          </p>
-          <p style="color: #666; font-size: 14px; margin: 5px 0;">
+          <img src="${qrCodeSrc}" alt="QR Code" style="width: 200px; height: 200px; max-width: 200px; margin: 10px auto; display: block; border: 2px solid #e5e7eb; padding: 10px; background: white;" />
+          <p style="color: #666; font-size: 14px; margin: 15px 0 5px 0;">
             Show this QR code at the event entrance
           </p>
         </div>
@@ -121,7 +144,17 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
           💡 You can also find your ticket in your dashboard
         </p>
       </div>
-    ` : '';
+    ` : '<div style="background: #fef2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0;"><p style="color: #991b1b; margin: 0;">⚠️ Ticket information is being generated. Please check your dashboard for your ticket.</p></div>';
+    
+    // Log QR code info for debugging
+    if (ticket && qrCodeSrc) {
+      console.log(`🎫 [Email Template] Including ticket ${ticket.ticketNumber} with QR source (${ticket?.qrCodeUrl ? 'URL' : 'base64'}, length: ${qrCodeSrc.length})`);
+      if (!ticket?.qrCodeUrl) {
+        console.log(`🎫 [QR Code Preview] ${ticket.qrCode.substring(0, 100)}...`);
+      }
+    } else {
+      console.log(`⚠️ [Email Template] No ticket data or QR code provided to email template`);
+    }
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -177,10 +210,13 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Registration email sent successfully to:', userEmail);
+    console.log('✅ [Registration Email] Sent successfully to:', userEmail);
+    console.log('📧 [Email Details] Event:', event.title, '| Ticket:', ticket?.ticketNumber || 'N/A');
     return result;
   } catch (error) {
-    console.error('❌ Error sending registration email:', error);
+    console.error('❌ [Registration Email] Failed to send to:', userEmail);
+    console.error('❌ [Email Error]:', error.message);
+    console.error('❌ [Email Stack]:', error.stack);
     throw error;
   }
 };

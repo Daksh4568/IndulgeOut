@@ -99,15 +99,15 @@ export default function NotificationDropdown({ onClose }) {
   };
 
   return (
-    <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-black rounded-lg shadow-2xl border border-gray-800 z-50">
+    <div className="sm:mt-2 w-[calc(100vw-1rem)] sm:w-96 bg-black rounded-lg shadow-2xl border border-gray-800 fixed sm:absolute right-[0.5rem] sm:right-0 top-16 sm:top-auto z-[60]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
         <div>
-          <h3 className="text-lg font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+          <h3 className="text-base sm:text-lg font-semibold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
             NOTIFICATIONS
           </h3>
           {unreadCount > 0 && (
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-xs sm:text-sm text-gray-400 mt-1">
               You have <span className="text-blue-400 font-semibold">{unreadCount} unread</span> notifications today
             </p>
           )}
@@ -121,7 +121,7 @@ export default function NotificationDropdown({ onClose }) {
       </div>
 
       {/* Notifications List */}
-      <div className="max-h-[500px] overflow-y-auto">
+      <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-8 w-8 border-4 border-purple-500 border-t-transparent rounded-full"></div>
@@ -224,16 +224,16 @@ export default function NotificationDropdown({ onClose }) {
 function NotificationItem({ notification, onNotificationClick, markAsRead, deleteNotification, getNotificationIcon, getTimeAgo }) {
   return (
     <div
-      className={`rounded-lg p-3 cursor-pointer transition-all group relative ${
+      className={`rounded-lg p-2.5 sm:p-3 cursor-pointer transition-all group relative ${
         !notification.isRead 
           ? 'bg-gradient-to-r from-[#4A4A8F]/40 to-[#3D3DD4]/40 hover:from-[#4A4A8F]/50 hover:to-[#3D3DD4]/50 border border-purple-500/30' 
           : 'bg-gray-900/50 hover:bg-gray-900 border border-transparent'
       }`}
       onClick={() => onNotificationClick(notification)}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         {/* Icon */}
-        <div className="text-2xl flex-shrink-0 mt-1">
+        <div className="text-xl sm:text-2xl flex-shrink-0 mt-1">
           {getNotificationIcon(notification)}
         </div>
 

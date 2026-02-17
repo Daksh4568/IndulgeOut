@@ -353,25 +353,7 @@ const userSchema = new mongoose.Schema({
     nicheCommunityDescription: String
   },
   
-  // Payout Information (for host_partner roles - community_organizer, venue, brand_sponsor)
-  payoutInfo: {
-    accountNumber: String,
-    ifscCode: String,
-    accountHolderName: String,
-    bankName: String,
-    accountType: {
-      type: String,
-      enum: ['savings', 'current']
-    },
-    panNumber: String,
-    gstNumber: String,
-    idProofUrl: String, // KYC document (Aadhaar, Passport, etc.)
-    isVerified: { type: Boolean, default: false },
-    verifiedAt: Date,
-    addedAt: { type: Date, default: Date.now }
-  },
-  
-  // Payout Details (for all host_partner types)
+  // Payout Details (for all host_partner types - KYC Information)
   payoutDetails: {
     accountHolderName: String,
     accountNumber: String,

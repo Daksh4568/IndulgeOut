@@ -7,6 +7,7 @@ const { authMiddleware } = require('../utils/authUtils.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
+const notificationService = require('../services/notificationService.js');
 
 const router = express.Router();
 
@@ -30,10 +31,10 @@ console.log('🔑 Cashfree Configuration:', {
 // Create payment order
 router.post('/create-order', authMiddleware, async (req, res) => {
   try {
-    const { eventId } = req.body;
+    const { eventId, amount, quantity = 1 } = req.body;
     const userId = req.user.userId || req.user.id;
 
-    console.log('Payment order request:', { eventId, userId });
+    console.log('Payment order request:', { eventId, userId, amount, quantity });
 
     // Fetch event details
     const event = await Event.findById(eventId).populate('host', 'name email');
@@ -45,12 +46,13 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     console.log('Event found:', {
       title: event.title,
       priceAmount: event.price?.amount,
-      ticketPrice: event.ticketPrice
+      ticketPrice: event.ticketPrice,
+      requestedAmount: amount
     });
 
-    // Check if event has ticket price
-    const ticketPrice = event.price?.amount || event.ticketPrice || 0;
-    console.log('Calculated ticket price:', ticketPrice);
+    // Use provided amount (from billing page with fees) or calculate from event price
+    const ticketPrice = amount || (event.price?.amount || event.ticketPrice || 0) * quantity;
+    console.log('Final ticket price for payment:', ticketPrice);
     
     if (!ticketPrice || ticketPrice === 0) {
       console.log('Event is free, no payment required');
@@ -146,7 +148,17 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 // Verify payment and complete registration
 router.post('/verify-payment', authMiddleware, async (req, res) => {
   try {
-    const { orderId, eventId } = req.body;
+    const { 
+      orderId, 
+      eventId,
+      quantity = 1,
+      groupingOffer,
+      additionalPersons = [],
+      basePrice,
+      gstAndOtherCharges,
+      platformFees,
+      totalAmount
+    } = req.body;
     const userId = req.user.userId || req.user.id;
 
     console.log('Verifying payment:', { orderId, eventId, userId });
@@ -180,25 +192,46 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       });
     }
 
+    // Determine ticket quantity based on grouping offer or manual quantity
+    let ticketQuantity;
+    if (groupingOffer && groupingOffer.tierPeople > 0) {
+      ticketQuantity = groupingOffer.tierPeople;
+    } else {
+      ticketQuantity = Math.min(Math.max(parseInt(quantity) || 1, 1), 10);
+    }
+
+    console.log(`📊 Payment verified - registering with quantity=${quantity}, ticketQuantity=${ticketQuantity}`);
+
+    // Prepare participant data
+    const participantData = {
+      user: userId,
+      registeredAt: new Date(),
+      status: 'registered',
+      quantity: ticketQuantity,
+      paymentStatus: 'paid',
+      paymentId: payment.cf_payment_id,
+      orderId: orderId,
+      amountPaid: payment.payment_amount
+    };
+
+    // Add grouping offer details if applicable
+    if (groupingOffer) {
+      participantData.groupingOffer = {
+        tierLabel: groupingOffer.tierLabel,
+        tierPeople: groupingOffer.tierPeople,
+        tierPrice: groupingOffer.tierPrice
+      };
+    }
+
     // Register user for event (atomic operation)
     const event = await Event.findOneAndUpdate(
       {
         _id: eventId,
-        $expr: { $lt: [{ $size: '$participants' }, '$maxParticipants'] },
         'participants.user': { $ne: userId }
       },
       {
-        $push: {
-          participants: {
-            user: userId,
-            registeredAt: new Date(),
-            status: 'registered',
-            paymentStatus: 'paid',
-            paymentId: payment.cf_payment_id,
-            orderId: orderId,
-            amountPaid: payment.payment_amount
-          }
-        }
+        $push: { participants: participantData },
+        $inc: { currentParticipants: ticketQuantity }
       },
       {
         new: true,
@@ -213,9 +246,6 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       });
     }
 
-    // Update participant count
-    await event.updateParticipantCount();
-
     // Update user's registered events
     const user = await User.findById(userId);
     user.registeredEvents.push(event._id);
@@ -228,35 +258,100 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       console.error('Failed to update analytics:', analyticsError);
     }
 
-    // Generate ticket for the registration
+    // Generate ticket for the primary user
     let ticket = null;
+    console.log(`🎫 [Payment Flow] Starting ticket generation for user ${userId}, event ${event._id}`);
     try {
+      const ticketMetadata = {
+        registrationSource: 'payment',
+        registeredAt: new Date(),
+        slotsBooked: ticketQuantity,
+        orderId: orderId
+      };
+      
+      if (groupingOffer) {
+        ticketMetadata.groupingOffer = groupingOffer.tierLabel;
+        ticketMetadata.tierPeople = groupingOffer.tierPeople;
+      }
+      
       ticket = await ticketService.generateTicket({
         userId,
         eventId: event._id,
-        amount: event.ticketPrice || event.price?.amount || 0,
-        paymentId: orderId
+        amount: totalAmount || payment.payment_amount,
+        paymentId: orderId,
+        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+        quantity: ticketQuantity,
+        metadata: ticketMetadata
       });
-      console.log(`✅ Ticket generated: ${ticket.ticketNumber}`);
+      console.log(`✅ Ticket generated: ${ticket.ticketNumber} (${ticketQuantity} spots)`);
+      console.log(`🎫 [Payment Ticket] QR Code present: ${!!ticket?.qrCode}, Length: ${ticket?.qrCode?.length || 0}`);
     } catch (ticketError) {
-      console.error('Failed to generate ticket:', ticketError);
+      console.error('❌ [Payment Ticket] Failed to generate ticket:', ticketError.message);
+      console.error('❌ [Payment Ticket Stack]:', ticketError.stack);
       // Continue without failing the entire registration
     }
 
     // Send confirmation emails asynchronously
     setImmediate(async () => {
       try {
-        await sendEventRegistrationEmail(user.email, user.name, event);
+        console.log(`📧 [Payment Email] Sending registration email with ticket: ${ticket?.ticketNumber}`);
+        console.log(`🎫 [Payment Email] Ticket has QR: ${!!ticket?.qrCode}, QR Length: ${ticket?.qrCode?.length}`);
+        await sendEventRegistrationEmail(user.email, user.name, event, ticket);
       } catch (emailError) {
         console.error('Failed to send registration email:', emailError);
       }
     });
+
+    // Send tickets to additional persons if provided
+    if (additionalPersons && additionalPersons.length > 0) {
+      console.log(`📧 [Additional Persons] Sending tickets to ${additionalPersons.length} additional person(s)`);
+      setImmediate(async () => {
+        for (const person of additionalPersons) {
+          if (person.email && person.name) {
+            try {
+              // Generate separate ticket for each additional person
+              const additionalTicket = await ticketService.generateTicket({
+                userId: userId, // Associate with primary user
+                eventId: event._id,
+                amount: 0, // No additional charge
+                paymentId: orderId,
+                ticketType: 'guest',
+                quantity: 1,
+                metadata: {
+                  registrationSource: 'payment',
+                  registeredAt: new Date(),
+                  guestName: person.name,
+                  guestEmail: person.email,
+                  primaryUserId: userId,
+                  slotsBooked: 1
+                }
+              });
+              
+              await sendEventRegistrationEmail(person.email, person.name, event, additionalTicket);
+              console.log(`✅ [Additional Person] Ticket sent to: ${person.email}`);
+            } catch (guestError) {
+              console.error(`❌ [Additional Person] Failed to send ticket to ${person.email}:`, guestError.message);
+            }
+          }
+        }
+      });
+    }
 
     setImmediate(async () => {
       try {
         await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
       } catch (emailError) {
         console.error('Failed to send host notification:', emailError);
+      }
+    });
+
+    // Send in-app booking confirmation notification to user
+    setImmediate(async () => {
+      try {
+        await notificationService.notifyBookingConfirmed(userId, event, ticket);
+        console.log(`✅ [Payment Flow] Booking confirmation notification sent to user ${userId}`);
+      } catch (notifError) {
+        console.error('Failed to send booking confirmation notification:', notifError);
       }
     });
 
@@ -272,7 +367,8 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         ticketNumber: ticket.ticketNumber,
         qrCode: ticket.qrCode,
         downloadUrl: `/api/tickets/${ticket.ticketNumber}/download`
-      } : null
+      } : null,
+      additionalTicketsSent: additionalPersons.length
     });
 
   } catch (error) {

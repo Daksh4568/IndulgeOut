@@ -68,6 +68,15 @@ const EventCreation = () => {
     coHosts: [],
     requirements: [],
     isPrivate: false,
+    groupingOffers: {
+      enabled: false,
+      tiers: [
+        { label: "Single", people: 1, price: 0 },
+        { label: "", people: 0, price: 0 },
+        { label: "", people: 0, price: 0 },
+        { label: "", people: 0, price: 0 },
+      ],
+    },
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -220,6 +229,15 @@ const EventCreation = () => {
           coHosts: event.coHosts || [],
           requirements: event.requirements || [],
           isPrivate: event.isPrivate || false,
+          groupingOffers: event.groupingOffers || {
+            enabled: false,
+            tiers: [
+              { label: "Single", people: 1, price: 0 },
+              { label: "", people: 0, price: 0 },
+              { label: "", people: 0, price: 0 },
+              { label: "", people: 0, price: 0 },
+            ],
+          },
         });
 
         // Set location query for display
@@ -255,19 +273,76 @@ const EventCreation = () => {
 
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
-      setFormData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: type === "checkbox" ? checked : value,
-        },
-      }));
+      setFormData((prev) => {
+        const newFormData = {
+          ...prev,
+          [parent]: {
+            ...prev[parent],
+            [child]: type === "checkbox" ? checked : value,
+          },
+        };
+        
+        // Sync price.amount with Single tier price
+        if (name === "price.amount" && prev.groupingOffers.enabled) {
+          const newTiers = [...prev.groupingOffers.tiers];
+          newTiers[0] = { ...newTiers[0], price: Number(value) };
+          newFormData.groupingOffers = {
+            ...prev.groupingOffers,
+            tiers: newTiers,
+          };
+        }
+        
+        return newFormData;
+      });
     } else {
       setFormData((prev) => ({
         ...prev,
         [name]: type === "checkbox" ? checked : value,
       }));
     }
+  };
+
+  const handleGroupingOfferToggle = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      groupingOffers: {
+        ...prev.groupingOffers,
+        enabled: checked,
+      },
+    }));
+  };
+
+  const handleGroupingTierChange = (index, field, value) => {
+    setFormData((prev) => {
+      const newTiers = [...prev.groupingOffers.tiers];
+      newTiers[index] = {
+        ...newTiers[index],
+        [field]: field === 'price' || field === 'people' ? Number(value) : value,
+      };
+      
+      // Auto-update label when people count changes (except for index 0 which is "Single")
+      if (field === 'people' && index > 0 && value) {
+        newTiers[index].label = `Group of ${value}`;
+      }
+      
+      const newFormData = {
+        ...prev,
+        groupingOffers: {
+          ...prev.groupingOffers,
+          tiers: newTiers,
+        },
+      };
+      
+      // Sync Single tier price with main price.amount
+      if (index === 0 && field === 'price') {
+        newFormData.price = {
+          ...prev.price,
+          amount: Number(value),
+        };
+      }
+      
+      return newFormData;
+    });
   };
 
   const handleCategoryToggle = (category) => {
@@ -1213,6 +1288,71 @@ const EventCreation = () => {
                     className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   />
                 </div>
+              </div>
+
+              {/* Grouping Offers */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="groupingOffers"
+                    checked={formData.groupingOffers.enabled}
+                    onChange={(e) => handleGroupingOfferToggle(e.target.checked)}
+                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
+                    style={{ accentColor: '#7878E9' }}
+                  />
+                  <label htmlFor="groupingOffers" className="text-white text-sm font-medium cursor-pointer">
+                    Grouping Offers
+                  </label>
+                </div>
+
+                {formData.groupingOffers.enabled && (
+                  <div className="space-y-3 pl-6 border-l-2 border-white/10">
+                    {formData.groupingOffers.tiers.map((tier, index) => (
+                      <div key={index} className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            {index === 0 ? 'Label (Fixed)' : (tier.people > 0 ? `Group of ${tier.people} - People` : `Group ${index + 1} - People`)}
+                          </label>
+                          {index === 0 ? (
+                            <input
+                              type="text"
+                              value={tier.label}
+                              disabled
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm opacity-50 cursor-not-allowed"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              value={tier.people}
+                              onChange={(e) => handleGroupingTierChange(index, 'people', e.target.value)}
+                              placeholder="No. of people"
+                              min="2"
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={tier.price}
+                            onChange={(e) => handleGroupingTierChange(index, 'price', e.target.value)}
+                            placeholder="₹0"
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <p className="text-xs text-gray-400 italic mt-2">
+                      💡 Set different prices for single tickets and group bookings
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Co-host */}

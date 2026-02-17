@@ -36,7 +36,6 @@ const EventDetail = () => {
   // Registration
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [quantity, setQuantity] = useState(1);
   
   // UI states
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -109,7 +108,7 @@ const EventDetail = () => {
       
       if (user && response.data.event.participants) {
         const isUserRegistered = response.data.event.participants.some(
-          (p) => p.userId?.toString() === user._id?.toString() || p.userId?._id?.toString() === user._id?.toString()
+          (p) => p.user?.toString() === user._id?.toString() || p.user?._id?.toString() === user._id?.toString()
         );
         setIsRegistered(isUserRegistered);
       }
@@ -866,50 +865,7 @@ const EventDetail = () => {
                 )}
               </div>
 
-              {/* Quantity Selector - Only for non-registered users */}
-              {!isRegistered && user?.role === 'user' && !eventEnded && spotsLeft > 0 && (
-                <div className="mb-6">
-                  <label 
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    Number of Spots
-                  </label>
-                  <div className="flex items-center justify-center space-x-4">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold transition-colors"
-                      disabled={quantity <= 1}
-                    >
-                      −
-                    </button>
-                    <div 
-                      className="text-2xl font-bold text-gray-900 dark:text-white w-12 text-center"
-                      style={{ fontFamily: 'Oswald, sans-serif' }}
-                    >
-                      {quantity}
-                    </div>
-                    <button
-                      onClick={() => {
-                        const availableSpots = event.maxParticipants - (event.participants?.length || 0);
-                        setQuantity(Math.min(10, availableSpots, quantity + 1));
-                      }}
-                      className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold transition-colors"
-                      disabled={quantity >= 10 || quantity >= spotsLeft}
-                    >
-                      +
-                    </button>
-                  </div>
-                  {quantity > 1 && event.price?.amount > 0 && (
-                    <p 
-                      className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      Total: ₹{(event.price.amount * quantity).toLocaleString('en-IN')}
-                    </p>
-                  )}
-                </div>
-              )}
+
 
               {/* CTA Button */}
               {isRegistered ? (
@@ -935,13 +891,13 @@ const EventDetail = () => {
                 </div>
               ) : (
                 <button
-                  onClick={handleRegister}
-                  disabled={isRegistering || spotsLeft === 0 || eventEnded}
+                  onClick={() => navigate(`/billing/${event._id}`)}
+                  disabled={spotsLeft === 0 || eventEnded}
                   className={`w-full py-3 rounded-md font-semibold text-lg transition-all transform shadow-2xl ${
                     eventEnded || spotsLeft === 0
                       ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
                       : 'hover:scale-105 hover:opacity-90 text-white'
-                  } ${isRegistering ? 'animate-pulse' : ''}`}
+                  }`}
                   style={
                     eventEnded || spotsLeft === 0
                       ? { fontFamily: 'Oswald, sans-serif' }
@@ -951,9 +907,7 @@ const EventDetail = () => {
                         }
                   }
                 >
-                  {isRegistering ? (
-                    'Processing...'
-                  ) : eventEnded ? (
+                  {eventEnded ? (
                     <>
                       <Clock className="inline h-5 w-5 mr-2" />
                       Event Ended
@@ -966,7 +920,7 @@ const EventDetail = () => {
                   ) : (
                     <>
                       <Ticket className="inline h-5 w-5 mr-2" />
-                      {quantity > 1 ? `Book ${quantity} Spots` : 'Get your Tickets'}
+                      Book your Tickets
                     </>
                   )}
                 </button>

@@ -85,6 +85,11 @@ const eventSchema = new mongoose.Schema({
       default: 1,
       min: 1,
       max: 10
+    },
+    groupingOffer: {
+      tierLabel: String,
+      tierPeople: Number,
+      tierPrice: Number
     }
   }],
   price: {
@@ -96,6 +101,28 @@ const eventSchema = new mongoose.Schema({
       type: String,
       default: 'USD'
     }
+  },
+  groupingOffers: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    tiers: [{
+      label: {
+        type: String,
+        default: ''
+      },
+      people: {
+        type: Number,
+        default: 0,
+        min: 0  // Allow 0 for unfilled tiers
+      },
+      price: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
+    }]
   },
   images: [String],
   tags: [String],

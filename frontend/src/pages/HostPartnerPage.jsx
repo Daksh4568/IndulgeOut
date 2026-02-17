@@ -243,7 +243,7 @@ const HostPartnerPage = () => {
             {/* Image */}
             <div className="relative rounded-2xl overflow-hidden h-[500px]">
               <img
-                src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80"
+                src="/images/BackgroundLogin.jpg"
                 alt="Event collaboration"
                 className="w-full h-full object-cover"
               />

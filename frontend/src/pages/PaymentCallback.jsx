@@ -17,6 +17,7 @@ const PaymentCallback = () => {
     try {
       const orderId = searchParams.get('order_id');
       const eventId = sessionStorage.getItem('payment_event_id');
+      const billingDataStr = sessionStorage.getItem('billing_data');
 
       if (!orderId || !eventId) {
         setStatus('failed');
@@ -24,15 +25,30 @@ const PaymentCallback = () => {
         return;
       }
 
+      // Parse billing data if available
+      let billingData = {};
+      if (billingDataStr) {
+        try {
+          billingData = JSON.parse(billingDataStr);
+        } catch (e) {
+          console.error('Failed to parse billing data:', e);
+        }
+      }
+
       const response = await api.post(
         '/payments/verify-payment',
-        { orderId, eventId }
+        { 
+          orderId, 
+          eventId,
+          ...billingData // Include billing details in verification
+        }
       );
 
       if (response.data.success) {
         setStatus('success');
         setMessage('Payment successful! Redirecting to your dashboard...');
         sessionStorage.removeItem('payment_event_id');
+        sessionStorage.removeItem('billing_data');
         
         // Redirect to dashboard with refresh flag
         setTimeout(() => {

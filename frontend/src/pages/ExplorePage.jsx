@@ -47,6 +47,16 @@ export default function ExplorePage() {
   // People tab state
   const [peopleFilter, setPeopleFilter] = useState('recommended');
   
+  // Rotating placeholder state
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const placeholderTexts = [
+    'Search an event',
+    'Search a festival',
+    'Search an interest',
+    'Search a mood',
+    'Search a city'
+  ];
+  
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   
@@ -85,6 +95,15 @@ export default function ExplorePage() {
       fetchSavedEvents();
     }
   }, [user]);
+
+  // Rotate placeholder text every 2 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prevIndex) => (prevIndex + 1) % placeholderTexts.length);
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (tab === 'events') {
@@ -464,7 +483,7 @@ export default function ExplorePage() {
           <div className="max-w-2xl mx-auto mb-8">
             <SearchBar
               onSearch={handleSearch}
-              placeholder={tab === 'people' ? 'Search people...' : 'Search events, communities, people...'}
+              placeholder={tab === 'people' ? 'Search people...' : placeholderTexts[placeholderIndex]}
               searchType={tab === 'communities' ? 'communities' : 'events'}
             />
           </div>

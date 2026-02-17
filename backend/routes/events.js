@@ -221,7 +221,15 @@ router.post('/', authMiddleware, [
 router.post('/:id/register', registrationLimiter, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const { quantity = 1 } = req.body; // Get quantity from request, default to 1
+    const { 
+      quantity = 1,
+      groupingOffer,
+      additionalPersons = [],
+      basePrice,
+      gstAndOtherCharges,
+      platformFees,
+      totalAmount
+    } = req.body;
     
     // Check if user is allowed to register (only regular users, not host_partner or admin)
     const User = require('../models/User');
@@ -237,9 +245,15 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       });
     }
     
-    // Validate quantity
-    const ticketQuantity = Math.min(Math.max(parseInt(quantity) || 1, 1), 10);
-    console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}`);
+    // Determine ticket quantity based on grouping offer or manual quantity
+    let ticketQuantity;
+    if (groupingOffer && groupingOffer.tierPeople > 0) {
+      ticketQuantity = groupingOffer.tierPeople;
+    } else {
+      ticketQuantity = Math.min(Math.max(parseInt(quantity) || 1, 1), 10);
+    }
+    
+    console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}, groupingOffer=${JSON.stringify(groupingOffer)}`);
     
     // First check if user is already registered
     const existingEvent = await Event.findById(req.params.id);
@@ -264,6 +278,23 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       });
     }
     
+    // Prepare participant data
+    const participantData = {
+      user: userId,
+      registeredAt: new Date(),
+      status: 'registered',
+      quantity: ticketQuantity
+    };
+    
+    // Add grouping offer details if applicable
+    if (groupingOffer) {
+      participantData.groupingOffer = {
+        tierLabel: groupingOffer.tierLabel,
+        tierPeople: groupingOffer.tierPeople,
+        tierPrice: groupingOffer.tierPrice
+      };
+    }
+    
     // Use findOneAndUpdate with atomic operations to prevent race conditions
     console.log(`🔄 Incrementing currentParticipants by ${ticketQuantity} for event ${req.params.id}`);
     const event = await Event.findOneAndUpdate(
@@ -274,14 +305,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       },
       {
         // Atomic update: add participant with quantity AND increment currentParticipants by quantity
-        $push: {
-          participants: {
-            user: userId,
-            registeredAt: new Date(),
-            status: 'registered',
-            quantity: ticketQuantity
-          }
-        },
+        $push: { participants: participantData },
         $inc: { currentParticipants: ticketQuantity }
       },
       {
@@ -338,37 +362,93 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       // Don't fail the registration if analytics update fails
     }
 
-    // Generate ticket for the event
+    // Generate ticket for the primary user
     let ticket = null;
+    console.log(`🎫 [Ticket] Starting ticket generation for user ${userId}, event ${event._id}`);
     try {
+      const ticketMetadata = {
+        registrationSource: 'web',
+        registeredAt: new Date(),
+        slotsBooked: ticketQuantity
+      };
+      
+      if (groupingOffer) {
+        ticketMetadata.groupingOffer = groupingOffer.tierLabel;
+        ticketMetadata.tierPeople = groupingOffer.tierPeople;
+      }
+      
       ticket = await ticketService.generateTicket({
         userId: userId,
         eventId: event._id,
-        amount: (event.price?.amount || 0) * ticketQuantity, // Total price based on quantity
+        amount: totalAmount || (event.price?.amount || 0) * ticketQuantity,
         paymentId: req.body.paymentId || null,
-        ticketType: ticketQuantity > 1 ? 'group' : 'general',
+        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
         quantity: ticketQuantity,
-        metadata: {
-          registrationSource: 'web',
-          registeredAt: new Date(),
-          slotsBooked: ticketQuantity
-        }
+        metadata: ticketMetadata
       });
       console.log(`✅ Ticket generated: ${ticket.ticketNumber} (${ticketQuantity} slot${ticketQuantity > 1 ? 's' : ''})`);
+      console.log(`🎫 [Ticket Generated] QR Code present: ${!!ticket?.qrCode}, Length: ${ticket?.qrCode?.length || 0}`);
     } catch (ticketError) {
-      console.error('❌ Failed to generate ticket:', ticketError);
+      console.error('❌ [TICKET ERROR] Failed to generate ticket:', ticketError.message);
+      console.error('❌ [TICKET ERROR STACK]:', ticketError.stack);
+      console.error('❌ [TICKET ERROR] User:', userId, 'Event:', event._id);
       // Continue without failing the registration
     }
 
     // Send emails asynchronously without blocking the response
-    // This prevents email delays from slowing down registration
+    console.log(`📧 [Event Registration] Preparing to send confirmation email to: ${user.email}`);
+    console.log(`🎫 [Ticket Debug] Ticket exists: ${!!ticket}, Ticket Number: ${ticket?.ticketNumber}, QR Code exists: ${!!ticket?.qrCode}, QR Length: ${ticket?.qrCode?.length}`);
     setImmediate(async () => {
       try {
+        console.log(`📬 [Email Send] Sending registration email for event: ${event.title}`);
+        console.log(`🎫 [Email Ticket] About to send ticket:`, {
+          hasTicket: !!ticket,
+          ticketNumber: ticket?.ticketNumber,
+          hasQrCode: !!ticket?.qrCode,
+          qrCodeLength: ticket?.qrCode?.length
+        });
         await sendEventRegistrationEmail(user.email, user.name, event, ticket);
+        console.log(`✅ [Email Success] Registration email sent to: ${user.email}`);
       } catch (emailError) {
-        console.error('Failed to send registration email:', emailError);
+        console.error('❌ [Email Failed] Registration email error:', emailError.message);
+        console.error('❌ [Email Details] User:', user.email, '| Event:', event.title);
       }
     });
+
+    // Send tickets to additional persons if provided
+    if (additionalPersons && additionalPersons.length > 0) {
+      console.log(`📧 [Additional Persons] Sending tickets to ${additionalPersons.length} additional person(s)`);
+      setImmediate(async () => {
+        for (const person of additionalPersons) {
+          if (person.email && person.name) {
+            try {
+              // Generate separate ticket for each additional person
+              const additionalTicket = await ticketService.generateTicket({
+                userId: userId, // Associate with primary user
+                eventId: event._id,
+                amount: 0, // No additional charge
+                paymentId: req.body.paymentId || null,
+                ticketType: 'guest',
+                quantity: 1,
+                metadata: {
+                  registrationSource: 'web',
+                  registeredAt: new Date(),
+                  guestName: person.name,
+                  guestEmail: person.email,
+                  primaryUserId: userId,
+                  slotsBooked: 1
+                }
+              });
+              
+              await sendEventRegistrationEmail(person.email, person.name, event, additionalTicket);
+              console.log(`✅ [Additional Person] Ticket sent to: ${person.email}`);
+            } catch (guestError) {
+              console.error(`❌ [Additional Person] Failed to send ticket to ${person.email}:`, guestError.message);
+            }
+          }
+        }
+      });
+    }
 
     setImmediate(async () => {
       try {
@@ -389,6 +469,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
     });
 
     res.json({
+      success: true,
       message: 'Successfully registered for event',
       ticket: ticket ? {
         ticketNumber: ticket.ticketNumber,
@@ -400,7 +481,8 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         title: event.title,
         date: event.date,
         currentParticipants: event.currentParticipants
-      }
+      },
+      additionalTicketsSent: additionalPersons.length
     });
   } catch (error) {
     console.error('Event registration error:', error);

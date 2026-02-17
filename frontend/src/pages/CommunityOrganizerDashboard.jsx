@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, TrendingUp, AlertCircle, DollarSign, Users, 
@@ -8,6 +8,7 @@ import {
   Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import NavigationBar from '../components/NavigationBar';
 import { api } from '../config/api';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
@@ -15,6 +16,7 @@ import { CATEGORY_ICONS } from '../constants/eventConstants';
 const CommunityOrganizerDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useContext(ToastContext);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // Changed from 'draft' to 'all'
   const [activeCollabTab, setActiveCollabTab] = useState('all'); // For collaborations
@@ -46,6 +48,24 @@ const CommunityOrganizerDashboard = () => {
   useEffect(() => {
     setCarouselIndex(0);
   }, [activeTab]);
+
+  // Check if KYC is complete
+  const checkKYCComplete = () => {
+    if (!user?.payoutDetails?.accountHolderName || 
+        !user?.payoutDetails?.accountNumber || 
+        !user?.payoutDetails?.ifscCode) {
+      toast?.error('Please complete your KYC details before creating an event');
+      navigate('/kyc-setup');
+      return false;
+    }
+    return true;
+  };
+
+  const handleCreateEvent = () => {
+    if (checkKYCComplete()) {
+      navigate('/create-event');
+    }
+  };
 
   // Reset collaboration carousel when tab changes
   useEffect(() => {
@@ -333,7 +353,7 @@ const CommunityOrganizerDashboard = () => {
               </div>
             )}
             <button
-              onClick={() => navigate('/create-event')}
+              onClick={handleCreateEvent}
               className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
               style={{ 
                 fontFamily: 'Oswald, sans-serif'
@@ -363,7 +383,7 @@ const CommunityOrganizerDashboard = () => {
             </p>
             {(activeTab === 'draft' || activeTab === 'all') && (
               <button
-                onClick={() => navigate('/create-event')}
+                onClick={handleCreateEvent}
                 className="inline-flex items-center space-x-2 bg-white text-black px-6 py-3 rounded-md font-medium transition-all hover:bg-gray-100"
                 style={{ 
                   fontFamily: 'Oswald, sans-serif'
@@ -1662,16 +1682,16 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
             <div className="p-4 border-b border-gray-700">
               <h4 className="font-semibold text-white">Event Breakdown</h4>
             </div>
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-black sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Event</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Views</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Bookings</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Fill %</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Conversion</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Retention</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Event</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Views</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Bookings</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Fill %</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Conversion</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Retention</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
@@ -1682,17 +1702,17 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                       : 0;
                     
                     return (
-                      <tr key={event.eventId} className="hover:bg-gray-800">
-                        <td className="px-4 py-3 text-sm font-medium text-white">
+                      <tr key={event.eventId} className="hover:bg-gray-800 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-white whitespace-nowrap">
                           {event.eventName}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-400">
+                        <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">
                           {event.views}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-400">
+                        <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">
                           {event.bookings}
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
                           <span className={`font-medium ${
                             event.fillPercentage >= 80 ? 'text-green-400' :
                             event.fillPercentage >= 50 ? 'text-yellow-400' :
@@ -1701,10 +1721,10 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                             {event.fillPercentage}%
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-400">
+                        <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">
                           {event.conversionRate}%
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
                           <span className={`font-medium ${
                             retentionRate >= 15 ? 'text-green-400' :
                             retentionRate >= 5 ? 'text-yellow-400' :
@@ -1976,20 +1996,7 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                     Here's what's happening with your events
                   </p>
                 </div>
-              
-              <div className="flex items-center space-x-3">
-                {/* Notification Icon */}
-                <button
-                  className="relative p-3 bg-white dark:bg-gray-800 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700"
-                  title="Notifications"
-                >
-                  <Bell className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-                  {actionItems.length > 0 && (
-                    <span className="absolute top-1 right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-                  )}
-                </button>
               </div>
-            </div>
             </div>
 
             {/* Dashboard Sections */}

@@ -1,7 +1,5 @@
 # Documentation files
-README.md
-TECHNICAL-DOCUMENTATION.md
-*.md/
+*.md
 
 # Dependencies
 node_modules/

@@ -124,6 +124,16 @@ router.post('/otp/register', async (req, res) => {
 
     console.log(`✅ New B2C user registered and OTP sent to ${method === 'email' ? email : phoneNumber} via ${method}`);
 
+    // Send welcome email for new B2C user registration
+    // Email is sent immediately after registration, before OTP verification
+    try {
+      await sendWelcomeEmail(newUser.email, newUser.name);
+      console.log(`📧 Welcome email sent to new B2C user: ${newUser.email}`);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail registration if welcome email fails
+    }
+
     res.status(201).json({
       message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
       expiresIn: 600,
@@ -320,16 +330,12 @@ router.post('/otp/verify', async (req, res) => {
       });
     }
 
-    // Check if this is a new user (first-time login - no lastLogin recorded)
-    // This ensures welcome email is only sent once, when user first successfully logs in
-    const isNewUser = !user.analytics?.lastLogin;
-
     // Mark phone as verified
     user.otpVerification.isPhoneVerified = true;
     user.otpVerification.otp = undefined; // Clear OTP after successful verification
     user.otpVerification.otpExpiry = undefined;
 
-    // Update last login (this marks the user as having logged in at least once)
+    // Update last login timestamp
     if (!user.analytics) {
       user.analytics = {};
     }
@@ -351,17 +357,6 @@ router.post('/otp/verify', async (req, res) => {
 
     console.log(`✅ OTP verified for ${identifier}. User logged in.`);
 
-    // Send welcome email for new users
-    if (isNewUser) {
-      try {
-        await sendWelcomeEmail(user.email, user.name);
-        console.log(`📧 Welcome email sent to ${user.email}`);
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        // Don't fail the registration if welcome email fails
-      }
-    }
-
     // Check for action required notifications
     try {
       await checkAndGenerateActionRequiredNotifications(user._id);
@@ -372,7 +367,7 @@ router.post('/otp/verify', async (req, res) => {
 
     // Return success response with token and user data
     res.json({
-      message: isNewUser ? 'Account created successfully!' : 'Login successful!',
+      message: 'Login successful!',
       token,
       user: {
         id: user._id,
@@ -382,8 +377,7 @@ router.post('/otp/verify', async (req, res) => {
         role: user.role,
         profilePicture: user.profilePicture,
         hostPartnerType: user.hostPartnerType
-      },
-      isNewUser
+      }
     });
 
   } catch (error) {

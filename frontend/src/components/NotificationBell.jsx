@@ -60,9 +60,17 @@ export default function NotificationBell() {
       </button>
 
       {showDropdown && (
-        <div ref={dropdownRef}>
-          <NotificationDropdown onClose={() => setShowDropdown(false)} />
-        </div>
+        <>
+          {/* Backdrop for mobile */}
+          <div 
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[55] sm:hidden"
+            onClick={() => setShowDropdown(false)}
+          />
+          
+          <div ref={dropdownRef} className="absolute right-0 md:right-0 z-[60]">
+            <NotificationDropdown onClose={() => setShowDropdown(false)} />
+          </div>
+        </>
       )}
     </div>
   );

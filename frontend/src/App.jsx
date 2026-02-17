@@ -19,6 +19,7 @@ import InterestSelection from './pages/InterestSelection'
 import { Navigate } from 'react-router-dom'
 import EventCreation from './pages/EventCreation'
 import EventDetail from './pages/EventDetailNew'
+import BillingPage from './pages/BillingPage'
 import CommunityDetail from './pages/CommunityDetail'
 import AnalyticsPage from './pages/AnalyticsPage'
 import About from './pages/About'
@@ -134,6 +135,7 @@ function AppContent() {
         <Route path="/create-event" element={<ErrorBoundary><EventCreation /></ErrorBoundary>} />
         <Route path="/edit-event/:id" element={<ErrorBoundary><EventCreation /></ErrorBoundary>} />
         <Route path="/events/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
+        <Route path="/billing/:eventId" element={<ErrorBoundary><BillingPage /></ErrorBoundary>} />
         <Route path="/events/:eventId/review" element={<ErrorBoundary><EventReviewPage /></ErrorBoundary>} />
         <Route path="/event/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
         <Route path="/communities/:id" element={<ErrorBoundary><CommunityDetail /></ErrorBoundary>} />

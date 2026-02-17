@@ -22,6 +22,9 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
     }
 
     // Check for existing notifications to avoid duplicates
+    // Only create new notification if none exists within last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
     const existingProfileNotification = await Notification.findOne({
       recipient: userId,
       type: {
@@ -32,14 +35,21 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
           'profile_incomplete_venue'
         ]
       },
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+      createdAt: { $gte: twentyFourHoursAgo } // Last 24 hours only
     });
 
     const existingKYCNotification = await Notification.findOne({
       recipient: userId,
       type: 'kyc_pending',
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      createdAt: { $gte: twentyFourHoursAgo } // Last 24 hours only
     });
+
+    if (existingProfileNotification) {
+      console.log(`⏭️ [Notification] Skipping profile notification - already sent within 24h for user: ${userId}`);
+    }
+    if (existingKYCNotification) {
+      console.log(`⏭️ [Notification] Skipping KYC notification - already sent within 24h for user: ${userId}`);
+    }
 
     // Check profile completeness based on user role
     if (user.role === 'host_partner') {
