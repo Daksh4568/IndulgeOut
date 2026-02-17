@@ -31,9 +31,17 @@ customHeaders:
     headers:
       - key: 'Cache-Control'
         value: 'public, max-age=31536000, immutable'
-# SPA Routing - Redirect all routes to index.html for React Router
+  - pattern: '**/*.js'
+    headers:
+      - key: 'Content-Type'
+        value: 'application/javascript'
+  - pattern: '**/*.css'
+    headers:
+      - key: 'Content-Type'
+        value: 'text/css'
+# SPA Routing - Redirect only non-file routes to index.html for React Router
 # This prevents 404 errors when users reload pages or access URLs directly
 redirects:
-  - source: '/<*>'
+  - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>'
     target: '/index.html'
     status: '200'
