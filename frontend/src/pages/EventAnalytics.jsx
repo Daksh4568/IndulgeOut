@@ -417,6 +417,7 @@ const EventAnalytics = () => {
               icon={Users}
               label="Tickets Sold"
               value={analytics.attendance?.ticketsSold || 0}
+              subValue={`${analytics.attendance?.totalAttendees || 0} total attendees`}
               iconColor="text-cyan-500"
             />
             <MetricCard
@@ -436,7 +437,7 @@ const EventAnalytics = () => {
               icon={UserX}
               label="No-shows"
               value={analytics.attendance?.noShows || 0}
-              subValue={`${(analytics.attendance?.ticketsSold || 0) - (analytics.attendance?.noShows || 0)} attended`}
+              subValue={`${(analytics.attendance?.totalAttendees || 0) - (analytics.attendance?.noShows || 0)} attended`}
               iconColor="text-orange-500"
             />
           </div>

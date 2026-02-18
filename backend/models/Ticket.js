@@ -69,7 +69,30 @@ const ticketSchema = new mongoose.Schema({
       enum: ['general', 'vip', 'early_bird', 'group', 'complimentary'],
       default: 'general'
     },
-    specialRequirements: String
+    specialRequirements: String,
+    // Revenue breakdown (organizer's share)
+    basePrice: {
+      type: Number,
+      default: 0
+    },
+    gstAndOtherCharges: {
+      type: Number,
+      default: 0
+    },
+    platformFees: {
+      type: Number,
+      default: 0
+    },
+    // Additional metadata
+    registrationSource: String,
+    registeredAt: Date,
+    slotsBooked: Number,
+    orderId: String,
+    groupingOffer: String,
+    tierPeople: Number,
+    guestName: String,
+    guestEmail: String,
+    primaryUserId: mongoose.Schema.Types.ObjectId
   }
 }, {
   timestamps: true

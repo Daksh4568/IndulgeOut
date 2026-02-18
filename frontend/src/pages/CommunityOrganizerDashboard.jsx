@@ -406,7 +406,7 @@ const CommunityOrganizerDashboard = () => {
                         ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                         : 0;
                       const statusBadge = getStatusBadge(event.date);
-                      const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
+                      const revenueValue = event.revenue || 0;
 
                       return (
                         <div
@@ -550,7 +550,7 @@ const CommunityOrganizerDashboard = () => {
                           ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                           : 0;
                         const statusBadge = getStatusBadge(event.date);
-                        const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
+                        const revenueValue = event.revenue || 0;
 
                         return (
                           <div
@@ -711,7 +711,7 @@ const CommunityOrganizerDashboard = () => {
                   ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                   : 0;
                 const statusBadge = getStatusBadge(event.date);
-                const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
+                const revenueValue = event.revenue || 0;
 
                 return (
                   <div
@@ -856,7 +856,7 @@ const CommunityOrganizerDashboard = () => {
                         : 0;
                       const statusBadge = getStatusBadge(event.date);
 
-                      const revenueValue = event.revenue ?? ((event.currentParticipants || 0) * (event.price?.amount || 0));
+                      const revenueValue = event.revenue || 0;
 
                       return (
                         <div

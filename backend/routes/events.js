@@ -109,9 +109,26 @@ router.get('/my-hosted', authMiddleware, async (req, res) => {
       .populate('participants.user', 'name email')
       .sort({ date: 1 });
 
+    // Calculate revenue for each event from tickets
+    const Ticket = require('../models/Ticket');
+    const eventsWithRevenue = await Promise.all(events.map(async (event) => {
+      const tickets = await Ticket.find({ event: event._id, status: { $ne: 'cancelled' } });
+      
+      // Calculate revenue using basePrice from metadata (order amount without fees)
+      const revenue = tickets.reduce((sum, ticket) => {
+        const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
+        return sum + ticketRevenue;
+      }, 0);
+      
+      // Convert to plain object and add revenue
+      const eventObj = event.toObject();
+      eventObj.revenue = revenue;
+      return eventObj;
+    }));
+
     res.json({
-      events,
-      total: events.length
+      events: eventsWithRevenue,
+      total: eventsWithRevenue.length
     });
   } catch (error) {
     console.error('Get hosted events error:', error);
@@ -369,7 +386,10 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       const ticketMetadata = {
         registrationSource: 'web',
         registeredAt: new Date(),
-        slotsBooked: ticketQuantity
+        slotsBooked: ticketQuantity,
+        basePrice: basePrice || (event.price?.amount || 0) * ticketQuantity,
+        gstAndOtherCharges: gstAndOtherCharges || 0,
+        platformFees: platformFees || 0
       };
       
       if (groupingOffer) {
@@ -664,11 +684,14 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       .populate('checkInBy', 'name')
       .sort({ purchaseDate: -1 });
     
-    // Calculate statistics
-    const totalRegistered = tickets.length;
-    const checkedIn = tickets.filter(t => t.status === 'checked_in').length;
-    const notCheckedIn = tickets.filter(t => t.status === 'active').length;
-    const cancelled = tickets.filter(t => t.status === 'cancelled').length;
+    // Calculate total slots (sum of all quantities for actual attendee count)
+    const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
+    
+    // Calculate statistics - use totalSlots for actual attendee/booking count
+    const totalRegistered = totalSlots; // Total bookings = total spots booked
+    const checkedIn = tickets.filter(t => t.status === 'checked_in').reduce((sum, t) => sum + (t.quantity || 1), 0);
+    const notCheckedIn = tickets.filter(t => t.status === 'active').reduce((sum, t) => sum + (t.quantity || 1), 0);
+    const cancelled = tickets.filter(t => t.status === 'cancelled').reduce((sum, t) => sum + (t.quantity || 1), 0);
     
     // Format attendee data - filter out tickets with null users (deleted accounts)
     const attendees = tickets
@@ -689,14 +712,13 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         checkInBy: ticket.checkInBy?.name || null
       }));
     
-    // Calculate total slots (sum of all quantities)
-    const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
-    
-    // Calculate revenue metrics (price.amount * quantity for each ticket)
+    // Calculate revenue metrics (use basePrice from metadata, don't multiply by quantity as it's already the total)
     const totalRevenue = tickets
       .filter(t => t.status !== 'cancelled')
       .reduce((sum, ticket) => {
-        const ticketRevenue = (ticket.price?.amount || 0) * (ticket.quantity || 1);
+        // Use basePrice from metadata (order amount without fees)
+        // If not available, fall back to ticket.price.amount (but don't multiply by quantity)
+        const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
       }, 0);
     
@@ -711,7 +733,8 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           revenueByType[ticketType] = { type: ticketType, count: 0, revenue: 0 };
         }
         revenueByType[ticketType].count += ticket.quantity || 1;
-        const ticketRevenue = (ticket.price?.amount || 0) * (ticket.quantity || 1);
+        // Use basePrice from metadata (order amount without fees)
+        const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         revenueByType[ticketType].revenue += ticketRevenue;
       }
     });
@@ -847,7 +870,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       }))
     };
     
-    console.log(`✅ Analytics fetched for event: ${event.title} - ${checkedIn}/${totalRegistered} tickets, ${totalSlots} total slots`);
+    console.log(`✅ Analytics fetched for event: ${event.title} - ${checkedIn}/${totalRegistered} attendees checked in, ${totalSlots} total slots`);
     
     res.json({
       success: true,
@@ -870,7 +893,8 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         revenueByTicketType: Object.values(revenueByType)
       },
       attendance: {
-        ticketsSold: totalRegistered,
+        ticketsSold: tickets.length,
+        totalAttendees: totalRegistered,
         actualCheckIns: checkedIn,
         showUpRate: parseFloat(showUpRate),
         noShows: noShows

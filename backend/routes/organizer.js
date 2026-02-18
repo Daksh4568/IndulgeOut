@@ -425,14 +425,20 @@ router.get('/events', authMiddleware, async (req, res) => {
     console.log('[Events] Past events found:', pastEvents.length);
 
     // Calculate fill percentage and revenue for each event
-    const enrichEvent = (event) => {
+    const Ticket = require('../models/Ticket');
+    
+    const enrichEvent = async (event) => {
       const fillPercentage = event.maxParticipants > 0
         ? Math.round((event.currentParticipants / event.maxParticipants) * 100)
         : 0;
       
-      const revenue = event.ticketPrice 
-        ? event.currentParticipants * event.ticketPrice
-        : 0;
+      // Calculate revenue from actual tickets (using basePrice from metadata)
+      const tickets = await Ticket.find({ event: event._id, status: { $ne: 'cancelled' } });
+      const revenue = tickets.reduce((sum, ticket) => {
+        // Use basePrice from metadata (order amount without fees)
+        const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
+        return sum + ticketRevenue;
+      }, 0);
 
       return {
         _id: event._id,
@@ -447,10 +453,17 @@ router.get('/events', authMiddleware, async (req, res) => {
       };
     };
 
+    // Process events in parallel with Promise.all
+    const [enrichedDraft, enrichedLive, enrichedPast] = await Promise.all([
+      Promise.all(draftEvents.map(enrichEvent)),
+      Promise.all(liveEvents.map(enrichEvent)),
+      Promise.all(pastEvents.map(enrichEvent))
+    ]);
+
     res.json({
-      draft: draftEvents.map(enrichEvent),
-      live: liveEvents.map(enrichEvent),
-      past: pastEvents.map(enrichEvent)
+      draft: enrichedDraft,
+      live: enrichedLive,
+      past: enrichedPast
     });
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -510,28 +523,29 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     // Fetch ALL events (including future ones for total lifetime calculation)
     const allEvents = await Event.find({
       host: userId
-    }).select('currentParticipants maxParticipants price ticketPrice date status').lean();
+    }).select('_id currentParticipants maxParticipants price ticketPrice date status').lean();
     
     console.log(`💰 [Earnings] Total events found: ${allEvents.length}`);
 
-    // Helper function to get event price
-    const getEventPrice = (event) => {
-      // Try price.amount first (newer structure), fallback to ticketPrice
-      return event.price?.amount || event.ticketPrice || 0;
-    };
+    // Import Ticket model to calculate actual revenue
+    const Ticket = require('../models/Ticket');
 
-    // Helper function to calculate revenue for an event
-    const calculateEventRevenue = (event) => {
-      const participants = event.currentParticipants || 0;
-      const price = getEventPrice(event);
-      return participants * price;
+    // Helper function to calculate revenue for an event using actual tickets
+    const calculateEventRevenue = async (eventId) => {
+      const tickets = await Ticket.find({ event: eventId, status: { $ne: 'cancelled' } });
+      const revenue = tickets.reduce((sum, ticket) => {
+        // Use basePrice from metadata (order amount without fees)
+        const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
+        return sum + ticketRevenue;
+      }, 0);
+      return revenue;
     };
 
     // Calculate total lifetime earnings (from ALL events with participants)
     const eventsWithRevenue = allEvents.filter(e => (e.currentParticipants || 0) > 0);
-    const totalLifetime = eventsWithRevenue.reduce((sum, event) => {
-      return sum + calculateEventRevenue(event);
-    }, 0);
+    const revenuePromises = eventsWithRevenue.map(event => calculateEventRevenue(event._id));
+    const revenues = await Promise.all(revenuePromises);
+    const totalLifetime = revenues.reduce((sum, rev) => sum + rev, 0);
     console.log(`💰 [Earnings] Total Lifetime: ₹${totalLifetime} from ${eventsWithRevenue.length} events`);
 
     // Calculate this month's earnings (events that happened this month)
@@ -544,9 +558,9 @@ router.get('/earnings', authMiddleware, async (req, res) => {
       return eventDate >= startOfMonth && eventDate <= endOfMonth;
     });
 
-    const thisMonth = thisMonthEvents.reduce((sum, event) => {
-      return sum + calculateEventRevenue(event);
-    }, 0);
+    const thisMonthRevenuePromises = thisMonthEvents.map(event => calculateEventRevenue(event._id));
+    const thisMonthRevenues = await Promise.all(thisMonthRevenuePromises);
+    const thisMonth = thisMonthRevenues.reduce((sum, rev) => sum + rev, 0);
     console.log(`💰 [Earnings] This Month: ₹${thisMonth} from ${thisMonthEvents.length} events`);
 
     // Calculate last month for growth percentage
@@ -558,9 +572,9 @@ router.get('/earnings', authMiddleware, async (req, res) => {
       return eventDate >= startOfLastMonth && eventDate <= endOfLastMonth;
     });
 
-    const lastMonth = lastMonthEvents.reduce((sum, event) => {
-      return sum + calculateEventRevenue(event);
-    }, 0);
+    const lastMonthRevenuePromises = lastMonthEvents.map(event => calculateEventRevenue(event._id));
+    const lastMonthRevenues = await Promise.all(lastMonthRevenuePromises);
+    const lastMonth = lastMonthRevenues.reduce((sum, rev) => sum + rev, 0);
     console.log(`💰 [Earnings] Last Month: ₹${lastMonth} from ${lastMonthEvents.length} events`);
 
     // Calculate month-over-month growth
@@ -575,9 +589,9 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     // Calculate pending payout (assuming 85% payout after 15% platform fee)
     // Only from completed/past events
     const pastEvents = allEvents.filter(event => new Date(event.date) < now);
-    const totalRevenue = pastEvents.reduce((sum, event) => {
-      return sum + calculateEventRevenue(event);
-    }, 0);
+    const pastRevenuePromises = pastEvents.map(event => calculateEventRevenue(event._id));
+    const pastRevenues = await Promise.all(pastRevenuePromises);
+    const totalRevenue = pastRevenues.reduce((sum, rev) => sum + rev, 0);
     
     const platformFeePercentage = 15; // 15% platform fee
     const pendingPayout = Math.round(totalRevenue * (1 - platformFeePercentage / 100));

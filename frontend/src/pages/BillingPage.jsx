@@ -20,9 +20,9 @@ const BillingPage = () => {
   const [selectedTier, setSelectedTier] = useState(null); // For grouping offers
   const [quantity, setQuantity] = useState(1); // For non-grouping events
 
-  // Additional person details
+  // Additional person details (only 1 person allowed)
   const [addAnotherPerson, setAddAnotherPerson] = useState(false);
-  const [additionalPersons, setAdditionalPersons] = useState([{ name: '', email: '' }]);
+  const [additionalPerson, setAdditionalPerson] = useState({ name: '', email: '' });
 
   useEffect(() => {
     if (!user) {
@@ -57,24 +57,8 @@ const BillingPage = () => {
     }
   };
 
-  const addPersonField = () => {
-    if (additionalPersons.length < 5) {
-      setAdditionalPersons([...additionalPersons, { name: '', email: '' }]);
-    }
-  };
-
-  const removePersonField = (index) => {
-    const newPersons = additionalPersons.filter((_, i) => i !== index);
-    setAdditionalPersons(newPersons);
-    if (newPersons.length === 0) {
-      setAddAnotherPerson(false);
-    }
-  };
-
-  const updatePersonField = (index, field, value) => {
-    const newPersons = [...additionalPersons];
-    newPersons[index][field] = value;
-    setAdditionalPersons(newPersons);
+  const updatePersonField = (field, value) => {
+    setAdditionalPerson(prev => ({ ...prev, [field]: value }));
   };
 
   const calculatePricing = () => {
@@ -93,30 +77,29 @@ const BillingPage = () => {
     const platformFees = basePrice * 0.03; // 3.0%
     const grandTotal = basePrice + gstAndOtherCharges + platformFees;
 
+    // Round all values to 2 decimal places to avoid floating point precision issues
     return {
-      basePrice,
+      basePrice: parseFloat(basePrice.toFixed(2)),
       numberOfPeople,
-      gstAndOtherCharges,
-      platformFees,
-      grandTotal
+      gstAndOtherCharges: parseFloat(gstAndOtherCharges.toFixed(2)),
+      platformFees: parseFloat(platformFees.toFixed(2)),
+      grandTotal: parseFloat(grandTotal.toFixed(2))
     };
   };
 
   const handleProceedToPayment = async () => {
     try {
-      // Validate additional persons if checkbox is checked
+      // Validate additional person if checkbox is checked
       if (addAnotherPerson) {
-        const invalidPersons = additionalPersons.filter(p => !p.name.trim() || !p.email.trim());
-        if (invalidPersons.length > 0) {
-          toast.error('Please fill in all additional person details');
+        if (!additionalPerson.name.trim() || !additionalPerson.email.trim()) {
+          toast.error('Please fill in additional person details');
           return;
         }
 
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const invalidEmails = additionalPersons.filter(p => !emailRegex.test(p.email));
-        if (invalidEmails.length > 0) {
-          toast.error('Please enter valid email addresses');
+        if (!emailRegex.test(additionalPerson.email)) {
+          toast.error('Please enter a valid email address');
           return;
         }
       }
@@ -132,7 +115,7 @@ const BillingPage = () => {
         basePrice: pricing.basePrice,
         gstAndOtherCharges: pricing.gstAndOtherCharges,
         platformFees: pricing.platformFees,
-        additionalPersons: addAnotherPerson ? additionalPersons : [],
+        additionalPersons: addAnotherPerson ? [additionalPerson] : [],
       };
 
       // Add grouping offer details if applicable
@@ -337,7 +320,7 @@ const BillingPage = () => {
                     onChange={(e) => {
                       setAddAnotherPerson(e.target.checked);
                       if (!e.target.checked) {
-                        setAdditionalPersons([{ name: '', email: '' }]);
+                        setAdditionalPerson({ name: '', email: '' });
                       }
                     }}
                     className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
@@ -349,44 +332,25 @@ const BillingPage = () => {
 
                 {addAnotherPerson && (
                   <div className="space-y-3 pl-7">
-                    {additionalPersons.map((person, index) => (
-                      <div key={index} className="bg-gray-800/30 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-400">Person {index + 1}</span>
-                          {additionalPersons.length > 1 && (
-                            <button
-                              onClick={() => removePersonField(index)}
-                              className="text-red-400 hover:text-red-300 transition-colors"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Full Name"
-                          value={person.name}
-                          onChange={(e) => updatePersonField(index, 'name', e.target.value)}
-                          className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                        <input
-                          type="email"
-                          placeholder="Email Address"
-                          value={person.email}
-                          onChange={(e) => updatePersonField(index, 'email', e.target.value)}
-                          className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
+                    <div className="bg-gray-800/30 rounded-lg p-4 space-y-3">
+                      <div className="mb-2">
+                        <span className="text-sm text-gray-400">Additional Recipient</span>
                       </div>
-                    ))}
-                    {additionalPersons.length < 5 && (
-                      <button
-                        onClick={addPersonField}
-                        className="flex items-center space-x-2 text-purple-400 hover:text-purple-300 text-sm transition-colors"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        <span>Add another person</span>
-                      </button>
-                    )}
+                      <input
+                        type="text"
+                        placeholder="Full Name"
+                        value={additionalPerson.name}
+                        onChange={(e) => updatePersonField('name', e.target.value)}
+                        className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email Address"
+                        value={additionalPerson.email}
+                        onChange={(e) => updatePersonField('email', e.target.value)}
+                        className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
                   </div>
                 )}
               </div>

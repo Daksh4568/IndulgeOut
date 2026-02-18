@@ -52,9 +52,13 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     // Use provided amount (from billing page with fees) or calculate from event price
     const ticketPrice = amount || (event.price?.amount || event.ticketPrice || 0) * quantity;
-    console.log('Final ticket price for payment:', ticketPrice);
     
-    if (!ticketPrice || ticketPrice === 0) {
+    // Round to 2 decimal places to avoid floating point precision issues
+    const roundedTicketPrice = parseFloat(ticketPrice.toFixed(2));
+    
+    console.log('Final ticket price for payment:', roundedTicketPrice);
+    
+    if (!roundedTicketPrice || roundedTicketPrice === 0) {
       console.log('Event is free, no payment required');
       return res.status(400).json({ message: 'This event is free, no payment required' });
     }
@@ -83,7 +87,7 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     // Create Cashfree order request
     const request = {
-      order_amount: ticketPrice,
+      order_amount: roundedTicketPrice,
       order_currency: 'INR',
       order_id: orderId,
       customer_details: {
@@ -266,7 +270,10 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         registrationSource: 'payment',
         registeredAt: new Date(),
         slotsBooked: ticketQuantity,
-        orderId: orderId
+        orderId: orderId,
+        basePrice: basePrice || 0,
+        gstAndOtherCharges: gstAndOtherCharges || 0,
+        platformFees: platformFees || 0
       };
       
       if (groupingOffer) {
@@ -302,32 +309,15 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       }
     });
 
-    // Send tickets to additional persons if provided
-    if (additionalPersons && additionalPersons.length > 0) {
+    // Send tickets to additional persons if provided (share the same ticket)
+    if (additionalPersons && additionalPersons.length > 0 && ticket) {
       console.log(`📧 [Additional Persons] Sending tickets to ${additionalPersons.length} additional person(s)`);
       setImmediate(async () => {
         for (const person of additionalPersons) {
           if (person.email && person.name) {
             try {
-              // Generate separate ticket for each additional person
-              const additionalTicket = await ticketService.generateTicket({
-                userId: userId, // Associate with primary user
-                eventId: event._id,
-                amount: 0, // No additional charge
-                paymentId: orderId,
-                ticketType: 'guest',
-                quantity: 1,
-                metadata: {
-                  registrationSource: 'payment',
-                  registeredAt: new Date(),
-                  guestName: person.name,
-                  guestEmail: person.email,
-                  primaryUserId: userId,
-                  slotsBooked: 1
-                }
-              });
-              
-              await sendEventRegistrationEmail(person.email, person.name, event, additionalTicket);
+              // Send the same ticket to additional person (they share the booking)
+              await sendEventRegistrationEmail(person.email, person.name, event, ticket);
               console.log(`✅ [Additional Person] Ticket sent to: ${person.email}`);
             } catch (guestError) {
               console.error(`❌ [Additional Person] Failed to send ticket to ${person.email}:`, guestError.message);
