@@ -281,7 +281,7 @@ const ScanTickets = () => {
 
         {/* Event Selection */}
         {!selectedEvent ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Select an Event
             </h2>
@@ -316,11 +316,15 @@ const ScanTickets = () => {
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2" />
-                        {formatDate(event.date)} at {event.time}
+                        {formatDate(event.date)}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-2" />
+                        {event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || 'TBD'}
                       </div>
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 mr-2" />
-                        {event.location?.city}
+                        {event.location?.city || event.location?.address || 'Venue TBD'}
                       </div>
                       <div className="flex items-center">
                         <Users className="h-4 w-4 mr-2" />
@@ -338,7 +342,7 @@ const ScanTickets = () => {
             {/* Left Column - Scanner */}
             <div className="lg:col-span-2 space-y-6">
               {/* Selected Event Info */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+              <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -347,12 +351,15 @@ const ScanTickets = () => {
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2" />
-                        {formatDate(selectedEvent.date)} at {selectedEvent.time}
+                        {formatDate(selectedEvent.date)}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-2" />
+                        {selectedEvent.startTime && selectedEvent.endTime ? `${selectedEvent.startTime} - ${selectedEvent.endTime}` : selectedEvent.time || 'TBD'}
                       </div>
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 mr-2" />
-                        {selectedEvent.location?.address},{" "}
-                        {selectedEvent.location?.city}
+                        {selectedEvent.location?.address || selectedEvent.location?.city || 'Venue TBD'}
                       </div>
                     </div>
                   </div>
@@ -366,7 +373,7 @@ const ScanTickets = () => {
               </div>
 
               {/* Scan Buttons */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+              <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
                 <button
                   onClick={() => setScannerActive(true)}
                   disabled={processingCheckIn}
@@ -386,7 +393,7 @@ const ScanTickets = () => {
                       <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                      <span className="px-2 bg-zinc-900 text-gray-400">
                         Or enter manually
                       </span>
                     </div>
@@ -401,7 +408,7 @@ const ScanTickets = () => {
                           setManualEntry(e.target.value.toUpperCase())
                         }
                         placeholder="IND-XXX-XXX"
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="flex-1 px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         disabled={processingCheckIn}
                       />
                       <button
@@ -418,7 +425,7 @@ const ScanTickets = () => {
 
               {/* Ticket Preview - Show before check-in */}
               {ticketPreview && !checkInResult && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-2 border-indigo-500">
+                <div className="bg-zinc-900 rounded-lg shadow-lg p-6 border-2 border-indigo-500">
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                       <Ticket className="h-5 w-5 mr-2 text-indigo-600" />
@@ -604,7 +611,7 @@ const ScanTickets = () => {
 
             {/* Right Column - Recent Scans */}
             <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 sticky top-24">
+              <div className="bg-zinc-900 rounded-lg shadow-lg p-6 sticky top-24">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                   <Clock className="h-5 w-5 mr-2 text-indigo-600" />
                   Recent Check-ins

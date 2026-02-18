@@ -162,48 +162,21 @@ export default function NavigationBar() {
                       DASHBOARD
                     </Link>
                     
-                    {/* Browse Dropdown - Venues & Sponsors */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setBrowseDropdownOpen(!browseDropdownOpen)}
-                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                      >
-                        <span>BROWSE</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                      
-                      {browseDropdownOpen && (
-                        <>
-                          {/* Backdrop to close dropdown */}
-                          <div 
-                            className="fixed inset-0 z-40" 
-                            onClick={() => setBrowseDropdownOpen(false)}
-                          />
-                          <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60]">
-                            <Link
-                              to="/browse/venues"
-                              onClick={() => setBrowseDropdownOpen(false)}
-                              className="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300 first:rounded-t-lg"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <Building2 className="h-4 w-4" />
-                                <span className="text-sm font-medium">Venues</span>
-                              </div>
-                            </Link>
-                            <Link
-                              to="/browse/sponsors"
-                              onClick={() => setBrowseDropdownOpen(false)}
-                              className="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300 last:rounded-b-lg"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <Sparkles className="h-4 w-4" />
-                                <span className="text-sm font-medium">Sponsors</span>
-                              </div>
-                            </Link>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    {/* Venues Button */}
+                    <Link
+                      to="/browse/venues"
+                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      VENUES
+                    </Link>
+                    
+                    {/* Sponsors Button */}
+                    <Link
+                      to="/browse/sponsors"
+                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      SPONSORS
+                    </Link>
                   </>
                 ) : (
                   <>
@@ -220,6 +193,16 @@ export default function NavigationBar() {
                     >
                       EXPLORE
                     </Link>
+                    
+                    {/* Categories - For Regular Users Only */}
+                    {user.role !== 'host_partner' && user.role !== 'admin' && (
+                      <Link
+                        to="/categories"
+                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        CATEGORIES
+                      </Link>
+                    )}
                     
                     {/* Browse Communities - For Venues and Brands */}
                     {canBrowseCommunities() && (

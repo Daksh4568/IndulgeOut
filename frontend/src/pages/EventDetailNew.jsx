@@ -51,26 +51,6 @@ const EventDetail = () => {
   // Mock data for highlights carousel (replace with actual data from event)
   const highlights = event?.images || [];
 
-  // Mock FAQ data (should come from backend)
-  const faqs = [
-    {
-      question: "Who Can Use IndulgeOut?",
-      answer: "Anyone Looking To Meet Like-Minded People And Engage In Activities They're Passionate About."
-    },
-    {
-      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
-      answer: "IndulgeOut focuses on authentic offline connections through curated experiences. We verify all hosts and venues, ensuring quality and safety."
-    },
-    {
-      question: "What types of events can I find?",
-      answer: "From art workshops and fitness sessions to music nights and food experiences - we cover diverse interests and activities."
-    },
-    {
-      question: "How do I register for an event?",
-      answer: "Simply click the 'Get your Tickets' button, select the number of spots, and complete the payment process. You'll receive a confirmation email with your ticket."
-    }
-  ];
-
   useEffect(() => {
     fetchEvent();
     
@@ -79,11 +59,11 @@ const EventDetail = () => {
       viewTracked.current = true;
     }
     
-    const refreshInterval = setInterval(() => {
-      fetchEvent();
-    }, 30000);
-    
-    return () => clearInterval(refreshInterval);
+    // Removed auto-refresh interval that was causing page reloads
+    // const refreshInterval = setInterval(() => {
+    //   fetchEvent();
+    // }, 30000);
+    // return () => clearInterval(refreshInterval);
   }, [id]);
 
   useEffect(() => {
@@ -339,11 +319,6 @@ const EventDetail = () => {
               <span className="bg-indigo-600 px-3 py-1 rounded-full text-sm font-medium text-white">
                 {getCategoryIcon(event.categories?.[0])} {event.categories?.[0] || 'Event'}
               </span>
-              {(event.price?.amount === 0 || !event.price) ? (
-                <span className="bg-green-600 px-3 py-1 rounded-full text-sm font-medium text-white">FREE</span>
-              ) : (
-                <span className="bg-white px-3 py-1 rounded-full text-sm font-bold text-gray-900">₹{event.price?.amount}</span>
-              )}
             </div>
             <h1 
               className="text-3xl md:text-5xl font-bold text-white mb-4"
@@ -370,13 +345,19 @@ const EventDetail = () => {
               >
                 About the Event
               </h2>
-              <div 
-                className="text-gray-400 leading-relaxed"
-                style={{ fontFamily: 'Source Serif Pro, serif' }}
-              >
-                <p className={showMore ? '' : 'line-clamp-4'}>
-                  {event.description || 'Get ready to step into experiences where conversations flow naturally and connections feel effortless. From lively social mixers filled with energy, to meaningful conversations that stay with you. Mingle & Meet brings together moments that turn strangers into connections and interactions into lasting memories.'}
-                </p>
+              <div className="text-gray-400">
+                {(event.description || 'Get ready to step into experiences where conversations flow naturally and connections feel effortless. From lively social mixers filled with energy, to meaningful conversations that stay with you. Mingle & Meet brings together moments that turn strangers into connections and interactions into lasting memories.')
+                  .split('\n\n')
+                  .filter(para => para.trim())
+                  .map((paragraph, idx, arr) => (
+                    <p 
+                      key={idx}
+                      className={`${showMore || idx === 0 ? '' : 'hidden'} ${idx < arr.length - 1 ? 'mb-4' : ''}`}
+                      style={{ fontFamily: 'Source Serif Pro, serif', lineHeight: '1.6' }}
+                    >
+                      {paragraph.trim()}
+                    </p>
+                  ))}
                 {event.description && event.description.length > 200 && (
                   <button
                     onClick={() => setShowMore(!showMore)}
@@ -390,7 +371,7 @@ const EventDetail = () => {
             </section>
 
             {/* Event Guide - 4 Column Grid */}
-            <section>
+            {/* <section>
               <h2 
                 className="text-3xl font-bold text-white mb-6"
                 style={{ fontFamily: 'Oswald, sans-serif' }}
@@ -398,7 +379,6 @@ const EventDetail = () => {
                 Event Guide
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Category */}
                 <div className="bg-zinc-900 rounded-xl p-4 border border-gray-800">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="h-5 w-5 text-indigo-400" />
@@ -417,7 +397,6 @@ const EventDetail = () => {
                   </p>
                 </div>
 
-                {/* Who it's for */}
                 <div className="bg-zinc-900 rounded-xl p-4 border border-gray-800">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="h-5 w-5 text-indigo-400" />
@@ -436,7 +415,6 @@ const EventDetail = () => {
                   </p>
                 </div>
 
-                {/* What you'll find here */}
                 <div className="bg-zinc-900 rounded-xl p-4 border border-gray-800">
                   <div className="flex items-center gap-2 mb-2">
                     <Ticket className="h-5 w-5 text-indigo-400" />
@@ -455,7 +433,6 @@ const EventDetail = () => {
                   </p>
                 </div>
 
-                {/* Age Restriction */}
                 <div className="bg-zinc-900 rounded-xl p-4 border border-gray-800">
                   <div className="flex items-center gap-2 mb-2">
                     <User className="h-5 w-5 text-indigo-400" />
@@ -474,7 +451,7 @@ const EventDetail = () => {
                   </p>
                 </div>
               </div>
-            </section>
+            </section> */}
 
             {/* Host */}
             <section>
@@ -546,7 +523,20 @@ const EventDetail = () => {
                       >
                         {typeof event.location === 'string' 
                           ? event.location 
-                          : event.location?.address || event.location?.city || 'Jawaharlal Nehru Stadium, Pragati Vihar, New Delhi, Delhi, India'}
+                          : (() => {
+                              const loc = event.location;
+                              if (!loc) return 'Venue address not available';
+                              // If address field exists and looks complete (has commas), just show it
+                              if (loc.address) {
+                                return loc.address;
+                              }
+                              // Otherwise build from components
+                              const parts = [];
+                              if (loc.city) parts.push(loc.city);
+                              if (loc.state) parts.push(loc.state);
+                              if (loc.zipCode) parts.push(loc.zipCode);
+                              return parts.length > 0 ? parts.join(', ') : 'Venue address not available';
+                            })()}
                       </p>
                     </div>
                   </div>
@@ -627,64 +617,6 @@ const EventDetail = () => {
               >
                 Need More Info?
               </p>
-            </section>
-
-            {/* FAQ Section */}
-            <section>
-              <h2 
-                className="text-3xl sm:text-4xl font-bold mb-2 text-center text-white"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
-              >
-                Frequently Asked <span className="text-indigo-400" style={{ fontStyle: 'italic' }}>Questions</span>
-              </h2>
-              <p 
-                className="text-gray-400 text-center mb-12 font-bold"
-                style={{ fontFamily: 'Source Serif Pro, serif' }}
-              >
-                Everything you need to know about the event
-              </p>
-
-              <div className="space-y-4">
-                {faqs.map((faq, index) => (
-                  <div
-                    key={index}
-                    className={`rounded-xl overflow-hidden transition-all ${
-                      openFAQ === index
-                        ? 'border-0'
-                        : 'bg-transparent border-2 border-white/20'
-                    }`}
-                    style={{
-                      background: openFAQ === index ? 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' : 'transparent'
-                    }}
-                  >
-                    <button
-                      onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                      className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors"
-                    >
-                      <span 
-                        className="font-semibold text-lg text-white pr-4"
-                        style={{ fontFamily: 'Oswald, sans-serif' }}
-                      >
-                        {faq.question}
-                      </span>
-                      <ChevronDown 
-                        className={`h-5 w-5 text-white flex-shrink-0 transition-transform ${
-                          openFAQ === index ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-                    
-                    {openFAQ === index && (
-                      <div 
-                        className="px-6 pb-5"
-                        style={{ fontFamily: 'Source Serif Pro, serif' }}
-                      >
-                        <p className="text-white leading-relaxed">{faq.answer}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             </section>
 
             {/* Terms and Conditions */}
@@ -794,28 +726,40 @@ const EventDetail = () => {
                       className="font-medium text-gray-900 dark:text-white"
                       style={{ fontFamily: 'Source Serif Pro, serif' }}
                     >
-                      {event.time || '08:00'}
+                      {event.startTime && event.endTime 
+                        ? `${event.startTime} - ${event.endTime}` 
+                        : event.time || '08:00'}
                     </p>
                   </div>
                 </div>
 
                 {/* Location */}
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
                     <p 
-                      className="text-sm text-gray-500 dark:text-gray-400"
+                      className="text-sm text-gray-500 dark:text-gray-400 mb-1"
                       style={{ fontFamily: 'Source Serif Pro, serif' }}
                     >
                       Location
                     </p>
                     <p 
-                      className="font-medium text-gray-900 dark:text-white"
+                      className="font-medium text-gray-900 dark:text-white text-sm leading-relaxed"
                       style={{ fontFamily: 'Source Serif Pro, serif' }}
                     >
-                      {event.venue || typeof event.location === 'string' 
+                      {typeof event.location === 'string' 
                         ? event.location 
-                        : event.location?.city || 'Mohali'}
+                        : (() => {
+                            const loc = event.location;
+                            if (!loc) return event.venue || 'Venue TBD';
+                            // If address exists, just show it (it should be complete)
+                            if (loc.address) {
+                              return loc.address;
+                            }
+                            // Otherwise build from city/state/zipCode
+                            const parts = [loc.city, loc.state, loc.zipCode].filter(Boolean);
+                            return parts.length > 0 ? parts.join(', ') : (event.venue || 'Venue TBD');
+                          })()}
                     </p>
                   </div>
                 </div>

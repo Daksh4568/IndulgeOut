@@ -48,7 +48,8 @@ const EventCreation = () => {
     description: "",
     categories: [],
     date: "",
-    time: "",
+    startTime: "",
+    endTime: "",
     location: {
       address: "",
       city: "",
@@ -72,9 +73,7 @@ const EventCreation = () => {
       enabled: false,
       tiers: [
         { label: "Single", people: 1, price: 0 },
-        { label: "", people: 0, price: 0 },
-        { label: "", people: 0, price: 0 },
-        { label: "", people: 0, price: 0 },
+        { label: "", people: "", price: "" },
       ],
     },
   });
@@ -209,7 +208,8 @@ const EventCreation = () => {
           description: event.description || "",
           categories: event.categories || [],
           date: formattedDate,
-          time: event.time || "",
+          startTime: event.startTime || "",
+          endTime: event.endTime || "",
           location: {
             address: event.location?.address || "",
             city: event.location?.city || "",
@@ -315,10 +315,19 @@ const EventCreation = () => {
   const handleGroupingTierChange = (index, field, value) => {
     setFormData((prev) => {
       const newTiers = [...prev.groupingOffers.tiers];
-      newTiers[index] = {
-        ...newTiers[index],
-        [field]: field === 'price' || field === 'people' ? Number(value) : value,
-      };
+      
+      // Allow empty strings for people and price in grouping offers (except Single)
+      if (field === 'people' || field === 'price') {
+        newTiers[index] = {
+          ...newTiers[index],
+          [field]: value === '' ? '' : Number(value),
+        };
+      } else {
+        newTiers[index] = {
+          ...newTiers[index],
+          [field]: value,
+        };
+      }
       
       // Auto-update label when people count changes (except for index 0 which is "Single")
       if (field === 'people' && index > 0 && value) {
@@ -337,12 +346,35 @@ const EventCreation = () => {
       if (index === 0 && field === 'price') {
         newFormData.price = {
           ...prev.price,
-          amount: Number(value),
+          amount: Number(value) || 0,
         };
       }
       
       return newFormData;
     });
+  };
+
+  const addGroupingTier = () => {
+    setFormData((prev) => ({
+      ...prev,
+      groupingOffers: {
+        ...prev.groupingOffers,
+        tiers: [
+          ...prev.groupingOffers.tiers,
+          { label: "", people: "", price: "" },
+        ],
+      },
+    }));
+  };
+
+  const removeGroupingTier = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      groupingOffers: {
+        ...prev.groupingOffers,
+        tiers: prev.groupingOffers.tiers.filter((_, i) => i !== index),
+      },
+    }));
   };
 
   const handleCategoryToggle = (category) => {
@@ -353,6 +385,8 @@ const EventCreation = () => {
         ? prev.categories.filter((c) => c !== categoryName)
         : [...prev.categories, categoryName].slice(0, 3), // Max 3 categories
     }));
+    // Close dropdown after selection
+    setShowCategoryDropdown(false);
   };
 
   // Location search functions
@@ -903,7 +937,8 @@ const EventCreation = () => {
         ...formData,
         maxParticipants: parseInt(formData.maxParticipants),
         date: formData.date,
-        time: formData.time,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
         images: uploadedImages.map((img) => img.url), // Send Cloudinary URLs
       };
 
@@ -1076,7 +1111,7 @@ const EventCreation = () => {
                             style={{ accentColor: '#7878E9' }}
                           />
                           <span className="ml-3 text-sm text-white">
-                            {category.emoji} {category.name}
+                            {category.name}
                           </span>
                         </label>
                       ))}
@@ -1103,7 +1138,7 @@ const EventCreation = () => {
               </div>
 
               {/* Date and Time */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-white text-sm font-medium mb-2">
                     Date <span className="text-red-400">*</span>
@@ -1117,18 +1152,33 @@ const EventCreation = () => {
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-white text-sm font-medium mb-2">
-                    Time <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="time"
-                    name="time"
-                    value={formData.time}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-white text-sm font-medium mb-2">
+                      Start Time <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      name="startTime"
+                      value={formData.startTime}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white text-sm font-medium mb-2">
+                      End Time <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      name="endTime"
+                      value={formData.endTime}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1275,17 +1325,22 @@ const EventCreation = () => {
                 </div>
                 <div>
                   <label className="block text-white text-sm font-medium mb-2">
-                    Price
+                    Price <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
                     name="price.amount"
                     value={formData.price.amount}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      // Prevent removing the value entirely, default to 0
+                      const value = e.target.value === '' ? '0' : e.target.value;
+                      handleInputChange({ target: { name: 'price.amount', value } });
+                    }}
                     placeholder="₹0"
                     min="0"
                     step="0.01"
                     className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                    required
                   />
                 </div>
               </div>
@@ -1309,45 +1364,74 @@ const EventCreation = () => {
                 {formData.groupingOffers.enabled && (
                   <div className="space-y-3 pl-6 border-l-2 border-white/10">
                     {formData.groupingOffers.tiers.map((tier, index) => (
-                      <div key={index} className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-1">
-                            {index === 0 ? 'Label (Fixed)' : (tier.people > 0 ? `Group of ${tier.people} - People` : `Group ${index + 1} - People`)}
-                          </label>
-                          {index === 0 ? (
-                            <input
-                              type="text"
-                              value={tier.label}
-                              disabled
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm opacity-50 cursor-not-allowed"
-                            />
-                          ) : (
-                            <input
-                              type="number"
-                              value={tier.people}
-                              onChange={(e) => handleGroupingTierChange(index, 'people', e.target.value)}
-                              placeholder="No. of people"
-                              min="2"
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                            />
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white text-xs font-medium">
+                            {index === 0 ? 'Single' : `Group ${index + 1}`}
+                          </span>
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => removeGroupingTier(index)}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           )}
                         </div>
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-1">
-                            Price (₹)
-                          </label>
-                          <input
-                            type="number"
-                            value={tier.price}
-                            onChange={(e) => handleGroupingTierChange(index, 'price', e.target.value)}
-                            placeholder="₹0"
-                            min="0"
-                            step="0.01"
-                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                          />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-gray-400 text-xs mb-1">
+                              {index === 0 ? 'Label' : 'People'}
+                            </label>
+                            {index === 0 ? (
+                              <input
+                                type="text"
+                                value={tier.label}
+                                disabled
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm opacity-50 cursor-not-allowed"
+                              />
+                            ) : (
+                              <input
+                                type="number"
+                                value={tier.people}
+                                onChange={(e) => handleGroupingTierChange(index, 'people', e.target.value)}
+                                placeholder="No. of people"
+                                min="2"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-gray-400 text-xs mb-1">
+                              Price (₹)
+                            </label>
+                            <input
+                              type="number"
+                              value={tier.price}
+                              onChange={(e) => handleGroupingTierChange(index, 'price', e.target.value)}
+                              placeholder="₹0"
+                              min="0"
+                              step="0.01"
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Add More Button - Show if less than 4 tiers */}
+                    {formData.groupingOffers.tiers.length < 4 && (
+                      <button
+                        type="button"
+                        onClick={addGroupingTier}
+                        className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
+                      >
+                        <span className="text-lg">+</span>
+                        <span>Add More</span>
+                      </button>
+                    )}
+                    
                     <p className="text-xs text-gray-400 italic mt-2">
                       💡 Set different prices for single tickets and group bookings
                     </p>

@@ -127,7 +127,33 @@ const BillingPage = () => {
         };
       }
 
-      // Create payment order
+      // Handle free events - register directly without payment
+      if (pricing.grandTotal === 0) {
+        console.log('Free event detected, registering directly without payment');
+        
+        const registrationData = {
+          quantity: billingData.quantity,
+          basePrice: 0,
+          gstAndOtherCharges: 0,
+          platformFees: 0,
+          totalAmount: 0,
+          additionalPersons: billingData.additionalPersons
+        };
+
+        if (billingData.groupingOffer) {
+          registrationData.groupingOffer = billingData.groupingOffer;
+        }
+
+        const registerResponse = await api.post(`/events/${event._id}/register`, registrationData);
+        
+        if (registerResponse.data.success || registerResponse.status === 200) {
+          toast.success('Successfully registered for the event! Check your email for tickets.');
+          navigate('/profile');
+        }
+        return;
+      }
+
+      // Handle paid events - proceed with payment gateway
       const paymentResponse = await api.post('/payments/create-order', {
         eventId: event._id,
         quantity: pricing.numberOfPeople,
@@ -226,7 +252,9 @@ const BillingPage = () => {
                 <div className="flex-1">
                   <h4 className="text-lg font-semibold text-white mb-2">{event.title}</h4>
                   <p className="text-gray-400 text-sm">
-                    {formatDate(event.date)} | {event.time}
+                    {formatDate(event.date)} | {event.startTime && event.endTime 
+                      ? `${event.startTime} - ${event.endTime}` 
+                      : event.time}
                   </p>
                   <p className="text-gray-400 text-sm mt-1">{event.location?.city}</p>
                 </div>

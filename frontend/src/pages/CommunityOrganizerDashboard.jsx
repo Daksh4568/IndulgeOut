@@ -185,7 +185,7 @@ const CommunityOrganizerDashboard = () => {
         {actionItems.map((item) => (
           <div
             key={item.id}
-            className={`flex-shrink-0 w-80 border rounded-xl p-5 ${getActionColor(item.priority)}`}
+            className={`flex-shrink-0 w-80 border rounded-xl p-5 flex flex-col ${getActionColor(item.priority)}`}
           >
             <div className="flex items-start justify-between mb-3">
               <div className={`p-2 rounded-lg ${
@@ -217,18 +217,23 @@ const CommunityOrganizerDashboard = () => {
                 )}
               </div>
             )}
-            <button
-              onClick={() => handleActionClick(item)}
-              className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                item.priority === 'high' 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : item.priority === 'medium'
-                  ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {item.ctaText || 'Fix Now'}
-            </button>
+            {/* Spacer to push button to bottom */}
+            <div className="flex-grow"></div>
+            {/* Hide button for low_fill (Promote Event) actions */}
+            {item.type !== 'low_fill' && (
+              <button
+                onClick={() => handleActionClick(item)}
+                className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors mt-4 ${
+                  item.priority === 'high' 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : item.priority === 'medium'
+                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {item.ctaText || 'Fix Now'}
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -246,6 +251,9 @@ const CommunityOrganizerDashboard = () => {
       case 'missing_kyc':
       case 'complete_kyc':
         navigate('/kyc-setup');
+        break;
+      case 'profile_incomplete':
+        navigate('/profile');
         break;
       case 'low_fill':
         navigate(`/organizer/events/${action.eventId}/promote`);
@@ -422,9 +430,23 @@ const CommunityOrganizerDashboard = () => {
                           >
                             {event.title}
                           </h3>
-                          <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
-                            {statusBadge.text}
-                          </span>
+                          <div className="flex items-center gap-2 ml-2">
+                            <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
+                              {statusBadge.text}
+                            </span>
+                            {event.status !== 'completed' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/edit-event/${event._id}`);
+                                }}
+                                className="p-1.5 hover:bg-gray-800 rounded transition-colors"
+                                title="Edit Event"
+                              >
+                                <Edit className="h-4 w-4 text-gray-400 hover:text-white" />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Date & Time */}
@@ -439,7 +461,7 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.time || '7:00 PM - 10:00 PM'}</span>
+                            <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
                           </div>
                         </div>
 
@@ -481,25 +503,14 @@ const CommunityOrganizerDashboard = () => {
                             <span>View</span>
                           </button>
 
-                          {/* Edit Button - Not for past events */}
-                          {event.status !== 'completed' && (
-                            <button
-                              onClick={() => navigate(`/edit-event/${event._id}`)}
-                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span>Edit</span>
-                            </button>
-                          )}
-
                           {/* Analytics Button - For events with bookings */}
                           {event.currentParticipants > 0 && (
                             <button
                               onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
-                              className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                              title="Analytics"
+                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
                               <BarChart3 className="h-4 w-4" />
+                              <span>Analytics</span>
                             </button>
                           )}
 
@@ -566,9 +577,23 @@ const CommunityOrganizerDashboard = () => {
                           >
                             {event.title}
                           </h3>
-                          <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
-                            {statusBadge.text}
-                          </span>
+                          <div className="flex items-center gap-2 ml-2">
+                            <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
+                              {statusBadge.text}
+                            </span>
+                            {event.status !== 'completed' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/edit-event/${event._id}`);
+                                }}
+                                className="p-1.5 hover:bg-gray-800 rounded transition-colors"
+                                title="Edit Event"
+                              >
+                                <Edit className="h-4 w-4 text-gray-400 hover:text-white" />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Date & Time */}
@@ -583,7 +608,7 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.time || '7:00 PM - 10:00 PM'}</span>
+                            <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
                           </div>
                         </div>
 
@@ -625,25 +650,14 @@ const CommunityOrganizerDashboard = () => {
                             <span>View</span>
                           </button>
 
-                          {/* Edit Button - Not for past events */}
-                          {event.status !== 'completed' && (
-                            <button
-                              onClick={() => navigate(`/edit-event/${event._id}`)}
-                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span>Edit</span>
-                            </button>
-                          )}
-
                           {/* Analytics Button - For events with bookings */}
                           {event.currentParticipants > 0 && (
                             <button
                               onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
-                              className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                              title="Analytics"
+                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
                               <BarChart3 className="h-4 w-4" />
+                              <span>Analytics</span>
                             </button>
                           )}
 
@@ -727,9 +741,23 @@ const CommunityOrganizerDashboard = () => {
                         >
                           {event.title}
                         </h3>
-                        <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
-                          {statusBadge.text}
-                        </span>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
+                            {statusBadge.text}
+                          </span>
+                          {event.status !== 'completed' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/edit-event/${event._id}`);
+                              }}
+                              className="p-1.5 hover:bg-gray-800 rounded transition-colors"
+                              title="Edit Event"
+                            >
+                              <Edit className="h-4 w-4 text-gray-400 hover:text-white" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Date & Time */}
@@ -744,7 +772,7 @@ const CommunityOrganizerDashboard = () => {
                         </div>
                         <div className="flex items-center text-sm text-gray-400">
                           <Clock className="h-4 w-4 mr-2" />
-                          <span>{event.time || '7:00 PM - 10:00 PM'}</span>
+                          <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
                         </div>
                       </div>
 
@@ -786,25 +814,14 @@ const CommunityOrganizerDashboard = () => {
                           <span>View</span>
                         </button>
 
-                        {/* Edit Button - Not for past events */}
-                        {event.status !== 'completed' && (
-                          <button
-                            onClick={() => navigate(`/edit-event/${event._id}`)}
-                            className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span>Edit</span>
-                          </button>
-                        )}
-
                         {/* Analytics Button - For events with bookings */}
                         {event.currentParticipants > 0 && (
                           <button
                             onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
-                            className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Analytics"
+                            className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                           >
                             <BarChart3 className="h-4 w-4" />
+                            <span>Analytics</span>
                           </button>
                         )}
 
@@ -872,9 +889,23 @@ const CommunityOrganizerDashboard = () => {
                           >
                             {event.title}
                           </h3>
-                          <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
-                            {statusBadge.text}
-                          </span>
+                          <div className="flex items-center gap-2 ml-2">
+                            <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
+                              {statusBadge.text}
+                            </span>
+                            {event.status !== 'completed' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/edit-event/${event._id}`);
+                                }}
+                                className="p-1.5 hover:bg-gray-800 rounded transition-colors"
+                                title="Edit Event"
+                              >
+                                <Edit className="h-4 w-4 text-gray-400 hover:text-white" />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Date & Time */}
@@ -889,7 +920,7 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.time || '7:00 PM - 10:00 PM'}</span>
+                            <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
                           </div>
                         </div>
 
@@ -931,25 +962,14 @@ const CommunityOrganizerDashboard = () => {
                             <span>View</span>
                           </button>
 
-                          {/* Edit Button - Not for past events */}
-                          {event.status !== 'completed' && (
-                            <button
-                              onClick={() => navigate(`/edit-event/${event._id}`)}
-                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span>Edit</span>
-                            </button>
-                          )}
-
                           {/* Analytics Button - For events with bookings */}
                           {event.currentParticipants > 0 && (
                             <button
                               onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
-                              className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                              title="Analytics"
+                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
                               <BarChart3 className="h-4 w-4" />
+                              <span>Analytics</span>
                             </button>
                           )}
 
@@ -1025,7 +1045,7 @@ const CommunityOrganizerDashboard = () => {
       const eventDetails = `
 Event: ${event.title}
 Date: ${new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-Time: ${event.time || '7:00 PM - 10:00 PM'}
+Time: ${event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}
 Location: ${event.location?.address || ''}, ${event.location?.city || ''}
 Capacity: ${event.maxParticipants || '0'}
 Price: ₹${event.price?.amount || 0}

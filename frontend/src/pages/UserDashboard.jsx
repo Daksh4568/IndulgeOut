@@ -319,7 +319,11 @@ const UserDashboard = () => {
           {emptyState.cta && (
             <button 
               onClick={emptyState.action}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              className="text-white px-6 py-3 rounded-lg transition-all hover:opacity-90 font-bold"
+              style={{ 
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                fontFamily: 'Oswald, sans-serif'
+              }}
             >
               {emptyState.cta}
             </button>
@@ -637,7 +641,7 @@ const UserDashboard = () => {
                   
                   {/* Profile Content (blurred) */}
                   <div className="flex flex-col items-center">
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mb-3"></div>
+                    <div className="h-16 w-16 rounded-full mb-3" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}></div>
                     <div className="h-4 w-20 bg-gray-600 rounded mb-2"></div>
                     <div className="h-3 w-16 bg-gray-700 rounded"></div>
                   </div>
@@ -661,7 +665,7 @@ const UserDashboard = () => {
                   
                   {/* Profile Content (blurred) */}
                   <div className="flex flex-col items-center">
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mb-3"></div>
+                    <div className="h-16 w-16 rounded-full mb-3" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}></div>
                     <div className="h-4 w-20 bg-gray-600 rounded mb-2"></div>
                     <div className="h-3 w-16 bg-gray-700 rounded"></div>
                   </div>
@@ -702,90 +706,90 @@ const UserDashboard = () => {
           {/* Desktop Grid */}
           <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Credit Balance */}
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg p-6 text-white">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <Gift className="h-8 w-8 opacity-80" />
-                <span className="text-sm opacity-80">Available</span>
+                <Gift className="h-8 w-8" />
+                <span className="text-sm">Available</span>
               </div>
               <div className="text-3xl font-bold mb-1">₹{rewards.credits || 0}</div>
-              <p className="text-sm opacity-90">Credits Balance</p>
+              <p className="text-sm text-gray-400">Credits Balance</p>
             </div>
 
             {/* VIP Status */}
-            <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg p-6 text-white">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <Crown className="h-8 w-8 opacity-80" />
+                <Crown className="h-8 w-8" />
                 <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                  {rewards.tier || 'Silver'}
+                  {rewards.tier || 'Bronze'}
                 </span>
               </div>
               <div className="text-2xl font-bold mb-1">{rewards.points || 0} pts</div>
-              <p className="text-sm opacity-90">VIP Points</p>
+              <p className="text-sm text-gray-400">VIP Points</p>
             </div>
 
             {/* Referral Count */}
-            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg p-6 text-white">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <UserPlus className="h-8 w-8 opacity-80" />
-                <span className="text-sm opacity-80">Invited</span>
+                <UserPlus className="h-8 w-8" />
+                <span className="text-sm">Invited</span>
               </div>
               <div className="text-3xl font-bold mb-1">{rewards.referrals || 0}</div>
-              <p className="text-sm opacity-90">Friends Referred</p>
+              <p className="text-sm text-gray-400">Friends Referred</p>
             </div>
 
             {/* Events Attended */}
-            <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg p-6 text-white">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <Trophy className="h-8 w-8 opacity-80" />
-                <span className="text-sm opacity-80">Total</span>
+                <Trophy className="h-8 w-8" />
+                <span className="text-sm">Total</span>
               </div>
               <div className="text-3xl font-bold mb-1">{rewards.eventsAttended || 0}</div>
-              <p className="text-sm opacity-90">Events Attended</p>
+              <p className="text-sm text-gray-400">Events Attended</p>
             </div>
           </div>
 
           {/* Mobile Horizontal Scroll */}
           <div className="md:hidden flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {/* Credit Balance */}
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg p-6 text-white flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700 flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
               <div className="flex items-center justify-between mb-2">
-                <Gift className="h-8 w-8 opacity-80" />
-                <span className="text-sm opacity-80">Available</span>
+                <Gift className="h-8 w-8" />
+                <span className="text-sm">Available</span>
               </div>
               <div className="text-3xl font-bold mb-1">₹{rewards.credits || 0}</div>
-              <p className="text-sm opacity-90">Credits Balance</p>
+              <p className="text-sm text-gray-400">Credits Balance</p>
             </div>
 
             {/* VIP Status */}
-            <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg p-6 text-white flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700 flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
               <div className="flex items-center justify-between mb-2">
-                <Crown className="h-8 w-8 opacity-80" />
+                <Crown className="h-8 w-8" />
                 <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                  {rewards.tier || 'Silver'}
+                  {rewards.tier || 'Bronze'}
                 </span>
               </div>
               <div className="text-2xl font-bold mb-1">{rewards.points || 0} pts</div>
-              <p className="text-sm opacity-90">VIP Points</p>
+              <p className="text-sm text-gray-400">VIP Points</p>
             </div>
 
             {/* Referral Count */}
-            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg p-6 text-white flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700 flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
               <div className="flex items-center justify-between mb-2">
-                <UserPlus className="h-8 w-8 opacity-80" />
-                <span className="text-sm opacity-80">Invited</span>
+                <UserPlus className="h-8 w-8" />
+                <span className="text-sm">Invited</span>
               </div>
               <div className="text-3xl font-bold mb-1">{rewards.referrals || 0}</div>
-              <p className="text-sm opacity-90">Friends Referred</p>
+              <p className="text-sm text-gray-400">Friends Referred</p>
             </div>
 
             {/* Events Attended */}
-            <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg p-6 text-white flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
+            <div className="bg-zinc-800 rounded-lg p-6 text-white border border-gray-700 flex-shrink-0 w-[calc(100vw-3rem)] snap-center">
               <div className="flex items-center justify-between mb-2">
-                <Trophy className="h-8 w-8 opacity-80" />
-                <span className="text-sm opacity-80">Total</span>
+                <Trophy className="h-8 w-8" />
+                <span className="text-sm">Total</span>
               </div>
               <div className="text-3xl font-bold mb-1">{rewards.eventsAttended || 0}</div>
-              <p className="text-sm opacity-90">Events Attended</p>
+              <p className="text-sm text-gray-400">Events Attended</p>
             </div>
           </div>
         </div>
@@ -812,7 +816,13 @@ const UserDashboard = () => {
             Refer {10 - (rewards.referrals || 0)} more friends to unlock ₹500 bonus credits!
           </p>
 
-          <button className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+          <button 
+            className="w-full text-white py-3 rounded-lg transition-all hover:opacity-90 font-bold"
+            style={{ 
+              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+              fontFamily: 'Oswald, sans-serif'
+            }}
+          >
             <UserPlus className="h-4 w-4 inline mr-2" />
             Refer Friends
           </button>
@@ -1032,10 +1042,13 @@ const UserDashboard = () => {
                         onClick={() => setActiveTab('upcoming')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           activeTab === 'upcoming'
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                            ? 'text-white'
                             : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
-                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                        style={activeTab === 'upcoming' ? { 
+                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          fontFamily: 'Oswald, sans-serif'
+                        } : { fontFamily: 'Oswald, sans-serif' }}
                       >
                         Upcoming
                       </button>
@@ -1043,10 +1056,13 @@ const UserDashboard = () => {
                         onClick={() => setActiveTab('past')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           activeTab === 'past'
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                            ? 'text-white'
                             : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
-                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                        style={activeTab === 'past' ? { 
+                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          fontFamily: 'Oswald, sans-serif'
+                        } : { fontFamily: 'Oswald, sans-serif' }}
                       >
                         Past
                       </button>
@@ -1054,10 +1070,13 @@ const UserDashboard = () => {
                         onClick={() => setActiveTab('saved')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           activeTab === 'saved'
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                            ? 'text-white'
                             : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
-                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                        style={activeTab === 'saved' ? { 
+                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          fontFamily: 'Oswald, sans-serif'
+                        } : { fontFamily: 'Oswald, sans-serif' }}
                       >
                         Saved
                       </button>

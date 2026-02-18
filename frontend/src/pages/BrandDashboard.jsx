@@ -665,7 +665,7 @@ const BrandDashboard = () => {
                   {actionsRequired.map((action, index) => (
                     <div
                       key={index}
-                      className="flex-shrink-0 w-80 bg-zinc-900 rounded-xl p-5 border border-gray-800 hover:border-red-500/50 transition-all"
+                      className="flex flex-col flex-shrink-0 w-80 bg-zinc-900 rounded-xl p-5 border border-gray-800 hover:border-red-500/50 transition-all"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="p-2 rounded-lg bg-red-500/20">
@@ -683,11 +683,12 @@ const BrandDashboard = () => {
                       <p className="text-sm text-gray-400 mb-4 line-clamp-2">
                         {action.description}
                       </p>
+                      <div className="flex-grow"></div>
                       <button
                         onClick={() =>
                           handleActionClick(action.type, action.itemId)
                         }
-                        className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
+                        className="w-full px-4 py-2 mt-4 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
                       >
                         <span>{action.ctaText || "Respond"}</span>
                         <ArrowRight className="h-4 w-4" />

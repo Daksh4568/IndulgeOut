@@ -538,7 +538,7 @@ export default function ExplorePage() {
             {/* Events Tab */}
             {tab === 'events' && (
               <div className="space-y-12">
-                {/* Upcoming Events Section - Horizontal Carousel */}
+                {/* Upcoming Events Section - Horizontal Carousel - COMMENTED OUT
                 {!searchQuery && topEvents.length > 0 && (
                   <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden rounded-2xl p-6 sm:p-8">
                     <div className="text-center mb-8">
@@ -548,7 +548,7 @@ export default function ExplorePage() {
                       <p className="text-gray-400 text-base" style={{ fontFamily: 'Source Serif Pro, serif' }}>Don't miss these popular experiences</p>
                     </div>
                     <div className="relative">
-                      {/* Left Arrow */}
+                      Left Arrow
                       <button
                         onClick={() => scrollCarousel('left')}
                         className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hidden sm:block"
@@ -556,7 +556,7 @@ export default function ExplorePage() {
                         <ChevronLeft className="h-6 w-6 text-gray-800" />
                       </button>
 
-                      {/* Carousel */}
+                      Carousel
                       <div 
                         ref={carouselRef}
                         onScroll={handleCarouselScroll}
@@ -571,31 +571,31 @@ export default function ExplorePage() {
                               animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
                             }}
                           >
-                            {/* Event Card */}
+                            Event Card
                             <div className="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all">
                               <div className="flex flex-row min-h-[280px] max-h-[320px]">
-                                {/* Left Side - Content */}
+                                Left Side - Content
                                 <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
                                   <div>
-                                    {/* Date */}
+                                    Date
                                     <div className="flex items-center gap-2 text-gray-700 mb-3">
                                       <Calendar className="h-4 w-4 flex-shrink-0" />
                                       <span className="text-sm font-bold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time || '6:30 PM'}
+                                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '6:30 PM'}
                                       </span>
                                     </div>
                                     
-                                    {/* Title */}
+                                    Title
                                     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                       {event.title}
                                     </h3>
                                     
-                                    {/* Category/Type */}
+                                    Category/Type
                                     <p className="text-sm text-gray-700 mb-3 font-semibold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                                       {event.category || 'Live Performances'} · {event.type || 'Music'} · {event.genre || 'Alternative'}
                                     </p>
                                     
-                                    {/* Location */}
+                                    Location
                                     <div className="flex items-start gap-2 text-gray-700 mb-3">
                                       <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                       <span className="text-sm font-bold line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
@@ -603,7 +603,7 @@ export default function ExplorePage() {
                                       </span>
                                     </div>
                                     
-                                    {/* Price */}
+                                    Price
                                     <div className="mb-3">
                                       <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                         ₹{event.price?.amount || 499} onwards
@@ -611,7 +611,7 @@ export default function ExplorePage() {
                                     </div>
                                   </div>
                                   
-                                  {/* Button */}
+                                  Button
                                   <button
                                     onClick={() => window.location.href = `/events/${event._id}`}
                                     className="w-full text-white px-8 py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-xl"
@@ -621,13 +621,13 @@ export default function ExplorePage() {
                                   </button>
                                 </div>
 
-                                {/* Right Side - Image */}
+                                Right Side - Image
                                 <div className="w-[45%] p-4 flex items-center justify-center">
                                   <div className="relative w-full max-w-[250px]">
-                                    {/* Shadow frame effect */}
+                                    Shadow frame effect
                                     <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg transform rotate-2 shadow-2xl"></div>
                                     
-                                    {/* Image container */}
+                                    Image container
                                     <div className="relative bg-white rounded-lg overflow-hidden shadow-xl aspect-[3/4]">
                                       {event.images && event.images.length > 0 ? (
                                         <img
@@ -651,7 +651,7 @@ export default function ExplorePage() {
                         ))}
                       </div>
 
-                      {/* Right Arrow */}
+                      Right Arrow
                       <button
                         onClick={() => scrollCarousel('right')}
                         className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hidden sm:block"
@@ -660,7 +660,7 @@ export default function ExplorePage() {
                       </button>
                     </div>
 
-                    {/* Carousel Dots */}
+                    Carousel Dots
                     {topEvents.length > 1 && (
                       <div className="hidden sm:flex justify-center gap-2 mt-6">
                         {topEvents.map((_, index) => (
@@ -694,6 +694,7 @@ export default function ExplorePage() {
                     `}</style>
                   </section>
                 )}
+                END COMMENTED OUT SECTION */}
 
                 {/* All Events Grid */}
                 <section>

@@ -38,40 +38,46 @@ export default function NotificationDropdown({ onClose }) {
       await markAsRead(notification._id);
     }
 
-    // Navigate based on notification type and available data
-    if (notification.actionButton?.link) {
-      let targetLink = notification.actionButton.link;
-      
-      console.log('📍 Initial link:', targetLink);
-      console.log('📋 Notification type:', notification.type);
-      console.log('🏷️ Notification title:', notification.title);
-      
-      // Handle payout/KYC notifications - navigate to profile with payout section
-      if (notification.type === 'kyc_pending' || 
-          notification.title.toLowerCase().includes('payout') || 
-          notification.title.toLowerCase().includes('kyc') ||
-          notification.message.toLowerCase().includes('bank details')) {
-        targetLink = '/profile?section=payout';
-        console.log('💳 Detected payout notification, navigating to:', targetLink);
-      }
-      // Handle ticket-related notifications - navigate to user dashboard with specific eventId
-      else if (notification.type === 'booking_confirmed' || 
-          notification.type === 'checkin_qr_ready' || 
-          targetLink.startsWith('/tickets/')) {
-        // Get the event ID from relatedEvent to auto-open that specific ticket
-        const eventId = notification.relatedEvent?._id || notification.relatedEvent;
-        targetLink = eventId ? `/user/dashboard?eventId=${eventId}` : '/user/dashboard';
-      }
-      // Handle related event links if present
-      else if (notification.relatedEvent?._id && targetLink.includes('/events/')) {
-        targetLink = `/event/${notification.relatedEvent._id}`;
-      }
-      
+    let targetLink = notification.actionButton?.link || null;
+    
+    console.log('📍 Initial link:', targetLink);
+    console.log('📋 Notification type:', notification.type);
+    console.log('🏷️ Notification title:', notification.title);
+    
+    // Handle "Complete Your Host Profile" notifications - navigate to profile page
+    if (notification.title.toLowerCase().includes('complete your') && 
+        notification.title.toLowerCase().includes('profile')) {
+      targetLink = '/profile';
+      console.log('👤 Detected profile completion notification, navigating to:', targetLink);
+    }
+    // Handle payout/KYC notifications - navigate to profile with payout section
+    else if (notification.type === 'kyc_pending' || 
+        notification.title.toLowerCase().includes('payout') || 
+        notification.title.toLowerCase().includes('kyc') ||
+        notification.message.toLowerCase().includes('bank details')) {
+      targetLink = '/profile?section=payout';
+      console.log('💳 Detected payout notification, navigating to:', targetLink);
+    }
+    // Handle ticket-related notifications - navigate to user dashboard with specific eventId
+    else if (notification.type === 'booking_confirmed' || 
+        notification.type === 'checkin_qr_ready' || 
+        (targetLink && targetLink.startsWith('/tickets/'))) {
+      // Get the event ID from relatedEvent to auto-open that specific ticket
+      const eventId = notification.relatedEvent?._id || notification.relatedEvent;
+      targetLink = eventId ? `/user/dashboard?eventId=${eventId}` : '/user/dashboard';
+    }
+    // Handle related event links if present
+    else if (notification.relatedEvent?._id && targetLink && targetLink.includes('/events/')) {
+      targetLink = `/event/${notification.relatedEvent._id}`;
+    }
+    
+    // Navigate if we have a target link
+    if (targetLink) {
       console.log('🚀 Final navigation target:', targetLink);
       navigate(targetLink);
       onClose();
     } else {
-      console.log('⚠️ No action button link found');
+      console.log('⚠️ No navigation target determined for this notification');
     }
   };
 

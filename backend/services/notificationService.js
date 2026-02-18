@@ -251,19 +251,38 @@ async function notifyProfileIncompleteUser(userId, missingFields) {
 
 /**
  * Notify host to complete profile
+ * Throttled to once every 24 hours
  */
 async function notifyProfileIncompleteHost(userId) {
-  return createNotification({
-    recipient: userId,
-    type: 'profile_incomplete_community_organizer',
-    category: 'action_required',
-    priority: 'high',
-    title: '🎯 Complete Your Host Profile',
-    message: 'Complete your profile to start creating events and reach more attendees.',
-    actionUrl: '/dashboard/profile',
-    actionText: 'Complete Profile',
-    metadata: {}
-  });
+  try {
+    // Check if there's a recent notification of this type (within last 24 hours)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentNotification = await Notification.findOne({
+      recipient: userId,
+      type: 'profile_incomplete_community_organizer',
+      createdAt: { $gte: twentyFourHoursAgo }
+    });
+
+    if (recentNotification) {
+      console.log(`⏳ Profile completion notification already sent to user ${userId} within last 24 hours. Skipping.`);
+      return null;
+    }
+
+    return createNotification({
+      recipient: userId,
+      type: 'profile_incomplete_community_organizer',
+      category: 'action_required',
+      priority: 'high',
+      title: '🎯 Complete Your Host Profile',
+      message: 'Complete your profile to start creating events and reach more attendees.',
+      actionUrl: '/profile',
+      actionText: 'Complete Profile',
+      metadata: {}
+    });
+  } catch (error) {
+    console.error('Error in notifyProfileIncompleteHost:', error);
+    return null;
+  }
 }
 
 /**

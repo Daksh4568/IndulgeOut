@@ -167,7 +167,8 @@ router.post('/', authMiddleware, [
   body('description').trim().isLength({ min: 10 }).withMessage('Description must be at least 10 characters'),
   body('categories').isArray({ min: 1 }).withMessage('At least one category is required'),
   body('date').isISO8601().withMessage('Valid date is required'),
-  body('time').notEmpty().withMessage('Time is required'),
+  body('startTime').notEmpty().withMessage('Start time is required'),
+  body('endTime').notEmpty().withMessage('End time is required'),
   body('location.address').notEmpty().withMessage('Address is required'),
   body('location.city').notEmpty().withMessage('City is required'),
   body('maxParticipants').isInt({ min: 1 }).withMessage('Max participants must be at least 1')
@@ -435,32 +436,15 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       }
     });
 
-    // Send tickets to additional persons if provided
-    if (additionalPersons && additionalPersons.length > 0) {
+    // Send tickets to additional persons if provided (share the same ticket)
+    if (additionalPersons && additionalPersons.length > 0 && ticket) {
       console.log(`📧 [Additional Persons] Sending tickets to ${additionalPersons.length} additional person(s)`);
       setImmediate(async () => {
         for (const person of additionalPersons) {
           if (person.email && person.name) {
             try {
-              // Generate separate ticket for each additional person
-              const additionalTicket = await ticketService.generateTicket({
-                userId: userId, // Associate with primary user
-                eventId: event._id,
-                amount: 0, // No additional charge
-                paymentId: req.body.paymentId || null,
-                ticketType: 'guest',
-                quantity: 1,
-                metadata: {
-                  registrationSource: 'web',
-                  registeredAt: new Date(),
-                  guestName: person.name,
-                  guestEmail: person.email,
-                  primaryUserId: userId,
-                  slotsBooked: 1
-                }
-              });
-              
-              await sendEventRegistrationEmail(person.email, person.name, event, additionalTicket);
+              // Send the same ticket to additional person (they share the booking)
+              await sendEventRegistrationEmail(person.email, person.name, event, ticket);
               console.log(`✅ [Additional Person] Ticket sent to: ${person.email}`);
             } catch (guestError) {
               console.error(`❌ [Additional Person] Failed to send ticket to ${person.email}:`, guestError.message);

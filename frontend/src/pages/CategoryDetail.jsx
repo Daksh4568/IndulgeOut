@@ -20,32 +20,11 @@ const CategoryDetail = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [openFAQ, setOpenFAQ] = useState(null);
   const [stats, setStats] = useState({
     totalEvents: 0,
     upcomingEvents: 0,
     totalParticipants: 0
   });
-
-  // FAQ data
-  const faqs = [
-    {
-      question: "Who Can Get Subscribed?",
-      answer: "Anyone looking to attend events in this category can subscribe. We regularly post about new events tailored to your interests."
-    },
-    {
-      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
-      answer: "IndulgeOut focuses on curated experiences that match your unique interests. We connect you with like-minded people and authentic local experiences."
-    },
-    {
-      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
-      answer: "We emphasize community building and meaningful connections over just ticket sales. Every event is handpicked for quality and authenticity."
-    },
-    {
-      question: "How Is IndulgeOut Different From Other Mainstream Platforms?",
-      answer: "Our platform offers personalized recommendations, interest-based discovery, and a vibrant community of experience seekers."
-    }
-  ];
 
   // If category not found, redirect to categories page
   useEffect(() => {
@@ -155,17 +134,17 @@ const CategoryDetail = () => {
         {/* Content Overlay */}
         <div className="relative h-full flex flex-col justify-center items-center text-center px-4">
           <h1 
-            className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 uppercase"
+            className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4"
             style={{ fontFamily: 'Oswald, sans-serif' }}
           >
             {(() => {
-              // Handle different category name formats
+              // Handle different category name formats - preserve original case and commas
               if (category.name.includes(',')) {
-                // For "Art, Music & Dance" -> "ART, MUSIC & DANCE" (keep as is)
+                // For "Wellness, Fitness & Sports" or "Art, Music & Dance"
                 const parts = category.name.split(', ');
                 return (
                   <>
-                    {parts[0]} <span className="text-purple-400">&</span>{' '}
+                    {parts[0]},{' '}
                     <span 
                       className="bg-gradient-to-r from-[#7878E9] to-[#B794F6] bg-clip-text text-transparent"
                     >
@@ -178,11 +157,11 @@ const CategoryDetail = () => {
                 const parts = category.name.split(' & ');
                 return (
                   <>
-                    {parts[0]} <span className="text-purple-400">&</span>{' '}
+                    {parts[0].toUpperCase()} <span className="text-purple-400">&</span>{' '}
                     <span 
                       className="bg-gradient-to-r from-[#7878E9] to-[#B794F6] bg-clip-text text-transparent"
                     >
-                      {parts[1]}
+                      {parts[1].toUpperCase()}
                     </span>
                   </>
                 );
@@ -191,11 +170,11 @@ const CategoryDetail = () => {
                 const parts = category.name.split(' ');
                 return (
                   <>
-                    {parts[0]}{' '}
+                    {parts[0].toUpperCase()}{' '}
                     <span 
                       className="bg-gradient-to-r from-[#7878E9] to-[#B794F6] bg-clip-text text-transparent"
                     >
-                      {parts.slice(1).join(' ')}
+                      {parts.slice(1).join(' ').toUpperCase()}
                     </span>
                   </>
                 );
@@ -364,74 +343,7 @@ const CategoryDetail = () => {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-8 sm:py-12 lg:py-16 bg-black">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 
-            className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-center"
-            style={{ fontFamily: 'Oswald, sans-serif' }}
-          >
-            Frequently Asked <span className="text-[#6366F1]" style={{ fontStyle: 'italic' }}>Questions</span>
-          </h2>
-          <p 
-            className="text-gray-400 text-center mb-8 sm:mb-12 font-bold text-sm sm:text-base"
-            style={{ fontFamily: 'Source Serif Pro, serif' }}
-          >
-            In the Popup: Create your own event and bring people together around your unique passion.
-          </p>
 
-          <div className="space-y-3 sm:space-y-4">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className={`rounded-xl overflow-hidden transition-all ${
-                  openFAQ === index
-                    ? 'bg-gradient-to-br from-[#6366F1] to-[#4F46E5] border-0'
-                    : 'bg-transparent border-2 border-white/20'
-                }`}
-              >
-                <button
-                  onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                  className="w-full px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between text-left transition-colors"
-                >
-                  <span 
-                    className="font-semibold text-base sm:text-lg pr-4"
-                    style={{ fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    {faq.question}
-                  </span>
-                  <ChevronDown 
-                    className={`h-5 w-5 text-white flex-shrink-0 transition-transform ${
-                      openFAQ === index ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                
-                {openFAQ === index && (
-                  <div 
-                    className="px-4 pb-4 sm:px-6 sm:pb-5"
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    <p className="text-white leading-relaxed text-sm sm:text-base">{faq.answer}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-8 sm:mt-12">
-            <button
-              className="text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-md text-sm sm:text-base font-bold transition-all duration-300 shadow-2xl w-full sm:w-auto"
-              style={{ 
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                fontFamily: 'Oswald, sans-serif'
-              }}
-            >
-              Host Your Event
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* Login Prompt Modal */}
       {showLoginPrompt && (
