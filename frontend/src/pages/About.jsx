@@ -83,7 +83,7 @@ const About = () => {
                       alt="Friends gathering"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
-                        e.target.src = '/images/postercard1.jpg';
+                        e.target.src = '/images/about1.jpg';
                       }}
                     />
                     <div className="h-10"></div>
@@ -98,7 +98,7 @@ const About = () => {
                       alt="Community event"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
-                        e.target.src = '/images/postercard2.jpg';
+                        e.target.src = '/images/about2.jpg';
                       }}
                     />
                     <div className="h-10"></div>
@@ -116,7 +116,7 @@ const About = () => {
                       alt="Event celebration"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
-                        e.target.src = '/images/postercard3.jpg';
+                        e.target.src = '/images/about3.jpg';
                       }}
                     />
                     <div className="h-10"></div>
@@ -131,7 +131,7 @@ const About = () => {
                       alt="Happy attendees"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
-                        e.target.src = '/images/postercard4.jpg';
+                        e.target.src = '/images/about4.jpg';
                       }}
                     />
                     <div className="h-10"></div>
