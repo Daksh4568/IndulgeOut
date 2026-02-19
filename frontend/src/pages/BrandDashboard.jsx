@@ -23,6 +23,8 @@ import {
   Building2,
   Sparkles,
   Copy,
+  Users2,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import NavigationBar from "../components/NavigationBar";
@@ -251,6 +253,14 @@ const BrandDashboard = () => {
                 </button>
               </div>
             )}
+            <button
+              onClick={() => navigate('/collaborations')}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
+              style={{ fontFamily: "Oswald, sans-serif" }}
+            >
+              <FileText className="h-5 w-5" />
+              <span>Manage Collaborations</span>
+            </button>
           </div>
         </div>
 
@@ -538,7 +548,7 @@ const BrandDashboard = () => {
               title="Dashboard"
             >
               <Grid className="h-6 w-6" />
-              <span className="text-xs font-medium">Dashboard</span>
+              <span className="text-xs font-medium">ALL</span>
             </button>
 
             {/* Actions Required */}
@@ -568,6 +578,28 @@ const BrandDashboard = () => {
               <span className="text-xs font-medium">Actions</span>
             </button>
 
+            {/* Collaborations */}
+            <button
+              onClick={() => setActiveSidebarItem("collaborations")}
+              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
+                activeSidebarItem === "collaborations"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
+              }`}
+              style={
+                activeSidebarItem === "collaborations"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
+              title="Collaborations"
+            >
+              <Users2 className="h-6 w-6" />
+              <span className="text-xs font-medium">Collaborations</span>
+            </button>
+
             {/* Analytics */}
             <button
               onClick={() => setActiveSidebarItem("analytics")}
@@ -590,27 +622,6 @@ const BrandDashboard = () => {
               <span className="text-xs font-medium">Analytics</span>
             </button>
 
-            {/* Help */}
-            <button
-              onClick={() => setActiveSidebarItem("help")}
-              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === "help"
-                  ? "text-white"
-                  : "text-gray-600 hover:text-gray-400"
-              }`}
-              style={
-                activeSidebarItem === "help"
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    }
-                  : {}
-              }
-              title="Help"
-            >
-              <HelpCircle className="h-6 w-6" />
-              <span className="text-xs font-medium">Help</span>
-            </button>
           </nav>
         </aside>
 
@@ -707,7 +718,17 @@ const BrandDashboard = () => {
             </div>
 
             {/* Manage Collaborations Section */}
-            <ManageCollaborationsSection />
+            {(activeSidebarItem === 'all' || activeSidebarItem === 'collaborations') && (
+              <div className="mb-8">
+                <h2
+                  className="text-xl font-semibold text-white mb-4"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
+                  Collaborations
+                </h2>
+                <ManageCollaborationsSection />
+              </div>
+            )}
 
             {/* Performance & Insights Section */}
             <div className="mb-8">

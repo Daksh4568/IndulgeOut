@@ -4,6 +4,7 @@ const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const User = require('../models/User.js');
+const Community = require('../models/Community.js');
 const { sendWelcomeEmail } = require('../utils/emailService.js');
 const { uploadToCloudinary } = require('../config/cloudinary.js');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
@@ -224,6 +225,43 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
         });
       }
       throw saveError; // Re-throw other errors
+    }
+
+    // Create Community document for community_organizer
+    if (hostPartnerType === 'community_organizer' && communityName) {
+      try {
+        const communityData = {
+          name: communityName,
+          description: `Welcome to ${communityName}! Join us for exciting events and connect with like-minded people.`,
+          shortDescription: `Join ${communityName} community`,
+          category: category && category.length > 0 ? (Array.isArray(category) ? category[0] : category) : 'Social Mixers',
+          host: user._id,
+          location: {
+            city: city || 'Not specified',
+            state: '',
+            country: 'India'
+          },
+          images: photoUrls || [],
+          coverImage: photoUrls && photoUrls.length > 0 ? photoUrls[0] : null,
+          isPrivate: false,
+          memberLimit: 1000,
+          socialLinks: {
+            instagram: instagramLink || ''
+          },
+          members: [{
+            user: user._id,
+            role: 'admin',
+            joinedAt: new Date()
+          }]
+        };
+
+        const community = new Community(communityData);
+        await community.save();
+        console.log(`✅ Community created: ${communityName} for user ${email}`);
+      } catch (communityError) {
+        console.error('❌ Failed to create community:', communityError);
+        // Don't fail registration if community creation fails
+      }
     }
 
     // Generate JWT token

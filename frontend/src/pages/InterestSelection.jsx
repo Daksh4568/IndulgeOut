@@ -14,68 +14,40 @@ const InterestSelection = () => {
 
   const interests = [
     {
-      id: 'sip-savor',
-      name: 'Sip & Savor',
-      description: 'Food tastings, cooking classes, wine events',
-      color: 'bg-gradient-to-br from-orange-400 to-red-500',
-      icon: '🍷',
-      bgColor: 'from-orange-100 to-red-100'
-    },
-    {
-      id: 'sweat-play',
-      name: 'Sweat & Play',
-      description: 'Sports, fitness, outdoor activities',
-      color: 'bg-gradient-to-br from-blue-400 to-purple-500',
-      icon: '⚽',
-      bgColor: 'from-blue-100 to-purple-100'
-    },
-    {
-      id: 'art-diy',
-      name: 'Art & DIY',
-      description: 'Creative workshops, crafting, painting',
-      color: 'bg-gradient-to-br from-pink-400 to-purple-500',
-      icon: '🎨',
-      bgColor: 'from-pink-100 to-purple-100'
-    },
-    {
       id: 'social-mixers',
       name: 'Social Mixers',
       description: 'Networking, meetups, social events',
-      color: 'bg-gradient-to-br from-green-400 to-teal-500',
-      icon: '🤝',
-      bgColor: 'from-green-100 to-teal-100'
+      image: '/images/social-mixers.jpg'
     },
     {
-      id: 'adventure-outdoors',
-      name: 'Adventure & Outdoors',
-      description: 'Hiking, camping, nature exploration',
-      color: 'bg-gradient-to-br from-green-500 to-emerald-600',
-      icon: '🏕️',
-      bgColor: 'from-green-100 to-emerald-100'
+      id: 'wellness-fitness-sports',
+      name: 'Wellness, Fitness & Sports',
+      description: 'Sports, fitness, wellness activities',
+      image: '/images/wellness-fitness-sports.jpg'
     },
     {
-      id: 'epic-screenings',
-      name: 'Epic Screenings',
-      description: 'Movie nights, film discussions',
-      color: 'bg-gradient-to-br from-indigo-400 to-blue-600',
-      icon: '🎬',
-      bgColor: 'from-indigo-100 to-blue-100'
+      id: 'art-music-dance',
+      name: 'Art, Music & Dance',
+      description: 'Creative workshops, music, dance performances',
+      image: '/images/art-music-dance.jpg'
     },
     {
-      id: 'indoor-boardgames',
-      name: 'Indoor & Board Games',
-      description: 'Game nights, puzzles, strategy games',
-      color: 'bg-gradient-to-br from-purple-400 to-pink-500',
-      icon: '🎲',
-      bgColor: 'from-purple-100 to-pink-100'
+      id: 'immersive',
+      name: 'Immersive',
+      description: 'Immersive experiences and interactive events',
+      image: '/images/immersive.jpg'
     },
     {
-      id: 'music-performance',
-      name: 'Music & Performance',
-      description: 'Concerts, open mics, live performances',
-      color: 'bg-gradient-to-br from-yellow-400 to-orange-500',
-      icon: '🎵',
-      bgColor: 'from-yellow-100 to-orange-100'
+      id: 'food-beverage',
+      name: 'Food & Beverage',
+      description: 'Food tastings, cooking classes, culinary events',
+      image: '/images/food-beverage.jpg'
+    },
+    {
+      id: 'games',
+      name: 'Games',
+      description: 'Board games, gaming tournaments, game nights',
+      image: '/images/games.jpg'
     }
   ]
 
@@ -128,10 +100,10 @@ const InterestSelection = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+      <div className="bg-white dark:bg-black shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20 sm:h-24">
-            <img src="/images/indulgeout-logo.png" alt="IndulgeOut" className="h-16 sm:h-20 w-auto" />
+            <img src="/images/LogoFinal2.jpg" alt="IndulgeOut" className="h-16 sm:h-20 w-auto" />
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Step 2 of 2
@@ -178,17 +150,21 @@ const InterestSelection = () => {
                 )}
 
                 {/* Card Content */}
-                <div className={`${interest.color} h-40 flex items-center justify-center text-6xl relative`}>
-                  {interest.icon}
+                <div className="relative h-40 overflow-hidden">
+                  <img 
+                    src={interest.image} 
+                    alt={interest.name}
+                    className="w-full h-full object-cover"
+                  />
                   {/* Overlay for better text readability */}
-                  <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                  <div className="absolute inset-0 bg-black bg-opacity-30"></div>
                 </div>
                 
-                <div className={`bg-gradient-to-r ${interest.bgColor} p-6`}>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                <div className="bg-white dark:bg-gray-800 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                     {interest.name}
                   </h3>
-                  <p className="text-gray-700 text-sm">
+                  <p className="text-gray-700 dark:text-gray-300 text-sm">
                     {interest.description}
                   </p>
                 </div>
@@ -211,7 +187,8 @@ const InterestSelection = () => {
           <button
             onClick={handleSubmit}
             disabled={selectedInterests.length === 0 || isLoading}
-            className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors flex items-center mx-auto"
+            className="disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 hover:opacity-90 flex items-center mx-auto"
+            style={{ background: selectedInterests.length === 0 || isLoading ? '#d1d5db' : 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
           >
             {isLoading ? (
               <div className="flex items-center">

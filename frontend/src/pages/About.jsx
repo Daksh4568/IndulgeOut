@@ -79,7 +79,7 @@ const About = () => {
                 <div className="transform -rotate-12 w-36 lg:w-40 xl:w-44">
                   <div className="bg-white p-3 shadow-2xl">
                     <img
-                      src="/images/Media (10).jpg"
+                      src="/images/about1.jpg"
                       alt="Friends gathering"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
@@ -94,7 +94,7 @@ const About = () => {
                 <div className="transform rotate-6 w-36 lg:w-40 xl:w-44">
                   <div className="bg-white p-3 shadow-2xl">
                     <img
-                      src="/images/Media (11).jpg"
+                      src="/images/about2.jpg"
                       alt="Community event"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
@@ -112,7 +112,7 @@ const About = () => {
                 <div className="transform rotate-12 w-36 lg:w-40 xl:w-44">
                   <div className="bg-white p-3 shadow-2xl">
                     <img
-                      src="/images/Media (12).jpg"
+                      src="/images/about3.jpg"
                       alt="Event celebration"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
@@ -127,7 +127,7 @@ const About = () => {
                 <div className="transform -rotate-6 w-36 lg:w-40 xl:w-44">
                   <div className="bg-white p-3 shadow-2xl">
                     <img
-                      src="/images/Media (13).jpg"
+                      src="/images/about4.jpg"
                       alt="Happy attendees"
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
@@ -234,7 +234,7 @@ const About = () => {
                 </button>
                 <div className="mt-6">
                   <img
-                    src="/images/Media (10).jpg"
+                    src="/images/Media (5).jpg"
                     alt="Curated experiences"
                     className="w-full h-72 object-cover rounded-lg"
                     onError={(e) => {
@@ -260,7 +260,7 @@ const About = () => {
                 </button>
                 <div className="mt-6">
                   <img
-                    src="/images/Media (11).jpg"
+                    src="/images/Media (8).jpg"
                     alt="Collaboration"
                     className="w-full h-72 object-cover rounded-lg"
                     onError={(e) => {

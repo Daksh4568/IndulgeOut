@@ -167,9 +167,28 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['cafe', 'bar', 'studio', 'club', 'outdoor', 'restaurant', 'coworking', 'other']
     },
+    venueDescription: String,
+    logo: String,
+    coverImage: String,
+    googleMapsLink: String,
+    whatsapp: String,
+    spaceType: {
+      type: String,
+      enum: ['Indoor', 'Outdoor', 'Rooftop', 'Mixed']
+    },
+    seatingCapacity: Number,
+    operatingDays: [{
+      type: String,
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    }],
+    operatingHours: String,
+    parkingAvailability: {
+      type: String,
+      enum: ['Available', 'Not Available', 'Limited']
+    },
     capacityRange: {
       type: String,
-      enum: ['0-20', '20-40', '40-80', '80-150', '150-300', '300+']
+      enum: ['≤30', '30-50', '50-100', '100+', '0-20', '20-40', '40-80', '80-150', '150-300', '300+']
     },
     contactPerson: {
       name: String,
@@ -188,6 +207,16 @@ const userSchema = new mongoose.Schema({
     instagram: String,
     facebook: String,
     website: String,
+    commercialModel: {
+      type: String,
+      enum: ['Rental', 'Cover Charge', 'Revenue Share', 'Mixed']
+    },
+    defaultPricing: {
+      rentalFee: Number,
+      coverChargePerGuest: Number,
+      revenueSharePercentage: Number,
+      currency: { type: String, default: 'INR' }
+    },
     amenities: [{
       type: String,
       enum: ['wifi', 'parking', 'ac', 'sound_system', 'projector', 'kitchen', 'bar', 'outdoor_seating', 'stage', 'dance_floor', 'green_room', 'security']
@@ -202,8 +231,12 @@ const userSchema = new mongoose.Schema({
         default: '18+'
       },
       soundRestrictions: String,
+      soundCutoffTime: String,
       additionalRules: String,
-      entryCutoffTime: String
+      entryCutoffTime: String,
+      foodBeverageExclusivity: { type: Boolean, default: false },
+      externalVendorsAllowed: { type: Boolean, default: true },
+      decorationAllowed: { type: Boolean, default: true }
     },
     pricing: {
       hourlyRate: Number,
@@ -222,7 +255,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredEventFormats: [{
       type: String,
-      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+      enum: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation']
     }],
     preferredCollaborationTypes: [{
       type: String,
@@ -230,7 +263,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredAudienceTypes: [{
       type: String,
-      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+      enum: ['Students', 'Young Professionals', 'Founders / Creators', 'Families', 'Niche Community']
     }],
     nicheCommunityDescription: String
   },
@@ -263,6 +296,15 @@ const userSchema = new mongoose.Schema({
     facebook: String,
     linkedin: String,
     logo: String,
+    productPhotos: {
+      type: [String],
+      validate: {
+        validator: function(v) {
+          return v.length <= 5;
+        },
+        message: 'You can upload a maximum of 5 product photos'
+      }
+    },
     brandAssets: [String],
     budget: {
       min: Number,
@@ -277,7 +319,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredEventFormats: [{
       type: String,
-      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+      enum: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation']
     }],
     preferredCollaborationTypes: [{
       type: String,
@@ -285,7 +327,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredAudienceTypes: [{
       type: String,
-      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+      enum: ['Students', 'Young Professionals', 'Founders / Creators', 'Families', 'Niche Community']
     }],
     nicheCommunityDescription: String
   },
@@ -310,9 +352,13 @@ const userSchema = new mongoose.Schema({
       phone: String
     },
     communityDescription: String,
+    shortBio: String,
+    logo: String, // Community logo URL
+    coverImage: String, // Community cover image
     instagram: String,
     facebook: String,
     website: String,
+    linkedin: String,
     pastEventPhotos: {
       type: [String],
       validate: {
@@ -328,7 +374,7 @@ const userSchema = new mongoose.Schema({
     },
     typicalAudienceSize: {
       type: String,
-      enum: ['0-20', '20-50', '50-100', '100-200', '200-500', '500+']
+      enum: ['≤20', '20-50', '50-100', '100+', '0-20', '20-50', '50-100', '100-200', '200-500', '500+']
     },
     established: Date,
     memberCount: { type: Number, default: 0 },
@@ -340,7 +386,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredEventFormats: [{
       type: String,
-      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+      enum: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation']
     }],
     preferredCollaborationTypes: [{
       type: String,
@@ -348,7 +394,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredAudienceTypes: [{
       type: String,
-      enum: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+      enum: ['Students', 'Young Professionals', 'Founders / Creators', 'Families', 'Niche Community']
     }],
     nicheCommunityDescription: String
   },
@@ -372,6 +418,7 @@ const userSchema = new mongoose.Schema({
   interests: [{
     type: String,
     enum: [
+      // Legacy interests (for backward compatibility)
       'Sip & Savor',
       'Sweat & Play', 
       'Art & DIY',
@@ -379,7 +426,13 @@ const userSchema = new mongoose.Schema({
       'Adventure & Outdoors',
       'Epic Screenings',
       'Indoor & Board Games',
-      'Music & Performance'
+      'Music & Performance',
+      // New category-aligned interests
+      'Wellness, Fitness & Sports',
+      'Art, Music & Dance',
+      'Immersive',
+      'Food & Beverage',
+      'Games'
     ]
   }],
   location: {
@@ -395,6 +448,11 @@ const userSchema = new mongoose.Schema({
   },
   profilePicture: String,
   bio: String,
+  age: Number,
+  gender: {
+    type: String,
+    enum: ['Male', 'Female', 'Non-binary', 'Prefer not to say']
+  },
   
   // Social Links (for all users)
   socialLinks: {

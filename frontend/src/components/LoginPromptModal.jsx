@@ -6,31 +6,31 @@ const LoginPromptModal = ({ isOpen, onClose, eventTitle, message }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl animate-fade-in">
+      <div className="bg-zinc-900 rounded-2xl max-w-md w-full shadow-2xl animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Sign in required</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-white">Sign in required</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            className="p-2 hover:bg-gray-800 rounded-full transition-colors"
           >
-            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6 text-center">
-          <div className="h-16 w-16 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
             <Lock className="h-8 w-8 text-white" />
           </div>
 
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+          <h3 className="text-2xl font-bold text-white mb-3">
             {message || 'Sign in to register for this event'}
           </h3>
 
           {eventTitle && (
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Create a free account to RSVP for <span className="font-semibold text-orange-500">"{eventTitle}"</span>
+            <p className="text-gray-300 mb-6">
+              Create a free account to RSVP for <span className="font-semibold" style={{ color: '#7878E9' }}>"{eventTitle}"</span>
             </p>
           )}
 
@@ -39,7 +39,8 @@ const LoginPromptModal = ({ isOpen, onClose, eventTitle, message }) => {
             <Link
               to="/login"
               onClick={onClose}
-              className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-full transition-all transform hover:scale-105"
+              className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3 px-6 rounded-full transition-all transform hover:scale-105"
+              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
               <Lock className="h-5 w-5" />
               Sign In
@@ -49,7 +50,7 @@ const LoginPromptModal = ({ isOpen, onClose, eventTitle, message }) => {
             <Link
               to="/register"
               onClick={onClose}
-              className="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold py-3 px-6 rounded-full transition-all"
+              className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-full transition-all"
             >
               <UserPlus className="h-5 w-5" />
               Create Free Account
@@ -57,24 +58,24 @@ const LoginPromptModal = ({ isOpen, onClose, eventTitle, message }) => {
           </div>
 
           {/* Benefits */}
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <p className="text-sm text-gray-400 mb-3">
               Join IndulgeOut and:
             </p>
             <div className="space-y-2 text-left">
-              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
                 <span className="text-green-500">✓</span>
                 <span>RSVP to unlimited events</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
                 <span className="text-green-500">✓</span>
                 <span>Join communities and connect</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
                 <span className="text-green-500">✓</span>
                 <span>Get personalized recommendations</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
                 <span className="text-green-500">✓</span>
                 <span>Host your own events</span>
               </div>
@@ -83,10 +84,10 @@ const LoginPromptModal = ({ isOpen, onClose, eventTitle, message }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-b-2xl text-center">
+        <div className="p-4 bg-black rounded-b-2xl text-center">
           <button
             onClick={onClose}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors"
+            className="text-gray-400 hover:text-white text-sm font-medium transition-colors"
           >
             Maybe later
           </button>

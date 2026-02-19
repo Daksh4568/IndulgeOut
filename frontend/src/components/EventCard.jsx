@@ -1,4 +1,4 @@
-import { MapPin, Calendar, Users, Heart } from 'lucide-react';
+import { MapPin, Calendar, Users, Heart, IndianRupee } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
@@ -135,7 +135,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
           <div className="flex items-center gap-2 text-gray-300 mb-2">
             <Calendar className="h-4 w-4 text-[#7878E9]" />
             <span className="text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              {formatDate(event.date)} • {formatTime(event.time)}
+              {formatDate(event.date)} • {event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : formatTime(event.time)}
             </span>
           </div>
 
@@ -154,6 +154,16 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
               {event.currentParticipants || 0} attending
             </span>
           </div>
+
+          {/* Price */}
+          {event.price?.amount !== undefined && (
+            <div className="flex items-center gap-2 text-gray-300 mb-3">
+              <IndianRupee className="h-4 w-4 text-[#7878E9]" />
+              <span className="text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                {event.price.amount === 0 ? 'FREE' : `₹${event.price.amount} onwards`}
+              </span>
+            </div>
+          )}
 
           {/* Category Badges */}
           {event.categories && event.categories.length > 0 && (

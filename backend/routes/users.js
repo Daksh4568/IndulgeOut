@@ -95,6 +95,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
       bio,
       location,
       phoneNumber,
+      age,
+      gender,
       communityProfile,
       venueProfile,
       brandProfile,
@@ -109,13 +111,22 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (bio !== undefined) updateData.bio = bio;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
     if (location !== undefined) updateData.location = location;
+    if (age !== undefined) updateData.age = age;
+    if (gender !== undefined) updateData.gender = gender;
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
 
-    // For profile objects during onboarding, allow full update
-    // But in normal profile editing, use specific endpoints
-    if (communityProfile && !onboardingCompleted) updateData.communityProfile = communityProfile;
-    if (venueProfile && !onboardingCompleted) updateData.venueProfile = venueProfile;
-    if (brandProfile && !onboardingCompleted) updateData.brandProfile = brandProfile;
+    // For profile objects - allow updates even after onboarding
+    // This enables profile page edits to work properly
+    if (communityProfile) {
+      // Merge with existing communityProfile to avoid overwriting fields
+      updateData.communityProfile = { ...user.communityProfile?.toObject?.() || {}, ...communityProfile };
+    }
+    if (venueProfile) {
+      updateData.venueProfile = { ...user.venueProfile?.toObject?.() || {}, ...venueProfile };
+    }
+    if (brandProfile) {
+      updateData.brandProfile = { ...user.brandProfile?.toObject?.() || {}, ...brandProfile };
+    }
 
     // Allow social links update for community and brand profiles
     const user = await User.findById(req.user.userId);
@@ -125,9 +136,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
     if (socialLinks) {
       if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
+        if (!user.communityProfile) user.communityProfile = {};
         if (socialLinks.instagram !== undefined) user.communityProfile.instagram = socialLinks.instagram;
         if (socialLinks.facebook !== undefined) user.communityProfile.facebook = socialLinks.facebook;
         if (socialLinks.website !== undefined) user.communityProfile.website = socialLinks.website;
+        if (socialLinks.linkedin !== undefined) user.communityProfile.linkedin = socialLinks.linkedin;
       } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
         if (socialLinks.instagram !== undefined) user.venueProfile.instagram = socialLinks.instagram;
         if (socialLinks.facebook !== undefined) user.venueProfile.facebook = socialLinks.facebook;
@@ -194,6 +207,131 @@ router.put('/profile', authenticateToken, async (req, res) => {
         await newCommunity.save();
 
         console.log(`✅ Created community "${communityProfile.communityName}" for organizer ${user.name}`);
+      }
+    }
+
+    // Sync communityProfile updates to Community document
+    if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
+      const community = await Community.findOne({ host: user._id });
+      
+      if (community) {
+        let communityUpdated = false;
+
+        // Sync name
+        if (communityProfile?.communityName && community.name !== communityProfile.communityName) {
+          community.name = communityProfile.communityName;
+          communityUpdated = true;
+        }
+
+        // Sync description
+        if (communityProfile?.communityDescription) {
+          if (community.description !== communityProfile.communityDescription) {
+            community.description = communityProfile.communityDescription;
+            communityUpdated = true;
+          }
+          const shortDesc = communityProfile.communityDescription.substring(0, 200);
+          if (community.shortDescription !== shortDesc) {
+            community.shortDescription = shortDesc;
+            communityUpdated = true;
+          }
+        }
+
+        // Sync category
+        if (communityProfile?.primaryCategory && community.category !== communityProfile.primaryCategory) {
+          community.category = communityProfile.primaryCategory;
+          communityUpdated = true;
+        }
+
+        // Sync location
+        if (communityProfile?.city && community.location.city !== communityProfile.city) {
+          community.location.city = communityProfile.city;
+          communityUpdated = true;
+        }
+        if (location?.state && community.location.state !== location.state) {
+          community.location.state = location.state;
+          communityUpdated = true;
+        }
+        if (location?.country && community.location.country !== location.country) {
+          community.location.country = location.country;
+          communityUpdated = true;
+        }
+
+        // Sync social links
+        if (socialLinks || communityProfile) {
+          const instagram = socialLinks?.instagram || communityProfile?.instagram;
+          const facebook = socialLinks?.facebook || communityProfile?.facebook;
+          const website = socialLinks?.website || communityProfile?.website;
+          const linkedin = socialLinks?.linkedin || communityProfile?.linkedin;
+
+          if (instagram !== undefined && community.socialLinks.instagram !== instagram) {
+            community.socialLinks.instagram = instagram;
+            communityUpdated = true;
+          }
+          if (facebook !== undefined && community.socialLinks.facebook !== facebook) {
+            community.socialLinks.facebook = facebook;
+            communityUpdated = true;
+          }
+          if (website !== undefined && community.socialLinks.website !== website) {
+            community.socialLinks.website = website;
+            communityUpdated = true;
+          }
+          if (linkedin !== undefined && community.socialLinks.linkedin !== linkedin) {
+            community.socialLinks.linkedin = linkedin;
+            communityUpdated = true;
+          }
+        }
+
+        // Sync logo
+        if (communityProfile?.logo && community.logo !== communityProfile.logo) {
+          community.logo = communityProfile.logo;
+          communityUpdated = true;
+        }
+
+        // Sync coverImage
+        if (communityProfile?.coverImage && community.coverImage !== communityProfile.coverImage) {
+          community.coverImage = communityProfile.coverImage;
+          communityUpdated = true;
+        }
+
+        // Sync shortBio to shortDescription
+        if (communityProfile?.shortBio && community.shortDescription !== communityProfile.shortBio) {
+          community.shortDescription = communityProfile.shortBio;
+          communityUpdated = true;
+        }
+
+        // Sync contact person (store in Community for future use)
+        if (communityProfile?.contactPerson) {
+          // Contact person can be stored in Community's host reference
+          // For now, just log it as it's stored in User model
+          console.log('📞 Contact person updated for community organizer');
+        }
+
+        // Sync images
+        if (communityProfile?.pastEventPhotos && communityProfile.pastEventPhotos.length > 0) {
+          const newImages = communityProfile.pastEventPhotos;
+          const existingImages = community.images || [];
+          
+          // Check if arrays are different
+          if (JSON.stringify(newImages) !== JSON.stringify(existingImages)) {
+            community.images = newImages;
+            community.coverImage = newImages[0] || community.coverImage;
+            communityUpdated = true;
+          }
+        }
+
+        // Sync isPrivate
+        if (communityProfile?.communityType) {
+          const isPrivate = communityProfile.communityType === 'curated';
+          if (community.isPrivate !== isPrivate) {
+            community.isPrivate = isPrivate;
+            communityUpdated = true;
+          }
+        }
+
+        if (communityUpdated) {
+          await community.save();
+          console.log(`🔄 Synced profile updates to Community document for ${user.name}`);
+        }
       }
     }
 
@@ -418,7 +556,7 @@ router.put('/profile/hosting-preferences', authenticateToken, async (req, res) =
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const { preferredCities, preferredCategories, preferredEventFormats, preferredCollaborationTypes, preferredAudienceTypes, nicheCommunityDescription } = req.body;
+    const { preferredCities, preferredCategories, preferredEventFormats, preferredCollaborationTypes, preferredAudienceTypes, nicheCommunityDescription, typicalAudienceSize } = req.body;
 
     if (user.hostPartnerType === 'community_organizer') {
       // Update only specific fields without replacing the entire object
@@ -428,6 +566,7 @@ router.put('/profile/hosting-preferences', authenticateToken, async (req, res) =
       if (preferredCollaborationTypes !== undefined) user.communityProfile.preferredCollaborationTypes = preferredCollaborationTypes;
       if (preferredAudienceTypes !== undefined) user.communityProfile.preferredAudienceTypes = preferredAudienceTypes;
       if (nicheCommunityDescription !== undefined) user.communityProfile.nicheCommunityDescription = nicheCommunityDescription;
+      if (typicalAudienceSize !== undefined) user.communityProfile.typicalAudienceSize = typicalAudienceSize;
     } else if (user.hostPartnerType === 'venue') {
       // Update only specific fields without replacing the entire object
       if (preferredCities !== undefined) user.venueProfile.preferredCities = preferredCities;
@@ -449,6 +588,25 @@ router.put('/profile/hosting-preferences', authenticateToken, async (req, res) =
     }
 
     await user.save();
+
+    // Sync hosting preferences to Community document for community organizers
+    if (user.hostPartnerType === 'community_organizer') {
+      const community = await Community.findOne({ host: user._id });
+      if (community) {
+        let updated = false;
+        
+        // Update community category if preferredCategories changed
+        if (preferredCategories && preferredCategories.length > 0 && preferredCategories[0] !== community.category) {
+          community.category = preferredCategories[0];
+          updated = true;
+        }
+        
+        if (updated) {
+          await community.save();
+          console.log('🔄 Synced hosting preferences to Community document');
+        }
+      }
+    }
 
     res.json({
       success: true,

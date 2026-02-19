@@ -356,13 +356,29 @@ router.get('/communities/featured', async (req, res) => {
     const { limit = 15, page = 1 } = req.query;
     const skip = (page - 1) * limit;
     
-    const communities = await Community.find({
-      isPrivate: false
-    })
-      .populate('host', 'name email')
+    // First, check total count in database
+    const totalInDb = await Community.countDocuments({});
+    const totalPublic = await Community.countDocuments({ isPrivate: false });
+    const totalPrivate = await Community.countDocuments({ isPrivate: true });
+    console.log(`📊 Database stats: Total=${totalInDb}, Public=${totalPublic}, Private=${totalPrivate}`);
+    
+    // Fetch communities - if no public ones exist, fetch all
+    let query = totalPublic > 0 ? { isPrivate: false } : {};
+    
+    const communities = await Community.find(query)
+      .populate('host', 'name email profilePicture')
       .skip(skip)
       .limit(parseInt(limit))
       .lean();
+    
+    console.log(`📦 Raw communities fetched: ${communities.length}`);
+    if (communities.length > 0) {
+      console.log('🔍 First community sample:', { 
+        name: communities[0].name, 
+        isPrivate: communities[0].isPrivate,
+        members: communities[0].members?.length || 0 
+      });
+    }
     
     // Sort by member count (since memberCount is now a virtual field)
     communities.sort((a, b) => {
@@ -377,7 +393,7 @@ router.get('/communities/featured', async (req, res) => {
       c.memberCount = c.members?.length || 0;
     });
     
-    const total = await Community.countDocuments({ isPrivate: false });
+    const total = totalPublic > 0 ? totalPublic : totalInDb;
 
     console.log(`✅ Found ${communities.length} featured communities`);
     res.json({ 

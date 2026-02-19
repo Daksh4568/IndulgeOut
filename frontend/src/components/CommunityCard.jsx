@@ -43,7 +43,7 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
           />
         ) : (
           <img
-            src="/images/postercard5.jpg"
+            src="/images/BackgroundLogin.jpg"
             alt={community.name || "Community poster"}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />

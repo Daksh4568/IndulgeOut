@@ -5,7 +5,7 @@ import {
   Eye, Target, Clock, ChevronRight, Plus, Edit, Copy,
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   ArrowUpRight, ArrowDownRight, Filter, Download, Bell,
-  Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft
+  Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -419,7 +419,8 @@ const CommunityOrganizerDashboard = () => {
                       return (
                         <div
                           key={event._id}
-                          className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                          onClick={() => navigate(`/events/${event._id}`)}
+                          className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
                         >
                       {/* Event Header */}
                       <div className="p-4 flex flex-col flex-grow">
@@ -494,34 +495,29 @@ const CommunityOrganizerDashboard = () => {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
-                          {/* View Button */}
+                          {/* Scan Button */}
                           <button
-                            onClick={() => navigate(`/events/${event._id}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/scan-tickets?eventId=${event._id}`);
+                            }}
                             className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                           >
-                            <Eye className="h-4 w-4" />
-                            <span>View</span>
+                            <QrCode className="h-4 w-4" />
+                            <span>Scan</span>
                           </button>
 
                           {/* Analytics Button - For events with bookings */}
                           {event.currentParticipants > 0 && (
                             <button
-                              onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/organizer/events/${event._id}/analytics`);
+                              }}
                               className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
                               <BarChart3 className="h-4 w-4" />
                               <span>Analytics</span>
-                            </button>
-                          )}
-
-                          {/* Scan Button - For live events with bookings */}
-                          {event.status === 'live' && event.currentParticipants > 0 && (
-                            <button
-                              onClick={() => navigate(`/scan-tickets?eventId=${event._id}`)}
-                              className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                              title="Scan Tickets"
-                            >
-                              <QrCode className="h-4 w-4" />
                             </button>
                           )}
 
@@ -566,7 +562,8 @@ const CommunityOrganizerDashboard = () => {
                         return (
                           <div
                             key={event._id}
-                            className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                            onClick={() => navigate(`/events/${event._id}`)}
+                            className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
                           >
                       {/* Event Header */}
                       <div className="p-4 flex flex-col flex-grow h-full">
@@ -641,34 +638,29 @@ const CommunityOrganizerDashboard = () => {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
-                          {/* View Button */}
+                          {/* Scan Button */}
                           <button
-                            onClick={() => navigate(`/events/${event._id}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/scan-tickets?eventId=${event._id}`);
+                            }}
                             className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                           >
-                            <Eye className="h-4 w-4" />
-                            <span>View</span>
+                            <QrCode className="h-4 w-4" />
+                            <span>Scan</span>
                           </button>
 
                           {/* Analytics Button - For events with bookings */}
                           {event.currentParticipants > 0 && (
                             <button
-                              onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/organizer/events/${event._id}/analytics`);
+                              }}
                               className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
                               <BarChart3 className="h-4 w-4" />
                               <span>Analytics</span>
-                            </button>
-                          )}
-
-                          {/* Scan Button - For live events with bookings */}
-                          {event.status === 'live' && event.currentParticipants > 0 && (
-                            <button
-                              onClick={() => navigate(`/scan-tickets?eventId=${event._id}`)}
-                              className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                              title="Scan Tickets"
-                            >
-                              <QrCode className="h-4 w-4" />
                             </button>
                           )}
 
@@ -730,7 +722,8 @@ const CommunityOrganizerDashboard = () => {
                 return (
                   <div
                     key={event._id}
-                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                    onClick={() => navigate(`/events/${event._id}`)}
+                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
                   >
                     {/* Event Header */}
                     <div className="p-4 flex flex-col flex-grow">
@@ -805,34 +798,29 @@ const CommunityOrganizerDashboard = () => {
 
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
-                        {/* View Button */}
+                        {/* Scan Button */}
                         <button
-                          onClick={() => navigate(`/events/${event._id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/scan-tickets?eventId=${event._id}`);
+                          }}
                           className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                         >
-                          <Eye className="h-4 w-4" />
-                          <span>View</span>
+                          <QrCode className="h-4 w-4" />
+                          <span>Scan</span>
                         </button>
 
                         {/* Analytics Button - For events with bookings */}
                         {event.currentParticipants > 0 && (
                           <button
-                            onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/organizer/events/${event._id}/analytics`);
+                            }}
                             className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                           >
                             <BarChart3 className="h-4 w-4" />
                             <span>Analytics</span>
-                          </button>
-                        )}
-
-                        {/* Scan Button - For live events with bookings */}
-                        {event.status === 'live' && event.currentParticipants > 0 && (
-                          <button
-                            onClick={() => navigate(`/scan-tickets?eventId=${event._id}`)}
-                            className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Scan Tickets"
-                          >
-                            <QrCode className="h-4 w-4" />
                           </button>
                         )}
 
@@ -878,7 +866,8 @@ const CommunityOrganizerDashboard = () => {
                       return (
                         <div
                           key={event._id}
-                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                          onClick={() => navigate(`/events/${event._id}`)}
+                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
                         >
                       {/* Event Header */}
                       <div className="p-4 flex flex-col flex-grow h-full">
@@ -953,34 +942,29 @@ const CommunityOrganizerDashboard = () => {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-4 mt-auto">
-                          {/* View Button */}
+                          {/* Scan Button */}
                           <button
-                            onClick={() => navigate(`/events/${event._id}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/scan-tickets?eventId=${event._id}`);
+                            }}
                             className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                           >
-                            <Eye className="h-4 w-4" />
-                            <span>View</span>
+                            <QrCode className="h-4 w-4" />
+                            <span>Scan</span>
                           </button>
 
                           {/* Analytics Button - For events with bookings */}
                           {event.currentParticipants > 0 && (
                             <button
-                              onClick={() => navigate(`/organizer/events/${event._id}/analytics`)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/organizer/events/${event._id}/analytics`);
+                              }}
                               className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
                               <BarChart3 className="h-4 w-4" />
                               <span>Analytics</span>
-                            </button>
-                          )}
-
-                          {/* Scan Button - For live events with bookings */}
-                          {event.status === 'live' && event.currentParticipants > 0 && (
-                            <button
-                              onClick={() => navigate(`/scan-tickets?eventId=${event._id}`)}
-                              className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                              title="Scan Tickets"
-                            >
-                              <QrCode className="h-4 w-4" />
                             </button>
                           )}
 
@@ -1178,6 +1162,14 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                 </button>
               </div>
             )}
+            <button
+              onClick={() => navigate('/collaborations')}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              <FileText className="h-5 w-5" />
+              <span>Manage Collaborations</span>
+            </button>
           </div>
         </div>
 
@@ -1775,11 +1767,11 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
           {insights.recommendations?.map((insight, index) => (
             <div
               key={index}
-              className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6"
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-6"
             >
-              <div className="flex items-start space-x-3 mb-4">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg">
-                  <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
@@ -1790,15 +1782,6 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                   </p>
                 </div>
               </div>
-              {insight.action && (
-                <button
-                  onClick={() => navigate(insight.actionLink)}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <span>{insight.action}</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
             </div>
           ))}
         </div>
@@ -1811,11 +1794,11 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
           {insights.recommendations?.map((insight, index) => (
             <div
               key={index}
-              className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6"
+              className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-6"
             >
-              <div className="flex items-start space-x-3 mb-4">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg">
-                  <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
@@ -1826,15 +1809,6 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                   </p>
                 </div>
               </div>
-              {insight.action && (
-                <button
-                  onClick={() => navigate(insight.actionLink)}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <span>{insight.action}</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
             </div>
           ))}
         </div>
@@ -1926,7 +1900,7 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                 </span>
               )}
               <Bell className="h-6 w-6" />
-              <span className="text-xs font-medium">Actions</span>
+              <span className="text-xs font-medium">Actions <br /> Required</span>
             </button>
 
             {/* Events */}
@@ -1946,6 +1920,23 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
               <span className="text-xs font-medium">Events</span>
             </button>
 
+            {/* Collaborations */}
+            <button
+              onClick={() => setActiveSidebarItem('collaborations')}
+              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
+                activeSidebarItem === 'collaborations'
+                  ? 'text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+              style={activeSidebarItem === 'collaborations' ? {
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+              } : {}}
+              title="Collaborations"
+            >
+              <Users2 className="h-6 w-6" />
+              <span className="text-xs font-medium">Collaborations</span>
+            </button>
+
             {/* Analytics */}
             <button
               onClick={() => setActiveSidebarItem('analytics')}
@@ -1963,39 +1954,6 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
               <span className="text-xs font-medium">Analytics</span>
             </button>
 
-            {/* Settings */}
-            <button
-              onClick={() => setActiveSidebarItem('settings')}
-              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'settings'
-                  ? 'text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-              style={activeSidebarItem === 'settings' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
-              title="Settings"
-            >
-              <Settings className="h-6 w-6" />
-              <span className="text-xs font-medium">Settings</span>
-            </button>
-
-            {/* Help */}
-            <button
-              onClick={() => setActiveSidebarItem('help')}
-              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === 'help'
-                  ? 'text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-              style={activeSidebarItem === 'help' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
-              title="Help"
-            >
-              <HelpCircle className="h-6 w-6" />
-              <span className="text-xs font-medium">Help</span>
-            </button>
           </nav>
         </aside>
 
@@ -2056,7 +2014,7 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                 </section>
               )}
 
-              {(activeSidebarItem === 'all' || activeSidebarItem === 'events') && (
+              {(activeSidebarItem === 'all' || activeSidebarItem === 'events' || activeSidebarItem === 'collaborations') && (
                 <section>
                   <h2 
                     className="text-xl font-bold text-gray-900 dark:text-white mb-4"

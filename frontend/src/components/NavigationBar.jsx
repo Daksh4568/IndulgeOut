@@ -337,8 +337,7 @@ export default function NavigationBar() {
                     className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">🔍</span>
-                      <span className="text-white font-semibold text-lg">Explore</span>
+                      <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>EXPLORE</span>
                     </div>
                   </Link>
 
@@ -349,8 +348,7 @@ export default function NavigationBar() {
                     className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">📂</span>
-                      <span className="text-white font-semibold text-lg">Categories</span>
+                      <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>CATEGORIES</span>
                     </div>
                   </Link>
 
@@ -361,8 +359,7 @@ export default function NavigationBar() {
                     className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">🤝</span>
-                      <span className="text-white font-semibold text-lg">Host & Partner</span>
+                      <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>HOST & PARTNER</span>
                     </div>
                   </Link>
 
@@ -373,8 +370,7 @@ export default function NavigationBar() {
                     className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">ℹ️</span>
-                      <span className="text-white font-semibold text-lg">About</span>
+                      <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>ABOUT</span>
                     </div>
                   </Link>
                   
@@ -408,8 +404,7 @@ export default function NavigationBar() {
                           className="w-full text-left block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <Plus className="h-6 w-6 text-white" />
-                            <span className="text-white font-semibold text-lg">Create Event</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>CREATE EVENT</span>
                           </div>
                         </button>
 
@@ -420,8 +415,7 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">🏠</span>
-                            <span className="text-white font-semibold text-lg">Dashboard</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>DASHBOARD</span>
                           </div>
                         </Link>
 
@@ -432,8 +426,7 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <Building2 className="h-6 w-6 text-white" />
-                            <span className="text-white font-semibold text-lg">Browse Venues</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE VENUES</span>
                           </div>
                         </Link>
 
@@ -444,8 +437,7 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <Sparkles className="h-6 w-6 text-white" />
-                            <span className="text-white font-semibold text-lg">Browse Sponsors</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE SPONSORS</span>
                           </div>
                         </Link>
                       </>
@@ -459,8 +451,7 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">🏠</span>
-                            <span className="text-white font-semibold text-lg">Dashboard</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>DASHBOARD</span>
                           </div>
                         </Link>
 
@@ -471,10 +462,22 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">🔍</span>
-                            <span className="text-white font-semibold text-lg">Explore</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>EXPLORE</span>
                           </div>
                         </Link>
+                        
+                        {/* Categories - For Regular Users Only */}
+                        {user.role !== 'host_partner' && user.role !== 'admin' && (
+                          <Link
+                            to="/categories"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>CATEGORIES</span>
+                            </div>
+                          </Link>
+                        )}
                         
                         {/* Browse Venues - Only for Brands */}
                         {canBrowseVenues() && (
@@ -484,8 +487,7 @@ export default function NavigationBar() {
                             className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <Building2 className="h-6 w-6 text-white" />
-                              <span className="text-white font-semibold text-lg">Browse Venues</span>
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE VENUES</span>
                             </div>
                           </Link>
                         )}
@@ -498,8 +500,7 @@ export default function NavigationBar() {
                             className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <Users className="h-6 w-6 text-white" />
-                              <span className="text-white font-semibold text-lg">Browse Communities</span>
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE COMMUNITIES</span>
                             </div>
                           </Link>
                         )}
@@ -512,8 +513,7 @@ export default function NavigationBar() {
                             className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <Sparkles className="h-6 w-6 text-white" />
-                              <span className="text-white font-semibold text-lg">Browse Sponsors</span>
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE SPONSORS</span>
                             </div>
                           </Link>
                         )}
@@ -538,7 +538,7 @@ export default function NavigationBar() {
                             {getUserInitials()}
                           </div>
                         )}
-                        <span className="text-white font-semibold text-lg">Profile Settings</span>
+                        <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>PROFILE SETTINGS</span>
                       </div>
                     </Link>
 
@@ -549,10 +549,10 @@ export default function NavigationBar() {
                         setMobileMenuOpen(false);
                       }}
                       className="w-full mt-6 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 px-6 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg"
+                      style={{ fontFamily: 'Source Serif Pro, serif' }}
                     >
                       <div className="flex items-center justify-center gap-2">
-                        <span className="text-xl">🚪</span>
-                        <span>Logout</span>
+                        <span className="uppercase">LOGOUT</span>
                       </div>
                     </button>
                   </>

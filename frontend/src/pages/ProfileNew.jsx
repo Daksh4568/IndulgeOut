@@ -33,8 +33,13 @@ const ProfileNew = () => {
   
   // Forms
   const [profileForm, setProfileForm] = useState({ 
-    name: '', bio: '', phoneNumber: '', city: '',
-    instagram: '', facebook: '', website: '', linkedin: ''
+    name: '', bio: '', phoneNumber: '', city: '', age: '', gender: '',
+    instagram: '', facebook: '', website: '', linkedin: '',
+    communityName: '', shortBio: '', logo: '', coverImage: '',
+    contactEmail: '', contactPhone: '', communityDescription: '',
+    brandName: '', brandDescription: '', venueName: '', venueDescription: '',
+    googleMapsLink: '', whatsapp: '', spaceType: '', seatingCapacity: '',
+    operatingHours: '', parkingAvailability: ''
   })
   const [hostingForm, setHostingForm] = useState({
     preferredCities: [],
@@ -42,15 +47,22 @@ const ProfileNew = () => {
     preferredEventFormats: [],
     preferredCollaborationTypes: [],
     preferredAudienceTypes: [],
-    nicheCommunityDescription: ''
+    nicheCommunityDescription: '',
+    averageEventSize: ''
   })
   const [payoutForm, setPayoutForm] = useState({
     accountNumber: '', ifscCode: '', accountHolderName: '',
-    bankName: '', accountType: 'savings', panNumber: '', gstNumber: ''
+    bankName: '', accountType: 'savings', panNumber: '', gstNumber: '',
+    billingAddress: '', upiId: ''
   })
   const [venueDetailsForm, setVenueDetailsForm] = useState({
     capacityRange: '', alcoholAllowed: false, smokingAllowed: false,
-    ageLimit: '18+', entryCutoffTime: '', soundRestrictions: '', additionalRules: ''
+    ageLimit: '18+', entryCutoffTime: '', soundRestrictions: '', 
+    soundCutoffTime: '', additionalRules: '',
+    commercialModel: '', rentalFee: '', coverChargePerGuest: '', 
+    revenueSharePercentage: '', operatingDays: [],
+    foodBeverageExclusivity: false, externalVendorsAllowed: true,
+    decorationAllowed: true
   })
   
   // Constants
@@ -67,6 +79,48 @@ const ProfileNew = () => {
   const collaborationIntentOptions = [
     'sponsorship', 'sampling', 'popups', 'experience_partnerships',
     'brand_activation', 'content_creation'
+  ]
+
+  const eventFormatOptions = [
+    'Workshop',
+    'Mixer / Social',
+    'Tournament',
+    'Performance / Show',
+    'Panel / Talk',
+    'Experiential / Activation'
+  ]
+
+  const audienceTypeOptions = [
+    'Students',
+    'Young Professionals',
+    'Founders / Creators',
+    'Families',
+    'Niche Community'
+  ]
+
+  const audienceSizeOptions = [
+    '≤20',
+    '20-50',
+    '50-100',
+    '100+'
+  ]
+
+  const venueCapacityOptions = [
+    '≤30',
+    '30-50',
+    '50-100',
+    '100+'
+  ]
+
+  const collaborationTypeOptions = [
+    'Sponsorship',
+    'Sampling',
+    'Pop-ups',
+    'Co-hosted events'
+  ]
+
+  const operatingDayOptions = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
   ]
 
   // Fetch profile data
@@ -111,29 +165,91 @@ const ProfileNew = () => {
     setEditingSection(section)
     
     if (section === 'profile') {
-      // Get social links based on user type
+      // Get social links and profile data based on user type
       let socialLinks = {};
+      let communityData = {};
+      let venueData = {};
+      let brandData = {};
+      
       if (isCommunityOrganizer) {
         socialLinks = profileData.communityProfile || {};
+        communityData = profileData.communityProfile || {};
+        setProfileForm({
+          name: profileData.name || '',
+          bio: profileData.bio || '',
+          phoneNumber: profileData.phoneNumber || '',
+          city: profileData.location?.city || '',
+          age: profileData.age || '',
+          gender: profileData.gender || '',
+          instagram: socialLinks?.instagram || '',
+          facebook: socialLinks?.facebook || '',
+          website: socialLinks?.website || '',
+          linkedin: socialLinks?.linkedin || '',
+          communityName: communityData?.communityName || '',
+          shortBio: communityData?.shortBio || '',
+          communityDescription: communityData?.communityDescription || '',
+          logo: communityData?.logo || '',
+          coverImage: communityData?.coverImage || '',
+          contactEmail: communityData?.contactPerson?.email || '',
+          contactPhone: communityData?.contactPerson?.phone || ''
+        });
       } else if (isVenue) {
         socialLinks = profileData.venueProfile || {};
+        venueData = profileData.venueProfile || {};
+        setProfileForm({
+          name: profileData.name || '',
+          bio: profileData.bio || '',
+          phoneNumber: profileData.phoneNumber || '',
+          city: profileData.location?.city || '',
+          age: profileData.age || '',
+          gender: profileData.gender || '',
+          instagram: socialLinks?.instagram || '',
+          facebook: socialLinks?.facebook || '',
+          website: socialLinks?.website || '',
+          whatsapp: venueData?.whatsapp || '',
+          venueName: venueData?.venueName || '',
+          venueDescription: venueData?.venueDescription || '',
+          logo: venueData?.logo || '',
+          coverImage: venueData?.coverImage || '',
+          googleMapsLink: venueData?.googleMapsLink || '',
+          spaceType: venueData?.spaceType || '',
+          seatingCapacity: venueData?.seatingCapacity || '',
+          operatingHours: venueData?.operatingHours || '',
+          parkingAvailability: venueData?.parkingAvailability || ''
+        });
       } else if (isBrandSponsor) {
         socialLinks = profileData.brandProfile || {};
+        brandData = profileData.brandProfile || {};
+        setProfileForm({
+          name: profileData.name || '',
+          bio: profileData.bio || '',
+          phoneNumber: profileData.phoneNumber || '',
+          city: profileData.location?.city || '',
+          age: profileData.age || '',
+          gender: profileData.gender || '',
+          instagram: socialLinks?.instagram || '',
+          facebook: socialLinks?.facebook || '',
+          website: socialLinks?.website || '',
+          linkedin: socialLinks?.linkedin || '',
+          brandName: brandData?.brandName || '',
+          brandDescription: brandData?.brandDescription || '',
+          logo: brandData?.logo || ''
+        });
       } else {
         // B2C users - get from base socialLinks field
         socialLinks = profileData.socialLinks || {};
+        setProfileForm({
+          name: profileData.name || '',
+          bio: profileData.bio || '',
+          phoneNumber: profileData.phoneNumber || '',
+          city: profileData.location?.city || '',
+          age: profileData.age || '',
+          gender: profileData.gender || '',
+          instagram: socialLinks?.instagram || '',
+          facebook: socialLinks?.facebook || '',
+          website: socialLinks?.website || ''
+        });
       }
-      
-      setProfileForm({
-        name: profileData.name || '',
-        bio: profileData.bio || '',
-        phoneNumber: profileData.phoneNumber || '',
-        city: profileData.location?.city || '',
-        instagram: socialLinks?.instagram || '',
-        facebook: socialLinks?.facebook || '',
-        website: socialLinks?.website || '',
-        linkedin: socialLinks?.linkedin || ''
-      })
     } else if (section === 'hosting') {
       if (isCommunityOrganizer) {
         setHostingForm({
@@ -142,7 +258,8 @@ const ProfileNew = () => {
           preferredEventFormats: profileData.communityProfile?.preferredEventFormats || [],
           preferredCollaborationTypes: profileData.communityProfile?.preferredCollaborationTypes || [],
           preferredAudienceTypes: profileData.communityProfile?.preferredAudienceTypes || [],
-          nicheCommunityDescription: profileData.communityProfile?.nicheCommunityDescription || ''
+          nicheCommunityDescription: profileData.communityProfile?.nicheCommunityDescription || '',
+          averageEventSize: profileData.communityProfile?.typicalAudienceSize || ''
         })
       } else if (isVenue) {
         setHostingForm({
@@ -151,7 +268,18 @@ const ProfileNew = () => {
           preferredEventFormats: profileData.venueProfile?.preferredEventFormats || [],
           preferredCollaborationTypes: profileData.venueProfile?.preferredCollaborationTypes || [],
           preferredAudienceTypes: profileData.venueProfile?.preferredAudienceTypes || [],
-          nicheCommunityDescription: profileData.venueProfile?.nicheCommunityDescription || ''
+          nicheCommunityDescription: profileData.venueProfile?.nicheCommunityDescription || '',
+          averageEventSize: ''
+        })
+      } else if (isBrandSponsor) {
+        setHostingForm({
+          preferredCities: profileData.brandProfile?.preferredCities || [],
+          preferredCategories: profileData.brandProfile?.preferredCategories || [],
+          preferredEventFormats: profileData.brandProfile?.preferredEventFormats || [],
+          preferredCollaborationTypes: profileData.brandProfile?.preferredCollaborationTypes || [],
+          preferredAudienceTypes: profileData.brandProfile?.preferredAudienceTypes || [],
+          nicheCommunityDescription: profileData.brandProfile?.nicheCommunityDescription || '',
+          averageEventSize: ''
         })
       }
     } else if (section === 'payout') {
@@ -162,7 +290,9 @@ const ProfileNew = () => {
         bankName: profileData.payoutDetails?.bankName || '',
         accountType: profileData.payoutDetails?.accountType || 'savings',
         panNumber: profileData.payoutDetails?.panNumber || '',
-        gstNumber: profileData.payoutDetails?.gstNumber || ''
+        gstNumber: profileData.payoutDetails?.gstNumber || '',
+        billingAddress: profileData.payoutDetails?.billingAddress || '',
+        upiId: profileData.payoutDetails?.upiId || ''
       })
     } else if (section === 'venue') {
       setVenueDetailsForm({
@@ -172,7 +302,16 @@ const ProfileNew = () => {
         ageLimit: profileData.venueProfile?.rules?.ageLimit || '18+',
         entryCutoffTime: profileData.venueProfile?.rules?.entryCutoffTime || '',
         soundRestrictions: profileData.venueProfile?.rules?.soundRestrictions || '',
-        additionalRules: profileData.venueProfile?.rules?.additionalRules || ''
+        soundCutoffTime: profileData.venueProfile?.rules?.soundCutoffTime || '',
+        additionalRules: profileData.venueProfile?.rules?.additionalRules || '',
+        commercialModel: profileData.venueProfile?.commercialModel || '',
+        rentalFee: profileData.venueProfile?.defaultPricing?.rentalFee || '',
+        coverChargePerGuest: profileData.venueProfile?.defaultPricing?.coverChargePerGuest || '',
+        revenueSharePercentage: profileData.venueProfile?.defaultPricing?.revenueSharePercentage || '',
+        operatingDays: profileData.venueProfile?.operatingDays || [],
+        foodBeverageExclusivity: profileData.venueProfile?.rules?.foodBeverageExclusivity || false,
+        externalVendorsAllowed: profileData.venueProfile?.rules?.externalVendorsAllowed || true,
+        decorationAllowed: profileData.venueProfile?.rules?.decorationAllowed || true
       })
     }
   }
@@ -185,19 +324,78 @@ const ProfileNew = () => {
         name: profileForm.name,
         phoneNumber: profileForm.phoneNumber,
         bio: profileForm.bio,
+        age: profileForm.age,
+        gender: profileForm.gender,
         location: { city: profileForm.city }
       };
       
-      // Add social links for all user types
-      payload.socialLinks = {
-        instagram: profileForm.instagram,
-        facebook: profileForm.facebook,
-        website: profileForm.website
-      };
-      
-      // Add LinkedIn for brand sponsors only
-      if (isBrandSponsor) {
-        payload.socialLinks.linkedin = profileForm.linkedin;
+      // For community organizers, update communityProfile
+      if (isCommunityOrganizer) {
+        payload.communityProfile = {
+          communityName: profileForm.communityName,
+          shortBio: profileForm.shortBio,
+          communityDescription: profileForm.communityDescription,
+          logo: profileForm.logo,
+          coverImage: profileForm.coverImage,
+          city: profileForm.city,
+          contactPerson: {
+            name: profileForm.name,
+            email: profileForm.contactEmail || profileForm.email,
+            phone: profileForm.contactPhone || profileForm.phoneNumber
+          }
+        };
+        
+        // Add social links to communityProfile
+        payload.socialLinks = {
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          website: profileForm.website,
+          linkedin: profileForm.linkedin
+        };
+      } else if (isVenue) {
+        // Update venue profile
+        payload.venueProfile = {
+          venueName: profileForm.venueName,
+          venueDescription: profileForm.venueDescription,
+          logo: profileForm.logo,
+          coverImage: profileForm.coverImage,
+          googleMapsLink: profileForm.googleMapsLink,
+          whatsapp: profileForm.whatsapp,
+          spaceType: profileForm.spaceType,
+          seatingCapacity: profileForm.seatingCapacity,
+          operatingHours: profileForm.operatingHours,
+          parkingAvailability: profileForm.parkingAvailability
+        };
+        
+        // Add social links
+        payload.socialLinks = {
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          website: profileForm.website
+        };
+      } else if (isBrandSponsor) {
+        // Update brand profile
+        payload.brandProfile = {
+          brandName: profileForm.brandName,
+          brandDescription: profileForm.brandDescription,
+          logo: profileForm.logo,
+          website: profileForm.website
+        };
+        
+        // Add social links
+        payload.socialLinks = {
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          website: profileForm.website,
+          linkedin: profileForm.linkedin
+        };
+      } else {
+        // B2C users - base social links
+        payload.socialLinks = {
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          website: profileForm.website
+        };
       }
       
       const response = await api.put('/users/profile', payload)
@@ -216,7 +414,12 @@ const ProfileNew = () => {
   const handleSaveHostingPreferences = async () => {
     try {
       setSaving(true)
-      const response = await api.put('/users/profile/hosting-preferences', hostingForm)
+      // For community organizers, include averageEventSize in their profile
+      const payload = { ...hostingForm };
+      if (isCommunityOrganizer && hostingForm.averageEventSize) {
+        payload.typicalAudienceSize = hostingForm.averageEventSize;
+      }
+      const response = await api.put('/users/profile/hosting-preferences', payload)
       setProfileData(response.data.user)
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Hosting preferences updated!' })
@@ -614,8 +817,51 @@ const ProfileNew = () => {
                   {/* Edit Form */}
                   {editingSection === 'profile' && (
                     <div className="mt-6 pt-6 border-t border-gray-800 space-y-4">
+                      {/* Community Organizer Fields */}
+                      {isCommunityOrganizer && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Community Name</label>
+                          <input 
+                            type="text"
+                            value={profileForm.communityName}
+                            onChange={(e) => setProfileForm({ ...profileForm, communityName: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            placeholder="Your community name"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Venue Fields */}
+                      {isVenue && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Venue Name</label>
+                          <input 
+                            type="text"
+                            value={profileForm.venueName}
+                            onChange={(e) => setProfileForm({ ...profileForm, venueName: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            placeholder="Your venue name"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Brand Sponsor Fields */}
+                      {isBrandSponsor && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Brand Name</label>
+                          <input 
+                            type="text"
+                            value={profileForm.brandName}
+                            onChange={(e) => setProfileForm({ ...profileForm, brandName: e.target.value })}
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            placeholder="Your brand name"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Common Name Field */}
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Name</label>
+                        <label className="block text-sm text-gray-400 mb-2">{isHostPartner ? 'Contact Person Name' : 'Name'}</label>
                         <input 
                           type="text"
                           value={profileForm.name}
@@ -623,16 +869,80 @@ const ProfileNew = () => {
                           className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
                         />
                       </div>
+                      
+                      {/* Age and Gender for B2C users */}
+                      {!isHostPartner && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Age</label>
+                            <input 
+                              type="number"
+                              value={profileForm.age}
+                              onChange={(e) => setProfileForm({ ...profileForm, age: e.target.value })}
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                              placeholder="Your age"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Gender</label>
+                            <select
+                              value={profileForm.gender}
+                              onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            >
+                              <option value="">Select gender</option>
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                              <option value="Non-binary">Non-binary</option>
+                              <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Community Short Bio */}
+                      {isCommunityOrganizer && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Short Bio (2-3 lines)</label>
+                          <textarea 
+                            value={profileForm.shortBio}
+                            onChange={(e) => setProfileForm({ ...profileForm, shortBio: e.target.value })}
+                            rows="2"
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            placeholder="A brief description of your community..."
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Description/Bio Field */}
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Bio</label>
+                        <label className="block text-sm text-gray-400 mb-2">
+                          {isCommunityOrganizer ? 'Community Description' : 
+                           isVenue ? 'Venue Description' : 
+                           isBrandSponsor ? 'Brand Description' : 'Bio'}
+                        </label>
                         <textarea 
-                          value={profileForm.bio}
-                          onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                          value={isCommunityOrganizer ? profileForm.communityDescription : 
+                                 isVenue ? profileForm.venueDescription :
+                                 isBrandSponsor ? profileForm.brandDescription : profileForm.bio}
+                          onChange={(e) => {
+                            if (isCommunityOrganizer) {
+                              setProfileForm({ ...profileForm, communityDescription: e.target.value });
+                            } else if (isVenue) {
+                              setProfileForm({ ...profileForm, venueDescription: e.target.value });
+                            } else if (isBrandSponsor) {
+                              setProfileForm({ ...profileForm, brandDescription: e.target.value });
+                            } else {
+                              setProfileForm({ ...profileForm, bio: e.target.value });
+                            }
+                          }}
                           rows="3"
                           className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
                           placeholder="Tell us about yourself..."
                         />
                       </div>
+                      
+                      {/* Phone Number */}
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Phone Number</label>
                         <input 
@@ -642,16 +952,164 @@ const ProfileNew = () => {
                           className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
                         />
                       </div>
+                      
+                      {/* City */}
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Instagram</label>
+                        <label className="block text-sm text-gray-400 mb-2">City</label>
                         <input 
                           type="text"
-                          value={profileForm.instagram}
-                          onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
-                          placeholder="@username"
+                          value={profileForm.city}
+                          onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
                           className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          placeholder="Your city"
                         />
                       </div>
+                      
+                      {/* Venue Specific Fields */}
+                      {isVenue && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Space Type</label>
+                              <select
+                                value={profileForm.spaceType}
+                                onChange={(e) => setProfileForm({ ...profileForm, spaceType: e.target.value })}
+                                className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                              >
+                                <option value="">Select type</option>
+                                <option value="Indoor">Indoor</option>
+                                <option value="Outdoor">Outdoor</option>
+                                <option value="Rooftop">Rooftop</option>
+                                <option value="Mixed">Mixed</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Seating Capacity</label>
+                              <input 
+                                type="number"
+                                value={profileForm.seatingCapacity}
+                                onChange={(e) => setProfileForm({ ...profileForm, seatingCapacity: e.target.value })}
+                                className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                                placeholder="Number of seats"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Operating Hours</label>
+                              <input 
+                                type="text"
+                                value={profileForm.operatingHours}
+                                onChange={(e) => setProfileForm({ ...profileForm, operatingHours: e.target.value })}
+                                className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                                placeholder="e.g. 10 AM - 11 PM"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Parking Availability</label>
+                              <select
+                                value={profileForm.parkingAvailability}
+                                onChange={(e) => setProfileForm({ ...profileForm, parkingAvailability: e.target.value })}
+                                className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                              >
+                                <option value="">Select</option>
+                                <option value="Available">Available</option>
+                                <option value="Not Available">Not Available</option>
+                                <option value="Limited">Limited</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Google Maps Link</label>
+                            <input 
+                              type="url"
+                              value={profileForm.googleMapsLink}
+                              onChange={(e) => setProfileForm({ ...profileForm, googleMapsLink: e.target.value })}
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                              placeholder="https://maps.google.com/..."
+                            />
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Community Contact Fields */}
+                      {isCommunityOrganizer && (
+                        <>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Contact Email</label>
+                            <input 
+                              type="email"
+                              value={profileForm.contactEmail}
+                              onChange={(e) => setProfileForm({ ...profileForm, contactEmail: e.target.value })}
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                              placeholder="contact@community.com"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Contact Phone</label>
+                            <input 
+                              type="tel"
+                              value={profileForm.contactPhone}
+                              onChange={(e) => setProfileForm({ ...profileForm, contactPhone: e.target.value })}
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                              placeholder="Contact phone number"
+                            />
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Social Links */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Instagram</label>
+                          <input 
+                            type="text"
+                            value={profileForm.instagram}
+                            onChange={(e) => setProfileForm({ ...profileForm, instagram: e.target.value })}
+                            placeholder="@username"
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                        {(isCommunityOrganizer || isBrandSponsor) && (
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">LinkedIn</label>
+                            <input 
+                              type="text"
+                              value={profileForm.linkedin}
+                              onChange={(e) => setProfileForm({ ...profileForm, linkedin: e.target.value })}
+                              placeholder="LinkedIn URL"
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            />
+                          </div>
+                        )}
+                        {isVenue && (
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">WhatsApp</label>
+                            <input 
+                              type="text"
+                              value={profileForm.whatsapp}
+                              onChange={(e) => setProfileForm({ ...profileForm, whatsapp: e.target.value })}
+                              placeholder="WhatsApp number"
+                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Website for all host partners and B2C with LinkedIn */}
+                      {(isHostPartner || !isHostPartner) && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Website</label>
+                          <input 
+                            type="url"
+                            value={profileForm.website}
+                            onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
+                            placeholder="https://..."
+                            className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                      )}
+                      
                       <div className="flex gap-2">
                         <button
                           onClick={handleSaveProfile}
@@ -753,7 +1211,7 @@ const ProfileNew = () => {
                     <p className="text-gray-500 text-xs mt-0.5">Browse our knowledge base</p>
                   </button>
                   <button
-                    onClick={() => setSupportModalOpen(true)}
+                    onClick={() => navigate('/contact-us')}
                     className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
                     Contact support
@@ -1089,8 +1547,8 @@ const ProfileNew = () => {
                       </div>
                     )}
 
-                    {/* Google Maps for Venue/Community */}
-                    {(isVenue || isCommunityOrganizer) && (
+                    {/* Google Maps for Venue Only */}
+                    {isVenue && (
                       <div className="flex items-center gap-3 text-gray-300">
                         <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
                           <MapPin className="h-4 w-4 text-gray-400" />
@@ -1479,64 +1937,106 @@ const ProfileNew = () => {
                         </div>
                       </div>
 
-                      {(isCommunityOrganizer || isVenue) && (
-                        <>
-                          <div>
-                            <label className="block text-sm text-gray-400 mb-2">Preferred Event Formats</label>
-                            <div className="flex flex-wrap gap-2">
-                              {categoryOptions.map(cat => (
-                                <button
-                                  key={cat}
-                                  onClick={() => setHostingForm({
-                                    ...hostingForm,
-                                    preferredEventFormats: toggleArrayItem(hostingForm.preferredEventFormats, cat)
-                                  })}
-                                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                    hostingForm.preferredEventFormats.includes(cat)
-                                      ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
-                                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                                  }`}
-                                >
-                                  {cat}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Preferred Event Formats</label>
+                        <div className="flex flex-wrap gap-2">
+                          {eventFormatOptions.map(format => (
+                            <button
+                              key={format}
+                              onClick={() => setHostingForm({
+                                ...hostingForm,
+                                preferredEventFormats: toggleArrayItem(hostingForm.preferredEventFormats, format)
+                              })}
+                              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                hostingForm.preferredEventFormats.includes(format)
+                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                              }`}
+                            >
+                              {format}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                          <div>
-                            <label className="block text-sm text-gray-400 mb-2">Preferred Audience Types</label>
-                            <div className="flex flex-wrap gap-2">
-                              {categoryOptions.map(cat => (
-                                <button
-                                  key={cat}
-                                  onClick={() => setHostingForm({
-                                    ...hostingForm,
-                                    preferredAudienceTypes: toggleArrayItem(hostingForm.preferredAudienceTypes, cat)
-                                  })}
-                                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                    hostingForm.preferredAudienceTypes.includes(cat)
-                                      ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
-                                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                                  }`}
-                                >
-                                  {cat}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Preferred Audience Types</label>
+                        <div className="flex flex-wrap gap-2">
+                          {audienceTypeOptions.map(type => (
+                            <button
+                              key={type}
+                              onClick={() => setHostingForm({
+                                ...hostingForm,
+                                preferredAudienceTypes: toggleArrayItem(hostingForm.preferredAudienceTypes, type)
+                              })}
+                              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                hostingForm.preferredAudienceTypes.includes(type)
+                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                          <div>
-                            <label className="block text-sm text-gray-400 mb-2">Niche Community Description</label>
-                            <textarea 
-                              value={hostingForm.nicheCommunityDescription}
-                              onChange={(e) => setHostingForm({ ...hostingForm, nicheCommunityDescription: e.target.value })}
-                              rows="3"
-                              placeholder="Describe your community's niche..."
-                              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                            />
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Preferred Collaboration Types</label>
+                        <div className="flex flex-wrap gap-2">
+                          {['Venue Partnership', 'Brand Sponsorship', 'Co-hosting', 'Content Collaboration', 'Cross Promotion'].map(type => (
+                            <button
+                              key={type}
+                              onClick={() => setHostingForm({
+                                ...hostingForm,
+                                preferredCollaborationTypes: toggleArrayItem(hostingForm.preferredCollaborationTypes, type.toLowerCase().replace(/\s+/g, '_'))
+                              })}
+                              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                hostingForm.preferredCollaborationTypes.includes(type.toLowerCase().replace(/\s+/g, '_'))
+                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {isCommunityOrganizer && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Average Event Size</label>
+                          <div className="flex flex-wrap gap-2">
+                            {audienceSizeOptions.map(size => (
+                              <button
+                                key={size}
+                                onClick={() => setHostingForm({
+                                  ...hostingForm,
+                                  averageEventSize: size
+                                })}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                  hostingForm.averageEventSize === size
+                                    ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                }`}
+                              >
+                                {size}
+                              </button>
+                            ))}
                           </div>
-                        </>
+                        </div>
                       )}
+
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Niche Community Description</label>
+                        <textarea 
+                          value={hostingForm.nicheCommunityDescription}
+                          onChange={(e) => setHostingForm({ ...hostingForm, nicheCommunityDescription: e.target.value })}
+                          rows="3"
+                          placeholder="Describe your community's niche..."
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                        />
+                      </div>
 
                       <div className="flex gap-2 pt-4">
                         <button
@@ -1614,14 +2114,16 @@ const ProfileNew = () => {
                       )}
 
                       {/* Preferred Event Formats */}
-                      {(isCommunityOrganizer || isVenue) && (
+                      {isHostPartner && (
                         <div>
                           <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Event Formats</p>
                           {(isCommunityOrganizer ? profileData.communityProfile?.preferredEventFormats : 
-                            profileData.venueProfile?.preferredEventFormats)?.length > 0 ? (
+                            isVenue ? profileData.venueProfile?.preferredEventFormats :
+                            profileData.brandProfile?.preferredEventFormats)?.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {(isCommunityOrganizer ? profileData.communityProfile.preferredEventFormats : 
-                                profileData.venueProfile.preferredEventFormats).map((format, idx) => (
+                                isVenue ? profileData.venueProfile.preferredEventFormats :
+                                profileData.brandProfile.preferredEventFormats).map((format, idx) => (
                                 <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                   {format}
                                 </span>
@@ -1633,13 +2135,17 @@ const ProfileNew = () => {
                         </div>
                       )}
 
-                      {/* Collaboration Types (Brand Only) */}
-                      {isBrandSponsor && (
+                      {/* Preferred Collaboration Types */}
+                      {isHostPartner && (
                         <div>
                           <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Collaboration Types</p>
-                          {profileData.brandProfile?.preferredCollaborationTypes?.length > 0 ? (
+                          {(isCommunityOrganizer ? profileData.communityProfile?.preferredCollaborationTypes :
+                            isVenue ? profileData.venueProfile?.preferredCollaborationTypes :
+                            profileData.brandProfile?.preferredCollaborationTypes)?.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
-                              {profileData.brandProfile.preferredCollaborationTypes.map((type, idx) => (
+                              {(isCommunityOrganizer ? profileData.communityProfile.preferredCollaborationTypes :
+                                isVenue ? profileData.venueProfile.preferredCollaborationTypes :
+                                profileData.brandProfile.preferredCollaborationTypes).map((type, idx) => (
                                 <span key={idx} className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
                                   {type}
                                 </span>
@@ -1656,11 +2162,11 @@ const ProfileNew = () => {
                         <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Audience Types</p>
                         {(isCommunityOrganizer ? profileData.communityProfile?.preferredAudienceTypes : 
                           isVenue ? profileData.venueProfile?.preferredAudienceTypes : 
-                          profileData.brandProfile?.targetAudience)?.length > 0 ? (
+                          profileData.brandProfile?.preferredAudienceTypes)?.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {(isCommunityOrganizer ? profileData.communityProfile.preferredAudienceTypes : 
                               isVenue ? profileData.venueProfile.preferredAudienceTypes : 
-                              profileData.brandProfile.targetAudience).map((type, idx) => (
+                              profileData.brandProfile.preferredAudienceTypes).map((type, idx) => (
                               <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                 {type}
                               </span>
@@ -1705,7 +2211,7 @@ const ProfileNew = () => {
                     <p className="text-gray-500 text-xs mt-0.5">Browse our knowledge base</p>
                   </button>
                   <button
-                    onClick={() => setSupportModalOpen(true)}
+                    onClick={() => navigate('/contact-us')}
                     className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
                   >
                     Contact support

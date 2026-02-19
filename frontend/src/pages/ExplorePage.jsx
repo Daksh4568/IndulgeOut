@@ -353,15 +353,20 @@ export default function ExplorePage() {
       setFeaturedCommunities(communities);
       setCommunitiesPagination(featuredData.pagination);
 
-      // Generate locked placeholder communities only if not searching
-      if (!searchQuery) {
-        const locked = Array(10).fill(null).map((_, index) => ({
+      // For "All Communities" section - use communities beyond the first 4 as locked
+      if (!searchQuery && communities.length > 4) {
+        const remainingCommunities = communities.slice(4);
+        setLockedCommunities(remainingCommunities);
+      } else if (!searchQuery && communities.length <= 4 && communities.length > 0) {
+        // If we have 4 or fewer communities, create some placeholder locked ones
+        const placeholderCount = Math.max(0, 6 - communities.length);
+        const locked = Array(placeholderCount).fill(null).map((_, index) => ({
           _id: `locked-${index}`,
           name: `Community ${index + 1}`,
-          description: 'This is a locked community. Download the app to view.',
+          description: 'Discover more amazing communities in the app',
           category: 'Social Mixers',
           memberCount: Math.floor(Math.random() * 500) + 100,
-          location: { city: 'Los Angeles', state: 'CA' }
+          location: { city: 'Bengaluru', state: 'Karnataka' }
         }));
         setLockedCommunities(locked);
       } else {
@@ -438,14 +443,14 @@ export default function ExplorePage() {
   // Get sorted people connections based on filter
   const getSortedPeople = () => {
     const allPeople = [
-      { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: 2.5, emoji: '👤', bgColor: 'from-purple-500 to-purple-700', isActive: true },
-      { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: 3.8, emoji: '👤', bgColor: 'from-pink-500 to-pink-700', isActive: false },
-      { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: 1.2, emoji: '👤', bgColor: 'from-blue-500 to-blue-700', isActive: true },
-      { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: 4.5, emoji: '👤', bgColor: 'from-indigo-500 to-indigo-700', isActive: false },
-      { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: 5.0, emoji: '👤', bgColor: 'from-violet-500 to-violet-700', isActive: true },
-      { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: 2.1, emoji: '👤', bgColor: 'from-fuchsia-500 to-fuchsia-700', isActive: false },
-      { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: 3.3, emoji: '👤', bgColor: 'from-cyan-500 to-cyan-700', isActive: true },
-      { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: 1.8, emoji: '👤', bgColor: 'from-rose-500 to-rose-700', isActive: false },
+      { name: 'Alex Johnson', interests: 'Music, Art, Travel', distance: 2.5, emoji: '👤', isActive: true },
+      { name: 'Sarah Williams', interests: 'Food, Photography, Yoga', distance: 3.8, emoji: '👤', isActive: false },
+      { name: 'Mike Davis', interests: 'Sports, Tech, Gaming', distance: 1.2, emoji: '👤', isActive: true },
+      { name: 'Emma Brown', interests: 'Dance, Fashion, Books', distance: 4.5, emoji: '👤', isActive: false },
+      { name: 'Chris Wilson', interests: 'Music, Comedy, Movies', distance: 5.0, emoji: '👤', isActive: true },
+      { name: 'Lisa Martinez', interests: 'Art, Wellness, Nature', distance: 2.1, emoji: '👤', isActive: false },
+      { name: 'David Lee', interests: 'Business, Tech, Coffee', distance: 3.3, emoji: '👤', isActive: true },
+      { name: 'Rachel Taylor', interests: 'Fitness, Travel, Food', distance: 1.8, emoji: '👤', isActive: false },
     ];
 
     switch(peopleFilter) {
@@ -1120,55 +1125,53 @@ export default function ExplorePage() {
                     )}
                   </div>
                   
-                  <div className="relative">
-                    {/* Calculate pagination for locked communities */}
-                    {(() => {
-                      const itemsPerPage = 8;
-                      const totalPages = Math.ceil(lockedCommunities.length / itemsPerPage);
-                      const startIdx = (communitiesPage - 1) * itemsPerPage;
-                      const endIdx = startIdx + itemsPerPage;
-                      const paginatedCommunities = lockedCommunities.slice(startIdx, endIdx);
-                      
-                      return (
-                        <>
-                          {/* Mobile: Horizontal Carousel */}
-                          <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                            <div className="flex gap-4 px-2">
+                  {lockedCommunities.length > 0 ? (
+                    <div className="relative">
+                      {/* Calculate pagination for locked communities */}
+                      {(() => {
+                        const itemsPerPage = 8;
+                        const totalPages = Math.ceil(lockedCommunities.length / itemsPerPage);
+                        const startIdx = (communitiesPage - 1) * itemsPerPage;
+                        const endIdx = startIdx + itemsPerPage;
+                        const paginatedCommunities = lockedCommunities.slice(startIdx, endIdx);
+                        
+                        return (
+                          <>
+                            {/* Mobile: Horizontal Carousel */}
+                            <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                              <div className="flex gap-4 px-2">
+                                {paginatedCommunities.map(community => (
+                                  <div key={community._id} className="flex-none w-[85vw] snap-center">
+                                    <CommunityCard
+                                      community={community}
+                                      isLocked={true}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* Desktop: Grid Layout */}
+                            <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                              {/* Show paginated communities as locked/blurred */}
                               {paginatedCommunities.map(community => (
-                                <div key={community._id} className="flex-none w-[85vw] snap-center">
-                                  <CommunityCard
-                                    community={community}
-                                    isLocked={true}
-                                  />
-                                </div>
+                                <CommunityCard
+                                  key={community._id}
+                                  community={community}
+                                  isLocked={true}
+                                />
                               ))}
                             </div>
-                          </div>
-                          
-                          {/* Desktop: Grid Layout */}
-                          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {/* Show paginated communities as locked/blurred */}
-                            {paginatedCommunities.map(community => (
-                              <CommunityCard
-                                key={community._id}
-                                community={community}
-                                isLocked={true}
-                              />
-                            ))}
-                          </div>
-                          
-                          {/* Unlock Overlay - positioned higher in the grid */}
-                          {lockedCommunities.length > 0 && (
+                            
+                            {/* Unlock Overlay - positioned higher in the grid */}
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '0%' }}>
                               <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-8 text-center text-white max-w-md pointer-events-auto">
-                                <div className="h-16 w-16 bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] rounded-full flex items-center justify-center mx-auto mb-4">
+                                <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                   <Lock className="h-8 w-8 text-white" />
                                 </div>
                                 <h3 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
                                   Unlock More Communities
                                 </h3>
-                                <p className="text-base mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                 Viewing {Math.min(8, lockedCommunities.length)} of {lockedCommunities.length} communities. <br /> Download the app to join more communities                          </p>
                                 <a
                                   href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
                                   target="_blank"
@@ -1176,11 +1179,14 @@ export default function ExplorePage() {
                                   className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
                                   style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                                 >
-                                  Download the App
+                                  App Coming Soon
                                 </a>
+
+                                {/* <p className=" mt-2 text-sm text-white/70" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                      Available on iOS & Android
+                                  </p> */}
                               </div>
                             </div>
-                          )}
                           
                           {/* Pagination Controls for Communities */}
                           {totalPages > 1 && (
@@ -1236,6 +1242,13 @@ export default function ExplorePage() {
                       );
                     })()}
                   </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-gray-600 dark:text-gray-400">
+                      All available communities are shown above
+                    </p>
+                  </div>
+                )}
                 </section>
               </div>
             )}
@@ -1330,7 +1343,7 @@ export default function ExplorePage() {
                           <div key={index} className="flex-none w-[85vw] snap-center">
                             <div className="bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 cursor-pointer flex flex-col blur-sm">
                               <div className="relative h-64">
-                                <div className={`w-full h-full bg-gradient-to-br ${person.bgColor} flex items-center justify-center`}>
+                                <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                   <span className="text-8xl opacity-80">{person.emoji}</span>
                                 </div>
                                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
@@ -1365,7 +1378,7 @@ export default function ExplorePage() {
                       {getSortedPeople().map((person, index) => (
                         <div key={index} className="bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 cursor-pointer flex flex-col blur-sm">
                           <div className="relative h-64">
-                            <div className={`w-full h-full bg-gradient-to-br ${person.bgColor} flex items-center justify-center`}>
+                            <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                               <span className="text-8xl opacity-80">{person.emoji}</span>
                             </div>
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
@@ -1407,11 +1420,9 @@ export default function ExplorePage() {
                           <Lock className="h-10 w-10 text-white" />
                         </div>
                         <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                          Unlock More Connections
+                          Unlock Connections
                         </h3>
-                        <p className="text-base mb-6 text-white/90" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                          Viewing 5 of many people. Download the app to connect with more like-minded people.
-                        </p>
+                  
                         <a
                           href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
                           target="_blank"
@@ -1419,11 +1430,11 @@ export default function ExplorePage() {
                           className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl mb-2"
                           style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                         >
-                          Download the App
+                          App Coming Soon
                         </a>
-                        <p className="text-sm text-white/70" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                          Available on iOS & Android
-                        </p>
+                        {/* <p className="text-sm text-white/70" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                          Available on iOS & Android(COMING SOON)
+                        </p> */}
                       </div>
                     </div>
                   </div>

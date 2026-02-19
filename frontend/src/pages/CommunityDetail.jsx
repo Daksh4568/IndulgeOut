@@ -786,84 +786,54 @@ const CommunityDetail = () => {
                 </div>
               )}
 
-              {/* Discussion List - Left sidebar with topics, Right main content area */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Left Sidebar - Discussion Topics */}
-                <div className="lg:col-span-1 bg-zinc-900/50 rounded-lg p-4 border border-gray-800">
-                  <h3 className="text-sm font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                    Discussions
-                  </h3>
-                  <div className="space-y-2">
-                    <button className="w-full text-left px-3 py-2 rounded-md text-white text-sm" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Source Serif Pro, serif' }}>
-                      Weekend Mock Strategy
-                    </button>
-                    <button className="w-full text-left px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      New Members Welcome
-                    </button>
-                    <button className="w-full text-left px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      Training Schedule
-                    </button>
-                    <button className="w-full text-left px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      Equipment Discussion
-                    </button>
-                  </div>
-                  <button 
-                    className="w-full mt-4 px-4 py-2 rounded-md text-white font-bold text-sm uppercase"
-                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    New Thread
-                  </button>
-                </div>
-
-                {/* Main Content - Forum Posts */}
-                <div className="lg:col-span-3 space-y-4">
-                  {community.forum && community.forum.length > 0 ? (
-                    community.forum.map((post) => (
-                      <div key={post._id} className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
-                        <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-                            {post.author?.profilePicture ? (
-                              <img src={post.author.profilePicture} alt={post.author.name} className="w-10 h-10 rounded-full object-cover" />
-                            ) : (
-                              <span className="text-sm font-bold text-gray-400">
-                                {post.author?.name?.charAt(0) || 'U'}
-                              </span>
-                            )}
+              {/* Forum Posts */}
+              <div className="space-y-4">
+                {community.forum && community.forum.length > 0 ? (
+                  community.forum.map((post) => (
+                    <div key={post._id} className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                          {post.author?.profilePicture ? (
+                            <img src={post.author.profilePicture} alt={post.author.name} className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <span className="text-sm font-bold text-gray-400">
+                              {post.author?.name?.charAt(0) || 'U'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-bold text-white text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                              {post.author?.name || 'Anonymous'}
+                            </span>
+                            <span className="text-xs text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {formatRelativeTime(post.createdAt)}
+                            </span>
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-bold text-white text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                                {post.author?.name || 'Anonymous'}
-                              </span>
-                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                {formatRelativeTime(post.createdAt)}
-                              </span>
-                            </div>
-                            <p className="text-gray-400 text-sm leading-relaxed mb-3 whitespace-pre-line" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                              {post.content}
-                            </p>
-                            <div className="flex items-center gap-4">
-                              <button className="flex items-center gap-1 text-gray-500 hover:text-white text-xs transition-colors">
-                                <MessageSquare className="h-3 w-3" />
-                                Reply
-                              </button>
-                            </div>
+                          <p className="text-gray-400 text-sm leading-relaxed mb-3 whitespace-pre-line" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                            {post.content}
+                          </p>
+                          <div className="flex items-center gap-4">
+                            <button className="flex items-center gap-1 text-gray-500 hover:text-white text-xs transition-colors">
+                              <MessageSquare className="h-3 w-3" />
+                              Reply
+                            </button>
                           </div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 bg-zinc-900/50 rounded-lg border border-gray-800">
-                      <MessageSquare className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                      <h4 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                        No discussions yet
-                      </h4>
-                      <p className="text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                        Be the first to start a conversation!
-                      </p>
                     </div>
-                  )}
-                </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 bg-zinc-900/50 rounded-lg border border-gray-800">
+                    <MessageSquare className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                    <h4 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      No discussions yet
+                    </h4>
+                    <p className="text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Be the first to start a conversation!
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -111,6 +111,9 @@ const communitySchema = new mongoose.Schema({
   coverImage: {
     type: String // Main community image
   },
+  logo: {
+    type: String // Community logo URL
+  },
   location: {
     city: String,
     state: String,

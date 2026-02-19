@@ -73,7 +73,7 @@ const Categories = () => {
       <NavigationBar />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-8">
         {/* Upcoming Events Section - Commented out until we have trending and famous events
         {!loading && upcomingEvents.length > 0 && (
           <section className="mb-16 py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden rounded-2xl p-6 sm:p-8">
@@ -294,8 +294,13 @@ const Categories = () => {
       {/* CTA Section - Didn't find your Interest Match? */}
       <section className="relative py-20 overflow-hidden">
         {/* Background Image with Dark Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 to-pink-900/50">
-          {/* You can add a background image here */}
+        <div className="absolute inset-0">
+          <img 
+            src="/images/BackgroundLogin.jpg" 
+            alt="Background" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/70 to-black/50"></div>
         </div>
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -303,7 +308,12 @@ const Categories = () => {
             className="text-4xl sm:text-5xl font-bold mb-4"
             style={{ fontFamily: 'Oswald, sans-serif' }}
           >
-            Didn't find your <span className="text-purple-400">Interest Match?</span>
+            Didn't find your <span style={{ 
+              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}> <br />Interest Match?</span>
           </h2>
           
           <p 

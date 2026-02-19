@@ -251,9 +251,35 @@ const BrowseVenues = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black">
+    <div className="min-h-screen bg-gradient-to-b from-[#0A0A0A] via-[#1A1A2E] to-[#0A0A0A] relative">
       <NavigationBar />
       
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(10px)' }}>
+        <div className="text-center px-4">
+          <div className="mb-6">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 mb-4">
+              <Building2 className="h-12 w-12 text-white" />
+            </div>
+          </div>
+          <h1 className="text-5xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+            Coming Soon
+          </h1>
+          <p className="text-xl text-gray-300 mb-8" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            We're working hard to bring you the best venue browsing experience
+          </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-8 py-3 bg-white text-black rounded-md font-semibold hover:bg-gray-100 transition-all"
+            style={{ fontFamily: 'Oswald, sans-serif' }}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+      
+      {/* Blurred Content */}
+      <div className="blur-sm pointer-events-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header - Browse Venues */}
         <div className="text-center mb-6">
@@ -263,17 +289,6 @@ const BrowseVenues = () => {
           <p className="text-gray-400 text-base mb-4">
             Join communities and circles for your interests and hobbies
           </p>
-          
-          {/* Manage Collaborations Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={() => navigate('/collaborations')}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full hover:scale-105 transition-transform flex items-center gap-2 shadow-lg hover:shadow-xl"
-            >
-              <FileText className="h-5 w-5" />
-              Manage Collaborations
-            </button>
-          </div>
         </div>
 
         {/* White Search Bar - Centered, not full width */}
@@ -771,6 +786,7 @@ const BrowseVenues = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

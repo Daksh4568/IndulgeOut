@@ -684,7 +684,7 @@ const UserDashboard = () => {
                 }}
               >
                 <Download className="h-5 w-5" />
-                Download App
+                App Coming Soon
               </button>
             </div>
           </div>
@@ -917,10 +917,10 @@ const UserDashboard = () => {
               style={activeSidebarItem === 'dashboard' ? {
                 background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
               } : {}}
-              title="Dashboard"
+              title="dashboard"
             >
               <LayoutDashboard className="h-6 w-6" />
-              <span className="text-xs font-medium">Dashboard</span>
+              <span className="text-xs font-medium">ALL</span>
             </button>
 
             {/* My Events */}
@@ -983,7 +983,7 @@ const UserDashboard = () => {
               <span className="text-xs font-medium">Rewards</span>
             </button>
 
-            {/* Help */}
+            {/* Help
             <button
               onClick={() => navigate('/contact')}
               className="flex flex-col items-center space-y-1 p-3 rounded-lg text-gray-400 hover:text-white transition-all"
@@ -991,7 +991,7 @@ const UserDashboard = () => {
             >
               <HelpCircle className="h-6 w-6" />
               <span className="text-xs font-medium">Help</span>
-            </button>
+            </button> */}
           </nav>
         </div>
 
@@ -1103,7 +1103,7 @@ const UserDashboard = () => {
               </section>
 
               {/* REWARDS & STATUS */}
-              <section id="rewards-status">
+              <section id="rewards-status" className="relative">
                 <div className="bg-zinc-900 rounded-xl border border-gray-800 p-6">
                   <div className="flex items-center mb-6">
                     <Gift className="h-5 w-5 text-white mr-2" />
@@ -1111,7 +1111,23 @@ const UserDashboard = () => {
                       Rewards & Status
                     </h2>
                   </div>
-                  <RewardsStatusSection />
+                  <div className="blur-sm pointer-events-none">
+                    <RewardsStatusSection />
+                  </div>
+                </div>
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
+                  <div className="text-center px-4">
+                    <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                      <Gift className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2 text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      Coming Soon
+                    </h3>
+                    <p className="text-gray-300 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                      Rewards & Status features will be available soon!
+                    </p>
+                  </div>
                 </div>
               </section>
             </div>

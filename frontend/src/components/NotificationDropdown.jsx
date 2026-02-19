@@ -3,6 +3,12 @@ import { X, Check, CheckCheck, Trash2, ExternalLink, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, isToday, isThisWeek, isAfter, subWeeks } from 'date-fns';
 
+// Remove emojis from text
+const removeEmojis = (text) => {
+  if (!text) return '';
+  return text.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+};
+
 export default function NotificationDropdown({ onClose }) {
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
@@ -31,8 +37,6 @@ export default function NotificationDropdown({ onClose }) {
   const groups = groupedNotifications();
 
   const handleNotificationClick = async (notification) => {
-    console.log('🔔 Notification clicked:', notification);
-    
     // Mark as read
     if (!notification.isRead) {
       await markAsRead(notification._id);
@@ -40,15 +44,10 @@ export default function NotificationDropdown({ onClose }) {
 
     let targetLink = notification.actionButton?.link || null;
     
-    console.log('📍 Initial link:', targetLink);
-    console.log('📋 Notification type:', notification.type);
-    console.log('🏷️ Notification title:', notification.title);
-    
     // Handle "Complete Your Host Profile" notifications - navigate to profile page
     if (notification.title.toLowerCase().includes('complete your') && 
         notification.title.toLowerCase().includes('profile')) {
       targetLink = '/profile';
-      console.log('👤 Detected profile completion notification, navigating to:', targetLink);
     }
     // Handle payout/KYC notifications - navigate to profile with payout section
     else if (notification.type === 'kyc_pending' || 
@@ -56,7 +55,6 @@ export default function NotificationDropdown({ onClose }) {
         notification.title.toLowerCase().includes('kyc') ||
         notification.message.toLowerCase().includes('bank details')) {
       targetLink = '/profile?section=payout';
-      console.log('💳 Detected payout notification, navigating to:', targetLink);
     }
     // Handle ticket-related notifications - navigate to user dashboard with specific eventId
     else if (notification.type === 'booking_confirmed' || 
@@ -73,27 +71,14 @@ export default function NotificationDropdown({ onClose }) {
     
     // Navigate if we have a target link
     if (targetLink) {
-      console.log('🚀 Final navigation target:', targetLink);
       navigate(targetLink);
       onClose();
-    } else {
-      console.log('⚠️ No navigation target determined for this notification');
     }
   };
 
   const getNotificationIcon = (notification) => {
-    const emoji = notification.metadata?.emoji;
-    if (emoji) return emoji;
-    
-    // Default icons based on category
-    const categoryIcons = {
-      action_required: '🔴',
-      status_update: '🔵',
-      reminder: '⏰',
-      milestone: '🎯'
-    };
-    
-    return categoryIcons[notification.category] || '📢';
+    // Removed emoji display for cleaner UI
+    return '';
   };
 
   const getTimeAgo = (date) => {
@@ -155,6 +140,7 @@ export default function NotificationDropdown({ onClose }) {
                       deleteNotification={deleteNotification}
                       getNotificationIcon={getNotificationIcon}
                       getTimeAgo={getTimeAgo}
+                      removeEmojis={removeEmojis}
                     />
                   ))}
                 </div>
@@ -177,6 +163,7 @@ export default function NotificationDropdown({ onClose }) {
                       deleteNotification={deleteNotification}
                       getNotificationIcon={getNotificationIcon}
                       getTimeAgo={getTimeAgo}
+                      removeEmojis={removeEmojis}
                     />
                   ))}
                 </div>
@@ -199,6 +186,7 @@ export default function NotificationDropdown({ onClose }) {
                       deleteNotification={deleteNotification}
                       getNotificationIcon={getNotificationIcon}
                       getTimeAgo={getTimeAgo}
+                      removeEmojis={removeEmojis}
                     />
                   ))}
                 </div>
@@ -227,7 +215,7 @@ export default function NotificationDropdown({ onClose }) {
 }
 
 // Notification Item Component
-function NotificationItem({ notification, onNotificationClick, markAsRead, deleteNotification, getNotificationIcon, getTimeAgo }) {
+function NotificationItem({ notification, onNotificationClick, markAsRead, deleteNotification, getNotificationIcon, getTimeAgo, removeEmojis }) {
   return (
     <div
       className={`rounded-lg p-2.5 sm:p-3 cursor-pointer transition-all group relative ${
@@ -238,19 +226,21 @@ function NotificationItem({ notification, onNotificationClick, markAsRead, delet
       onClick={() => onNotificationClick(notification)}
     >
       <div className="flex items-start gap-2 sm:gap-3">
-        {/* Icon */}
-        <div className="text-xl sm:text-2xl flex-shrink-0 mt-1">
-          {getNotificationIcon(notification)}
-        </div>
+        {/* Icon - Hidden for cleaner UI */}
+        {/* {getNotificationIcon(notification) && (
+          <div className="text-xl sm:text-2xl flex-shrink-0 mt-1">
+            {getNotificationIcon(notification)}
+          </div>
+        )} */}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1" style={{ fontFamily: 'Oswald, sans-serif' }}>
-            {notification.title}
+            {removeEmojis(notification.title)}
           </h4>
           
           <p className="text-xs text-gray-400 line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-            {notification.message}
+            {removeEmojis(notification.message)}
           </p>
 
           <div className="flex items-center justify-between mt-2">

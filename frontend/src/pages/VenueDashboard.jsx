@@ -25,6 +25,7 @@ import {
   Sparkles,
   Eye,
   Copy,
+  Users2,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import NavigationBar from "../components/NavigationBar";
@@ -213,6 +214,14 @@ const VenueDashboard = () => {
                 </button>
               </div>
             )}
+            <button
+              onClick={() => navigate('/collaborations')}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
+              style={{ fontFamily: "Oswald, sans-serif" }}
+            >
+              <FileText className="h-5 w-5" />
+              <span>Manage Collaborations</span>
+            </button>
           </div>
         </div>
 
@@ -500,7 +509,7 @@ const VenueDashboard = () => {
               title="Dashboard"
             >
               <Grid className="h-6 w-6" />
-              <span className="text-xs font-medium">Dashboard</span>
+              <span className="text-xs font-medium">ALL</span>
             </button>
 
             {/* Actions Required */}
@@ -530,26 +539,26 @@ const VenueDashboard = () => {
               <span className="text-xs font-medium">Actions</span>
             </button>
 
-            {/* Events */}
+            {/* Collaborations */}
             <button
-              onClick={() => setActiveSidebarItem("events")}
+              onClick={() => setActiveSidebarItem("collaborations")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === "events"
+                activeSidebarItem === "collaborations"
                   ? "text-white"
                   : "text-gray-600 hover:text-gray-400"
               }`}
               style={
-                activeSidebarItem === "events"
+                activeSidebarItem === "collaborations"
                   ? {
                       background:
                         "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
                     }
                   : {}
               }
-              title="Events"
+              title="Collaborations"
             >
-              <Calendar className="h-6 w-6" />
-              <span className="text-xs font-medium">Events</span>
+              <Users2 className="h-6 w-6" />
+              <span className="text-xs font-medium">Collaborations</span>
             </button>
 
             {/* Analytics */}
@@ -572,28 +581,6 @@ const VenueDashboard = () => {
             >
               <BarChart3 className="h-6 w-6" />
               <span className="text-xs font-medium">Analytics</span>
-            </button>
-
-            {/* Settings */}
-            <button
-              onClick={() => setActiveSidebarItem("settings")}
-              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
-                activeSidebarItem === "settings"
-                  ? "text-white"
-                  : "text-gray-600 hover:text-gray-400"
-              }`}
-              style={
-                activeSidebarItem === "settings"
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    }
-                  : {}
-              }
-              title="Settings"
-            >
-              <Settings className="h-6 w-6" />
-              <span className="text-xs font-medium">Settings</span>
             </button>
           </nav>
         </aside>
@@ -799,18 +786,18 @@ const VenueDashboard = () => {
             </div>
 
             {/* Collaborations Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
+            {(activeSidebarItem === 'all' || activeSidebarItem === 'collaborations') && (
+              <div className="mb-8">
                 <h2
-                  className="text-xl font-semibold text-white flex items-center"
+                  className="text-xl font-semibold text-white flex items-center mb-4"
                   style={{ fontFamily: "Oswald, sans-serif" }}
                 >
                   <Building2 className="h-6 w-6 mr-2" />
                   Collaborations
                 </h2>
+                <ManageCollaborationsSection />
               </div>
-              <ManageCollaborationsSection />
-            </div>
+            )}
 
             {/* Performance & Insights Section */}
             <div className="mb-8">

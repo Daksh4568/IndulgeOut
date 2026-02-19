@@ -141,17 +141,17 @@ const HostPartnerPage = () => {
       <NavigationBar />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-20 pb-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             Choose who you are
           </h1>
-          <p className="text-lg md:text-xl text-gray-400 mb-16">
+          <p className="text-lg md:text-xl text-gray-400 mb-12">
             A dedicated space for seamless offline experience collaborations.
           </p>
 
           {/* Role Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
             {roleCards.map((role, index) => (
               <div
                 key={index}
@@ -209,9 +209,9 @@ const HostPartnerPage = () => {
       </section>
 
       {/* How it Works Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">How it works</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">How it works</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {howItWorks.map((step, index) => (
@@ -233,9 +233,9 @@ const HostPartnerPage = () => {
       </section>
 
       {/* What Makes IndulgeOut Different */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             What makes IndulgeOut different
           </h2>
 
@@ -278,24 +278,18 @@ const HostPartnerPage = () => {
         </div>
       </section>
 
-      {/* Need More Info Section */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
-        <div className="max-w-4xl mx-auto text-center">
-          <h3 className="text-2xl font-bold mb-4">Need More Info?</h3>
-        </div>
-      </section>
 
       {/* FAQ Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
             Frequently Asked
           </h2>
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-10">
             <span className="text-[#6366F1] italic">Questions</span>
           </h2>
 
-          <div className="space-y-4 mt-12">
+          <div className="space-y-4 mt-8">
             {faqs.map((faq, index) => (
               <div
                 key={index}
@@ -340,7 +334,7 @@ const HostPartnerPage = () => {
             Join thousands of communities, venues, and brands creating meaningful offline experiences.
           </p>
           <button
-            onClick={() => navigate('/register')}
+            onClick={() => navigate('/signup/host')}
             className="text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl uppercase"
             style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
           >
