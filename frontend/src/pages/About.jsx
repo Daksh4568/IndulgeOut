@@ -44,11 +44,11 @@ const About = () => {
             <div className="transform -rotate-12 w-32">
               <div className="bg-white p-2 shadow-2xl">
                 <img
-                  src="/images/Media (10).jpg"
+                  src="/images/about1.jpg"
                   alt="Friends gathering"
                   className="w-full aspect-square object-cover"
                   onError={(e) => {
-                    e.target.src = '/images/postercard1.jpg';
+                    e.target.src = '/images/about1.jpg';
                   }}
                 />
                 <div className="h-6"></div>
@@ -58,11 +58,11 @@ const About = () => {
             <div className="transform rotate-12 w-32">
               <div className="bg-white p-2 shadow-2xl">
                 <img
-                  src="/images/Media (11).jpg"
+                  src="/images/about3.jpg"
                   alt="Event celebration"
                   className="w-full aspect-square object-cover"
                   onError={(e) => {
-                    e.target.src = '/images/postercard2.jpg';
+                    e.target.src = '/images/about3.jpg';
                   }}
                 />
                 <div className="h-6"></div>
@@ -147,10 +147,10 @@ const About = () => {
             <div className="relative mb-8 md:block hidden">
               <div className="relative">
                 {/* Speech bubble */}
-                <div className="bg-gray-800 px-6 py-3 rounded-full text-sm font-medium border-2 border-gray-600 relative">
+                <div className="bg-zinc-900 px-6 py-3 rounded-full text-sm font-medium border-2 border-gray-600 relative">
                   <span className="italic">tap here !</span>
                   {/* Bubble tail pointing down-left */}
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gray-800 border-b-2 border-l-2 border-gray-600 rotate-45"></div>
+                  {/* <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gray-800 border-b-2 border-l-2 border-gray-600 rotate-45"></div> */}
                 </div>
                 {/* Curved arrow pointing to envelope */}
                 <svg className="absolute top-full left-1/2 transform translate-x-8 translate-y-1 w-20 h-20" viewBox="0 0 100 100">
@@ -181,11 +181,11 @@ const About = () => {
               <div className="transform rotate-6 w-32">
                 <div className="bg-white p-2 shadow-2xl">
                   <img
-                    src="/images/Media (12).jpg"
+                    src="/images/about2.jpg"
                     alt="Community event"
                     className="w-full aspect-square object-cover"
                     onError={(e) => {
-                      e.target.src = '/images/postercard3.jpg';
+                      e.target.src = '/images/about2.jpg';
                     }}
                   />
                   <div className="h-6"></div>
@@ -195,11 +195,11 @@ const About = () => {
               <div className="transform -rotate-6 w-32">
                 <div className="bg-white p-2 shadow-2xl">
                   <img
-                    src="/images/Media (13).jpg"
+                    src="/images/about4.jpg"
                     alt="Happy attendees"
                     className="w-full aspect-square object-cover"
                     onError={(e) => {
-                      e.target.src = '/images/postercard4.jpg';
+                      e.target.src = '/images/about4.jpg';
                     }}
                   />
                   <div className="h-6"></div>
