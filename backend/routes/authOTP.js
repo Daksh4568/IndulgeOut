@@ -4,6 +4,7 @@ const User = require('../models/User');
 const { authMiddleware } = require('../utils/authUtils');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 const { sendWelcomeEmail, sendOTPEmail } = require('../utils/emailService');
+const { notifyProfileIncompleteUser } = require('../services/notificationService');
 
 // Helper functions
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -363,6 +364,25 @@ router.post('/otp/verify', async (req, res) => {
     } catch (notifError) {
       console.error('Failed to generate action required notifications:', notifError);
       // Don't fail login if notification generation fails
+    }
+
+    // Check if B2C user profile is incomplete and send notification
+    if (user.role === 'user') {
+      try {
+        const missingFields = [];
+        if (!user.age) missingFields.push('age');
+        if (!user.gender) missingFields.push('gender');
+        if (!user.bio) missingFields.push('bio');
+        
+        // Only send notification if there are missing fields
+        if (missingFields.length > 0) {
+          await notifyProfileIncompleteUser(user._id, missingFields);
+          console.log(`📢 Sent profile completion notification to ${user.name}`);
+        }
+      } catch (notifError) {
+        console.error('Error sending profile notification:', notifError);
+        // Don't fail login if notification fails
+      }
     }
 
     // Return success response with token and user data

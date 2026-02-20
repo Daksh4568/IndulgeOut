@@ -127,6 +127,11 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
     }
 
     console.log(`📝 Starting registration for: ${email} (${hostPartnerType})`);
+    
+    // Log category for debugging multi-select
+    if (category) {
+      console.log(`📋 Categories received:`, Array.isArray(category) ? category : [category]);
+    }
 
     // Upload photos to Cloudinary (if any)
     const photoUrls = [];

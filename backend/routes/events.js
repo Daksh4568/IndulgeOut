@@ -243,6 +243,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       quantity = 1,
       groupingOffer,
       additionalPersons = [],
+      questionnaireResponses = [],
       basePrice,
       gstAndOtherCharges,
       platformFees,
@@ -301,7 +302,8 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       user: userId,
       registeredAt: new Date(),
       status: 'registered',
-      quantity: ticketQuantity
+      quantity: ticketQuantity,
+      questionnaireResponses: questionnaireResponses || []
     };
     
     // Add grouping offer details if applicable
@@ -640,7 +642,7 @@ router.post('/:id/view', async (req, res) => {
 router.get('/:id/analytics', authMiddleware, async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await Event.findById(eventId).populate('participants.user', 'name email');
     
     if (!event) {
       return res.status(404).json({ 
@@ -661,6 +663,18 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       });
     }
     
+    // Create a map of userId to questionnaireResponses for quick lookup
+    const questionnaireMap = new Map();
+    if (event.participants && event.participants.length > 0) {
+      event.participants.forEach(participant => {
+        if (participant.user && participant.questionnaireResponses) {
+          questionnaireMap.set(participant.user._id.toString(), participant.questionnaireResponses);
+        }
+      });
+    }
+    
+    console.log(`📊 Analytics: Found ${questionnaireMap.size} participants with questionnaire responses`);
+    
     // Get all tickets for this event with user details
     const Ticket = require('../models/Ticket');
     const tickets = await Ticket.find({ event: eventId })
@@ -680,21 +694,27 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     // Format attendee data - filter out tickets with null users (deleted accounts)
     const attendees = tickets
       .filter(ticket => ticket.user != null) // Skip tickets with deleted users
-      .map(ticket => ({
-        ticketId: ticket._id, // Unique ticket ID for React key
-        userId: ticket.user._id,
-        name: ticket.user.name,
-        email: ticket.user.email,
-        phoneNumber: ticket.user.phoneNumber,
-        profilePicture: ticket.user.profilePicture,
-        ticketNumber: ticket.ticketNumber,
-        ticketType: ticket.metadata?.ticketType || 'general',
-        quantity: ticket.quantity || 1,
-        status: ticket.status,
-        purchaseDate: ticket.purchaseDate,
-        checkInTime: ticket.checkInTime,
-        checkInBy: ticket.checkInBy?.name || null
-      }));
+      .map(ticket => {
+        const userId = ticket.user._id.toString();
+        const questionnaireResponses = questionnaireMap.get(userId) || [];
+        
+        return {
+          ticketId: ticket._id, // Unique ticket ID for React key
+          userId: ticket.user._id,
+          name: ticket.user.name,
+          email: ticket.user.email,
+          phoneNumber: ticket.user.phoneNumber,
+          profilePicture: ticket.user.profilePicture,
+          ticketNumber: ticket.ticketNumber,
+          ticketType: ticket.metadata?.ticketType || 'general',
+          quantity: ticket.quantity || 1,
+          status: ticket.status,
+          purchaseDate: ticket.purchaseDate,
+          checkInTime: ticket.checkInTime,
+          checkInBy: ticket.checkInBy?.name || null,
+          questionnaireResponses: questionnaireResponses
+        };
+      });
     
     // Calculate revenue metrics (use basePrice from metadata, don't multiply by quantity as it's already the total)
     const totalRevenue = tickets

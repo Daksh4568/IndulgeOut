@@ -94,7 +94,11 @@ const eventSchema = new mongoose.Schema({
       tierLabel: String,
       tierPeople: Number,
       tierPrice: Number
-    }
+    },
+    questionnaireResponses: [{
+      question: String,
+      answer: String
+    }]
   }],
   price: {
     amount: {
@@ -125,6 +129,18 @@ const eventSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: 0
+      }
+    }]
+  },
+  questionnaire: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    questions: [{
+      question: {
+        type: String,
+        trim: true
       }
     }]
   },

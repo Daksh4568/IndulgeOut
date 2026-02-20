@@ -72,8 +72,14 @@ const EventCreation = () => {
     groupingOffers: {
       enabled: false,
       tiers: [
-        { label: "Single", people: 1, price: 0 },
-        { label: "", people: "", price: "" },
+        { people: 1, price: 0 },
+        { people: 0, price: "" },
+      ],
+    },
+    questionnaire: {
+      enabled: false,
+      questions: [
+        { question: "" },
       ],
     },
   });
@@ -229,13 +235,37 @@ const EventCreation = () => {
           coHosts: event.coHosts || [],
           requirements: event.requirements || [],
           isPrivate: event.isPrivate || false,
-          groupingOffers: event.groupingOffers || {
+          groupingOffers: event.groupingOffers ? {
+            enabled: event.groupingOffers.enabled || false,
+            tiers: event.groupingOffers.tiers?.length > 0 
+              ? event.groupingOffers.tiers.map((tier, idx) => ({
+                  people: idx === 0 ? 1 : (tier.people || 0),
+                  price: tier.price || 0
+                }))
+              : [
+                  { people: 1, price: 0 },
+                  { people: 0, price: 0 },
+                  { people: 0, price: 0 },
+                  { people: 0, price: 0 },
+                ]
+          } : {
             enabled: false,
             tiers: [
-              { label: "Single", people: 1, price: 0 },
-              { label: "", people: 0, price: 0 },
-              { label: "", people: 0, price: 0 },
-              { label: "", people: 0, price: 0 },
+              { people: 1, price: 0 },
+              { people: 0, price: 0 },
+              { people: 0, price: 0 },
+              { people: 0, price: 0 },
+            ],
+          },
+          questionnaire: event.questionnaire ? {
+            enabled: event.questionnaire.enabled || false,
+            questions: event.questionnaire.questions?.length > 0 
+              ? event.questionnaire.questions 
+              : [{ question: "" }]
+          } : {
+            enabled: false,
+            questions: [
+              { question: "" },
             ],
           },
         });
@@ -285,7 +315,7 @@ const EventCreation = () => {
         // Sync price.amount with Single tier price
         if (name === "price.amount" && prev.groupingOffers.enabled) {
           const newTiers = [...prev.groupingOffers.tiers];
-          newTiers[0] = { ...newTiers[0], price: Number(value) };
+          newTiers[0] = { ...newTiers[0], people: 1, price: Number(value) };
           newFormData.groupingOffers = {
             ...prev.groupingOffers,
             tiers: newTiers,
@@ -303,24 +333,33 @@ const EventCreation = () => {
   };
 
   const handleGroupingOfferToggle = (checked) => {
-    setFormData((prev) => ({
-      ...prev,
-      groupingOffers: {
-        ...prev.groupingOffers,
-        enabled: checked,
-      },
-    }));
+    setFormData((prev) => {
+      const tiers = [...prev.groupingOffers.tiers];
+      // Ensure first tier always has people: 1
+      if (tiers.length > 0) {
+        tiers[0] = { ...tiers[0], people: 1 };
+      }
+      
+      return {
+        ...prev,
+        groupingOffers: {
+          ...prev.groupingOffers,
+          enabled: checked,
+          tiers: tiers,
+        },
+      };
+    });
   };
 
   const handleGroupingTierChange = (index, field, value) => {
     setFormData((prev) => {
       const newTiers = [...prev.groupingOffers.tiers];
       
-      // Allow empty strings for people and price in grouping offers (except Single)
-      if (field === 'people' || field === 'price') {
+      // Handle price and people as numbers
+      if (field === 'price' || field === 'people') {
         newTiers[index] = {
           ...newTiers[index],
-          [field]: value === '' ? '' : Number(value),
+          [field]: value === '' ? (field === 'people' ? 0 : '') : Number(value),
         };
       } else {
         newTiers[index] = {
@@ -329,9 +368,9 @@ const EventCreation = () => {
         };
       }
       
-      // Auto-update label when people count changes (except for index 0 which is "Single")
-      if (field === 'people' && index > 0 && value) {
-        newTiers[index].label = `Group of ${value}`;
+      // Ensure first tier always has people: 1
+      if (index === 0) {
+        newTiers[0] = { ...newTiers[0], people: 1 };
       }
       
       const newFormData = {
@@ -361,7 +400,7 @@ const EventCreation = () => {
         ...prev.groupingOffers,
         tiers: [
           ...prev.groupingOffers.tiers,
-          { label: "", people: "", price: "" },
+          { people: 0, price: "" },
         ],
       },
     }));
@@ -373,6 +412,53 @@ const EventCreation = () => {
       groupingOffers: {
         ...prev.groupingOffers,
         tiers: prev.groupingOffers.tiers.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  // Questionnaire handlers
+  const handleQuestionnaireToggle = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      questionnaire: {
+        ...prev.questionnaire,
+        enabled: checked,
+      },
+    }));
+  };
+
+  const handleQuestionChange = (index, value) => {
+    setFormData((prev) => {
+      const newQuestions = [...prev.questionnaire.questions];
+      newQuestions[index] = { question: value };
+      return {
+        ...prev,
+        questionnaire: {
+          ...prev.questionnaire,
+          questions: newQuestions,
+        },
+      };
+    });
+  };
+
+  const addQuestion = () => {
+    if (formData.questionnaire.questions.length < 3) {
+      setFormData((prev) => ({
+        ...prev,
+        questionnaire: {
+          ...prev.questionnaire,
+          questions: [...prev.questionnaire.questions, { question: "" }],
+        },
+      }));
+    }
+  };
+
+  const removeQuestion = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      questionnaire: {
+        ...prev.questionnaire,
+        questions: prev.questionnaire.questions.filter((_, i) => i !== index),
       },
     }));
   };
@@ -941,6 +1027,14 @@ const EventCreation = () => {
         endTime: formData.endTime,
         images: uploadedImages.map((img) => img.url), // Send Cloudinary URLs
       };
+      
+      // Ensure first tier always has people: 1 if grouping offers enabled
+      if (eventData.groupingOffers?.enabled && eventData.groupingOffers.tiers?.length > 0) {
+        eventData.groupingOffers.tiers[0] = {
+          ...eventData.groupingOffers.tiers[0],
+          people: 1
+        };
+      }
 
       let response;
       if (isEditMode) {
@@ -1351,7 +1445,7 @@ const EventCreation = () => {
                   <input
                     type="checkbox"
                     id="groupingOffers"
-                    checked={formData.groupingOffers.enabled}
+                    checked={formData.groupingOffers?.enabled || false}
                     onChange={(e) => handleGroupingOfferToggle(e.target.checked)}
                     className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
                     style={{ accentColor: '#7878E9' }}
@@ -1361,15 +1455,12 @@ const EventCreation = () => {
                   </label>
                 </div>
 
-                {formData.groupingOffers.enabled && (
+                {formData.groupingOffers?.enabled && (
                   <div className="space-y-3 pl-6 border-l-2 border-white/10">
-                    {formData.groupingOffers.tiers.map((tier, index) => (
+                    {formData.groupingOffers.tiers?.map((tier, index) => (
                       <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-white text-xs font-medium">
-                            {index === 0 ? 'Single' : `Group ${index + 1}`}
-                          </span>
-                          {index > 0 && (
+                        {index > 0 && (
+                          <div className="flex items-center justify-end">
                             <button
                               type="button"
                               onClick={() => removeGroupingTier(index)}
@@ -1377,27 +1468,27 @@ const EventCreation = () => {
                             >
                               <X className="h-4 w-4" />
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-gray-400 text-xs mb-1">
-                              {index === 0 ? 'Label' : 'People'}
+                              People
                             </label>
                             {index === 0 ? (
                               <input
-                                type="text"
-                                value={tier.label}
+                                type="number"
+                                value={1}
                                 disabled
                                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm opacity-50 cursor-not-allowed"
                               />
                             ) : (
                               <input
                                 type="number"
-                                value={tier.people}
+                                value={tier.people || ''}
                                 onChange={(e) => handleGroupingTierChange(index, 'people', e.target.value)}
-                                placeholder="No. of people"
-                                min="2"
+                                placeholder="0"
+                                min="0"
                                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                               />
                             )}
@@ -1421,7 +1512,7 @@ const EventCreation = () => {
                     ))}
                     
                     {/* Add More Button - Show if less than 4 tiers */}
-                    {formData.groupingOffers.tiers.length < 4 && (
+                    {(formData.groupingOffers.tiers?.length || 0) < 4 && (
                       <button
                         type="button"
                         onClick={addGroupingTier}
@@ -1433,7 +1524,72 @@ const EventCreation = () => {
                     )}
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Set different prices for single tickets and group bookings
+                      💡 Set number of people and price for each tier (e.g., 2 people - ₹80)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Questionnaire */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="questionnaire"
+                    checked={formData.questionnaire?.enabled || false}
+                    onChange={(e) => handleQuestionnaireToggle(e.target.checked)}
+                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
+                    style={{ accentColor: '#7878E9' }}
+                  />
+                  <label htmlFor="questionnaire" className="text-white text-sm font-medium cursor-pointer">
+                    Questionnaire for Participants
+                  </label>
+                </div>
+
+                {formData.questionnaire?.enabled && (
+                  <div className="space-y-3 pl-6 border-l-2 border-white/10">
+                    {formData.questionnaire.questions?.map((item, index) => (
+                      <div key={index} className="space-y-2">
+                        {formData.questionnaire.questions.length > 1 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-white text-xs font-medium">
+                              Question {index + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeQuestion(index)}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                        <div>
+                          <textarea
+                            value={item.question}
+                            onChange={(e) => handleQuestionChange(index, e.target.value)}
+                            placeholder="Enter your question here..."
+                            rows="2"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Add More Button - Show if less than 3 questions */}
+                    {(formData.questionnaire.questions?.length || 0) < 3 && (
+                      <button
+                        type="button"
+                        onClick={addQuestion}
+                        className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
+                      >
+                        <span className="text-lg">+</span>
+                        <span>Add Question</span>
+                      </button>
+                    )}
+                    
+                    <p className="text-xs text-gray-400 italic mt-2">
+                      💡 Ask participants questions before booking (max 3 questions)
                     </p>
                   </div>
                 )}

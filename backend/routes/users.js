@@ -7,6 +7,7 @@ const Community = require('../models/Community.js');
 const Notification = require('../models/Notification.js');
 const { cloudinary } = require('../config/cloudinary.js');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
+const { notifyProfileIncompleteUser } = require('../services/notificationService.js');
 
 const router = express.Router();
 
@@ -331,6 +332,26 @@ router.put('/profile', authenticateToken, async (req, res) => {
         if (communityUpdated) {
           await community.save();
           console.log(`🔄 Synced profile updates to Community document for ${user.name}`);
+        }
+      }
+    }
+
+    // Check if B2C user profile is incomplete and send notification
+    if (user.role === 'user') {
+      const missingFields = [];
+      if (!user.age) missingFields.push('age');
+      if (!user.gender) missingFields.push('gender');
+      if (!user.bio) missingFields.push('bio');
+      if (!user.phoneNumber) missingFields.push('phone number');
+      
+      // Only send notification if there are missing fields
+      if (missingFields.length > 0) {
+        try {
+          await notifyProfileIncompleteUser(user._id, missingFields);
+          console.log(`📢 Sent profile completion notification to ${user.name}`);
+        } catch (notifError) {
+          console.error('Error sending profile notification:', notifError);
+          // Don't fail the request if notification fails
         }
       }
     }

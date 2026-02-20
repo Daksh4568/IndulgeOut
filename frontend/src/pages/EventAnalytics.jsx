@@ -28,6 +28,8 @@ import {
   UserX,
   Zap,
   TrendingDown,
+  X,
+  FileText,
 } from "lucide-react";
 
 const EventAnalytics = () => {
@@ -42,6 +44,8 @@ const EventAnalytics = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name");
+  const [showResponsesModal, setShowResponsesModal] = useState(false);
+  const [selectedAttendee, setSelectedAttendee] = useState(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -59,6 +63,7 @@ const EventAnalytics = () => {
       const response = await api.get(`/events/${eventId}/analytics`);
       setAnalytics(response.data);
       console.log("📊 Analytics data:", response.data);
+      console.log("📊 Attendees with responses:", response.data.attendees?.filter(a => a.questionnaireResponses?.length > 0).length);
     } catch (error) {
       console.error("❌ Error fetching analytics:", error);
       setError(error.response?.data?.message || error.message || "Failed to load analytics");
@@ -763,6 +768,9 @@ const EventAnalytics = () => {
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Check-in Time
                     </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/50">
@@ -844,6 +852,23 @@ const EventAnalytics = () => {
                           <span className="text-gray-600">—</span>
                         )}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {attendee.questionnaireResponses && attendee.questionnaireResponses.length > 0 && (
+                          <button
+                            onClick={() => {
+                              setSelectedAttendee(attendee);
+                              setShowResponsesModal(true);
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-all hover:opacity-90"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                            }}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            Responses
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -852,6 +877,48 @@ const EventAnalytics = () => {
           </div>
         </div>
       </div>
+
+      {/* Questionnaire Responses Modal */}
+      {showResponsesModal && selectedAttendee && (
+        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-700">
+            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-semibold text-white">
+                  Questionnaire Responses
+                </h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  {selectedAttendee.name || selectedAttendee.email}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowResponsesModal(false);
+                  setSelectedAttendee(null);
+                }}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {selectedAttendee.questionnaireResponses.map((response, index) => (
+                <div key={index} className="bg-gray-750 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="font-semibold text-sm" style={{ color: '#7878E9' }}>Q{index + 1}:</span>
+                    <p className="text-gray-300 font-medium flex-1">{response.question}</p>
+                  </div>
+                  <div className="flex items-start gap-2 pl-6">
+                    <span className="text-green-400 font-semibold text-sm">A:</span>
+                    <p className="text-gray-400 flex-1">{response.answer || "No answer provided"}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

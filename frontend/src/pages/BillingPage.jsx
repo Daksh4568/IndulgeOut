@@ -24,6 +24,11 @@ const BillingPage = () => {
   const [addAnotherPerson, setAddAnotherPerson] = useState(false);
   const [additionalPerson, setAdditionalPerson] = useState({ name: '', email: '' });
 
+  // Questionnaire state
+  const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
+  const [questionnaireResponses, setQuestionnaireResponses] = useState([]);
+  const [questionnaireAnswered, setQuestionnaireAnswered] = useState(false);
+
   useEffect(() => {
     if (!user) {
       toast.error('Please login to continue');
@@ -38,6 +43,8 @@ const BillingPage = () => {
       setLoading(true);
       const response = await api.get(`/events/${eventId}`);
       const eventData = response.data.event || response.data;
+      console.log('📊 Event Data:', eventData);
+      console.log('📊 Grouping Offers:', eventData.groupingOffers);
       setEvent(eventData);
 
       // Set default selection
@@ -87,8 +94,36 @@ const BillingPage = () => {
     };
   };
 
+  const handleQuestionnaireSubmit = () => {
+    // Validate all questions are answered
+    const allAnswered = questionnaireResponses.every(response => response.answer && response.answer.trim() !== '');
+    
+    if (!allAnswered) {
+      toast.error('Please answer all questions');
+      return;
+    }
+
+    setQuestionnaireAnswered(true);
+    setShowQuestionnaireModal(false);
+    toast.success('Questionnaire submitted successfully');
+  };
+
   const handleProceedToPayment = async () => {
     try {
+      // Check if questionnaire needs to be answered first
+      if (event?.questionnaire?.enabled && event.questionnaire.questions?.length > 0 && !questionnaireAnswered) {
+        // Initialize questionnaire responses if not already done
+        if (questionnaireResponses.length === 0) {
+          const initialResponses = event.questionnaire.questions.map((q) => ({
+            question: q.question,
+            answer: ''
+          }));
+          setQuestionnaireResponses(initialResponses);
+        }
+        setShowQuestionnaireModal(true);
+        return;
+      }
+
       // Validate additional person if checkbox is checked
       if (addAnotherPerson) {
         if (!additionalPerson.name.trim() || !additionalPerson.email.trim()) {
@@ -116,12 +151,13 @@ const BillingPage = () => {
         gstAndOtherCharges: pricing.gstAndOtherCharges,
         platformFees: pricing.platformFees,
         additionalPersons: addAnotherPerson ? [additionalPerson] : [],
+        questionnaireResponses: questionnaireAnswered ? questionnaireResponses : [],
       };
 
       // Add grouping offer details if applicable
       if (event?.groupingOffers?.enabled && selectedTier) {
         billingData.groupingOffer = {
-          tierLabel: selectedTier.label,
+          tierLabel: `${selectedTier.people} ${selectedTier.people === 1 ? 'Person' : 'People'}`,
           tierPeople: selectedTier.people,
           tierPrice: selectedTier.price
         };
@@ -264,7 +300,7 @@ const BillingPage = () => {
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold text-white mb-4">Choose your Ticket</h4>
 
-                {event.groupingOffers?.enabled ? (
+                {event.groupingOffers?.enabled && event.groupingOffers.tiers?.some(tier => tier.people > 0) ? (
                   // Show grouping offers
                   <div className="space-y-3">
                     {event.groupingOffers.tiers
@@ -285,13 +321,12 @@ const BillingPage = () => {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
+                              <div className="flex items-center space-x-2 mb-1">
                                 <Users className="h-5 w-5 text-purple-400" />
-                                <span className="text-white font-semibold">{tier.label}</span>
+                                <span className="text-white font-semibold">
+                                  {tier.people} {tier.people === 1 ? 'Person' : 'People'}
+                                </span>
                               </div>
-                              <p className={`text-sm ${selectedTier === tier ? 'text-white/80' : 'text-gray-400'}`}>
-                                {tier.people} {tier.people === 1 ? 'person' : 'people'}
-                              </p>
                             </div>
                             <div className="text-right">
                               <p className="text-2xl font-bold text-white">₹{tier.price}</p>
@@ -382,6 +417,26 @@ const BillingPage = () => {
                   </div>
                 )}
               </div>
+
+              {/* Questionnaire Responses Display */}
+              {questionnaireAnswered && questionnaireResponses.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-400" />
+                    Your Questionnaire Responses
+                  </h4>
+                  <div className="space-y-3">
+                    {questionnaireResponses.map((response, index) => (
+                      <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <p className="text-sm font-medium mb-1" style={{ color: '#7878E9' }}>
+                          Q{index + 1}: {response.question}
+                        </p>
+                        <p className="text-white text-sm">{response.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -460,6 +515,74 @@ const BillingPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Questionnaire Modal */}
+      {showQuestionnaireModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-700">
+            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-white">Questionnaire</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  Please answer the following questions before proceeding
+                </p>
+              </div>
+              <button
+                onClick={() => setShowQuestionnaireModal(false)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {questionnaireResponses.map((response, index) => (
+                <div key={index} className="space-y-2">
+                  <label className="text-white font-medium flex items-start gap-2">
+                    <span className="font-semibold" style={{ color: '#7878E9' }}>Q{index + 1}.</span>
+                    <span className="flex-1">{response.question}</span>
+                  </label>
+                  <textarea
+                    value={response.answer}
+                    onChange={(e) => {
+                      const updatedResponses = [...questionnaireResponses];
+                      updatedResponses[index].answer = e.target.value;
+                      setQuestionnaireResponses(updatedResponses);
+                    }}
+                    placeholder="Type your answer here..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none resize-none"
+                    style={{
+                      transition: 'all 0.3s ease',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderImage = 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%) 1';
+                      e.target.style.borderWidth = '2px';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderImage = 'none';
+                      e.target.style.borderWidth = '1px';
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="sticky bottom-0 bg-zinc-900 border-t border-gray-700 p-6">
+              <button
+                onClick={handleQuestionnaireSubmit}
+                className="w-full py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center space-x-2"
+                style={{
+                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                }}
+              >
+                <CheckCircle2 className="h-5 w-5" />
+                <span>Submit & Continue</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

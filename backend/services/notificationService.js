@@ -235,9 +235,9 @@ async function notifyProfileIncompleteUser(userId, missingFields) {
     type: 'profile_incomplete',
     category: 'action_required',
     priority: 'low',
-    title: '👤 Complete Your Profile',
+    title: 'Complete Your Profile',
     message: `Your profile is incomplete. Add ${missingFields.join(', ')} to get personalized event recommendations.`,
-    actionUrl: '/profile/edit',
+    actionUrl: '/profile',
     actionText: 'Complete Profile',
     metadata: {
       missingFields

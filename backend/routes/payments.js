@@ -158,6 +158,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       quantity = 1,
       groupingOffer,
       additionalPersons = [],
+      questionnaireResponses = [],
       basePrice,
       gstAndOtherCharges,
       platformFees,
@@ -215,7 +216,8 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       paymentStatus: 'paid',
       paymentId: payment.cf_payment_id,
       orderId: orderId,
-      amountPaid: payment.payment_amount
+      amountPaid: payment.payment_amount,
+      questionnaireResponses: questionnaireResponses || []
     };
 
     // Add grouping offer details if applicable

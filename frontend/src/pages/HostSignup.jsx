@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload } from "lucide-react";
+import { Upload, ChevronDown, X } from "lucide-react";
 import axios from "axios";
 import API_URL from "../config/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -10,7 +10,7 @@ const HostSignup = () => {
   const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     communityName: "",
-    category: "",
+    category: [],
     contactPersonName: "",
     phoneNumber: "",
     workEmail: "",
@@ -20,13 +20,68 @@ const HostSignup = () => {
   const [photos, setPhotos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef(null);
+
+  const categoryOptions = [
+    "Social Mixers",
+    "Wellness, Fitness & Sports",
+    "Art, Music & Dance",
+    "Immersive",
+    "Food & Beverage",
+    "Games"
+  ];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
     setError("");
+  };
+
+  const toggleCategory = (category) => {
+    const currentCategories = formData.category;
+    let updatedCategories;
+    
+    if (currentCategories.includes(category)) {
+      // Remove category if already selected
+      updatedCategories = currentCategories.filter(cat => cat !== category);
+    } else {
+      // Add category if not selected
+      updatedCategories = [...currentCategories, category];
+    }
+    
+    setFormData({
+      ...formData,
+      category: updatedCategories,
+    });
+    
+    // Close dropdown after selection
+    setIsCategoryDropdownOpen(false);
+    setError("");
+  };
+
+  const removeCategory = (categoryToRemove) => {
+    setFormData({
+      ...formData,
+      category: formData.category.filter(cat => cat !== categoryToRemove),
+    });
   };
 
   const handleFileChange = (e) => {
@@ -52,8 +107,8 @@ const HostSignup = () => {
       setError("Please enter community name");
       return;
     }
-    if (!formData.category.trim()) {
-      setError("Please select category");
+    if (!formData.category || formData.category.length === 0) {
+      setError("Please select at least one category");
       return;
     }
     if (!formData.contactPersonName.trim()) {
@@ -84,7 +139,16 @@ const HostSignup = () => {
       formDataToSend.append("role", "host_partner");
       formDataToSend.append("hostPartnerType", "community_organizer");
       formDataToSend.append("communityName", formData.communityName);
-      formDataToSend.append("category", formData.category);
+      
+      // Append multiple categories
+      if (Array.isArray(formData.category)) {
+        formData.category.forEach((cat) => {
+          formDataToSend.append("category", cat);
+        });
+      } else {
+        formDataToSend.append("category", formData.category);
+      }
+      
       formDataToSend.append("city", formData.city);
       if (formData.instagramLink) {
         formDataToSend.append("instagramLink", formData.instagramLink);
@@ -143,13 +207,36 @@ const HostSignup = () => {
         </div>
         {/* Glass Morphism Card */}
         <div
-          className="rounded-3xl p-8 border w-full max-h-[80vh] overflow-y-auto"
+          className="rounded-3xl p-8 border w-full max-h-[80vh] overflow-y-auto scrollbar-hide"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(10px)",
             borderColor: "rgba(255, 255, 255, 0.1)",
           }}
         >
+          <style jsx>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            .scrollbar-hide {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            /* Hide scrollbar in dropdown */
+            .overflow-y-auto::-webkit-scrollbar {
+              width: 6px;
+            }
+            .overflow-y-auto::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .overflow-y-auto::-webkit-scrollbar-thumb {
+              background: rgba(120, 120, 233, 0.3);
+              border-radius: 3px;
+            }
+            .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+              background: rgba(120, 120, 233, 0.5);
+            }
+          `}</style>
           {/* Back Button */}
           <button
             onClick={() => navigate("/signup/b2b-type")}
@@ -196,52 +283,83 @@ const HostSignup = () => {
               />
             </div>
 
-            {/* Category */}
+            {/* Category - Custom Dropdown */}
             <div>
               <label className="block text-white text-sm font-medium mb-2">
                 Category <span className="text-red-500">*</span>
               </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                style={{ "--tw-ring-color": "#7878E9" }}
-              >
-                <option value="" >
-                  Choose your category
-                </option>
-                <option
-                  value="Social Mixers"
-                  >
-                  Social Mixers
-                </option>
-                <option
-                  value="Wellness, Fitness & Sports"
-                  >
-                  Wellness, Fitness & Sports
-                </option>
-                <option
-                  value="Art, Music & Dance"
-                  >
-                  Art, Music & Dance
-                </option>
-                <option
-                  value="Immersive"
-                  >
-                  Immersive
-                </option>
-                <option
-                  value="Food & Beverage"
-                  >
-                  Food & Beverage
-                </option>
-                <option
-                  value="Games"
-                  >
-                  Games
-                </option>
-              </select>
+              
+              {/* Selected Categories Display */}
+              {formData.category.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.category.map((cat) => (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-white text-sm rounded-full"
+                      style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                    >
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() => removeCategory(cat)}
+                        className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Custom Dropdown */}
+              <div ref={categoryDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all flex items-center justify-between"
+                  style={{ "--tw-ring-color": "#7878E9" }}
+                >
+                  <span className={formData.category.length === 0 ? "text-gray-500" : "text-white"}>
+                    {formData.category.length === 0 
+                      ? "Choose your category" 
+                      : `${formData.category.length} categor${formData.category.length === 1 ? 'y' : 'ies'} selected`}
+                  </span>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isCategoryDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-2 bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                    {categoryOptions.map((option) => {
+                      const isSelected = formData.category.includes(option);
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => toggleCategory(option)}
+                          className={`w-full px-4 py-3 text-left text-white hover:bg-[#7878E9]/20 transition-colors flex items-center gap-3 ${
+                            isSelected ? 'bg-[#7878E9]/30' : ''
+                          }`}
+                        >
+                          <div 
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              isSelected ? 'border-transparent' : 'border-white/30'
+                            }`}
+                            style={isSelected ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                          >
+                            {isSelected && (
+                              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <span>{option}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Contact Person Name */}

@@ -331,7 +331,7 @@ const EventDetail = () => {
       </div>
 
       {/* Main Content - Two Column Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-56 lg:pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Left Column - Main Content */}
@@ -507,7 +507,8 @@ const EventDetail = () => {
                 Venue
               </h2>
               <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
-                <div className="flex items-start justify-between">
+                {/* Desktop Layout */}
+                <div className="hidden md:flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <MapPin className="h-6 w-6 text-indigo-400 flex-shrink-0 mt-1" />
                     <div>
@@ -548,6 +549,59 @@ const EventDetail = () => {
                       window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
                     }}
                     className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    <Navigation className="h-4 w-4" />
+                    <span 
+                      className="text-sm font-medium"
+                      style={{ fontFamily: 'Source Serif Pro, serif' }}
+                    >
+                      Get Directions
+                    </span>
+                  </button>
+                </div>
+
+                {/* Mobile Layout */}
+                <div className="md:hidden">
+                  <div className="flex items-start gap-3 mb-4">
+                    <MapPin className="h-6 w-6 text-indigo-400 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h3 
+                        className="text-xl font-bold text-white mb-2"
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                      >
+                        {event.venue || 'Event Venue'}
+                      </h3>
+                      <p 
+                        className="text-gray-400 leading-relaxed"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        {typeof event.location === 'string' 
+                          ? event.location 
+                          : (() => {
+                              const loc = event.location;
+                              if (!loc) return 'Venue address not available';
+                              // If address field exists and looks complete (has commas), just show it
+                              if (loc.address) {
+                                return loc.address;
+                              }
+                              // Otherwise build from components
+                              const parts = [];
+                              if (loc.city) parts.push(loc.city);
+                              if (loc.state) parts.push(loc.state);
+                              if (loc.zipCode) parts.push(loc.zipCode);
+                              return parts.length > 0 ? parts.join(', ') : 'Venue address not available';
+                            })()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const address = typeof event.location === 'string' 
+                        ? event.location 
+                        : event.location?.address || event.location?.city || '';
+                      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors border border-gray-700"
                   >
                     <Navigation className="h-4 w-4" />
                     <span 
@@ -774,8 +828,8 @@ const EventDetail = () => {
                 </div>
               </div>
 
-              {/* Price */}
-              <div className="mb-6 text-center py-4 bg-gray-50 dark:bg-zinc-800 rounded-xl">
+              {/* Price - Hidden on Mobile */}
+              <div className="hidden lg:block mb-6 text-center py-4 bg-gray-50 dark:bg-zinc-800 rounded-xl">
                 <p 
                   className="text-sm text-gray-500 dark:text-gray-400 mb-1"
                   style={{ fontFamily: 'Source Serif Pro, serif' }}
@@ -801,11 +855,11 @@ const EventDetail = () => {
 
 
 
-              {/* CTA Button */}
+              {/* CTA Button - Hidden on Mobile */}
               {isRegistered ? (
                 <button
                   onClick={() => navigate('/user/dashboard')}
-                  className="w-full py-3 rounded-md font-semibold text-lg transition-all transform hover:scale-105 hover:opacity-90 shadow-2xl text-white"
+                  className="hidden lg:block w-full py-3 rounded-md font-semibold text-lg transition-all transform hover:scale-105 hover:opacity-90 shadow-2xl text-white"
                   style={{ 
                     background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                     fontFamily: 'Oswald, sans-serif'
@@ -815,7 +869,7 @@ const EventDetail = () => {
                   View Ticket
                 </button>
               ) : user && user.role !== 'user' ? (
-                <div className="w-full py-3 px-4 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-center">
+                <div className="hidden lg:block w-full py-3 px-4 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-center">
                   <p 
                     className="text-sm text-gray-600 dark:text-gray-400"
                     style={{ fontFamily: 'Source Serif Pro, serif' }}
@@ -827,7 +881,7 @@ const EventDetail = () => {
                 <button
                   onClick={() => navigate(`/billing/${event._id}`)}
                   disabled={spotsLeft === 0 || eventEnded}
-                  className={`w-full py-3 rounded-md font-semibold text-lg transition-all transform shadow-2xl ${
+                  className={`hidden lg:block w-full py-3 rounded-md font-semibold text-lg transition-all transform shadow-2xl ${
                     eventEnded || spotsLeft === 0
                       ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
                       : 'hover:scale-105 hover:opacity-90 text-white'
@@ -1081,6 +1135,106 @@ const EventDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t-2 border-gray-200 dark:border-gray-800 px-6 py-5 z-50 shadow-2xl rounded-t-3xl">
+        <div className="space-y-4">
+          {/* Date */}
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-base font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              {new Date(event.date).toLocaleDateString('en-US', { 
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+
+          {/* Venue */}
+          <div className="flex items-start gap-3">
+            <MapPin className="h-5 w-5 flex-shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
+            <span className="text-base font-semibold text-gray-900 dark:text-white leading-tight" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              {(() => {
+                const venue = event.venue || 'Event Venue';
+                if (typeof event.location === 'string') {
+                  // If it's a string, show venue + first part of location (usually area/street)
+                  const locationParts = event.location.split(',').map(s => s.trim());
+                  const area = locationParts[0];
+                  return area !== venue ? `${venue}, ${area}` : venue;
+                } else if (event.location) {
+                  // If it's an object, show venue + city or street (not state)
+                  const loc = event.location;
+                  const area = loc.street || loc.city || '';
+                  return area ? `${venue}, ${area}` : venue;
+                } else {
+                  return venue;
+                }
+              })()}
+            </span>
+          </div>
+
+          {/* Price */}
+          <div className="text-center pt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              Starting from
+            </p>
+            {(event.price?.amount === 0 || !event.price) ? (
+              <p className="text-3xl font-bold text-green-600" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                FREE
+              </p>
+            ) : (
+              <p className="text-3xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                ₹{event.price?.amount}
+              </p>
+            )}
+          </div>
+
+          {/* CTA Button - Full Width */}
+          {isRegistered ? (
+            <button
+              onClick={() => navigate('/user/dashboard')}
+              className="w-full py-4 rounded-xl font-bold text-base transition-all text-white shadow-lg"
+              style={{ 
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                fontFamily: 'Oswald, sans-serif'
+              }}
+            >
+              View Ticket
+            </button>
+          ) : user && user.role !== 'user' ? (
+            <button
+              disabled
+              className="w-full py-4 rounded-xl font-bold text-base bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              Not Available
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate(`/billing/${event._id}`)}
+              disabled={spotsLeft === 0 || eventEnded}
+              className={`w-full py-4 rounded-xl font-bold text-base transition-all shadow-lg ${
+                eventEnded || spotsLeft === 0
+                  ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'text-white'
+              }`}
+              style={
+                eventEnded || spotsLeft === 0
+                  ? { fontFamily: 'Oswald, sans-serif' }
+                  : { 
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                      fontFamily: 'Oswald, sans-serif'
+                    }
+              }
+            >
+              {eventEnded ? 'Event Ended' : spotsLeft === 0 ? 'Event Full' : 'Get your Tickets'}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

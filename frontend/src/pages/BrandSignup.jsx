@@ -143,13 +143,22 @@ const BrandSignup = () => {
         </div>
         {/* Glass Morphism Card */}
         <div
-          className="rounded-3xl p-8 border w-full max-h-[80vh] overflow-y-auto"
+          className="rounded-3xl p-8 border w-full max-h-[80vh] overflow-y-auto scrollbar-hide"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(10px)",
             borderColor: "rgba(255, 255, 255, 0.1)",
           }}
         >
+          <style jsx>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            .scrollbar-hide {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+          `}</style>
           {/* Back Button */}
           <button
             onClick={() => navigate("/signup/b2b-type")}
