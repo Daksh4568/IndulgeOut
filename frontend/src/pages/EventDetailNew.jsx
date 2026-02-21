@@ -1078,41 +1078,6 @@ const EventDetail = () => {
                 </span>
               </button>
 
-              {/* Twitter */}
-              <button
-                onClick={() => shareToSocial('twitter')}
-                className="w-full flex items-center gap-3 p-4 bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 rounded-lg transition-colors"
-              >
-                <div className="w-10 h-10 bg-sky-500 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                  </svg>
-                </div>
-                <span 
-                  className="font-medium text-gray-900 dark:text-white"
-                  style={{ fontFamily: 'Source Serif Pro, serif' }}
-                >
-                  Share on Twitter
-                </span>
-              </button>
-
-              {/* LinkedIn */}
-              <button
-                onClick={() => shareToSocial('linkedin')}
-                className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-              >
-                <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                  </svg>
-                </div>
-                <span 
-                  className="font-medium text-gray-900 dark:text-white"
-                  style={{ fontFamily: 'Source Serif Pro, serif' }}
-                >
-                  Share on LinkedIn
-                </span>
-              </button>
 
               {/* Copy Link */}
               <button
@@ -1137,59 +1102,61 @@ const EventDetail = () => {
       )}
 
       {/* Mobile Sticky Bottom Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t-2 border-gray-200 dark:border-gray-800 px-6 py-5 z-50 shadow-2xl rounded-t-3xl">
-        <div className="space-y-4">
-          {/* Date */}
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
-            <span className="text-base font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              {new Date(event.date).toLocaleDateString('en-US', { 
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </span>
-          </div>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t-2 border-gray-200 dark:border-gray-800 px-5 py-4 z-50 shadow-2xl rounded-t-3xl">
+        <div className="space-y-3">
+          {/* Top Row: Date, Venue, and Price */}
+          <div className="flex items-start justify-between gap-4">
+            {/* Left Side - Date and Venue */}
+            <div className="flex-1 space-y-2 min-w-0">
+              {/* Date */}
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                  {new Date(event.date).toLocaleDateString('en-US', { 
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </span>
+              </div>
 
-          {/* Venue */}
-          <div className="flex items-start gap-3">
-            <MapPin className="h-5 w-5 flex-shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
-            <span className="text-base font-semibold text-gray-900 dark:text-white leading-tight" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              {(() => {
-                const venue = event.venue || 'Event Venue';
-                if (typeof event.location === 'string') {
-                  // If it's a string, show venue + first part of location (usually area/street)
-                  const locationParts = event.location.split(',').map(s => s.trim());
-                  const area = locationParts[0];
-                  return area !== venue ? `${venue}, ${area}` : venue;
-                } else if (event.location) {
-                  // If it's an object, show venue + city or street (not state)
-                  const loc = event.location;
-                  const area = loc.street || loc.city || '';
-                  return area ? `${venue}, ${area}` : venue;
-                } else {
-                  return venue;
-                }
-              })()}
-            </span>
-          </div>
+              {/* Venue */}
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 flex-shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                  {(() => {
+                    const venue = event.venue || 'Event Venue';
+                    if (typeof event.location === 'string') {
+                      const locationParts = event.location.split(',').map(s => s.trim());
+                      const area = locationParts[0];
+                      return area !== venue ? `${venue}, ${area}` : venue;
+                    } else if (event.location) {
+                      const loc = event.location;
+                      const area = loc.street || loc.city || '';
+                      return area ? `${venue}, ${area}` : venue;
+                    } else {
+                      return venue;
+                    }
+                  })()}
+                </span>
+              </div>
+            </div>
 
-          {/* Price */}
-          <div className="text-center pt-2">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              Starting from
-            </p>
-            {(event.price?.amount === 0 || !event.price) ? (
-              <p className="text-3xl font-bold text-green-600" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                FREE
+            {/* Right Side - Price */}
+            <div className="text-right flex-shrink-0">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                Starting from
               </p>
-            ) : (
-              <p className="text-3xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                ₹{event.price?.amount}
-              </p>
-            )}
+              {(event.price?.amount === 0 || !event.price) ? (
+                <p className="text-2xl font-bold text-green-600" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  FREE
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  ₹{event.price?.amount}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* CTA Button - Full Width */}

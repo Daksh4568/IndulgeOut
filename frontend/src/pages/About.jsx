@@ -43,29 +43,33 @@ const About = () => {
             {/* Polaroid 1 - Top Left on Mobile */}
             <div className="transform -rotate-12 w-32">
               <div className="bg-white p-2 shadow-2xl">
-                <img
-                  src="/images/about1.jpg"
-                  alt="Friends gathering"
-                  className="w-full aspect-square object-cover"
-                  onError={(e) => {
-                    e.target.src = '/images/about1.jpg';
-                  }}
-                />
-                <div className="h-6"></div>
+                <div className="w-full aspect-square overflow-hidden">
+                  <img
+                    src="/images/about1.jpg"
+                    alt="Friends gathering"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/images/about1.jpg';
+                    }}
+                  />
+                </div>
+                <div className="h-2"></div>
               </div>
             </div>
             {/* Polaroid 2 - Top Right on Mobile */}
             <div className="transform rotate-12 w-32">
               <div className="bg-white p-2 shadow-2xl">
-                <img
-                  src="/images/about3.jpg"
-                  alt="Event celebration"
-                  className="w-full aspect-square object-cover"
-                  onError={(e) => {
-                    e.target.src = '/images/about3.jpg';
-                  }}
-                />
-                <div className="h-6"></div>
+                <div className="w-full aspect-square overflow-hidden">
+                  <img
+                    src="/images/about3.jpg"
+                    alt="Event celebration"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/images/about3.jpg';
+                    }}
+                  />
+                </div>
+                <div className="h-2"></div>
               </div>
             </div>
           </div>
@@ -77,31 +81,35 @@ const About = () => {
               <div className="flex flex-col justify-between items-start">
                 {/* Polaroid 1 - Top Left */}
                 <div className="transform -rotate-12 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-3 shadow-2xl">
-                    <img
-                      src="/images/about1.jpg"
-                      alt="Friends gathering"
-                      className="w-full aspect-square object-cover"
-                      onError={(e) => {
-                        e.target.src = '/images/about1.jpg';
-                      }}
-                    />
-                    <div className="h-10"></div>
+                  <div className="bg-white p-2 shadow-2xl">
+                    <div className="w-full aspect-square overflow-hidden">
+                      <img
+                        src="/images/about1.jpg"
+                        alt="Friends gathering"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/images/about1.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="h-2"></div>
                   </div>
                 </div>
 
                 {/* Polaroid 2 - Bottom Left */}
                 <div className="transform rotate-6 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-3 shadow-2xl">
-                    <img
-                      src="/images/about2.jpg"
-                      alt="Community event"
-                      className="w-full aspect-square object-cover"
-                      onError={(e) => {
-                        e.target.src = '/images/about2.jpg';
-                      }}
-                    />
-                    <div className="h-10"></div>
+                  <div className="bg-white p-2 shadow-2xl">
+                    <div className="w-full aspect-square overflow-hidden">
+                      <img
+                        src="/images/about2.jpg"
+                        alt="Community event"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/images/about2.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="h-2"></div>
                   </div>
                 </div>
               </div>
@@ -110,31 +118,35 @@ const About = () => {
               <div className="flex flex-col justify-between items-end">
                 {/* Polaroid 3 - Top Right */}
                 <div className="transform rotate-12 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-3 shadow-2xl">
-                    <img
-                      src="/images/about3.jpg"
-                      alt="Event celebration"
-                      className="w-full aspect-square object-cover"
-                      onError={(e) => {
-                        e.target.src = '/images/about3.jpg';
-                      }}
-                    />
-                    <div className="h-10"></div>
+                  <div className="bg-white p-2 shadow-2xl">
+                    <div className="w-full aspect-square overflow-hidden">
+                      <img
+                        src="/images/about3.jpg"
+                        alt="Event celebration"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/images/about3.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="h-2"></div>
                   </div>
                 </div>
 
                 {/* Polaroid 4 - Bottom Right */}
                 <div className="transform -rotate-6 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-3 shadow-2xl">
-                    <img
-                      src="/images/about4.jpg"
-                      alt="Happy attendees"
-                      className="w-full aspect-square object-cover"
-                      onError={(e) => {
-                        e.target.src = '/images/about4.jpg';
-                      }}
-                    />
-                    <div className="h-10"></div>
+                  <div className="bg-white p-2 shadow-2xl">
+                    <div className="w-full aspect-square overflow-hidden">
+                      <img
+                        src="/images/about4.jpg"
+                        alt="Happy attendees"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/images/about4.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="h-2"></div>
                   </div>
                 </div>
               </div>
@@ -293,7 +305,7 @@ const About = () => {
                   
                   <h3 className="text-2xl font-bold mb-4 italic">Authenticity</h3>
                   <p className="text-gray-700 italic leading-relaxed">
-                    Every host and venue partner goes through a thorough verification process. We only work with trusted community owners, venues and brands.
+                    Every host, sponsor and venue partner goes through a thorough verification process. We only work with trusted community owners, venues and brands.
                   </p>
                 </div>
               </div>

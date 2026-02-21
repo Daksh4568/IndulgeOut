@@ -24,7 +24,7 @@ function Homepage() {
   const [instagramScrollIndex, setInstagramScrollIndex] = useState(0);
   const instagramScrollRef = useRef(null);
   
-  const typewriterWords = ['Find Your Tribe,'];
+  const typewriterWords = ['Offline Experiences Made Easy,'];
   const secondLineWords = 'Live Your Passions';
   const currentWord = typewriterWords[currentWordIndex];
 
@@ -65,21 +65,21 @@ function Homepage() {
       title: "Curated Offline Experiences",
       description: "If you're a community host who loves bringing people together, we help you list your community & events, access relevant brand and venue partners to enhance your experiences for your attendees.",
       buttonText: "LIST YOUR EVENTS",
-      buttonAction: () => navigate('/register?role=community_organizer'),
+      buttonAction: () => navigate('/signup/host'),
       image: "/images/Media (5).jpg"
     },
     {
       title: "Collaborate as a Brand",
       description: "If you’re a brand owner with a product or service offering, we help you with experiential marketing, sales and trials through community led events and meetups.",
       buttonText: "LIST YOUR BRAND",
-      buttonAction: () => navigate('/register?role=brand'),
+      buttonAction: () => navigate('/signup/brand'),
       image: "/images/brand.jpg"
     },
     {
       title: "Your Space for Events",
       description: "If you have a restaurant, cafe or a space that is open for community led events, we’ll help you with access these curated experiences hosted by communities to bring newer audience and additional revenue.",
       buttonText: "LIST YOUR VENUE",
-      buttonAction: () => navigate('/register?role=venue'),
+      buttonAction: () => navigate('/signup/venue'),
       image: "/images/venue.jpg"
     }
   ];

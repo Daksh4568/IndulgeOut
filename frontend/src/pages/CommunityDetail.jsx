@@ -15,7 +15,9 @@ import {
   Send,
   Clock,
   Quote,
-  PartyPopper
+  PartyPopper,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -35,6 +37,96 @@ const CommunityDetail = () => {
   const [isJoining, setIsJoining] = useState(false);
   const [hostCommunities, setHostCommunities] = useState([]);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(0);
+
+  // Carousel navigation functions
+  const nextImage = () => {
+    if (community?.images && community.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % community.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (community?.images && community.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + community.images.length) % community.images.length);
+    }
+  };
+
+  const goToImage = (index) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Handle touch events for mobile swipe
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+    
+    if (isLeftSwipe) {
+      nextImage();
+    }
+    if (isRightSwipe) {
+      prevImage();
+    }
+    
+    setTouchStart(0);
+    setTouchEnd(0);
+  };
+
+  // Handle mouse drag for desktop
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart(e.clientX);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+  };
+
+  const handleMouseUp = (e) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    
+    const distance = dragStart - e.clientX;
+    const isLeftDrag = distance > 50;
+    const isRightDrag = distance < -50;
+    
+    if (isLeftDrag) {
+      nextImage();
+    }
+    if (isRightDrag) {
+      prevImage();
+    }
+    
+    setDragStart(0);
+  };
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      setDragStart(0);
+    }
+  };
+
+  // Reset carousel index when community changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [id]);
 
   // Function to close testimonials and return to overview
   const handleCloseTestimonials = () => {
@@ -461,63 +553,78 @@ const CommunityDetail = () => {
                 </div>
               </div>
 
-              {/* Highlights */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                    Highlights
-                  </h2>
-                  <div className="flex gap-2">
-                    <button className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
-                      ←
-                    </button>
-                    <button className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
-                      →
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Large image on left */}
-                  <div className="row-span-2">
-                    <div className="aspect-[4/3] bg-gray-800 rounded-lg overflow-hidden">
-                      <img 
-                        src="/images/Media (10).jpg"
-                        alt="Community Highlight"
-                        className="w-full h-full object-cover"
-                      />
+              {/* Highlights Carousel */}
+              {community?.images && community.images.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                      Highlights
+                    </h2>
+                    <div className="flex items-center gap-3">
+                      {community.images.length > 1 && (
+                        <>
+                          <button 
+                            onClick={prevImage}
+                            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
+                            aria-label="Previous image"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <div className="text-sm text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                            {currentImageIndex + 1} / {community.images.length}
+                          </div>
+                          <button 
+                            onClick={nextImage}
+                            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
+                            aria-label="Next image"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   
-                  {/* Two smaller images on right */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden">
+                  <div className="relative group">
+                    {/* Main carousel image */}
+                    <div 
+                      className="relative w-full aspect-[16/9] md:aspect-[21/9] bg-gray-800 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseLeave}
+                    >
                       <img 
-                        src="/images/Media (11).jpg"
-                        alt="Community Highlight"
-                        className="w-full h-full object-cover"
+                        src={community.images[currentImageIndex]}
+                        alt={`Community Highlight ${currentImageIndex + 1}`}
+                        className="w-full h-full object-cover transition-opacity duration-300 pointer-events-none select-none"
+                        draggable="false"
                       />
                     </div>
-                    <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden">
-                      <img 
-                        src="/images/Media (12).jpg"
-                        alt="Community Highlight"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1">
-                    <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
-                      <img 
-                        src="/images/Media (13).jpg"
-                        alt="Community Highlight"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    
+                    {/* Dot indicators - hidden on mobile */}
+                    {community.images.length > 1 && (
+                      <div className="hidden md:flex justify-center gap-2 mt-4">
+                        {community.images.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => goToImage(index)}
+                            className={`transition-all duration-300 rounded-full ${
+                              index === currentImageIndex 
+                                ? 'w-8 h-2 bg-purple-500' 
+                                : 'w-2 h-2 bg-gray-600 hover:bg-gray-500'
+                            }`}
+                            aria-label={`Go to image ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

@@ -14,12 +14,12 @@ const HostPartnerPage = () => {
   const roleCards = [
     {
       icon: <Users className="h-12 w-12" />,
-      title: "COMMUNITIES & ORGANIZERS",
+      title: "Hosts & Communities",
       subtitle: "For passionate community builders",
       perfectFor: [
+        "Event organizers",
         "Communities",
         "Creators",
-        "Event organizers"
       ],
       whatYouCanDo: [
         "Host curated experiences",
@@ -30,6 +30,27 @@ const HostPartnerPage = () => {
       ],
       buttonText: "Host an Experience",
       buttonLink: "/signup/host",
+      gradient: "from-[#6366F1] to-[#6366F1]",
+      iconBg: "bg-[#6366F1]"
+    },
+    
+    {
+      icon: <Sparkles className="h-12 w-12" />,
+      title: "Brands & Sponsors",
+      subtitle: "For brands seeking experiential marketing",
+      perfectFor: [
+        "Consumer Brands",
+        "Lifestyle brands",
+      ],
+      whatYouCanDo: [
+        "Engage your target audiences offline",
+        "Sponsor meaningful experiences",
+        "Product Trials, Sales & Brand Advocacy",
+        "Real Time Consumer Feedback & Insights",
+        "Effective Retargeting"
+      ],
+      buttonText: "Market Your Product",
+      buttonLink: "/signup/brand",
       gradient: "from-[#6366F1] to-[#6366F1]",
       iconBg: "bg-[#6366F1]"
     },
@@ -51,27 +72,6 @@ const HostPartnerPage = () => {
       ],
       buttonText: "List Your Space",
       buttonLink: "/signup/venue",
-      gradient: "from-[#6366F1] to-[#6366F1]",
-      iconBg: "bg-[#6366F1]"
-    },
-    {
-      icon: <Sparkles className="h-12 w-12" />,
-      title: "CONSUMER BRANDS",
-      subtitle: "For brands seeking experiential marketing",
-      perfectFor: [
-        "Lifestyle brands",
-        "Consumer Brands",
-        "Beverage brands"
-      ],
-      whatYouCanDo: [
-        "Engage your target audiences offline",
-        "Sponsor meaningful experiences",
-        "Product Trials, Sales & Brand Advocacy",
-        "Real Time Consumer Feedback & Insights",
-        "Effective Retargeting"
-      ],
-      buttonText: "Market Your Product",
-      buttonLink: "/signup/brand",
       gradient: "from-[#6366F1] to-[#6366F1]",
       iconBg: "bg-[#6366F1]"
     }
@@ -215,15 +215,15 @@ const HostPartnerPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {howItWorks.map((step, index) => (
-              <div key={index} className="relative flex flex-col items-center">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 hover:scale-105 transition-transform duration-300 border border-gray-700 w-full relative min-h-[320px] flex flex-col justify-between">
+              <div key={index} className="relative flex flex-col items-stretch h-full">
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 hover:scale-105 transition-transform duration-300 border border-gray-700 w-full relative flex flex-col h-full">
                   {/* Icon */}
-                  <div className="bg-[#6366F1] w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                  <div className="bg-[#6366F1] w-14 h-14 rounded-full flex items-center justify-center mb-4">
                     {step.icon}
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-xl font-bold mb-4">{step.title}</h3>
+                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed">{step.description}</p>
                 </div>
               </div>

@@ -106,6 +106,12 @@ router.put('/profile', authenticateToken, async (req, res) => {
       socialLinks
     } = req.body;
 
+    // Fetch user first before building update data
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     // Build update data - only allow basic fields
     const updateData = {};
     if (name !== undefined) updateData.name = name;
@@ -130,11 +136,6 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 
     // Allow social links update for community and brand profiles
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
     if (socialLinks) {
       if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
         if (!user.communityProfile) user.communityProfile = {};

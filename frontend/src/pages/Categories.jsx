@@ -73,7 +73,7 @@ const Categories = () => {
       <NavigationBar />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-2">
         {/* Upcoming Events Section - Commented out until we have trending and famous events
         {!loading && upcomingEvents.length > 0 && (
           <section className="mb-16 py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden rounded-2xl p-6 sm:p-8">
@@ -192,14 +192,9 @@ const Categories = () => {
         */}
 
         {/* Section Title */}
-        <div className="mb-8">
+        <div className="mb-4">
           {/* Categories Pill */}
           <div className="inline-block mb-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-full px-6 py-2">
-              <p className="text-gray-300 text-sm uppercase tracking-wider font-medium" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                CATEGORIES
-              </p>
-            </div>
           </div>
           
           <h1 
@@ -216,28 +211,24 @@ const Categories = () => {
           </p>
         </div>
 
-        {/* All Categories Heading */}
-        <h2 
-          className="text-2xl sm:text-3xl font-bold mb-6"
-          style={{ fontFamily: 'Oswald, sans-serif' }}
-        >
-          All Categories
-        </h2>
-
         {/* Categories Grid - 3 columns on desktop, 2 on tablet, 1 on mobile */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-2">
           {CATEGORIES.map((category, index) => (
             <div
               key={category.id}
               onClick={() => handleCategoryClick(category)}
-              className="group relative bg-gray-900 rounded-2xl shadow-xl transition-all duration-300 ease-in-out cursor-pointer hover:scale-110 hover:shadow-2xl hover:z-10"
+              className="group relative bg-gray-900 rounded-2xl shadow-xl transition-all duration-300 ease-in-out cursor-pointer hover:scale-[1.08] hover:shadow-2xl hover:z-10 hover:bg-gray-800"
               style={{
                 animation: `slideIn 0.5s ease-out ${index * 0.1}s both`,
                 transformOrigin: 'center'
               }}
             >
+              {/* Gradient Border on Hover */}
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-[2px]" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                <div className="w-full h-full bg-gray-800 rounded-2xl"></div>
+              </div>
               {/* Card Content */}
-              <div className="p-6 flex flex-col h-full">
+              <div className="relative z-10 p-6 flex flex-col h-full">
                 {/* Top Section - Category Image */}
                 <div className="aspect-video mb-4 rounded-lg overflow-hidden relative bg-gray-800">
                   <img 
@@ -258,7 +249,7 @@ const Categories = () => {
 
                 {/* Category Name */}
                 <h3 
-                  className="text-xl sm:text-2xl font-bold mb-2"
+                  className="text-xl sm:text-2xl font-bold mb-2 group-hover:text-purple-400 transition-colors"
                   style={{ 
                     fontFamily: 'Oswald, sans-serif',
                     color: '#7878E9'
@@ -269,22 +260,11 @@ const Categories = () => {
 
                 {/* Description */}
                 <p 
-                  className="text-gray-400 text-xs sm:text-sm mb-4 flex-grow font-semibold"
+                  className="text-gray-400 text-xs sm:text-sm flex-grow font-semibold group-hover:text-gray-300 transition-colors"
                   style={{ fontFamily: 'Source Serif Pro, serif' }}
                 >
                   {category.description}
                 </p>
-
-                {/* View All Button - Smaller size */}
-                <button
-                  className="text-white px-4 py-1.5 rounded text-xs font-bold transform hover:scale-105 hover:opacity-90 transition-all duration-300 w-fit"
-                  style={{ 
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                    fontFamily: 'Oswald, sans-serif'
-                  }}
-                >
-                  View All
-                </button>
               </div>
             </div>
           ))}
@@ -313,7 +293,7 @@ const Categories = () => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
-            }}> <br />Interest Match?</span>
+            }}> Interest Match?</span>
           </h2>
           
           <p 
