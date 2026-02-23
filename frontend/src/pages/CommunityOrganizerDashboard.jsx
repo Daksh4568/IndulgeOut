@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, TrendingUp, AlertCircle, DollarSign, Users, 
-  Eye, Target, Clock, ChevronRight, Plus, Edit, Copy,
+  Eye, Target, Clock, ChevronRight, Plus, Edit, Share2,
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   ArrowUpRight, ArrowDownRight, Filter, Download, Bell,
   Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText
@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import NavigationBar from '../components/NavigationBar';
+import ShareModal from '../components/ShareModal';
 import { api } from '../config/api';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 
@@ -39,6 +40,10 @@ const CommunityOrganizerDashboard = () => {
   });
   const [analytics, setAnalytics] = useState({});
   const [insights, setInsights] = useState({});
+  
+  // Share Modal States
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedEventForShare, setSelectedEventForShare] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -331,9 +336,12 @@ const CommunityOrganizerDashboard = () => {
                   onClick={() => setActiveTab(tab.key)}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeTab === tab.key
-                      ? 'bg-white dark:bg-white text-black'
+                      ? 'text-white'
                       : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                   }`}
+                  style={activeTab === tab.key ? {
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                  } : {}}
                 >
                   {tab.label}
                 </button>
@@ -362,9 +370,10 @@ const CommunityOrganizerDashboard = () => {
             )}
             <button
               onClick={handleCreateEvent}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 text-white px-6 py-2 rounded-md font-medium transition-all hover:opacity-90"
               style={{ 
-                fontFamily: 'Oswald, sans-serif'
+                fontFamily: 'Oswald, sans-serif',
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
               }}
             >
               <Plus className="h-5 w-5" />
@@ -420,7 +429,7 @@ const CommunityOrganizerDashboard = () => {
                         <div
                           key={event._id}
                           onClick={() => navigate(`/events/${event._id}`)}
-                          className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
+                          className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                         >
                       {/* Event Header */}
                       <div className="p-4 flex flex-col flex-grow">
@@ -521,16 +530,16 @@ const CommunityOrganizerDashboard = () => {
                             </button>
                           )}
 
-                          {/* Copy Button */}
+                          {/* Share Button */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCopyEvent(event);
+                              handleShareEvent(event);
                             }}
                             className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Copy Event Details"
+                            title="Share Event"
                           >
-                            <Copy className="h-4 w-4" />
+                            <Share2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -563,7 +572,7 @@ const CommunityOrganizerDashboard = () => {
                           <div
                             key={event._id}
                             onClick={() => navigate(`/events/${event._id}`)}
-                            className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
+                            className="bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                           >
                       {/* Event Header */}
                       <div className="p-4 flex flex-col flex-grow h-full">
@@ -664,16 +673,16 @@ const CommunityOrganizerDashboard = () => {
                             </button>
                           )}
 
-                          {/* Copy Button */}
+                          {/* Share Button */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCopyEvent(event);
+                              handleShareEvent(event);
                             }}
                             className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Copy Event Details"
+                            title="Share Event"
                           >
-                            <Copy className="h-4 w-4" />
+                            <Share2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -723,7 +732,7 @@ const CommunityOrganizerDashboard = () => {
                   <div
                     key={event._id}
                     onClick={() => navigate(`/events/${event._id}`)}
-                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
+                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                   >
                     {/* Event Header */}
                     <div className="p-4 flex flex-col flex-grow">
@@ -824,16 +833,16 @@ const CommunityOrganizerDashboard = () => {
                           </button>
                         )}
 
-                        {/* Copy Button */}
+                        {/* Share Button */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleCopyEvent(event);
+                            handleShareEvent(event);
                           }}
                           className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                          title="Copy Event Details"
+                          title="Share Event"
                         >
-                          <Copy className="h-4 w-4" />
+                          <Share2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -867,7 +876,7 @@ const CommunityOrganizerDashboard = () => {
                         <div
                           key={event._id}
                           onClick={() => navigate(`/events/${event._id}`)}
-                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
+                          className="bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                         >
                       {/* Event Header */}
                       <div className="p-4 flex flex-col flex-grow h-full">
@@ -968,16 +977,16 @@ const CommunityOrganizerDashboard = () => {
                             </button>
                           )}
 
-                          {/* Copy Button */}
+                          {/* Share Button */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCopyEvent(event);
+                              handleShareEvent(event);
                             }}
                             className="p-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                            title="Copy Event Details"
+                            title="Share Event"
                           >
-                            <Copy className="h-4 w-4" />
+                            <Share2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -1024,31 +1033,58 @@ const CommunityOrganizerDashboard = () => {
     }
   };
 
-  const handleCopyEvent = async (event) => {
+  const handleShareEvent = (event) => {
+    setSelectedEventForShare(event);
+    setShowShareModal(true);
+  };
+
+  const shareToSocial = (platform) => {
+    if (!selectedEventForShare) return;
+    
+    const eventUrl = `${window.location.origin}/events/${selectedEventForShare._id}`;
+    const eventTitle = selectedEventForShare.title;
+    const eventDate = new Date(selectedEventForShare.date).toLocaleDateString('en-IN', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+    const shareText = `Check out ${eventTitle} on ${eventDate}! ${eventUrl}`;
+
+    let shareUrl = '';
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
+        break;
+      case 'instagram':
+        toast?.show({ message: 'Please share manually on Instagram', type: 'info' });
+        navigator.clipboard.writeText(eventUrl);
+        return;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
+        break;
+      default:
+        return;
+    }
+
+    if (shareUrl) {
+      window.open(shareUrl, '_blank');
+    }
+  };
+
+  const copyEventLink = async () => {
+    if (!selectedEventForShare) return;
+    
     try {
-      const eventDetails = `
-Event: ${event.title}
-Date: ${new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-Time: ${event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}
-Location: ${event.location?.address || ''}, ${event.location?.city || ''}
-Capacity: ${event.maxParticipants || '0'}
-Price: ₹${event.price?.amount || 0}
-Description: ${event.description || ''}
-Categories: ${event.categories?.join(', ') || 'N/A'}
-      `.trim();
-      
-      await navigator.clipboard.writeText(eventDetails);
-      
-      // Show success feedback (you can replace with a toast notification if available)
-      const btn = document.activeElement;
-      const originalTitle = btn.getAttribute('title');
-      btn.setAttribute('title', 'Copied!');
-      setTimeout(() => {
-        btn.setAttribute('title', originalTitle || 'Copy Event Details');
-      }, 2000);
+      const eventUrl = `${window.location.origin}/events/${selectedEventForShare._id}`;
+      await navigator.clipboard.writeText(eventUrl);
+      toast?.show({ message: 'Event link copied to clipboard!', type: 'success' });
+      setShowShareModal(false);
     } catch (error) {
-      console.error('Error copying event details:', error);
-      alert('Failed to copy event details');
+      console.error('Error copying event link:', error);
+      toast?.show({ message: 'Failed to copy link', type: 'error' });
     }
   };
 
@@ -1133,9 +1169,12 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
                   onClick={() => setActiveCollabTab(tab.key)}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeCollabTab === tab.key
-                      ? 'bg-white dark:bg-white text-black'
+                      ? 'text-white'
                       : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                   }`}
+                  style={activeCollabTab === tab.key ? {
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                  } : {}}
                 >
                   {tab.label}
                 </button>
@@ -1164,8 +1203,11 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
             )}
             <button
               onClick={() => navigate('/collaborations')}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
-              style={{ fontFamily: 'Oswald, sans-serif' }}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 text-white px-6 py-2 rounded-md font-medium transition-all hover:opacity-90"
+              style={{ 
+                fontFamily: 'Oswald, sans-serif',
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+              }}
             >
               <FileText className="h-5 w-5" />
               <span>Manage Collaborations</span>
@@ -1857,6 +1899,77 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black overflow-x-hidden">
+      {/* Animated Border CSS */}
+      <style>{`
+        .animated-border-card {
+          position: relative;
+          border: 2px solid transparent;
+          transition: all 0.5s ease;
+        }
+        
+        /* Mobile: Always show animated border */
+        @media (max-width: 768px) {
+          .animated-border-card {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(90deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+            animation: borderGradientRotate 4s ease-in-out infinite;
+          }
+        }
+        
+        /* Desktop: Show static border, animate on hover */
+        @media (min-width: 769px) {
+          .animated-border-card {
+            border: 2px solid #374151;
+          }
+          
+          .animated-border-card:hover {
+            border: 2px solid transparent;
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(90deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+            animation: borderGradientRotate 4s ease-in-out infinite;
+          }
+        }
+        
+        @keyframes borderGradientRotate {
+          0% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(90deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          12.5% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(135deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          25% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(180deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          37.5% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(225deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          50% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(270deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          62.5% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(315deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          75% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(0deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          87.5% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(45deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+          100% {
+            background: linear-gradient(#18181b, #18181b) padding-box,
+                        linear-gradient(90deg, #6B7280 0%, #9CA3AF 50%, #6B7280 100%) border-box;
+          }
+        }
+      `}</style>
+      
       {/* Navigation Bar */}
       <NavigationBar />
       
@@ -1934,7 +2047,7 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
               title="Collaborations"
             >
               <Users2 className="h-6 w-6" />
-              <span className="text-xs font-medium">Collaborations</span>
+              <span className="text-xs font-medium">Collabs</span>
             </button>
 
             {/* Analytics */}
@@ -2103,6 +2216,15 @@ Categories: ${event.categories?.join(', ') || 'N/A'}
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        event={selectedEventForShare}
+        onShare={shareToSocial}
+        onCopyLink={copyEventLink}
+      />
     </div>
   );
 };

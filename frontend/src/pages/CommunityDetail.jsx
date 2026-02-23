@@ -4,6 +4,7 @@ import { api } from '../config/api.js';
 import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import Footer from '../components/Footer';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { 
   Users, 
   Calendar,
@@ -598,7 +599,7 @@ const CommunityDetail = () => {
                       onMouseLeave={handleMouseLeave}
                     >
                       <img 
-                        src={community.images[currentImageIndex]}
+                        src={getOptimizedCloudinaryUrl(community.images[currentImageIndex])}
                         alt={`Community Highlight ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover transition-opacity duration-300 pointer-events-none select-none"
                         draggable="false"
@@ -658,7 +659,7 @@ const CommunityDetail = () => {
                       <div className="relative h-48 bg-gray-800">
                         {event.images && event.images.length > 0 ? (
                           <img
-                            src={event.images[0]}
+                            src={getOptimizedCloudinaryUrl(event.images[0])}
                             alt={event.title}
                             className="w-full h-full object-cover"
                           />

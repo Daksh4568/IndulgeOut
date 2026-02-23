@@ -9,6 +9,7 @@ import CommunityCard from '../components/CommunityCard';
 import LoginPromptModal from '../components/LoginPromptModal';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL } from '../config/api';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 export default function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -636,7 +637,7 @@ export default function ExplorePage() {
                                     <div className="relative bg-white rounded-lg overflow-hidden shadow-xl aspect-[3/4]">
                                       {event.images && event.images.length > 0 ? (
                                         <img
-                                          src={event.images[0]}
+                                          src={getOptimizedCloudinaryUrl(event.images[0])}
                                           alt={event.title}
                                           className="w-full h-full object-cover"
                                         />

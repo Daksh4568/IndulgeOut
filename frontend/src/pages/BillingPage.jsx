@@ -5,6 +5,7 @@ import { ToastContext } from '../App';
 import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
 import { ArrowLeft, Users, Ticket, CreditCard, CheckCircle2, UserPlus, X } from 'lucide-react';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 const BillingPage = () => {
   const { eventId } = useParams();
@@ -280,7 +281,7 @@ const BillingPage = () => {
               <div className="flex items-start space-x-4 mb-6">
                 {event.images && event.images[0] && (
                   <img
-                    src={event.images[0]}
+                    src={getOptimizedCloudinaryUrl(event.images[0])}
                     alt={event.title}
                     className="w-24 h-24 rounded-lg object-cover"
                   />

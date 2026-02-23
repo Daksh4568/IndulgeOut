@@ -4,6 +4,7 @@ import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORIES } from '../constants/categories';
 import NavigationBar from '../components/NavigationBar';
 import { API_URL } from '../config/api';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 /**
  * All Categories Page
@@ -162,7 +163,7 @@ const Categories = () => {
                             <div className="relative bg-white rounded-lg overflow-hidden shadow-xl aspect-[3/4]">
                               {event.images && event.images.length > 0 ? (
                                 <img
-                                  src={event.images[0]}
+                                  src={getOptimizedCloudinaryUrl(event.images[0])}
                                   alt={event.title}
                                   className="w-full h-full object-cover"
                                 />

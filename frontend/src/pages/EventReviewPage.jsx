@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
 import { Star, Upload, X, ArrowLeft, Send, AlertCircle } from 'lucide-react';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 const EventReviewPage = () => {
   const { eventId } = useParams();
@@ -204,7 +205,7 @@ const EventReviewPage = () => {
             <div className="flex items-start gap-4">
               {event.images && event.images[0] && (
                 <img
-                  src={event.images[0]}
+                  src={getOptimizedCloudinaryUrl(event.images[0])}
                   alt={event.title}
                   className="w-20 h-20 object-cover rounded-lg"
                 />

@@ -71,16 +71,17 @@ const IdentitySelection = () => {
 
               {/* Title */}
               <h3 
-                className="text-2xl font-bold text-white text-center mb-2"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
+                className="text-2xl font-bold text-center mb-2"
+                style={{ 
+                  fontFamily: 'Oswald, sans-serif',
+                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
               >
-                B2C
+                Attendees/Participants
               </h3>
-
-              {/* Subtitle */}
-              <p className="text-[#6366F1] text-center mb-4 text-xs font-semibold uppercase">
-                CONSUMER
-              </p>
 
               {/* Description */}
               <p className="text-gray-300 text-center mb-4 text-sm">
@@ -122,16 +123,17 @@ const IdentitySelection = () => {
 
               {/* Title */}
               <h3 
-                className="text-2xl font-bold text-white text-center mb-2"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
+                className="text-2xl font-bold text-center mb-2"
+                style={{ 
+                  fontFamily: 'Oswald, sans-serif',
+                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
               >
-                B2B
+                Experience Partners
               </h3>
-
-              {/* Subtitle */}
-              <p className="text-[#6366F1] text-center mb-4 text-xs font-semibold uppercase">
-                BUSINESS PARTNER
-              </p>
 
               {/* Description */}
               <p className="text-gray-300 text-center mb-4 text-sm">

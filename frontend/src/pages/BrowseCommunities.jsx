@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
 import FilterBar from '../components/FilterBar';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 // Community type icon mapping for fallback images
 const COMMUNITY_TYPE_ICONS = {
@@ -310,7 +311,7 @@ const BrowseCommunities = () => {
                   {community.communityProfile?.pastEventPhotos && community.communityProfile.pastEventPhotos.length > 0 ? (
                     <>
                       <img
-                        src={community.communityProfile.pastEventPhotos[0]}
+                        src={getOptimizedCloudinaryUrl(community.communityProfile.pastEventPhotos[0])}
                         alt={community.communityProfile?.communityName}
                         className="w-full h-full object-cover"
                       />
@@ -500,7 +501,7 @@ const BrowseCommunities = () => {
                     {selectedCommunity.communityProfile?.pastEventPhotos && selectedCommunity.communityProfile.pastEventPhotos.length > 0 ? (
                       <>
                         <img
-                          src={selectedCommunity.communityProfile.pastEventPhotos[currentImageIndex]}
+                          src={getOptimizedCloudinaryUrl(selectedCommunity.communityProfile.pastEventPhotos[currentImageIndex])}
                           alt={selectedCommunity.communityProfile?.communityName}
                           className="w-full h-full object-cover"
                         />
@@ -548,7 +549,7 @@ const BrowseCommunities = () => {
                             idx === currentImageIndex ? 'border-purple-500' : 'border-transparent'
                           }`}
                         >
-                          <img src={photo} alt="" className="w-full h-full object-cover" />
+                          <img src={getOptimizedCloudinaryUrl(photo)} alt="" className="w-full h-full object-cover" />
                         </button>
                       ))}
                     </div>

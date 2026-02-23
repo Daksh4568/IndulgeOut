@@ -597,7 +597,7 @@ const BrandDashboard = () => {
               title="Collaborations"
             >
               <Users2 className="h-6 w-6" />
-              <span className="text-xs font-medium">Collaborations</span>
+              <span className="text-xs font-medium">Collabs</span>
             </button>
 
             {/* Analytics */}

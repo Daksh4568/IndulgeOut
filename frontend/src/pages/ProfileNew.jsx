@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 import NavigationBar from '../components/NavigationBar'
 import SupportModal from '../components/SupportModal'
 import { api } from '../config/api.js'
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 const ProfileNew = () => {
   const navigate = useNavigate()
@@ -342,10 +343,15 @@ const ProfileNew = () => {
             name: profileForm.name,
             email: profileForm.contactEmail || profileForm.email,
             phone: profileForm.contactPhone || profileForm.phoneNumber
-          }
+          },
+          // Include social links in communityProfile
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          website: profileForm.website,
+          linkedin: profileForm.linkedin
         };
         
-        // Add social links to communityProfile
+        // Also send at root level for backward compatibility
         payload.socialLinks = {
           instagram: profileForm.instagram,
           facebook: profileForm.facebook,
@@ -364,10 +370,14 @@ const ProfileNew = () => {
           spaceType: profileForm.spaceType,
           seatingCapacity: profileForm.seatingCapacity,
           operatingHours: profileForm.operatingHours,
-          parkingAvailability: profileForm.parkingAvailability
+          parkingAvailability: profileForm.parkingAvailability,
+          // Include social links in venueProfile
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          website: profileForm.website
         };
         
-        // Add social links
+        // Also send at root level for backward compatibility
         payload.socialLinks = {
           instagram: profileForm.instagram,
           facebook: profileForm.facebook,
@@ -379,10 +389,14 @@ const ProfileNew = () => {
           brandName: profileForm.brandName,
           brandDescription: profileForm.brandDescription,
           logo: profileForm.logo,
-          website: profileForm.website
+          website: profileForm.website,
+          // Include social links in brandProfile
+          instagram: profileForm.instagram,
+          facebook: profileForm.facebook,
+          linkedin: profileForm.linkedin
         };
         
-        // Add social links
+        // Also send at root level for backward compatibility
         payload.socialLinks = {
           instagram: profileForm.instagram,
           facebook: profileForm.facebook,
@@ -719,34 +733,35 @@ const ProfileNew = () => {
               {/* Profile Card with Purple Gradient Header */}
               <div className="bg-[#171717] rounded-lg overflow-hidden transition-card">
                 {/* Purple gradient header */}
-                <div className="bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] p-6 relative">
+                <div className="bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] p-4 sm:p-6 relative">
                   <button 
                     onClick={() => handleEditSection('profile')}
-                    className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm font-medium"
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 px-2.5 py-1.5 sm:px-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-xs sm:text-sm font-medium"
                   >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    Edit
+                    <Edit2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">Edit</span>
                   </button>
                   
-                  <div className="flex items-start gap-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       {profileData.profilePicture ? (
                         <img 
                           src={profileData.profilePicture} 
                           alt="Profile" 
-                          className="h-24 w-24 rounded-xl object-cover border-2 border-white/30"
+                          className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl object-cover border-2 border-white/30"
                         />
                       ) : (
-                        <div className="h-24 w-24 rounded-xl bg-white/20 flex items-center justify-center text-white text-3xl font-bold border-2 border-white/30">
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl bg-white/20 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-2 border-white/30">
                           {getUserInitials()}
                         </div>
                       )}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 -right-2 bg-white text-purple-600 rounded-lg p-2 hover:bg-gray-100 transition-colors shadow-lg"
+                        className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1.5 sm:p-2 hover:bg-gray-100 transition-colors shadow-lg"
+                        style={{ color: '#7878E9' }}
                       >
-                        <Camera className="h-4 w-4" />
+                        <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </button>
                       <input 
                         ref={fileInputRef}
@@ -758,14 +773,14 @@ const ProfileNew = () => {
                     </div>
 
                     {/* Profile Info */}
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
                         {profileData.name}
                       </h2>
-                      <p className="text-white/80 text-sm mb-4">Member</p>
+                      <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">Member</p>
                       
                       {profileData.bio && (
-                        <p className="text-white/90 text-sm leading-relaxed mb-4">
+                        <p className="text-white/90 text-xs sm:text-sm leading-relaxed mb-2 sm:mb-4">
                           {profileData.bio}
                         </p>
                       )}
@@ -1186,7 +1201,7 @@ const ProfileNew = () => {
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-semibold flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-purple-400" />
+                    <Sparkles className="h-5 w-5" style={{ color: '#7878E9' }} />
                     Interest
                   </h3>
                   <button 
@@ -1234,7 +1249,7 @@ const ProfileNew = () => {
               {/* Help & Support Section */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <HelpCircle className="h-5 w-5 text-purple-400" />
+                  <HelpCircle className="h-5 w-5" style={{ color: '#7878E9' }} />
                   <h3 className="text-white font-semibold">Help & Support</h3>
                 </div>
                 <div className="space-y-2">
@@ -1274,18 +1289,18 @@ const ProfileNew = () => {
               <div className="bg-[#171717] rounded-lg overflow-hidden transition-card">
                 {/* Purple gradient header */}
                 <div 
-                  className="p-6 relative"
+                  className="p-4 sm:p-6 relative"
                   style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                 >
                   <button 
                     onClick={() => handleEditSection('profile')}
-                    className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm font-medium"
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 px-2.5 py-1.5 sm:px-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-xs sm:text-sm font-medium"
                   >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    Edit
+                    <Edit2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">Edit</span>
                   </button>
                   
-                  <div className="flex items-start gap-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       {profileData.profilePicture ? (
@@ -1301,9 +1316,10 @@ const ProfileNew = () => {
                       )}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 -right-2 bg-white text-purple-600 rounded-lg p-2 hover:bg-gray-100 transition-colors shadow-lg"
+                        className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1.5 sm:p-2 hover:bg-gray-100 transition-colors shadow-lg"
+                        style={{ color: '#7878E9' }}
                       >
-                        <Camera className="h-4 w-4" />
+                        <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </button>
                       <input 
                         ref={fileInputRef}
@@ -1315,8 +1331,8 @@ const ProfileNew = () => {
                     </div>
 
                     {/* Profile Info */}
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
                         {isCommunityOrganizer && profileData.communityProfile?.communityName}
                         {isVenue && profileData.venueProfile?.venueName}
                         {isBrandSponsor && profileData.brandProfile?.brandName}
@@ -1324,7 +1340,7 @@ const ProfileNew = () => {
                       
                       {/* Tags for Venue */}
                       {isVenue && profileData.venueProfile?.venueType && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-2 sm:mb-3 justify-center sm:justify-start">
                           {profileData.venueProfile.venueType.split(',').map((tag, idx) => (
                             <span key={idx} className="px-2.5 py-1 bg-white/20 text-white text-xs rounded-md font-medium">
                               {tag.trim()}
@@ -1333,14 +1349,14 @@ const ProfileNew = () => {
                         </div>
                       )}
 
-                      <p className="text-white/80 text-sm mb-4">
+                      <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">
                         {isCommunityOrganizer && 'Community Organizer'}
                         {isVenue && 'Venue Partner'}
                         {isBrandSponsor && 'Brand Partner'}
                       </p>
                       
                       {(isCommunityOrganizer || isBrandSponsor) && (
-                        <p className="text-white/90 text-sm leading-relaxed">
+                        <p className="text-white/90 text-xs sm:text-sm leading-relaxed">
                           {isCommunityOrganizer && profileData.communityProfile?.communityDescription}
                           {isBrandSponsor && profileData.brandProfile?.brandDescription}
                         </p>
@@ -1361,7 +1377,7 @@ const ProfileNew = () => {
                   <div className="grid grid-cols-5 gap-3">
                     {photos.map((photo, idx) => (
                       <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-800">
-                        <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img src={getOptimizedCloudinaryUrl(photo)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                         <button
                           onClick={() => handleDeletePhoto(photo)}
                           disabled={isUploading}
@@ -1603,7 +1619,7 @@ const ProfileNew = () => {
                 <div ref={payoutSectionRef} className="bg-[#171717] rounded-lg p-6 transition-card">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5 text-purple-400" />
+                      <CreditCard className="h-5 w-5" style={{ color: '#7878E9' }} />
                       <h3 className="text-white font-semibold">Payouts, KYC & Compliance</h3>
                     </div>
                     {editingSection !== 'payout' && (
@@ -1753,7 +1769,10 @@ const ProfileNew = () => {
                             </div>
                             <button
                               onClick={() => navigate('/kyc-setup')}
-                              className="text-xs text-purple-400 hover:text-purple-300 underline"
+                              className="text-xs underline"
+                              style={{ color: '#7878E9' }}
+                              onMouseEnter={(e) => e.target.style.color = '#6767D1'}
+                              onMouseLeave={(e) => e.target.style.color = '#7878E9'}
                             >
                               Update KYC
                             </button>
@@ -1866,7 +1885,7 @@ const ProfileNew = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1 p-3 bg-gray-800/50 rounded-lg">
                         <div className="flex items-center gap-2 mb-1">
-                          <Users className="h-4 w-4 text-purple-400" />
+                          <Users className="h-4 w-4" style={{ color: '#7878E9' }} />
                           <span className="text-xs text-gray-500">Capacity</span>
                         </div>
                         <span className="text-white font-medium">
@@ -1876,7 +1895,7 @@ const ProfileNew = () => {
 
                       <div className="flex flex-col gap-1 p-3 bg-gray-800/50 rounded-lg">
                         <div className="flex items-center gap-2 mb-1">
-                          <Shield className="h-4 w-4 text-purple-400" />
+                          <Shield className="h-4 w-4" style={{ color: '#7878E9' }} />
                           <span className="text-xs text-gray-500">Restrictions</span>
                         </div>
                         <span className="text-white font-medium">
@@ -2102,7 +2121,11 @@ const ProfileNew = () => {
                             {(isCommunityOrganizer ? profileData.communityProfile.preferredCities : 
                               isVenue ? profileData.venueProfile.preferredCities : 
                               profileData.brandProfile.preferredCities).map((city, idx) => (
-                              <span key={idx} className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
+                              <span 
+                                key={idx} 
+                                className="px-2.5 py-1 text-white rounded-md text-xs font-medium"
+                                style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                              >
                                 {city}
                               </span>
                             ))}
@@ -2136,10 +2159,10 @@ const ProfileNew = () => {
                       {isCommunityOrganizer && (
                         <div>
                           <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Attendee Event Size</p>
-                          {profileData.communityProfile?.averageEventSize ? (
+                          {profileData.communityProfile?.typicalAudienceSize ? (
                             <div className="flex gap-2">
-                              <span className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
-                                {profileData.communityProfile.averageEventSize}
+                              <span className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                                {profileData.communityProfile.typicalAudienceSize}
                               </span>
                             </div>
                           ) : (
@@ -2181,7 +2204,7 @@ const ProfileNew = () => {
                               {(isCommunityOrganizer ? profileData.communityProfile.preferredCollaborationTypes :
                                 isVenue ? profileData.venueProfile.preferredCollaborationTypes :
                                 profileData.brandProfile.preferredCollaborationTypes).map((type, idx) => (
-                                <span key={idx} className="px-2.5 py-1 bg-gray-800 text-gray-300 rounded-md text-xs font-medium">
+                                <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                   {type}
                                 </span>
                               ))}
@@ -2234,7 +2257,7 @@ const ProfileNew = () => {
               {/* Help & Support Section */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <HelpCircle className="h-5 w-5 text-purple-400" />
+                  <HelpCircle className="h-5 w-5" style={{ color: '#7878E9' }} />
                   <h3 className="text-white font-semibold">Help & Support</h3>
                 </div>
                 <div className="space-y-2">

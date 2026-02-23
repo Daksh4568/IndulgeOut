@@ -5,6 +5,7 @@ import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
 import TicketViewer from '../components/TicketViewer';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
+import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { 
   Calendar, MapPin, Clock, Users, Heart, Star, 
   TrendingUp, Gift, Crown, Award, UserPlus, 
@@ -213,7 +214,7 @@ const UserDashboard = () => {
           <div className={`relative h-44 overflow-hidden bg-gradient-to-br ${getEventGradient(event.categories?.[0])}`}>
             {event.images && event.images.length > 0 && !imageError ? (
               <img
-                src={event.images[0]}
+                src={getOptimizedCloudinaryUrl(event.images[0])}
                 alt={event.title}
                 className="w-full h-full object-cover opacity-80"
                 onError={() => setImageError(true)}

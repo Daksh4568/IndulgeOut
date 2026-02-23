@@ -20,6 +20,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { ToastContext } from "../App";
 import { COMMUNITIES } from "../constants/eventConstants";
 import locationService from "../services/locationService";
+import { getOptimizedCloudinaryUrl } from "../utils/cloudinaryHelper";
 
 // 6 Fixed Categories for consistency across the website
 const EVENT_CATEGORIES = [
@@ -944,7 +945,7 @@ const EventCreation = () => {
         multiple: true,
         maxFiles: 5,
         resourceType: "image",
-        clientAllowedFormats: ["jpg", "jpeg", "png", "gif", "webp"],
+        clientAllowedFormats: ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif"],
         maxFileSize: 5000000, // 5MB
         folder: "indulgeout/events", // Organize uploads in folders
         cropping: false, // Disable cropping for now
@@ -1642,7 +1643,7 @@ const EventCreation = () => {
                     {uploadedImages.map((image) => (
                       <div key={image.public_id} className="relative group">
                         <img
-                          src={image.url}
+                          src={getOptimizedCloudinaryUrl(image.url)}
                           alt="Event preview"
                           className="w-full h-20 object-cover rounded-lg border border-white/10"
                         />

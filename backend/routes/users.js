@@ -119,7 +119,13 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
     if (location !== undefined) updateData.location = location;
     if (age !== undefined) updateData.age = age;
-    if (gender !== undefined) updateData.gender = gender;
+    
+    // Gender is only relevant for B2C users, not for host partners
+    // Only update if gender is provided and is not an empty string
+    if (gender !== undefined && gender !== '' && user.role === 'user') {
+      updateData.gender = gender;
+    }
+    
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
 
     // For profile objects - allow updates even after onboarding

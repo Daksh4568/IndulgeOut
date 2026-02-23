@@ -262,22 +262,21 @@ const CategoryDetail = () => {
           </div>
 
           {loading ? (
-            <div className="flex gap-6 overflow-hidden">
+            <div className="flex gap-4 sm:gap-6 overflow-hidden">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex-none w-[280px] h-[450px] bg-gray-800 rounded-xl animate-pulse" />
+                <div key={i} className="flex-none w-[260px] sm:w-[280px] h-[520px] sm:h-[500px] bg-gray-800 rounded-xl animate-pulse" />
               ))}
             </div>
           ) : (
             <div 
               ref={carouselRef}
-              className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth"
+              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {events.map((event) => (
                 <div 
                   key={event._id}
-                  className="flex-none w-[280px] h-[450px] snap-start"
-                  style={{ minHeight: '450px', maxHeight: '450px' }}
+                  className="flex-none w-[260px] sm:w-[280px] snap-start"
                 >
                   <EventCard event={event} />
                 </div>

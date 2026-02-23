@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { X, Menu, User, Building2, Sparkles, Users, ChevronDown, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -8,6 +8,7 @@ import { useState, useContext } from 'react';
 export default function NavigationBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useContext(ToastContext);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [browseDropdownOpen, setBrowseDropdownOpen] = useState(false);
@@ -145,37 +146,44 @@ export default function NavigationBar() {
                 {/* Community Organizer Navigation */}
                 {user.role === 'host_partner' && user.hostPartnerType === 'community_organizer' ? (
                   <>
-                    {/* Create Event Button - Primary Action */}
-                    <button
-                      onClick={handleCreateEvent}
-                      className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-bold uppercase transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>CREATE EVENT</span>
-                    </button>
-                    
                     {/* Dashboard */}
                     <Link
                       to={getDashboardRoute()}
-                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                        location.pathname.includes('/organizer/dashboard') ? 'font-bold' : 'font-medium'
+                      }`}
                     >
                       DASHBOARD
+                    </Link>
+                    
+                    {/* Create Event Button */}
+                    <button
+                      onClick={handleCreateEvent}
+                      className={`flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm uppercase transition-colors ${
+                        location.pathname.includes('/create-event') ? 'font-bold' : 'font-medium'
+                      }`}
+                    >
+                      <span>CREATE EVENT</span>
+                    </button>
+                    
+                    {/* Sponsors Button */}
+                    <Link
+                      to="/browse/sponsors"
+                      className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                        location.pathname.includes('/browse/sponsors') ? 'font-bold' : 'font-medium'
+                      }`}
+                    >
+                      SPONSORS
                     </Link>
                     
                     {/* Venues Button */}
                     <Link
                       to="/browse/venues"
-                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                        location.pathname.includes('/browse/venues') ? 'font-bold' : 'font-medium'
+                      }`}
                     >
                       VENUES
-                    </Link>
-                    
-                    {/* Sponsors Button */}
-                    <Link
-                      to="/browse/sponsors"
-                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      SPONSORS
                     </Link>
                   </>
                 ) : (
@@ -257,6 +265,18 @@ export default function NavigationBar() {
                 >
                   LOG IN/SIGN UP
                 </button>
+                
+                {/* Mobile: Hamburger menu for logged out users */}
+                <button
+                  className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? (
+                    <X className="h-6 w-6 text-white" />
+                  ) : (
+                    <Menu className="h-6 w-6 text-white dark:text-white" />
+                  )}
+                </button>
               </>
             ) : (
               // Logged IN Actions
@@ -283,25 +303,23 @@ export default function NavigationBar() {
                   </Link>
                 </div>
                 
-                {/* Mobile: Show notification bell before hamburger menu */}
-                <div className="md:hidden">
+                {/* Mobile: Show notification bell and hamburger menu together */}
+                <div className="md:hidden flex items-center space-x-2">
                   <NotificationBell />
+                  <button
+                    className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  >
+                    {mobileMenuOpen ? (
+                      <X className="h-6 w-6 text-white" />
+                    ) : (
+                      <Menu className="h-6 w-6 text-white dark:text-white" />
+                    )}
+                  </button>
                 </div>
               </>
             )}
           </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6 text-white" />
-            ) : (
-              <Menu className="h-6 w-6 text-white dark:text-white" />
-            )}
-          </button>
         </div>
 
         {/* Mobile Menu - Side Drawer */}
@@ -426,7 +444,7 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE VENUES</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>VENUES</span>
                           </div>
                         </Link>
 
@@ -437,7 +455,7 @@ export default function NavigationBar() {
                           className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE SPONSORS</span>
+                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>SPONSORS</span>
                           </div>
                         </Link>
                       </>
@@ -487,7 +505,7 @@ export default function NavigationBar() {
                             className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE VENUES</span>
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>VENUES</span>
                             </div>
                           </Link>
                         )}
@@ -500,7 +518,7 @@ export default function NavigationBar() {
                             className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE COMMUNITIES</span>
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>COMMUNITIES</span>
                             </div>
                           </Link>
                         )}
@@ -513,7 +531,7 @@ export default function NavigationBar() {
                             className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>BROWSE SPONSORS</span>
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>SPONSORS</span>
                             </div>
                           </Link>
                         )}
