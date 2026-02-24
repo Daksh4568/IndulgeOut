@@ -2083,9 +2083,6 @@ const CommunityOrganizerDashboard = () => {
                   >
                     Welcome back, {user?.communityProfile?.communityName || user?.name}!
                   </h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Here's what's happening with your events
-                  </p>
                 </div>
               </div>
             </div>

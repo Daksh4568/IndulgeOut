@@ -84,7 +84,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
   return (
     <Link
       to={`/events/${event._id}`}
-      className={`group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''} h-full min-h-[480px]`}
+      className={`group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''} h-full`}
     >
       {/* Image */}
       <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-700 flex-shrink-0">
@@ -175,19 +175,13 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
                   {category}
                 </span>
               ))}
-              {event.mood && (
-                <span className="inline-flex items-center gap-1 bg-[#2A2A3E] text-gray-300 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                  {event.mood}
-                </span>
-              )}
             </div>
           )}
         </div>
 
         {/* View Details Button - Fixed at bottom */}
         <button
-          className="w-full text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm font-bold uppercase transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-3"
+          className="w-full text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm font-bold uppercase transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-2"
           style={{ 
             background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
             fontFamily: 'Oswald, sans-serif'

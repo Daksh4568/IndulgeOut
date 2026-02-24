@@ -72,13 +72,18 @@ router.get('/browse', async (req, res) => {
       locality: venue.venueProfile?.locality,
       city: venue.venueProfile?.city,
       venueType: venue.venueProfile?.venueType,
+      venueDescription: venue.venueProfile?.venueDescription,
+      logo: venue.venueProfile?.logo,
       capacityRange: venue.venueProfile?.capacityRange,
       amenities: venue.venueProfile?.amenities || [],
-      eventSuitabilityTags: venue.venueProfile?.eventSuitabilityTags || [],
       photos: venue.venueProfile?.photos || [],
       availability: venue.venueProfile?.availability,
-      eventsHosted: venue.venueProfile?.eventsHosted || 0,
-      description: venue.venueProfile?.description
+      preferredCities: venue.venueProfile?.preferredCities || [],
+      preferredCategories: venue.venueProfile?.preferredCategories || [],
+      preferredEventFormats: venue.venueProfile?.preferredEventFormats || [],
+      preferredAudienceTypes: venue.venueProfile?.preferredAudienceTypes || [],
+      nicheCommunityDescription: venue.venueProfile?.nicheCommunityDescription || '',
+      rules: venue.venueProfile?.rules || {}
     }));
 
     res.json(transformedVenues);

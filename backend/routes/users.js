@@ -721,8 +721,11 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
     } else if (user.hostPartnerType === 'venue') {
       photoArray = user.venueProfile?.photos || [];
       folderPath = 'indulgeout/venue-photos';
+    } else if (user.hostPartnerType === 'brand_sponsor') {
+      photoArray = user.brandProfile?.productPhotos || [];
+      folderPath = 'indulgeout/brand-photos';
     } else {
-      return res.status(400).json({ message: 'Photo upload only available for community organizers and venues' });
+      return res.status(400).json({ message: 'Photo upload only available for host partners' });
     }
 
     // Check if limit reached (max 5)
@@ -745,8 +748,10 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
     // Update user
     if (user.hostPartnerType === 'community_organizer') {
       user.communityProfile.pastEventPhotos = photoArray;
-    } else {
+    } else if (user.hostPartnerType === 'venue') {
       user.venueProfile.photos = photoArray;
+    } else if (user.hostPartnerType === 'brand_sponsor') {
+      user.brandProfile.productPhotos = photoArray;
     }
 
     await user.save();
@@ -786,8 +791,10 @@ router.delete('/profile/photos', authenticateToken, async (req, res) => {
       user.communityProfile.pastEventPhotos = user.communityProfile.pastEventPhotos.filter(url => url !== photoUrl);
     } else if (user.hostPartnerType === 'venue') {
       user.venueProfile.photos = user.venueProfile.photos.filter(url => url !== photoUrl);
+    } else if (user.hostPartnerType === 'brand_sponsor') {
+      user.brandProfile.productPhotos = user.brandProfile.productPhotos.filter(url => url !== photoUrl);
     } else {
-      return res.status(400).json({ message: 'Photo deletion only available for community organizers and venues' });
+      return res.status(400).json({ message: 'Photo deletion only available for host partners' });
     }
 
     await user.save();

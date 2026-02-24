@@ -43,8 +43,7 @@ const BrowseSponsors = () => {
     brandCategory: '',
     targetCity: '',
     sponsorshipType: [],
-    collaborationIntent: [],
-    budgetScale: ''
+    collaborationIntent: []
   });
 
   const brandCategories = [
@@ -72,12 +71,6 @@ const BrowseSponsors = () => {
     { value: 'experience_partnerships', label: 'Experience Partnerships', icon: '✨' },
     { value: 'brand_activation', label: 'Brand Activation', icon: '🚀' },
     { value: 'content_creation', label: 'Content Creation', icon: '📸' }
-  ];
-
-  const budgetScales = [
-    { value: 'micro', label: 'Micro (₹0-50K)' },
-    { value: 'mid', label: 'Mid (₹50K-2L)' },
-    { value: 'large', label: 'Large (₹2L+)' }
   ];
 
   const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata', 'Ahmedabad'];
@@ -163,17 +156,6 @@ const BrowseSponsors = () => {
       );
     }
 
-    // Budget filter
-    if (filters.budgetScale) {
-      filtered = filtered.filter(brand => {
-        const max = brand.budget?.max || 0;
-        if (filters.budgetScale === 'micro') return max <= 50000;
-        if (filters.budgetScale === 'mid') return max > 50000 && max <= 200000;
-        if (filters.budgetScale === 'large') return max > 200000;
-        return true;
-      });
-    }
-
     setFilteredBrands(filtered);
     setCurrentPage(1); // Reset to first page when filters change
   };
@@ -199,8 +181,7 @@ const BrowseSponsors = () => {
       brandCategory: '',
       targetCity: '',
       sponsorshipType: [],
-      collaborationIntent: [],
-      budgetScale: ''
+      collaborationIntent: []
     });
     setSearchQuery('');
   };
@@ -231,24 +212,6 @@ const BrowseSponsors = () => {
     return BRAND_CATEGORY_ICONS[category] || BRAND_CATEGORY_ICONS['other'];
   };
 
-  const getBudgetDisplay = (budget) => {
-    if (!budget || (!budget.min && !budget.max)) return 'Budget not specified';
-    if (budget.min && budget.max) {
-      return `₹${(budget.min / 1000).toFixed(0)}K - ₹${(budget.max / 1000).toFixed(0)}K`;
-    }
-    if (budget.max) {
-      return `Up to ₹${(budget.max / 1000).toFixed(0)}K`;
-    }
-    return 'Flexible budget';
-  };
-
-  const getActivationScale = (targetCity) => {
-    if (!targetCity || targetCity.length === 0) return 'National';
-    if (targetCity.length === 1) return 'City-specific';
-    if (targetCity.length <= 3) return 'Multi-city';
-    return 'Pan-India';
-  };
-
   const getBrandCategoryLabel = (category) => {
     const cat = brandCategories.find(c => c.value === category);
     return cat ? cat.label : category;
@@ -265,17 +228,17 @@ const BrowseSponsors = () => {
   };
 
   const nextImage = () => {
-    if (selectedBrand && selectedBrand.images) {
+    if (selectedBrand && selectedBrand.productPhotos) {
       setCurrentImageIndex((prev) => 
-        (prev + 1) % selectedBrand.images.length
+        (prev + 1) % selectedBrand.productPhotos.length
       );
     }
   };
 
   const prevImage = () => {
-    if (selectedBrand && selectedBrand.images) {
+    if (selectedBrand && selectedBrand.productPhotos) {
       setCurrentImageIndex((prev) => 
-        prev === 0 ? selectedBrand.images.length - 1 : prev - 1
+        prev === 0 ? selectedBrand.productPhotos.length - 1 : prev - 1
       );
     }
   };
@@ -364,22 +327,18 @@ const BrowseSponsors = () => {
                 onClick={() => openBrandModal(brand)}
                 className="bg-zinc-900 rounded-xl overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex flex-col h-full"
               >
-                {/* Brand Image with Gradient Overlay */}
+                {/* Brand Image */}
                 <div className="relative h-48 overflow-hidden">
-                  <div 
-                    className="absolute inset-0"
-                    style={{
-                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                    }}
-                  />
-                  {brand.images && brand.images.length > 0 ? (
+                  {brand.productPhotos && brand.productPhotos.length > 0 ? (
                     <img
-                      src={brand.images[0]}
+                      src={brand.productPhotos[0]}
                       alt={brand.brandName}
-                      className="w-full h-full object-cover mix-blend-overlay"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-6xl relative z-10">
+                    <div className="flex items-center justify-center h-full text-6xl relative z-10" style={{
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                    }}>
                       {getBrandCategoryIcon(brand.brandCategory)}
                     </div>
                   )}
@@ -558,14 +517,14 @@ const BrowseSponsors = () => {
                 <div className="space-y-4">
                   {/* Main Image */}
                   <div className="relative h-80 rounded-xl overflow-hidden">
-                    {selectedBrand.images && selectedBrand.images.length > 0 ? (
+                    {selectedBrand.productPhotos && selectedBrand.productPhotos.length > 0 ? (
                       <>
                         <img
-                          src={selectedBrand.images[currentImageIndex]}
+                          src={selectedBrand.productPhotos[currentImageIndex]}
                           alt={selectedBrand.brandName}
                           className="w-full h-full object-cover"
                         />
-                        {selectedBrand.images.length > 1 && (
+                        {selectedBrand.productPhotos.length > 1 && (
                           <>
                             <button
                               onClick={prevImage}
@@ -581,7 +540,7 @@ const BrowseSponsors = () => {
                             </button>
                             {/* Image Counter */}
                             <div className="absolute top-3 right-3 px-3 py-1 bg-black/70 rounded-full text-white text-sm">
-                              {currentImageIndex + 1} / {selectedBrand.images.length}
+                              {currentImageIndex + 1} / {selectedBrand.productPhotos.length}
                             </div>
                           </>
                         )}
@@ -599,9 +558,9 @@ const BrowseSponsors = () => {
                   </div>
 
                   {/* Thumbnail Images */}
-                  {selectedBrand.images && selectedBrand.images.length > 1 && (
+                  {selectedBrand.productPhotos && selectedBrand.productPhotos.length > 1 && (
                     <div className="flex gap-2 overflow-x-auto">
-                      {selectedBrand.images.map((image, idx) => (
+                      {selectedBrand.productPhotos.map((image, idx) => (
                         <button
                           key={idx}
                           onClick={() => setCurrentImageIndex(idx)}
@@ -623,28 +582,18 @@ const BrowseSponsors = () => {
                     <p className="text-gray-400">{selectedBrand.brandDescription || 'Discover collaboration opportunities'}</p>
                   </div>
 
-                  {/* Brand Category */}
-                  {selectedBrand.brandCategory && (
+                  {/* Preferred Cities */}
+                  {selectedBrand.preferredCities && selectedBrand.preferredCities.length > 0 && (
                     <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Brand Category</h4>
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white" style={{
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                      }}>
-                        <span className="text-lg">{getBrandCategoryIcon(selectedBrand.brandCategory)}</span>
-                        <span className="font-medium">{getBrandCategoryLabel(selectedBrand.brandCategory)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Target Cities */}
-                  {selectedBrand.targetCity && selectedBrand.targetCity.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Target Cities</h4>
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Cities</h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedBrand.targetCity.map((city, idx) => (
+                        {selectedBrand.preferredCities.map((city, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium"
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
                           >
                             {city}
                           </span>
@@ -653,38 +602,91 @@ const BrowseSponsors = () => {
                     </div>
                   )}
 
-                  {/* Sponsorship Type */}
-                  {selectedBrand.sponsorshipType && selectedBrand.sponsorshipType.length > 0 && (
+                  {/* Preferred Categories */}
+                  {selectedBrand.preferredCategories && selectedBrand.preferredCategories.length > 0 && (
                     <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Sponsorship Type</h4>
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Categories</h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedBrand.sponsorshipType.map((type, idx) => (
+                        {selectedBrand.preferredCategories.map((cat, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 bg-gray-800 text-purple-400 rounded-lg flex items-center gap-2 font-medium"
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
                           >
-                            <Sparkles className="h-4 w-4" />
-                            {type.replace('_', ' ')}
+                            {cat}
                           </span>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Collaboration Intent */}
-                  {selectedBrand.collaborationIntent && selectedBrand.collaborationIntent.length > 0 && (
+                  {/* Preferred Event Formats */}
+                  {selectedBrand.preferredEventFormats && selectedBrand.preferredEventFormats.length > 0 && (
                     <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Collaboration Intent</h4>
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Event Formats</h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedBrand.collaborationIntent.map((intent, idx) => (
+                        {selectedBrand.preferredEventFormats.map((format, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium"
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
                           >
-                            {intent.replace('_', ' ')}
+                            {format}
                           </span>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Preferred Collaboration Types */}
+                  {selectedBrand.preferredCollaborationTypes && selectedBrand.preferredCollaborationTypes.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Collaboration Types</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBrand.preferredCollaborationTypes.map((type, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
+                          >
+                            {type}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preferred Audience Types */}
+                  {selectedBrand.preferredAudienceTypes && selectedBrand.preferredAudienceTypes.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Audience Types</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBrand.preferredAudienceTypes.map((audience, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
+                          >
+                            {audience}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Niche Community Description */}
+                  {selectedBrand.nicheCommunityDescription && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Niche Community</h4>
+                      <p className="text-white">{selectedBrand.nicheCommunityDescription}</p>
                     </div>
                   )}
 

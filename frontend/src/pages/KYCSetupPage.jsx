@@ -129,7 +129,7 @@ const KYCSetupPage = () => {
               KYC Submitted Successfully!
             </h2>
             <p className="text-gray-400">
-              Your KYC details have been saved. Redirecting to profile...
+              Your KYC is uploaded, you can start hosting events
             </p>
           </div>
         </div>

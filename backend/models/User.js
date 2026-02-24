@@ -257,10 +257,6 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation']
     }],
-    preferredCollaborationTypes: [{
-      type: String,
-      enum: ['venue_partnership', 'brand_sponsorship', 'co-hosting', 'content_collaboration', 'cross_promotion']
-    }],
     preferredAudienceTypes: [{
       type: String,
       enum: ['Students', 'Young Professionals', 'Founders / Creators', 'Families', 'Niche Community']
@@ -323,7 +319,7 @@ const userSchema = new mongoose.Schema({
     }],
     preferredCollaborationTypes: [{
       type: String,
-      enum: ['venue_partnership', 'brand_sponsorship', 'co-hosting', 'content_collaboration', 'cross_promotion']
+      enum: ['sponsorship', 'sampling', 'pop-ups', 'co-hosted_events']
     }],
     preferredAudienceTypes: [{
       type: String,
@@ -387,10 +383,6 @@ const userSchema = new mongoose.Schema({
     preferredEventFormats: [{
       type: String,
       enum: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation']
-    }],
-    preferredCollaborationTypes: [{
-      type: String,
-      enum: ['venue_partnership', 'brand_sponsorship', 'co-hosting', 'content_collaboration', 'cross_promotion']
     }],
     preferredAudienceTypes: [{
       type: String,

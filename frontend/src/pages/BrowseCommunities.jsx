@@ -306,22 +306,14 @@ const BrowseCommunities = () => {
                 onClick={() => openCommunityModal(community)}
                 className="bg-zinc-900 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-800 flex flex-col h-full"
               >
-                {/* Community Image with Gradient Overlay */}
+                {/* Community Image */}
                 <div className="relative h-48 overflow-hidden">
                   {community.communityProfile?.pastEventPhotos && community.communityProfile.pastEventPhotos.length > 0 ? (
-                    <>
-                      <img
-                        src={getOptimizedCloudinaryUrl(community.communityProfile.pastEventPhotos[0])}
-                        alt={community.communityProfile?.communityName}
-                        className="w-full h-full object-cover"
-                      />
-                      <div 
-                        className="absolute inset-0 mix-blend-overlay"
-                        style={{
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                        }}
-                      ></div>
-                    </>
+                    <img
+                      src={getOptimizedCloudinaryUrl(community.communityProfile.pastEventPhotos[0])}
+                      alt={community.communityProfile?.communityName}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div 
                       className="w-full h-full flex items-center justify-center text-6xl relative z-10"
@@ -563,97 +555,114 @@ const BrowseCommunities = () => {
                       {selectedCommunity.communityProfile?.communityName || selectedCommunity.name}
                     </h3>
                     <p className="text-gray-400">
-                      {selectedCommunity.communityProfile?.communityDescription || 'An enchanting outdoor venue perfect for intimate gatherings and creative events under the stars'}
+                      {selectedCommunity.communityProfile?.communityDescription || 'Discover collaboration opportunities'}
                     </p>
                   </div>
 
-                  {/* Target Cities */}
-                  {selectedCommunity.communityProfile?.city && (
+                  {/* Preferred Cities */}
+                  {selectedCommunity.communityProfile?.preferredCities && selectedCommunity.communityProfile.preferredCities.length > 0 && (
                     <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Target Cities</h4>
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Cities</h4>
                       <div className="flex flex-wrap gap-2">
-                        <span className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium">
-                          {selectedCommunity.communityProfile.city}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Community Type */}
-                  {selectedCommunity.communityProfile?.communityType && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Community Type</h4>
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg" style={{
-                        background: selectedCommunity.communityProfile.communityType === 'curated' 
-                          ? 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                          : 'linear-gradient(180deg, #4ADE80 11%, #22C55E 146%)'
-                      }}>
-                        <span className="text-lg">{getCommunityTypeIcon(selectedCommunity.communityProfile.communityType)}</span>
-                        <span className="font-medium text-white capitalize">
-                          {selectedCommunity.communityProfile.communityType}
-                          {selectedCommunity.communityProfile.communityType === 'curated' && (
-                            <span className="block text-xs opacity-80">Approval required</span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Categories */}
-                  {selectedCommunity.communityProfile?.primaryCategory && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Categories</h4>
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Main Category</p>
-                          <span className="px-4 py-2 bg-purple-900/50 text-purple-300 rounded-lg inline-block font-medium">
-                            {selectedCommunity.communityProfile.primaryCategory}
+                        {selectedCommunity.communityProfile.preferredCities.map((city, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
+                          >
+                            {city}
                           </span>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Typical Audience Size */}
-                  {selectedCommunity.communityProfile?.typicalAudienceSize && (
+                  {/* Preferred Categories */}
+                  {selectedCommunity.communityProfile?.preferredCategories && selectedCommunity.communityProfile.preferredCategories.length > 0 && (
                     <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Typical Audience Size</h4>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-purple-400" />
-                          <div>
-                            <p className="text-2xl font-bold text-white">{selectedCommunity.communityProfile.typicalAudienceSize.split('-')[0]}</p>
-                            <p className="text-xs text-gray-400">Average attendees</p>
-                          </div>
-                        </div>
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Categories</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCommunity.communityProfile.preferredCategories.map((cat, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
+                          >
+                            {cat}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Stats Section */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Events Hosted */}
-                    {selectedCommunity.communityProfile?.pastEventExperience && (
-                      <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="h-5 w-5 text-purple-400" />
-                          <p className="text-xs text-gray-400">Events Hosted</p>
-                        </div>
-                        <p className="text-2xl font-bold text-white">{selectedCommunity.communityProfile.pastEventExperience}</p>
+                  {/* Preferred Event Formats */}
+                  {selectedCommunity.communityProfile?.preferredEventFormats && selectedCommunity.communityProfile.preferredEventFormats.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Event Formats</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCommunity.communityProfile.preferredEventFormats.map((format, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
+                          >
+                            {format}
+                          </span>
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Total Reach */}
-                    {selectedCommunity.communityProfile?.memberCount && (
-                      <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                        <div className="flex items-center gap-2 mb-2">
-                          <BarChart3 className="h-5 w-5 text-purple-400" />
-                          <p className="text-xs text-gray-400">Total Reach</p>
-                        </div>
-                        <p className="text-2xl font-bold text-white">{selectedCommunity.communityProfile.memberCount.toLocaleString()}</p>
+                  {/* Preferred Audience Types */}
+                  {selectedCommunity.communityProfile?.preferredAudienceTypes && selectedCommunity.communityProfile.preferredAudienceTypes.length > 0 && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Audience Types</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCommunity.communityProfile.preferredAudienceTypes.map((audience, idx) => (
+                          <span
+                            key={idx}
+                            className="px-4 py-2 rounded-lg text-white font-medium"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                            }}
+                          >
+                            {audience}
+                          </span>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Attendee Event Size */}
+                  {selectedCommunity.communityProfile?.attendeeEventSize && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Attendee Event Size</h4>
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className="px-4 py-2 rounded-lg text-white font-medium"
+                          style={{
+                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                          }}
+                        >
+                          {selectedCommunity.communityProfile.attendeeEventSize}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Niche Community Description */}
+                  {selectedCommunity.communityProfile?.nicheCommunityDescription && (
+                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Niche Community</h4>
+                      <p className="text-white">{selectedCommunity.communityProfile.nicheCommunityDescription}</p>
+                    </div>
+                  )}
 
                   {/* Propose Campaign Button */}
                   <button

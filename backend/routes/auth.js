@@ -17,10 +17,17 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
+    // Only validate image files for photo uploads
+    // Allow all files through multer, we'll validate images separately
+    if (file.fieldname === 'photos') {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed for photos'));
+      }
     } else {
-      cb(new Error('Only image files are allowed'));
+      // For other fields, allow through (these are form data fields)
+      cb(null, true);
     }
   }
 });

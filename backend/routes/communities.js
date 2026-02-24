@@ -74,7 +74,18 @@ router.get('/browse', async (req, res) => {
     const transformedCommunities = communities.map(user => ({
       _id: user._id,
       email: user.email,
-      communityProfile: user.communityProfile
+      communityProfile: {
+        communityName: user.communityProfile?.communityName,
+        communityDescription: user.communityProfile?.communityDescription,
+        logo: user.communityProfile?.logo,
+        pastEventPhotos: user.communityProfile?.pastEventPhotos || [],
+        preferredCities: user.communityProfile?.preferredCities || [],
+        preferredCategories: user.communityProfile?.preferredCategories || [],
+        preferredEventFormats: user.communityProfile?.preferredEventFormats || [],
+        preferredAudienceTypes: user.communityProfile?.preferredAudienceTypes || [],
+        attendeeEventSize: user.communityProfile?.typicalAudienceSize || '',
+        nicheCommunityDescription: user.communityProfile?.nicheCommunityDescription || ''
+      }
     }));
 
     res.json(transformedCommunities);

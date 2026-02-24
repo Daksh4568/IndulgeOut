@@ -225,9 +225,12 @@ const BrandDashboard = () => {
                   onClick={() => setActiveCollabTab(tab.key)}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeCollabTab === tab.key
-                      ? 'bg-white dark:bg-white text-black'
+                      ? 'text-white'
                       : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                   }`}
+                  style={activeCollabTab === tab.key ? {
+                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                  } : {}}
                 >
                   {tab.label}
                 </button>
@@ -255,8 +258,11 @@ const BrandDashboard = () => {
             )}
             <button
               onClick={() => navigate('/collaborations')}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white text-black px-6 py-2 rounded-md font-medium transition-all hover:bg-gray-100"
-              style={{ fontFamily: "Oswald, sans-serif" }}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 text-white px-6 py-2 rounded-md font-medium transition-all"
+              style={{ 
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                fontFamily: "Oswald, sans-serif" 
+              }}
             >
               <FileText className="h-5 w-5" />
               <span>Manage Collaborations</span>
@@ -642,70 +648,79 @@ const BrandDashboard = () => {
                   Welcome back, {user?.brandProfile?.brandName || "Partner"}
                 </p>
               </div>
-              <button
-                onClick={() => navigate("/profile")}
-                className="px-6 py-2.5 rounded-lg font-medium text-white transition-all"
-                style={{
-                  background:
-                    "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                }}
-              >
-                Edit Profile
-              </button>
             </div>
 
             {/* Actions Required Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2
-                  className="text-xl font-semibold text-white flex items-center"
-                  style={{ fontFamily: "Oswald, sans-serif" }}
-                >
-                  <AlertCircle className="h-6 w-6 mr-2" />
-                  Actions Required
-                  {actionsRequired && actionsRequired.length > 0 && (
-                    <span className="ml-3 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                      {actionsRequired.length}
-                    </span>
-                  )}
-                </h2>
-              </div>
+            {(activeSidebarItem === 'all' || activeSidebarItem === 'actions') && (
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-xl font-semibold text-white flex items-center"
+                    style={{ fontFamily: "Oswald, sans-serif" }}
+                  >
+                    <AlertCircle className="h-6 w-6 mr-2" />
+                    Actions Required
+                    {actionsRequired && actionsRequired.length > 0 && (
+                      <span className="ml-3 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                        {actionsRequired.length}
+                      </span>
+                    )}
+                  </h2>
+                </div>
 
-              {actionsRequired && actionsRequired.length > 0 ? (
+                {actionsRequired && actionsRequired.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
-                  {actionsRequired.map((action, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col flex-shrink-0 w-80 bg-zinc-900 rounded-xl p-5 border border-gray-800 hover:border-red-500/50 transition-all"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="p-2 rounded-lg bg-red-500/20">
-                          <AlertCircle className="h-5 w-5 text-red-500" />
-                        </div>
-                        {action.priority === "high" && (
-                          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
-                            High Priority
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-lg font-semibold text-white mb-2">
-                        {action.title}
-                      </h3>
-                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">
-                        {action.description}
-                      </p>
-                      <div className="flex-grow"></div>
-                      <button
-                        onClick={() =>
-                          handleActionClick(action.type, action.itemId)
-                        }
-                        className="w-full px-4 py-2 mt-4 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
+                  {actionsRequired.map((action, index) => {
+                    const priorityStyles = {
+                      high: 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20',
+                      medium: 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20',
+                      low: 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
+                    };
+                    const iconStyles = {
+                      high: 'text-red-600 bg-red-100 dark:bg-red-900/40',
+                      medium: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/40',
+                      low: 'text-blue-600 bg-blue-100 dark:bg-blue-900/40'
+                    };
+                    const buttonStyles = {
+                      high: 'bg-red-600 hover:bg-red-700 text-white',
+                      medium: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+                      low: 'bg-blue-600 hover:bg-blue-700 text-white'
+                    };
+                    const priority = action.priority || 'low';
+                    
+                    return (
+                      <div
+                        key={index}
+                        className={`flex-shrink-0 w-80 border rounded-xl p-5 flex flex-col ${priorityStyles[priority] || priorityStyles.low}`}
                       >
-                        <span>{action.ctaText || "Respond"}</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`p-2 rounded-lg ${iconStyles[priority] || iconStyles.low}`}>
+                            <AlertCircle className="h-5 w-5" />
+                          </div>
+                          {action.priority === "high" && (
+                            <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
+                              High Priority
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          {action.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
+                          {action.description}
+                        </p>
+                        <div className="flex-grow"></div>
+                        <button
+                          onClick={() =>
+                            handleActionClick(action.type, action.itemId)
+                          }
+                          className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors ${buttonStyles[priority] || buttonStyles.low}`}
+                        >
+                          {action.ctaText || "Fix Now"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="bg-zinc-900 border border-gray-800 rounded-xl p-8 text-center">
@@ -715,7 +730,8 @@ const BrandDashboard = () => {
                   </p>
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Manage Collaborations Section */}
             {(activeSidebarItem === 'all' || activeSidebarItem === 'collaborations') && (
@@ -731,8 +747,9 @@ const BrandDashboard = () => {
             )}
 
             {/* Performance & Insights Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
+            {(activeSidebarItem === 'all' || activeSidebarItem === 'analytics') && (
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
                 <h2
                   className="text-xl font-semibold text-white flex items-center"
                   style={{ fontFamily: "Oswald, sans-serif" }}
@@ -747,52 +764,63 @@ const BrandDashboard = () => {
               </div>
 
               {/* Performance Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <Sparkles className="h-8 w-8 text-purple-500" />
+              {collaborations.all.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <Sparkles className="h-8 w-8 text-purple-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-white mb-1">
+                      {performance?.totalCollaborations || 0}
+                    </p>
+                    <p className="text-sm text-gray-400">Total Collaborations</p>
+                    <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">
-                    {performance?.totalCollaborations || 12}
-                  </p>
-                  <p className="text-sm text-gray-400">Total Collaborations</p>
-                  <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
-                </div>
 
-                <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <Sparkles className="h-8 w-8 text-purple-500" />
+                  <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <Sparkles className="h-8 w-8 text-purple-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-white mb-1">
+                      {performance?.totalCollaborations || 0}
+                    </p>
+                    <p className="text-sm text-gray-400">Total Collaborations</p>
+                    <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">
-                    {performance?.totalCollaborations || 12}
-                  </p>
-                  <p className="text-sm text-gray-400">Total Collaborations</p>
-                  <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
-                </div>
 
-                <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <Sparkles className="h-8 w-8 text-purple-500" />
+                  <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <Sparkles className="h-8 w-8 text-purple-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-white mb-1">
+                      {performance?.totalCollaborations || 0}
+                    </p>
+                    <p className="text-sm text-gray-400">Total Collaborations</p>
+                    <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">
-                    {performance?.totalCollaborations || 12}
-                  </p>
-                  <p className="text-sm text-gray-400">Total Collaborations</p>
-                  <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
-                </div>
 
-                <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <Sparkles className="h-8 w-8 text-purple-500" />
+                  <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <Sparkles className="h-8 w-8 text-purple-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-white mb-1">
+                      {performance?.totalCollaborations || 0}
+                    </p>
+                    <p className="text-sm text-gray-400">Total Collaborations</p>
+                    <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">
-                    {performance?.totalCollaborations || 12}
-                  </p>
-                  <p className="text-sm text-gray-400">Total Collaborations</p>
-                  <p className="text-xs text-green-400 mt-2">via IndulgeOut</p>
                 </div>
-              </div>
-            </div>
+              ) : (
+                <div className="bg-zinc-900 border border-gray-800 rounded-xl p-12 text-center mb-6">
+                  <BarChart3 className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 font-medium text-lg mb-2">
+                    Start collaborating to get analytics data
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    Your performance metrics will appear here once you begin collaborations
+                  </p>
+                </div>
+              )}
 
             {/* What's Working & Suggestions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -801,21 +829,28 @@ const BrandDashboard = () => {
                 <h3 className="text-lg font-semibold text-white mb-4">
                   What's Working
                 </h3>
-                <div className="space-y-3">
-                  {[1, 2, 3].map((_, index) => (
-                    <div
-                      key={index}
-                      className="bg-gradient-to-r from-green-900/20 to-green-800/10 border border-green-700/30 rounded-lg p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <TrendingUp className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-green-100">
-                          Music & social events perform best at your venue
-                        </p>
+                {collaborations.all.length > 0 && insights?.whatsWorking?.length > 0 ? (
+                  <div className="space-y-3">
+                    {insights.whatsWorking.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-gradient-to-r from-green-900/20 to-green-800/10 border border-green-700/30 rounded-lg p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <TrendingUp className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-green-100">{item}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900 border border-gray-800 rounded-lg p-8 text-center">
+                    <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm">
+                      Start collaborations to see what works for your brand
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Suggestions for You */}
@@ -823,21 +858,28 @@ const BrandDashboard = () => {
                 <h3 className="text-lg font-semibold text-white mb-4">
                   Suggestions for You
                 </h3>
-                <div className="space-y-3">
-                  {[1, 2, 3].map((_, index) => (
-                    <div
-                      key={index}
-                      className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/10 border border-yellow-700/30 rounded-lg p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <Sparkles className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-yellow-100">
-                          Music & social events perform best at your venue
-                        </p>
+                {collaborations.all.length > 0 && insights?.suggestions?.length > 0 ? (
+                  <div className="space-y-3">
+                    {insights.suggestions.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/10 border border-yellow-700/30 rounded-lg p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Sparkles className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-yellow-100">{item}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900 border border-gray-800 rounded-lg p-8 text-center">
+                    <Sparkles className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm">
+                      Get personalized suggestions after you start collaborating with communities
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -846,42 +888,67 @@ const BrandDashboard = () => {
               <h3 className="text-lg font-semibold text-white mb-4">
                 Event-Level Performance
               </h3>
-              <div className="space-y-3">
-                {[1, 2, 3].map((_, index) => (
-                  <div
-                    key={index}
-                    className="bg-zinc-900 border border-gray-800 rounded-lg p-5 flex items-center justify-between hover:border-gray-700 transition-colors"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                        <Calendar className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-white font-semibold mb-1">
-                          Cooking Workshop Series
-                        </h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-400">
-                          <span>Food & Culture Meetup • Bangalore</span>
-                          <span>Jan 20, 2026</span>
+              {collaborations.completed.length > 0 ? (
+                <div className="space-y-3">
+                  {collaborations.completed.slice(0, 3).map((collab, index) => (
+                    <div
+                      key={index}
+                      className="bg-zinc-900 border border-gray-800 rounded-lg p-5 flex items-center justify-between hover:border-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                          <Calendar className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-white font-semibold mb-1">
+                            {collab.event?.title || 'Event'}
+                          </h4>
+                          <div className="flex items-center gap-4 text-sm text-gray-400">
+                            <span>{collab.community?.communityProfile?.communityName || 'Community'} • {collab.event?.city || 'City'}</span>
+                            <span>{collab.event?.date ? new Date(collab.event.date).toLocaleDateString() : ''}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-white">48</p>
-                        <p className="text-xs text-gray-400">Tickets</p>
+                      <div className="flex items-center gap-6">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-white">{collab.event?.ticketsSold || 0}</p>
+                          <p className="text-xs text-gray-400">Tickets</p>
+                        </div>
+                        <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full">
+                          {collab.collaborationType || 'Collaboration'}
+                        </span>
+                        <button className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+                          <ChevronRight className="h-5 w-5 text-gray-400" />
+                        </button>
                       </div>
-                      <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full">
-                        Pop-up
-                      </span>
-                      <button className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-zinc-900 border border-gray-800 rounded-lg p-12 text-center">
+                  <Calendar className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 font-medium text-lg mb-2">
+                    Start collaborating with communities
+                  </p>
+                  <p className="text-gray-500 text-sm mb-6">
+                    Your event performance data will appear here once you complete collaborations
+                  </p>
+                  <button
+                    onClick={() => navigate('/browse/communities')}
+                    className="px-6 py-2.5 rounded-lg font-medium text-white transition-all inline-flex items-center gap-2"
+                    style={{
+                      background:
+                        'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    }}
+                  >
+                    Explore Communities
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
+          </div>
+            )}
           </div>
         </div>
       </div>

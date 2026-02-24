@@ -75,14 +75,15 @@ router.get('/browse', async (req, res) => {
     const transformedBrands = brands.map(brand => ({
       _id: brand._id,
       brandName: brand.brandProfile?.brandName,
-      brandCategory: brand.brandProfile?.brandCategory,
       brandDescription: brand.brandProfile?.brandDescription,
       logo: brand.brandProfile?.logo,
-      targetCity: brand.brandProfile?.targetCity || [],
-      sponsorshipType: brand.brandProfile?.sponsorshipType || [],
-      collaborationIntent: brand.brandProfile?.collaborationIntent || [],
-      budget: brand.brandProfile?.budget || {},
-      pastActivations: brand.brandProfile?.pastActivations || 0
+      productPhotos: brand.brandProfile?.productPhotos || [],
+      preferredCities: brand.brandProfile?.preferredCities || [],
+      preferredCategories: brand.brandProfile?.preferredCategories || [],
+      preferredEventFormats: brand.brandProfile?.preferredEventFormats || [],
+      preferredCollaborationTypes: brand.brandProfile?.preferredCollaborationTypes || [],
+      preferredAudienceTypes: brand.brandProfile?.preferredAudienceTypes || [],
+      nicheCommunityDescription: brand.brandProfile?.nicheCommunityDescription || ''
     }));
 
     res.json(transformedBrands);

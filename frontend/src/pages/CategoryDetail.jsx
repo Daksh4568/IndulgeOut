@@ -43,8 +43,8 @@ const CategoryDetail = () => {
   const fetchCategoryData = async () => {
     setLoading(true);
     try {
-      // Fetch events for this category using category name
-      const eventsResponse = await api.get(`/events?category=${category.name}&status=published`);
+      // Fetch events for this category using category name (note: categories parameter is plural)
+      const eventsResponse = await api.get(`/events?categories=${encodeURIComponent(category.name)}&status=published`);
       
       // Handle response - could be array or object with data property
       let filteredEvents = Array.isArray(eventsResponse.data) 

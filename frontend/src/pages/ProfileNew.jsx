@@ -536,7 +536,9 @@ const ProfileNew = () => {
 
     const currentPhotos = isCommunityOrganizer 
       ? profileData.communityProfile?.pastEventPhotos || []
-      : profileData.venueProfile?.photos || []
+      : isVenue
+      ? profileData.venueProfile?.photos || []
+      : profileData.brandProfile?.productPhotos || []
     
     if (currentPhotos.length >= 5) {
       setMessage({ type: 'error', text: 'Maximum 5 photos allowed' })
@@ -670,6 +672,8 @@ const ProfileNew = () => {
     ? profileData.communityProfile?.pastEventPhotos || []
     : isVenue 
     ? profileData.venueProfile?.photos || []
+    : isBrandSponsor
+    ? profileData.brandProfile?.productPhotos || []
     : []
 
   return (
@@ -1177,20 +1181,6 @@ const ProfileNew = () => {
                       </div>
                     </div>
                   )}
-
-                  {/* Logout Button */}
-                  <div className="mt-6 pt-6 border-t border-gray-800">
-                    <button
-                      onClick={() => {
-                        logout();
-                        navigate('/login');
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1276,6 +1266,20 @@ const ProfileNew = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Logout Button */}
+              <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1355,9 +1359,10 @@ const ProfileNew = () => {
                         {isBrandSponsor && 'Brand Partner'}
                       </p>
                       
-                      {(isCommunityOrganizer || isBrandSponsor) && (
+                      {(isCommunityOrganizer || isVenue || isBrandSponsor) && (
                         <p className="text-white/90 text-xs sm:text-sm leading-relaxed">
                           {isCommunityOrganizer && profileData.communityProfile?.communityDescription}
+                          {isVenue && profileData.venueProfile?.venueDescription}
                           {isBrandSponsor && profileData.brandProfile?.brandDescription}
                         </p>
                       )}
@@ -1374,16 +1379,16 @@ const ProfileNew = () => {
                     {isVenue && `Venue Photos (${photos.length}/5)`}
                     {isBrandSponsor && `Brand Photos (${photos.length}/5)`}
                   </h3>
-                  <div className="grid grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                     {photos.map((photo, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-800">
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-800 group">
                         <img src={getOptimizedCloudinaryUrl(photo)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                         <button
                           onClick={() => handleDeletePhoto(photo)}
                           disabled={isUploading}
-                          className="absolute top-1 right-1 bg-red-600 rounded-full p-1 hover:bg-red-700 transition-colors"
+                          className="absolute top-2 right-2 bg-black/70 hover:bg-black rounded p-1 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                         >
-                          <X className="h-3 w-3 text-white" />
+                          <X className="h-4 w-4 text-white" />
                         </button>
                       </div>
                     ))}
@@ -1425,8 +1430,74 @@ const ProfileNew = () => {
 
                 {editingSection === 'profile' ? (
                   <div className="space-y-4">
+                    {/* Entity Name (Brand/Venue/Community) */}
+                    {isBrandSponsor && (
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Brand Name</label>
+                        <input 
+                          type="text"
+                          value={profileForm.brandName}
+                          onChange={(e) => setProfileForm({ ...profileForm, brandName: e.target.value })}
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          placeholder="Your brand name"
+                        />
+                      </div>
+                    )}
+                    {isVenue && (
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Venue Name</label>
+                        <input 
+                          type="text"
+                          value={profileForm.venueName}
+                          onChange={(e) => setProfileForm({ ...profileForm, venueName: e.target.value })}
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          placeholder="Your venue name"
+                        />
+                      </div>
+                    )}
+                    {isCommunityOrganizer && (
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Community Name</label>
+                        <input 
+                          type="text"
+                          value={profileForm.communityName}
+                          onChange={(e) => setProfileForm({ ...profileForm, communityName: e.target.value })}
+                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          placeholder="Your community name"
+                        />
+                      </div>
+                    )}
+
+                    {/* Description Field */}
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Name</label>
+                      <label className="block text-sm text-gray-400 mb-2">
+                        {isBrandSponsor ? 'Brand Description' : isVenue ? 'Venue Description' : 'Community Description'}
+                      </label>
+                      <textarea 
+                        value={isBrandSponsor ? profileForm.brandDescription : 
+                               isVenue ? profileForm.venueDescription :
+                               profileForm.communityDescription}
+                        onChange={(e) => {
+                          if (isBrandSponsor) {
+                            setProfileForm({ ...profileForm, brandDescription: e.target.value });
+                          } else if (isVenue) {
+                            setProfileForm({ ...profileForm, venueDescription: e.target.value });
+                          } else {
+                            setProfileForm({ ...profileForm, communityDescription: e.target.value });
+                          }
+                        }}
+                        rows="3"
+                        className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                        placeholder="Describe your brand/venue/community..."
+                      />
+                    </div>
+
+                    <div className="border-t border-gray-700 my-3 pt-3">
+                      <p className="text-gray-400 text-xs font-semibold mb-2">CONTACT DETAILS</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Contact Person Name</label>
                       <input 
                         type="text"
                         value={profileForm.name}
@@ -1614,8 +1685,8 @@ const ProfileNew = () => {
                 )}
               </div>
 
-              {/* Payout/KYC Section (Community Organizer Only) */}
-              {isCommunityOrganizer && (
+              {/* Payout/KYC Section (All Host Partners) */}
+              {isHostPartner && (
                 <div ref={payoutSectionRef} className="bg-[#171717] rounded-lg p-6 transition-card">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
@@ -1924,25 +1995,10 @@ const ProfileNew = () => {
                   )}
                 </div>
               )}
-
-              {/* Logout Button */}
-              <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  <LogOut className="h-5 w-5" />
-                  Logout
-                </button>
-              </div>
             </div>
 
             {/* RIGHT COLUMN - Hosting Preferences & Help */}
-            <div className="space-y-6">
-              {/* Hosting Preferences */}
+            <div className="space-y-6">{/* Hosting Preferences */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-semibold">Hosting Preferences</h3>
@@ -2035,27 +2091,32 @@ const ProfileNew = () => {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Preferred Collaboration Types</label>
-                        <div className="flex flex-wrap gap-2">
-                          {['Venue Partnership', 'Brand Sponsorship', 'Co-hosting', 'Content Collaboration', 'Cross Promotion'].map(type => (
-                            <button
-                              key={type}
-                              onClick={() => setHostingForm({
-                                ...hostingForm,
-                                preferredCollaborationTypes: toggleArrayItem(hostingForm.preferredCollaborationTypes, type.toLowerCase().replace(/\s+/g, '_'))
-                              })}
-                              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                hostingForm.preferredCollaborationTypes.includes(type.toLowerCase().replace(/\s+/g, '_'))
-                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
-                                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                              }`}
-                            >
-                              {type}
-                            </button>
-                          ))}
+                      {isBrandSponsor && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Preferred Collaboration Types</label>
+                          <div className="flex flex-wrap gap-2">
+                            {collaborationTypeOptions.map(type => (
+                              <button
+                                key={type}
+                                onClick={() => setHostingForm({
+                                  ...hostingForm,
+                                  preferredCollaborationTypes: toggleArrayItem(hostingForm.preferredCollaborationTypes, type.toLowerCase().replace(/\s+/g, '_'))
+                                })}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                  hostingForm.preferredCollaborationTypes.includes(type.toLowerCase().replace(/\s+/g, '_'))
+                                    ? 'text-white shadow-md shadow-purple-500/50'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                }`}
+                                style={hostingForm.preferredCollaborationTypes.includes(type.toLowerCase().replace(/\s+/g, '_')) ? {
+                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                                } : {}}
+                              >
+                                {type}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {isCommunityOrganizer && (
                         <div>
@@ -2140,11 +2201,11 @@ const ProfileNew = () => {
                         <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Categories</p>
                         {(isCommunityOrganizer ? profileData.communityProfile?.preferredCategories : 
                           isVenue ? profileData.venueProfile?.preferredCategories : 
-                          profileData.brandProfile?.targetCategories)?.length > 0 ? (
+                          profileData.brandProfile?.preferredCategories)?.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {(isCommunityOrganizer ? profileData.communityProfile.preferredCategories : 
                               isVenue ? profileData.venueProfile.preferredCategories : 
-                              profileData.brandProfile.targetCategories).map((cat, idx) => (
+                              profileData.brandProfile.preferredCategories).map((cat, idx) => (
                               <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                 {cat}
                               </span>
@@ -2193,17 +2254,13 @@ const ProfileNew = () => {
                         </div>
                       )}
 
-                      {/* Preferred Collaboration Types */}
-                      {isHostPartner && (
+                      {/* Preferred Collaboration Types - Brand Only */}
+                      {isBrandSponsor && (
                         <div>
                           <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Preferred Collaboration Types</p>
-                          {(isCommunityOrganizer ? profileData.communityProfile?.preferredCollaborationTypes :
-                            isVenue ? profileData.venueProfile?.preferredCollaborationTypes :
-                            profileData.brandProfile?.preferredCollaborationTypes)?.length > 0 ? (
+                          {profileData.brandProfile?.preferredCollaborationTypes?.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
-                              {(isCommunityOrganizer ? profileData.communityProfile.preferredCollaborationTypes :
-                                isVenue ? profileData.venueProfile.preferredCollaborationTypes :
-                                profileData.brandProfile.preferredCollaborationTypes).map((type, idx) => (
+                              {profileData.brandProfile.preferredCollaborationTypes.map((type, idx) => (
                                 <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                                   {type}
                                 </span>
@@ -2283,6 +2340,20 @@ const ProfileNew = () => {
                     <p className="text-gray-500 text-xs mt-0.5">Review our policies</p>
                   </button>
                 </div>
+              </div>
+
+              {/* Logout Button */}
+              <div className="bg-[#171717] rounded-lg p-6 transition-card">
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <LogOut className="h-5 w-5" />
+                  Logout
+                </button>
               </div>
             </div>
           </div>

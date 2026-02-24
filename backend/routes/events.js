@@ -36,7 +36,14 @@ router.get('/', async (req, res) => {
     let filter = { status: 'published' };
     
     if (categories) {
-      filter.categories = { $in: categories.split(',') };
+      // Handle both single category and multiple categories
+      // For single category (from CategoryDetail), categories will be the full name
+      // For multiple categories, use pipe delimiter (|) instead of comma
+      const categoryArray = categories.includes('|') 
+        ? categories.split('|').map(c => c.trim())
+        : [categories]; // Single category, don't split
+      
+      filter.categories = { $in: categoryArray };
     }
     
     if (city) {

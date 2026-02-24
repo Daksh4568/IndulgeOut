@@ -214,7 +214,7 @@ const HostSignup = () => {
             borderColor: "rgba(255, 255, 255, 0.1)",
           }}
         >
-          <style jsx>{`
+          <style>{`
             .scrollbar-hide::-webkit-scrollbar {
               display: none;
             }

@@ -129,12 +129,7 @@ const BrowseVenues = () => {
           amenity.toLowerCase().replace('_', ' ').includes(query)
         );
         
-        // Search in event suitability tags
-        const matchesEventTypes = venue.eventSuitability?.some(event => 
-          event.toLowerCase().replace('_', ' ').includes(query)
-        );
-        
-        return matchesBasicFields || matchesVenueType || matchesCapacity || matchesAmenities || matchesEventTypes;
+        return matchesBasicFields || matchesVenueType || matchesCapacity || matchesAmenities;
       });
     }
 
@@ -435,26 +430,6 @@ const BrowseVenues = () => {
                     </div>
                   )}
 
-                  {/* Event Suitability */}
-                  {venue.eventSuitability && venue.eventSuitability.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-1 mb-2">
-                        <CheckCircle className="h-4 w-4 text-purple-400" />
-                        <span className="text-xs text-gray-400">Event Types</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {venue.eventSuitability.slice(0, 3).map((type, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1 bg-gray-800 text-white rounded-full text-xs"
-                          >
-                            {type}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Request Collaboration Button */}
                   <button
                     onClick={(e) => {
@@ -736,38 +711,101 @@ const BrowseVenues = () => {
                     </div>
                   )}
 
-                  {/* Event Suitability */}
-                  {selectedVenue.eventSuitability && selectedVenue.eventSuitability.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Suitable For</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedVenue.eventSuitability.map((type, idx) => (
-                          <span
-                            key={idx}
-                            className="px-4 py-2 bg-gray-800 text-purple-400 rounded-lg font-medium"
-                          >
-                            {type}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Hosting Preferences */}
+                  {(selectedVenue.preferredCities?.length > 0 ||
+                    selectedVenue.preferredCategories?.length > 0 ||
+                    selectedVenue.preferredEventFormats?.length > 0 ||
+                    selectedVenue.preferredAudienceTypes?.length > 0 ||
+                    selectedVenue.nicheCommunityDescription) && (
+                    <>
+                      {/* Preferred Cities */}
+                      {selectedVenue.preferredCities?.length > 0 && (
+                        <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Cities</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedVenue.preferredCities.map((city, idx) => (
+                              <span
+                                key={idx}
+                                className="px-4 py-2 rounded-lg text-white font-medium"
+                                style={{
+                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                                }}
+                              >
+                                {city}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                  {/* Venue Scales */}
-                  {selectedVenue.venueScales && selectedVenue.venueScales.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Venue Scales</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedVenue.venueScales.map((scale, idx) => (
-                          <span
-                            key={idx}
-                            className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium"
-                          >
-                            {scale}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                      {/* Preferred Categories */}
+                      {selectedVenue.preferredCategories?.length > 0 && (
+                        <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Categories</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedVenue.preferredCategories.map((cat, idx) => (
+                              <span
+                                key={idx}
+                                className="px-4 py-2 rounded-lg text-white font-medium"
+                                style={{
+                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                                }}
+                              >
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Preferred Event Formats */}
+                      {selectedVenue.preferredEventFormats?.length > 0 && (
+                        <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Event Formats</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedVenue.preferredEventFormats.map((format, idx) => (
+                              <span
+                                key={idx}
+                                className="px-4 py-2 rounded-lg text-white font-medium"
+                                style={{
+                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                                }}
+                              >
+                                {format}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Preferred Audience Types */}
+                      {selectedVenue.preferredAudienceTypes?.length > 0 && (
+                        <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Audience Types</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedVenue.preferredAudienceTypes.map((audience, idx) => (
+                              <span
+                                key={idx}
+                                className="px-4 py-2 rounded-lg text-white font-medium"
+                                style={{
+                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                                }}
+                              >
+                                {audience}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Niche Community Description */}
+                      {selectedVenue.nicheCommunityDescription && (
+                        <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Niche Community</h4>
+                          <p className="text-white">{selectedVenue.nicheCommunityDescription}</p>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Propose Campaign Button */}
