@@ -84,10 +84,51 @@ const ScanTickets = () => {
 
   // Handle QR code scan
   const handleScanSuccess = async (ticketData) => {
-    const ticketNumber = ticketData.ticketNumber || ticketData;
-    console.log("✅ Scanned ticket number:", ticketNumber);
+    try {
+      // Validate ticket data
+      if (!ticketData) {
+        console.error('❌ No ticket data received');
+        setCheckInResult({
+          type: 'error',
+          message: 'No ticket data received from scanner',
+        });
+        return;
+      }
 
-    await fetchTicketInfo(ticketNumber);
+      // Extract ticket number with validation
+      let ticketNumber;
+      if (typeof ticketData === 'object' && ticketData.ticketNumber) {
+        ticketNumber = String(ticketData.ticketNumber).trim();
+      } else if (typeof ticketData === 'string') {
+        ticketNumber = ticketData.trim();
+      } else {
+        console.error('❌ Invalid ticket data format:', ticketData);
+        setCheckInResult({
+          type: 'error',
+          message: 'Invalid ticket format',
+        });
+        return;
+      }
+
+      if (!ticketNumber) {
+        console.error('❌ Empty ticket number');
+        setCheckInResult({
+          type: 'error',
+          message: 'Empty ticket number',
+        });
+        return;
+      }
+
+      console.log("✅ Scanned ticket number:", ticketNumber);
+      setScannerActive(false); // Close scanner after successful scan
+      await fetchTicketInfo(ticketNumber);
+    } catch (error) {
+      console.error('❌ Error handling scan:', error);
+      setCheckInResult({
+        type: 'error',
+        message: 'Error processing scanned ticket',
+      });
+    }
   };
 
   // Fetch ticket info without checking in
@@ -243,24 +284,24 @@ const ScanTickets = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       <NavigationBar />
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <button
             onClick={() => navigate("/organizer/dashboard")}
-            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 mb-4 transition-colors"
+            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
           >
-            <ArrowLeft className="h-5 w-5 mr-2" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Back to Dashboard
           </button>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-                <QrCode className="h-8 w-8 mr-3 text-indigo-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+                <QrCode className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-indigo-600" />
                 Scan Tickets
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
                 Check in attendees at your event entrance
               </p>
             </div>
@@ -270,9 +311,9 @@ const ScanTickets = () => {
                 onClick={() =>
                   navigate(`/organizer/events/${selectedEvent._id}/analytics`)
                 }
-                className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white text-sm sm:text-base rounded-lg hover:bg-indigo-700 transition-colors"
               >
-                <BarChart3 className="h-5 w-5 mr-2" />
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 View Analytics
               </button>
             )}
@@ -373,15 +414,15 @@ const ScanTickets = () => {
               </div>
 
               {/* Scan Buttons */}
-              <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
+              <div className="bg-zinc-900 rounded-lg shadow-lg p-4 sm:p-6">
                 <button
                   onClick={() => setScannerActive(true)}
                   disabled={processingCheckIn}
-                  className="w-full py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full py-5 sm:py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none touch-manipulation"
                 >
-                  <Camera className="h-12 w-12 mx-auto mb-3" />
-                  <span className="text-xl font-semibold">Scan QR Code</span>
-                  <p className="text-sm opacity-90 mt-1">
+                  <Camera className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-3" />
+                  <span className="text-lg sm:text-xl font-semibold">Scan QR Code</span>
+                  <p className="text-xs sm:text-sm opacity-90 mt-1">
                     Use camera to scan ticket
                   </p>
                 </button>
@@ -392,7 +433,7 @@ const ScanTickets = () => {
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                     </div>
-                    <div className="relative flex justify-center text-sm">
+                    <div className="relative flex justify-center text-xs sm:text-sm">
                       <span className="px-2 bg-zinc-900 text-gray-400">
                         Or enter manually
                       </span>
@@ -408,13 +449,13 @@ const ScanTickets = () => {
                           setManualEntry(e.target.value.toUpperCase())
                         }
                         placeholder="IND-XXX-XXX"
-                        className="flex-1 px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="flex-1 px-3 py-3 sm:px-4 text-sm sm:text-base border border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         disabled={processingCheckIn}
                       />
                       <button
                         type="submit"
                         disabled={!manualEntry.trim() || processingCheckIn}
-                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        className="px-4 sm:px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center touch-manipulation"
                       >
                         <Search className="h-5 w-5" />
                       </button>

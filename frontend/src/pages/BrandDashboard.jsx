@@ -768,7 +768,12 @@ const BrandDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
-                      <Sparkles className="h-8 w-8 text-purple-500" />
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      >
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
                     </div>
                     <p className="text-3xl font-bold text-white mb-1">
                       {performance?.totalCollaborations || 0}
@@ -779,7 +784,12 @@ const BrandDashboard = () => {
 
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
-                      <Sparkles className="h-8 w-8 text-purple-500" />
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      >
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
                     </div>
                     <p className="text-3xl font-bold text-white mb-1">
                       {performance?.totalCollaborations || 0}
@@ -790,7 +800,12 @@ const BrandDashboard = () => {
 
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
-                      <Sparkles className="h-8 w-8 text-purple-500" />
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      >
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
                     </div>
                     <p className="text-3xl font-bold text-white mb-1">
                       {performance?.totalCollaborations || 0}
@@ -801,7 +816,12 @@ const BrandDashboard = () => {
 
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
-                      <Sparkles className="h-8 w-8 text-purple-500" />
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      >
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
                     </div>
                     <p className="text-3xl font-bold text-white mb-1">
                       {performance?.totalCollaborations || 0}
@@ -838,7 +858,16 @@ const BrandDashboard = () => {
                       >
                         <div className="flex items-start gap-3">
                           <TrendingUp className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-green-100">{item}</p>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-green-100 mb-1">
+                              {typeof item === 'string' ? item : item.title}
+                            </h4>
+                            {typeof item === 'object' && item.description && (
+                              <p className="text-xs text-green-200/80">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -867,7 +896,16 @@ const BrandDashboard = () => {
                       >
                         <div className="flex items-start gap-3">
                           <Sparkles className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-yellow-100">{item}</p>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-yellow-100 mb-1">
+                              {typeof item === 'string' ? item : item.title}
+                            </h4>
+                            {typeof item === 'object' && item.description && (
+                              <p className="text-xs text-yellow-200/80">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

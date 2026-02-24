@@ -762,10 +762,9 @@ const ProfileNew = () => {
                       )}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1.5 sm:p-2 hover:bg-gray-100 transition-colors shadow-lg"
-                        style={{ color: '#7878E9' }}
+                        className="absolute bottom-2 right-2 hover:opacity-80 transition-opacity"
                       >
-                        <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <Camera className="h-5 w-5 text-white drop-shadow-lg" />
                       </button>
                       <input 
                         ref={fileInputRef}
@@ -1320,10 +1319,9 @@ const ProfileNew = () => {
                       )}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1.5 sm:p-2 hover:bg-gray-100 transition-colors shadow-lg"
-                        style={{ color: '#7878E9' }}
+                        className="absolute bottom-2 right-2 hover:opacity-80 transition-opacity"
                       >
-                        <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <Camera className="h-5 w-5 text-white drop-shadow-lg" />
                       </button>
                       <input 
                         ref={fileInputRef}

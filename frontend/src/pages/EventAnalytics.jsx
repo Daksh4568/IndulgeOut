@@ -247,58 +247,66 @@ const EventAnalytics = () => {
     <div className="min-h-screen bg-black">
       <NavigationBar />
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <button
             onClick={() => navigate("/organizer/dashboard")}
-            className="flex items-center text-gray-400 hover:text-purple-400 mb-6 transition-colors group"
+            className="flex items-center text-gray-400 hover:text-purple-400 mb-4 sm:mb-6 transition-colors group text-sm sm:text-base"
           >
-            <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
             Back to Dashboard
           </button>
 
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div className="flex-1">
-              <div className="inline-flex items-center px-3 py-1 bg-blue-500/20 rounded-full text-sm text-blue-300 mb-3">
-                <Clock className="h-4 w-4 mr-1.5" />
+              <div className="inline-flex items-center px-2.5 sm:px-3 py-1 bg-blue-500/20 rounded-full text-xs sm:text-sm text-blue-300 mb-2 sm:mb-3">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                 Live
               </div>
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-2">
                 {analytics.eventTitle || "Event Analytics"}
               </h1>
-              <div className="flex items-center space-x-4 text-sm text-gray-400">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
                 <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1.5" />
-                  {analytics.eventDate &&
-                    formatDate(analytics.eventDate)}{" "}at {analytics.eventTime || "TBD"}
+                  <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 flex-shrink-0" />
+                  <span className="line-clamp-1">
+                    {analytics.eventDate &&
+                      formatDate(analytics.eventDate)}{" "}at {analytics.eventTime || "TBD"}
+                  </span>
                 </div>
-                {analytics.eventLocation?.city && (
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1.5" />
-                    {analytics.eventLocation.city}
+                {analytics.eventLocation && (
+                  <div className="flex items-start">
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 flex-shrink-0 mt-0.5" />
+                    <span className="line-clamp-2">
+                      {analytics.eventLocation.address || analytics.eventLocation.city || "Venue TBD"}
+                      {analytics.eventLocation.address && analytics.eventLocation.city && (
+                        <span className="text-gray-500"> • {analytics.eventLocation.city}</span>
+                      )}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => navigate(`/scan-tickets?eventId=${eventId}`)}
-                className="flex items-center px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg shadow-purple-500/20"
+                className="flex-1 sm:flex-none flex items-center justify-center px-4 sm:px-5 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg shadow-purple-500/20"
               >
-                <QrCode className="h-5 w-5 mr-2" />
-                Scan Tickets
+                <QrCode className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span className="hidden sm:inline">Scan Tickets</span>
+                <span className="sm:hidden">Scan</span>
               </button>
 
               <button
                 onClick={() => fetchAnalytics(true)}
                 disabled={refreshing}
-                className="p-2.5 text-gray-400 hover:text-purple-400 transition-colors disabled:opacity-50 bg-gray-800/50 rounded-xl"
+                className="p-2 sm:p-2.5 text-gray-400 hover:text-purple-400 transition-colors disabled:opacity-50 bg-gray-800/50 rounded-xl"
                 title="Refresh data"
               >
                 <RefreshCw
-                  className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+                  className={`h-4 w-4 sm:h-5 sm:w-5 ${refreshing ? "animate-spin" : ""}`}
                 />
               </button>
             </div>
