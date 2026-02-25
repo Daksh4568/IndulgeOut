@@ -5,9 +5,9 @@ const authMiddleware = async (req, res, next) => {
   try {
     // Get token from header
     const authHeader = req.header('Authorization');
-    console.log('Auth header:', authHeader);
     
     if (!authHeader) {
+      console.log('❌ [Auth] No authorization header');
       return res.status(401).json({ message: 'No authorization header provided' });
     }
     
@@ -19,16 +19,16 @@ const authMiddleware = async (req, res, next) => {
       token = authHeader;
     }
     
-    console.log('Extracted token:', token ? 'Present' : 'Missing');
-    
     // Check for invalid token values
     if (!token || token === 'null' || token === 'undefined') {
+      console.log('❌ [Auth] Invalid token value:', token);
       return res.status(401).json({ message: 'No valid token provided' });
     }
     
+    console.log('✅ [Auth] Valid token format received');
+    
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    console.log('Decoded token:', decoded);
     
     // Find user by ID from token
     const userId = decoded.userId || decoded.id;
