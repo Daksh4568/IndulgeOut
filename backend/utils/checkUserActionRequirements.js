@@ -69,16 +69,22 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
         }
       }
 
-      // Check KYC/payout details for all host partners
+      // Check KYC/payout details for venues and communities only (not brands)
       // Required fields: accountHolderName, accountNumber, ifscCode, billingAddress
-      const hasPayoutDetails = user.payoutDetails?.accountHolderName && 
-                               user.payoutDetails?.accountNumber && 
-                               user.payoutDetails?.ifscCode &&
-                               user.payoutDetails?.billingAddress;
+      let hasPayoutDetails = true; // Brands don't need payout details
       
-      if (!hasPayoutDetails && !existingKYCNotification) {
-        await notificationService.notifyKYCPending(userId);
-        console.log(`💳 Created KYC/payout notification for: ${user.name} (${user.hostPartnerType})`);
+      if (user.hostPartnerType !== 'brand_sponsor') {
+        hasPayoutDetails = user.payoutDetails?.accountHolderName && 
+                          user.payoutDetails?.accountNumber && 
+                          user.payoutDetails?.ifscCode &&
+                          user.payoutDetails?.billingAddress;
+        
+        if (!hasPayoutDetails && !existingKYCNotification) {
+          await notificationService.notifyKYCPending(userId);
+          console.log(`💳 Created KYC/payout notification for: ${user.name} (${user.hostPartnerType})`);
+        }
+      } else {
+        console.log(`⏭️ Skipping payout details check for brand: ${user.name} (not required for brands)`);
       }
 
       return {
@@ -86,7 +92,7 @@ async function checkAndGenerateActionRequiredNotifications(userId) {
         profileComplete: isComplete,
         payoutDetailsComplete: hasPayoutDetails,
         missingFields,
-        requiresAction: !isComplete || !hasPayoutDetails
+        requiresAction: !isComplete || (user.hostPartnerType !== 'brand_sponsor' && !hasPayoutDetails)
       };
     } else {
       // Regular B2C user - comprehensive check

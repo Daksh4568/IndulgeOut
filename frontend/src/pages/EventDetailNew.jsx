@@ -299,14 +299,27 @@ const EventDetail = () => {
     <div className="min-h-screen bg-black">
       <NavigationBar />
 
-      {/* Banner Section */}
-      <div className="relative w-full h-[400px] md:h-[500px] overflow-hidden">
+      {/* Banner Section - Desktop (landscape) */}
+      <div className="hidden md:block relative w-full h-[600px] overflow-hidden bg-black">
         {event.images && event.images.length > 0 ? (
-          <img
-            src={getOptimizedCloudinaryUrl(event.images[0])}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
+          <>
+            {/* Blurred background layer */}
+            <div className="absolute inset-0 -z-10">
+              <img
+                src={getOptimizedCloudinaryUrl(event.images[0])}
+                alt=""
+                className="w-full h-full object-cover blur-3xl scale-110"
+                style={{ opacity: 0.3 }}
+              />
+            </div>
+            {/* Main image - contains to show full photo */}
+            <img
+              src={getOptimizedCloudinaryUrl(event.images[0])}
+              alt={event.title}
+              className="relative w-full h-full object-contain"
+              style={{ maxHeight: '600px' }}
+            />
+          </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center">
             <div className="text-8xl">{getCategoryIcon(event.categories?.[0])}</div>
@@ -315,7 +328,7 @@ const EventDetail = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
         
         {/* Banner Text Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
+        <div className="absolute bottom-0 left-0 right-0 p-12">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-2 mb-3">
               <span className="bg-indigo-600 px-3 py-1 rounded-full text-sm font-medium text-white">
@@ -323,12 +336,58 @@ const EventDetail = () => {
               </span>
             </div>
             <h1 
-              className="text-3xl md:text-5xl font-bold text-white mb-4"
+              className="text-5xl font-bold text-white mb-4"
               style={{ fontFamily: 'Oswald, sans-serif' }}
             >
               {event.title}
             </h1>
           </div>
+        </div>
+      </div>
+
+      {/* Banner Section - Mobile (portrait with blur) */}
+      <div className="block md:hidden relative w-full h-[65vh] overflow-hidden bg-black">
+        {event.images && event.images.length > 0 ? (
+          <>
+            {/* Blurred background layer */}
+            <div className="absolute inset-0 -z-10">
+              <img
+                src={getOptimizedCloudinaryUrl(event.images[0])}
+                alt=""
+                className="w-full h-full object-cover blur-3xl scale-125"
+                style={{ opacity: 0.4 }}
+              />
+            </div>
+            {/* Sharp foreground image */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src={getOptimizedCloudinaryUrl(event.images[0])}
+                alt={event.title}
+                className="w-full h-full object-contain max-h-full"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center">
+            <div className="text-8xl">{getCategoryIcon(event.categories?.[0])}</div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+        
+        {/* Banner Text Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="bg-indigo-600 px-3 py-1 rounded-full text-xs font-medium text-white">
+              {event.categories?.[0] || 'Event'}
+            </span>
+          </div>
+          <h1 
+            className="text-2xl font-bold text-white leading-tight"
+            style={{ fontFamily: 'Oswald, sans-serif' }}
+          >
+            {event.title}
+          </h1>
         </div>
       </div>
 
@@ -642,14 +701,26 @@ const EventDetail = () => {
                     </button>
                   </div>
                 </div>
-                <div className="relative rounded-2xl overflow-hidden">
+
+                {/* Desktop view - landscape */}
+                <div className="hidden md:block relative rounded-2xl overflow-hidden h-[500px] bg-black">
+                  {/* Blurred background layer */}
+                  <div className="absolute inset-0 -z-10">
+                    <img
+                      src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
+                      alt=""
+                      className="w-full h-full object-cover blur-3xl scale-110"
+                      style={{ opacity: 0.3 }}
+                    />
+                  </div>
+                  {/* Main image */}
                   <img
                     src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
                     alt={`Highlight ${currentHighlight + 1}`}
-                    className="w-full h-[400px] object-cover"
+                    className="relative w-full h-full object-contain"
                   />
-                  {/* Dot indicators - hidden on mobile, shown on desktop */}
-                  <div className="hidden lg:flex absolute bottom-4 left-1/2 transform -translate-x-1/2 gap-2">
+                  {/* Dot indicators */}
+                  <div className="flex absolute bottom-4 left-1/2 transform -translate-x-1/2 gap-2">
                     {highlights.map((_, index) => (
                       <button
                         key={index}
@@ -661,6 +732,28 @@ const EventDetail = () => {
                         }`}
                       />
                     ))}
+                  </div>
+                </div>
+
+                {/* Mobile view - portrait with blur */}
+                <div className="block md:hidden relative rounded-2xl overflow-hidden h-[55vh] bg-black">
+                  {/* Blurred background layer */}
+                  <div className="absolute inset-0 -z-10">
+                    <img
+                      src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
+                      alt=""
+                      className="w-full h-full object-cover blur-3xl scale-125"
+                      style={{ opacity: 0.4 }}
+                    />
+                  </div>
+                  {/* Sharp foreground image */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
+                      alt={`Highlight ${currentHighlight + 1}`}
+                      className="w-full h-full object-contain max-h-full"
+                      style={{ objectFit: 'contain' }}
+                    />
                   </div>
                 </div>
               </section>

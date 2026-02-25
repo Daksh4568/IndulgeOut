@@ -7,16 +7,13 @@ import { useAuth } from "../contexts/AuthContext";
 const B2CSignup = () => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
-  const [step, setStep] = useState(1); // 1 = details form, 2 = OTP verification
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phoneNumber: "",
   });
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [contactMethod, setContactMethod] = useState("email"); // 'email' or 'phone'
 
   const handleChange = (e) => {
     setFormData({
@@ -26,26 +23,7 @@ const B2CSignup = () => {
     setError("");
   };
 
-  const handleOtpChange = (index, value) => {
-    if (value.length <= 1 && /^\d*$/.test(value)) {
-      const newOtp = [...otp];
-      newOtp[index] = value;
-      setOtp(newOtp);
-
-      // Auto-focus next input
-      if (value && index < 5) {
-        document.getElementById(`otp-${index + 1}`)?.focus();
-      }
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus();
-    }
-  };
-
-  const handleSendOTP = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -66,43 +44,11 @@ const B2CSignup = () => {
     setIsLoading(true);
 
     try {
-      // Register new user and send OTP
-      await axios.post(`${API_URL}/api/auth/otp/register`, {
+      // Register new user directly (no OTP required on first signup)
+      const response = await axios.post(`${API_URL}/api/auth/otp/register`, {
         name: formData.fullName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        method: contactMethod,
-      });
-
-      setStep(2);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to send OTP");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    const otpCode = otp.join("");
-    if (otpCode.length !== 6) {
-      setError("Please enter complete OTP");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const identifier =
-        contactMethod === "email" ? formData.email : formData.phoneNumber;
-
-      // Verify OTP and activate account
-      const response = await axios.post(`${API_URL}/api/auth/otp/verify`, {
-        identifier,
-        otp: otpCode,
-        method: contactMethod,
       });
 
       // Store token
@@ -112,28 +58,10 @@ const B2CSignup = () => {
       // Refresh auth context to update navbar
       await refreshUser();
 
-      // Redirect to user dashboard
-      navigate("/user/dashboard");
+      // Redirect to Explore page so users can browse and register for events
+      navigate("/explore");
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid OTP");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    setError("");
-    setIsLoading(true);
-
-    try {
-      const identifier =
-        contactMethod === "email" ? formData.email : formData.phoneNumber;
-      await axios.post(`${API_URL}/api/auth/otp/resend`, {
-        identifier,
-        method: contactMethod,
-      });
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to resend OTP");
+      setError(err.response?.data?.message || "Failed to register");
     } finally {
       setIsLoading(false);
     }
@@ -175,20 +103,19 @@ const B2CSignup = () => {
           <p className="text-gray-300 text-center mb-8 text-sm">
             Find offline experiences, join communities and connect with people
           </p>
-          {step === 1 ? (
-            /* Step 1: Details Form */
-            <>
-              <h1
-                className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5"
-                style={{ fontFamily: "Oswald, sans-serif" }}
-              >
-                Join Us
-              </h1>
-              <p className="text-gray-300 text-center mb-4 text-sm">
-                Create your account to get started
-              </p>
+          
+          {/* Registration Form */}
+          <h1
+            className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5"
+            style={{ fontFamily: "Oswald, sans-serif" }}
+          >
+            Join Us
+          </h1>
+          <p className="text-gray-300 text-center mb-4 text-sm">
+            Create your account to get started
+          </p>
 
-              <form onSubmit={handleSendOTP} className="space-y-3.5">
+          <form onSubmit={handleRegister} className="space-y-3.5">
                 {/* Full Name */}
                 <div>
                   <label className="block text-white text-sm font-medium mb-1.5">
@@ -270,110 +197,41 @@ const B2CSignup = () => {
                   </label>
                 </div>
 
-                {/* Error Message */}
-                {error && (
-                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm">
-                    {error}
-                  </div>
-                )}
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
 
-                {/* Send OTP Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background:
-                      "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    fontFamily: "Oswald, sans-serif",
-                  }}
+            {/* Register Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background:
+                  "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                fontFamily: "Oswald, sans-serif",
+              }}
+            >
+              {isLoading ? "REGISTERING..." : "REGISTER"}
+            </button>
+
+            {/* Login Link */}
+            <div className="text-center pt-4 border-t border-white/10">
+              <p className="text-gray-400 text-sm">
+                Already have an Account?{" "}
+                <span
+                  onClick={() => navigate("/login")}
+                  className="cursor-pointer font-bold transition-colors"
+                  style={{ color: "#7878E9" }}
                 >
-                  {isLoading ? "SENDING..." : "SEND OTP"}
-                </button>
-
-                {/* Login Link */}
-                <div className="text-center pt-4 border-t border-white/10">
-                  <p className="text-gray-400 text-sm">
-                    Already have an Account?{" "}
-                    <span
-                      onClick={() => navigate("/login")}
-                      className="cursor-pointer font-bold transition-colors"
-                      style={{ color: "#7878E9" }}
-                    >
-                      Log In
-                    </span>
-                  </p>
-                </div>
-              </form>
-            </>
-          ) : (
-            /* Step 2: OTP Verification */
-            <>
-              <h1
-                className="text-2xl md:text-3xl font-bold text-white text-center mb-1.5"
-                style={{ fontFamily: "Oswald, sans-serif" }}
-              >
-                Enter Your OTP here
-              </h1>
-              <p className="text-gray-300 text-center mb-6 text-sm">
-                We have sent an OTP to your mobile number and email
+                  Log In
+                </span>
               </p>
-
-              <form onSubmit={handleVerifyOTP} className="space-y-5">
-                {/* OTP Input Boxes */}
-                <div className="flex justify-center gap-2">
-                  {otp.map((digit, index) => (
-                    <input
-                      key={index}
-                      id={`otp-${index}`}
-                      type="text"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(index, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-12 h-12 text-center text-2xl font-bold bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                      style={{ "--tw-ring-color": "#7878E9" }}
-                    />
-                  ))}
-                </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm text-center">
-                    {error}
-                  </div>
-                )}
-
-                {/* Sign Up Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full text-white font-bold py-3.5 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background:
-                      "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    fontFamily: "Oswald, sans-serif",
-                  }}
-                >
-                  {isLoading ? "VERIFYING..." : "SIGN UP"}
-                </button>
-
-                {/* Resend OTP */}
-                <div className="text-center pt-4">
-                  <p className="text-gray-400 text-sm">
-                    Didn't receive code?{" "}
-                    <span
-                      onClick={handleResendOTP}
-                      className="cursor-pointer font-semibold transition-colors"
-                      style={{ color: "#7878E9" }}
-                    >
-                      Resend OTP
-                    </span>
-                  </p>
-                </div>
-              </form>
-            </>
-          )}
+            </div>
+          </form>
         </div>
       </div>
     </div>

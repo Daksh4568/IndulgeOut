@@ -154,45 +154,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       }
     }
 
-    // 2. Check for missing KYC/Payout details
-    const hasPayoutDetails = brand.payoutDetails?.accountHolderName && 
-                            brand.payoutDetails?.accountNumber && 
-                            brand.payoutDetails?.ifscCode &&
-                            brand.payoutDetails?.billingAddress;
-    
-    if (!hasPayoutDetails) {
-      console.log('💳 [Brand Dashboard] Payout details missing');
-      actionsRequired.push({
-        id: 'missing_kyc',
-        type: 'missing_kyc',
-        priority: 'high',
-        title: 'Add Payout Details',
-        description: 'Add your payout details to receive revenue from brand collaborations.',
-        ctaText: 'Add Payout Details',
-        actionUrl: '/kyc-setup',
-        itemId: null
-      });
-      
-      // Check if notification was already created within last 24 hours before creating a new one
-      const recentKYCNotif = await Notification.findOne({
-        recipient: userId,
-        type: 'kyc_pending',
-        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-      });
-      
-      if (!recentKYCNotif) {
-        try {
-          await notificationService.notifyKYCPending(userId);
-          console.log('📬 [Brand Dashboard] KYC pending notification created');
-        } catch (notifError) {
-          console.error('Failed to create brand KYC pending notification:', notifError);
-        }
-      } else {
-        console.log('⏭️ [Brand Dashboard] Skipping KYC notification - already sent within 24h');
-      }
-    }
-
-    // 3. Fetch collaboration-related notifications (from Notification model)
+    // 2. Fetch collaboration-related notifications (from Notification model)
     const notifications = await Notification.find({
       recipient: userId,
       category: 'action_required',

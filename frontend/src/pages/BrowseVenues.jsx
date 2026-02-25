@@ -613,9 +613,7 @@ const BrowseVenues = () => {
                   {selectedVenue.venueType && (
                     <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Venue Type</h4>
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white" style={{
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                      }}>
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-sm bg-indigo-500 bg-opacity-25">
                         <span className="text-lg">{getVenueTypeIcon(selectedVenue.venueType)}</span>
                         <span className="font-medium">{getVenueTypeLabel(selectedVenue.venueType)}</span>
                       </div>
@@ -726,10 +724,7 @@ const BrowseVenues = () => {
                             {selectedVenue.preferredCities.map((city, idx) => (
                               <span
                                 key={idx}
-                                className="px-4 py-2 rounded-lg text-white font-medium"
-                                style={{
-                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                                }}
+                                className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                               >
                                 {city}
                               </span>
@@ -746,10 +741,7 @@ const BrowseVenues = () => {
                             {selectedVenue.preferredCategories.map((cat, idx) => (
                               <span
                                 key={idx}
-                                className="px-4 py-2 rounded-lg text-white font-medium"
-                                style={{
-                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                                }}
+                                className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                               >
                                 {cat}
                               </span>
@@ -766,10 +758,7 @@ const BrowseVenues = () => {
                             {selectedVenue.preferredEventFormats.map((format, idx) => (
                               <span
                                 key={idx}
-                                className="px-4 py-2 rounded-lg text-white font-medium"
-                                style={{
-                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                                }}
+                                className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                               >
                                 {format}
                               </span>
@@ -786,10 +775,7 @@ const BrowseVenues = () => {
                             {selectedVenue.preferredAudienceTypes.map((audience, idx) => (
                               <span
                                 key={idx}
-                                className="px-4 py-2 rounded-lg text-white font-medium"
-                                style={{
-                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                                }}
+                                className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                               >
                                 {audience}
                               </span>

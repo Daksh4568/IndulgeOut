@@ -679,14 +679,11 @@ const CommunityDetail = () => {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-400 mb-3" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                           <MapPin className="h-3 w-3" />
-                          <span className="line-clamp-1">{event.venue || 'TBD'}</span>
+                          <span className="line-clamp-1">{event.location?.city || event.location?.address || event.city || 'Venue TBD'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                             ₹{event.ticketPrice || 0} onwards
-                          </span>
-                          <span className="px-2 py-0.5 bg-green-900/30 text-green-400 rounded text-xs">
-                            {event.registrations?.length || 0} attending
                           </span>
                         </div>
                         <button 

@@ -769,8 +769,7 @@ const BrandDashboard = () => {
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
                       <div 
-                        className="p-2 rounded-lg"
-                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        className="p-2 rounded-lg bg-indigo-500 bg-opacity-25"
                       >
                         <Sparkles className="h-5 w-5 text-white" />
                       </div>
@@ -785,8 +784,7 @@ const BrandDashboard = () => {
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
                       <div 
-                        className="p-2 rounded-lg"
-                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        className="p-2 rounded-lg bg-indigo-500 bg-opacity-25"
                       >
                         <Sparkles className="h-5 w-5 text-white" />
                       </div>
@@ -801,8 +799,7 @@ const BrandDashboard = () => {
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
                       <div 
-                        className="p-2 rounded-lg"
-                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        className="p-2 rounded-lg bg-indigo-500 bg-opacity-25"
                       >
                         <Sparkles className="h-5 w-5 text-white" />
                       </div>
@@ -817,8 +814,7 @@ const BrandDashboard = () => {
                   <div className="bg-zinc-900 rounded-xl p-6 border border-gray-800">
                     <div className="flex items-center justify-between mb-4">
                       <div 
-                        className="p-2 rounded-lg"
-                        style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        className="p-2 rounded-lg bg-indigo-500 bg-opacity-25"
                       >
                         <Sparkles className="h-5 w-5 text-white" />
                       </div>

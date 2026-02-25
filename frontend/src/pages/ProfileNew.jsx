@@ -592,11 +592,13 @@ const ProfileNew = () => {
     fields.push({ name: 'Profile Picture', value: !!profileData.profilePicture })
     
     if (isHostPartner) {
-      // KYC/Payout details (important for all host partners)
-      fields.push({ name: 'Account Holder Name', value: !!profileData.payoutDetails?.accountHolderName })
-      fields.push({ name: 'Bank Account Number', value: !!profileData.payoutDetails?.accountNumber })
-      fields.push({ name: 'IFSC Code', value: !!profileData.payoutDetails?.ifscCode })
-      fields.push({ name: 'Billing Address', value: !!profileData.payoutDetails?.billingAddress })
+      // KYC/Payout details (only for Venues & Communities, not for Brands)
+      if (!isBrandSponsor) {
+        fields.push({ name: 'Account Holder Name', value: !!profileData.payoutDetails?.accountHolderName })
+        fields.push({ name: 'Bank Account Number', value: !!profileData.payoutDetails?.accountNumber })
+        fields.push({ name: 'IFSC Code', value: !!profileData.payoutDetails?.ifscCode })
+        fields.push({ name: 'Billing Address', value: !!profileData.payoutDetails?.billingAddress })
+      }
       
       if (isCommunityOrganizer) {
         // Community Organizer specific fields
@@ -1205,7 +1207,7 @@ const ProfileNew = () => {
                   <div className="flex flex-wrap gap-2">
                     {profileData.interests.map((interest, idx) => (
                       <div key={idx} className="group relative">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white rounded-full text-sm font-medium shadow-md shadow-purple-500/30">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 bg-opacity-25 text-white rounded-full text-sm font-medium">
                           {interest}
                           {editingSection === 'interests' && (
                             <button 
@@ -1683,8 +1685,8 @@ const ProfileNew = () => {
                 )}
               </div>
 
-              {/* Payout/KYC Section (All Host Partners) */}
-              {isHostPartner && (
+              {/* Payout/KYC Section (Venues & Communities Only - Not for Brands) */}
+              {isHostPartner && !isBrandSponsor && (
                 <div ref={payoutSectionRef} className="bg-[#171717] rounded-lg p-6 transition-card">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
@@ -2035,7 +2037,7 @@ const ProfileNew = () => {
                               })}
                               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                                 hostingForm.preferredCategories.includes(cat)
-                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                  ? 'bg-indigo-500 bg-opacity-25 text-white'
                                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                               }`}
                             >
@@ -2057,7 +2059,7 @@ const ProfileNew = () => {
                               })}
                               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                                 hostingForm.preferredEventFormats.includes(format)
-                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                  ? 'bg-indigo-500 bg-opacity-25 text-white'
                                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                               }`}
                             >
@@ -2079,7 +2081,7 @@ const ProfileNew = () => {
                               })}
                               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                                 hostingForm.preferredAudienceTypes.includes(type)
-                                  ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                  ? 'bg-indigo-500 bg-opacity-25 text-white'
                                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                               }`}
                             >
@@ -2102,12 +2104,9 @@ const ProfileNew = () => {
                                 })}
                                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                                   hostingForm.preferredCollaborationTypes.includes(type.toLowerCase().replace(/\s+/g, '_'))
-                                    ? 'text-white shadow-md shadow-purple-500/50'
+                                    ? 'bg-indigo-500 bg-opacity-25 text-white'
                                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                 }`}
-                                style={hostingForm.preferredCollaborationTypes.includes(type.toLowerCase().replace(/\s+/g, '_')) ? {
-                                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                                } : {}}
                               >
                                 {type}
                               </button>
@@ -2129,7 +2128,7 @@ const ProfileNew = () => {
                                 })}
                                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                                   hostingForm.averageEventSize === size
-                                    ? 'bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white shadow-md shadow-purple-500/50'
+                                    ? 'bg-indigo-500 bg-opacity-25 text-white'
                                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                 }`}
                               >
@@ -2204,7 +2203,7 @@ const ProfileNew = () => {
                             {(isCommunityOrganizer ? profileData.communityProfile.preferredCategories : 
                               isVenue ? profileData.venueProfile.preferredCategories : 
                               profileData.brandProfile.preferredCategories).map((cat, idx) => (
-                              <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                              <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium bg-indigo-500 bg-opacity-25">
                                 {cat}
                               </span>
                             ))}
@@ -2220,7 +2219,7 @@ const ProfileNew = () => {
                           <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Attendee Event Size</p>
                           {profileData.communityProfile?.typicalAudienceSize ? (
                             <div className="flex gap-2">
-                              <span className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                              <span className="px-2.5 py-1 text-white rounded-md text-xs font-medium bg-indigo-500 bg-opacity-25">
                                 {profileData.communityProfile.typicalAudienceSize}
                               </span>
                             </div>
@@ -2241,7 +2240,7 @@ const ProfileNew = () => {
                               {(isCommunityOrganizer ? profileData.communityProfile.preferredEventFormats : 
                                 isVenue ? profileData.venueProfile.preferredEventFormats :
                                 profileData.brandProfile.preferredEventFormats).map((format, idx) => (
-                                <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                                <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium bg-indigo-500 bg-opacity-25">
                                   {format}
                                 </span>
                               ))}
@@ -2259,7 +2258,7 @@ const ProfileNew = () => {
                           {profileData.brandProfile?.preferredCollaborationTypes?.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {profileData.brandProfile.preferredCollaborationTypes.map((type, idx) => (
-                                <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                                <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium bg-indigo-500 bg-opacity-25">
                                   {type}
                                 </span>
                               ))}
@@ -2280,7 +2279,7 @@ const ProfileNew = () => {
                             {(isCommunityOrganizer ? profileData.communityProfile.preferredAudienceTypes : 
                               isVenue ? profileData.venueProfile.preferredAudienceTypes : 
                               profileData.brandProfile.preferredAudienceTypes).map((type, idx) => (
-                              <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                              <span key={idx} className="px-2.5 py-1 text-white rounded-md text-xs font-medium bg-indigo-500 bg-opacity-25">
                                 {type}
                               </span>
                             ))}

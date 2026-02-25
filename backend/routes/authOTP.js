@@ -15,24 +15,18 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 const router = express.Router();
 
 /**
- * Register New User with OTP
+ * Register New User (No OTP required on first signup)
  * POST /api/auth/otp/register
+ * Similar to B2B registration - direct account creation without OTP verification
  */
 router.post('/otp/register', async (req, res) => {
   try {
-    const { name, email, phoneNumber, method } = req.body;
+    const { name, email, phoneNumber } = req.body;
 
     // Validate required fields
-    if (!name || !email || !phoneNumber || !method) {
+    if (!name || !email || !phoneNumber) {
       return res.status(400).json({
-        message: 'Name, email, phone number, and method are required'
-      });
-    }
-
-    // Validate method
-    if (!['sms', 'email'].includes(method)) {
-      return res.status(400).json({
-        message: 'Method must be either "sms" or "email"'
+        message: 'Name, email, and phone number are required'
       });
     }
 
@@ -70,63 +64,50 @@ router.post('/otp/register', async (req, res) => {
       }
     }
 
-    // Generate OTP
-    const otp = generateOTP();
-    console.log(`🔐 [OTP] Generated OTP for ${email}: ${otp}`);
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    // Send OTP via email (SMS temporarily disabled)
-    if (method === 'email') {
-      try {
-        await sendOTPEmail(email, otp, name);
-      } catch (error) {
-        return res.status(500).json({
-          message: `Failed to send OTP: ${error.message}`
-        });
-      }
-    } else {
-      // SMS not implemented - for now, just log
-      console.log(`SMS OTP for ${phoneNumber}: ${otp}`);
-    }
-
-    // Create user account (unverified) - B2C only
+    // Create user account (verified immediately) - B2C only
     const newUser = new User({
       name,
       email: email.toLowerCase(),
       phoneNumber,
       role: 'user',
       otpVerification: {
-        otp,
-        otpExpiry,
-        otpAttempts: 1,
-        lastOTPSent: new Date(),
-        isPhoneVerified: false
+        isPhoneVerified: true // Mark as verified immediately on signup
       },
       analytics: {
         registrationDate: new Date(),
-        registrationMethod: 'otp'
-        // lastLogin will be set on first successful OTP verification
+        registrationMethod: 'direct_signup',
+        lastLogin: new Date()
       }
     });
 
     try {
       await newUser.save();
-      console.log(`✅ B2C user saved to database: ${email}`);
+      console.log(`✅ B2C user registered and saved to database: ${email}`);
     } catch (saveError) {
       // Handle duplicate key error (race condition where two requests try to create same user)
       if (saveError.code === 11000) {
         console.log(`⚠️ Duplicate key error during B2C registration for: ${email} - User may have been created by concurrent request`);
         return res.status(409).json({ 
-          message: 'An account with this email or phone number already exists. If you just registered, please check your email for the OTP.' 
+          message: 'An account with this email or phone number already exists.' 
         });
       }
       throw saveError; // Re-throw other errors
     }
 
-    console.log(`✅ New B2C user registered and OTP sent to ${method === 'email' ? email : phoneNumber} via ${method}`);
+    // Generate JWT token immediately
+    const token = jwt.sign(
+      { 
+        userId: newUser._id,
+        email: newUser.email,
+        role: newUser.role
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ New B2C user registered successfully: ${email}`);
 
     // Send welcome email for new B2C user registration
-    // Email is sent immediately after registration, before OTP verification
     try {
       await sendWelcomeEmail(newUser.email, newUser.name);
       console.log(`📧 Welcome email sent to new B2C user: ${newUser.email}`);
@@ -135,10 +116,26 @@ router.post('/otp/register', async (req, res) => {
       // Don't fail registration if welcome email fails
     }
 
+    // Check for action required notifications
+    try {
+      await checkAndGenerateActionRequiredNotifications(newUser._id);
+    } catch (notifError) {
+      console.error('Failed to generate action required notifications:', notifError);
+      // Don't fail registration if notification generation fails
+    }
+
+    // Return success response with token and user data
     res.status(201).json({
-      message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
-      expiresIn: 600,
-      userId: newUser._id
+      message: 'Registration successful!',
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+        profilePicture: newUser.profilePicture
+      }
     });
 
   } catch (error) {

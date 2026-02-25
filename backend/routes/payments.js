@@ -3,11 +3,13 @@ const axios = require('axios');
 const { Cashfree } = require('cashfree-pg');
 const Event = require('../models/Event.js');
 const User = require('../models/User.js');
+const WebhookLog = require('../models/WebhookLog.js');
 const { authMiddleware } = require('../utils/authUtils.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
 const notificationService = require('../services/notificationService.js');
+const { verifyCashfreeWebhook } = require('../utils/webhookVerification.js');
 
 const router = express.Router();
 
@@ -82,8 +84,8 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Create unique order ID
-    const orderId = `ORDER_${Date.now()}_${userId}_${eventId}`;
+    // Create unique order ID with quantity
+    const orderId = `ORDER_${Date.now()}_${userId}_${eventId}_${quantity || 1}`;
 
     // Create Cashfree order request
     const request = {
@@ -159,7 +161,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       groupingOffer,
       additionalPersons = [],
       questionnaireResponses = [],
-      basePrice,
+      basePrice, // Base price from frontend (already calculated correctly)
       gstAndOtherCharges,
       platformFees,
       totalAmount
@@ -207,6 +209,38 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
 
     console.log(`📊 Payment verified - registering with quantity=${quantity}, ticketQuantity=${ticketQuantity}`);
 
+    // Check if already registered (webhook might have already processed this)
+    const existingEvent = await Event.findById(eventId).populate('host', 'name email');
+    const alreadyRegistered = existingEvent.participants.some(
+      p => p.user.toString() === userId
+    );
+
+    if (alreadyRegistered) {
+      console.log('⚠️ [VERIFY-PAYMENT] User already registered (webhook likely processed this)');
+      
+      // Find existing ticket
+      const existingTicket = await require('../models/Ticket').findOne({
+        user: userId,
+        event: eventId,
+        orderId: orderId
+      });
+
+      return res.json({
+        success: true,
+        message: 'Already registered (payment was processed via webhook)',
+        event: {
+          id: existingEvent._id,
+          title: existingEvent.title,
+          date: existingEvent.date
+        },
+        ticket: existingTicket ? {
+          ticketNumber: existingTicket.ticketNumber,
+          qrCode: existingTicket.qrCode,
+          downloadUrl: `/api/tickets/${existingTicket.ticketNumber}/download`
+        } : null
+      });
+    }
+
     // Prepare participant data
     const participantData = {
       user: userId,
@@ -216,7 +250,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       paymentStatus: 'paid',
       paymentId: payment.cf_payment_id,
       orderId: orderId,
-      amountPaid: payment.payment_amount,
+      amountPaid: basePrice || totalAmount || payment.payment_amount, // Use frontend basePrice for revenue
       questionnaireResponses: questionnaireResponses || []
     };
 
@@ -273,7 +307,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         registeredAt: new Date(),
         slotsBooked: ticketQuantity,
         orderId: orderId,
-        basePrice: basePrice || 0,
+        basePrice: basePrice || 0, // Base price from frontend (revenue amount)
         gstAndOtherCharges: gstAndOtherCharges || 0,
         platformFees: platformFees || 0
       };
@@ -286,7 +320,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       ticket = await ticketService.generateTicket({
         userId,
         eventId: event._id,
-        amount: totalAmount || payment.payment_amount,
+        amount: basePrice || totalAmount || payment.payment_amount, // Use frontend basePrice for revenue
         paymentId: orderId,
         ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
         quantity: ticketQuantity,
@@ -374,29 +408,341 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
 
 // Webhook for payment status updates
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const startTime = Date.now();
+  let webhookLog = null;
+  let payload = null;
+  
   try {
-    // Verify webhook signature (implement Cashfree signature verification)
+    // Parse payload
+    payload = JSON.parse(req.body.toString());
+    
+    // Extract headers
     const signature = req.headers['x-webhook-signature'];
     const timestamp = req.headers['x-webhook-timestamp'];
     
-    // TODO: Verify signature using Cashfree's verification method
+    console.log('🔔 [WEBHOOK] Payment webhook received:', {
+      type: payload.type,
+      orderId: payload.data?.order?.order_id,
+      amount: payload.data?.payment?.payment_amount,
+      status: payload.data?.payment?.payment_status
+    });
+
+    // Verify webhook signature (CRITICAL SECURITY CHECK)
+    const isSignatureValid = verifyCashfreeWebhook(req.body.toString(), signature, timestamp);
     
-    const payload = JSON.parse(req.body.toString());
-    
-    console.log('Payment webhook received:', payload);
+    if (!isSignatureValid && process.env.NODE_ENV === 'production') {
+      console.error('❌ [WEBHOOK] Invalid signature - rejecting webhook');
+      
+      // Log failed verification
+      await WebhookLog.create({
+        type: payload.type || 'UNKNOWN',
+        orderId: payload.data?.order?.order_id || 'UNKNOWN',
+        status: 'failed',
+        error: {
+          message: 'Invalid webhook signature',
+          code: 'SIGNATURE_VERIFICATION_FAILED'
+        },
+        signatureVerified: false,
+        payload: payload,
+        headers: { signature, timestamp, userAgent: req.headers['user-agent'] },
+        responseStatus: 403,
+        responseMessage: 'Invalid signature',
+        receivedAt: new Date(),
+        processedAt: new Date(),
+        processingTime: Date.now() - startTime
+      });
+      
+      return res.status(403).json({ message: 'Invalid signature' });
+    }
+
+    console.log('✅ [WEBHOOK] Signature verified');
 
     // Handle different event types
     if (payload.type === 'PAYMENT_SUCCESS_WEBHOOK') {
-      // Payment successful - you might want to update payment status in database
-      console.log('Payment successful:', payload.data.order.order_id);
+      const orderId = payload.data?.order?.order_id;
+      const paymentAmount = payload.data?.payment?.payment_amount;
+      const cfPaymentId = payload.data?.payment?.cf_payment_id;
+      
+      console.log('✅ [WEBHOOK] Payment successful:', orderId);
+      
+      if (!orderId) {
+        console.error('❌ [WEBHOOK] No order ID in webhook payload');
+        return res.status(400).json({ message: 'Invalid webhook payload' });
+      }
+
+      // Parse order ID to extract userId, eventId, and quantity
+      // Format: ORDER_timestamp_userId_eventId_quantity
+      const orderParts = orderId.split('_');
+      if (orderParts.length < 4) {
+        console.error('❌ [WEBHOOK] Invalid order ID format:', orderId);
+        return res.status(400).json({ message: 'Invalid order ID format' });
+      }
+
+      const userId = orderParts[2];
+      const eventId = orderParts[3];
+      const orderQuantity = orderParts[4] ? parseInt(orderParts[4]) : 1;
+
+      console.log('🎫 [WEBHOOK] Processing registration:', { userId, eventId });
+
+      // Fetch event and user
+      const event = await Event.findById(eventId).populate('host', 'name email');
+      const user = await User.findById(userId);
+
+      if (!event) {
+        console.error('❌ [WEBHOOK] Event not found:', eventId);
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      if (!user) {
+        console.error('❌ [WEBHOOK] User not found:', userId);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Check if already registered (idempotency check)
+      const alreadyRegistered = event.participants.some(
+        p => p.user.toString() === userId
+      );
+
+      if (alreadyRegistered) {
+        console.log('⚠️ [WEBHOOK] User already registered (duplicate webhook or verify-payment already processed)');
+        
+        // Log duplicate webhook
+        await WebhookLog.create({
+          type: payload.type,
+          orderId: orderId,
+          paymentId: cfPaymentId,
+          amount: paymentAmount,
+          status: 'duplicate',
+          signatureVerified: true,
+          processingTime: Date.now() - startTime,
+          payload: payload,
+          headers: {
+            signature: req.headers['x-webhook-signature'],
+            timestamp: req.headers['x-webhook-timestamp'],
+            userAgent: req.headers['user-agent']
+          },
+          responseStatus: 200,
+          responseMessage: 'Already registered',
+          userId: userId,
+          eventId: eventId,
+          receivedAt: new Date(startTime),
+          processedAt: new Date()
+        });
+        
+        return res.status(200).json({ success: true, message: 'Already registered' });
+      }
+
+      // Use quantity from order ID
+      const ticketQuantity = orderQuantity;
+
+      // Calculate base price (revenue without payment gateway fees)
+      // Base price = ticket price × quantity
+      const ticketPrice = event.price?.amount || event.ticketPrice || 0;
+      const basePrice = ticketPrice * ticketQuantity;
+      
+      console.log('💰 [WEBHOOK] Price calculation:', {
+        ticketPrice,
+        quantity: ticketQuantity,
+        basePrice,
+        totalPaid: paymentAmount
+      });
+
+      // Prepare participant data
+      const participantData = {
+        user: userId,
+        registeredAt: new Date(),
+        status: 'registered',
+        quantity: ticketQuantity,
+        paymentStatus: 'paid',
+        paymentId: cfPaymentId,
+        orderId: orderId,
+        amountPaid: basePrice, // Use base price for revenue calculation
+        questionnaireResponses: []
+      };
+
+      // Register user for event (atomic operation)
+      const updatedEvent = await Event.findOneAndUpdate(
+        {
+          _id: eventId,
+          'participants.user': { $ne: userId }
+        },
+        {
+          $push: { participants: participantData },
+          $inc: { currentParticipants: ticketQuantity }
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!updatedEvent) {
+        console.error('❌ [WEBHOOK] Failed to register user (race condition or already registered)');
+        return res.status(400).json({ message: 'Registration failed' });
+      }
+
+      // Update user's registered events
+      if (!user.registeredEvents.includes(eventId)) {
+        user.registeredEvents.push(eventId);
+        await user.save();
+      }
+
+      // Update analytics
+      try {
+        await recommendationEngine.updateEventRegistrationAnalytics(userId, eventId);
+      } catch (analyticsError) {
+        console.error('⚠️ [WEBHOOK] Failed to update analytics:', analyticsError);
+      }
+
+      // Generate ticket
+      let ticket = null;
+      console.log('🎫 [WEBHOOK] Generating ticket for user:', userId);
+      try {
+        ticket = await ticketService.generateTicket({
+          userId,
+          eventId: eventId,
+          amount: basePrice, // Use base price (revenue amount)
+          paymentId: orderId,
+          ticketType: ticketQuantity > 1 ? 'group' : 'general',
+          quantity: ticketQuantity,
+          metadata: {
+            registrationSource: 'webhook',
+            registeredAt: new Date(),
+            slotsBooked: ticketQuantity,
+            orderId: orderId,
+            basePrice: basePrice, // For revenue calculation
+            totalPaid: paymentAmount, // Total including fees
+            ticketPrice: ticketPrice // Per-ticket price
+          }
+        });
+        console.log('✅ [WEBHOOK] Ticket generated:', ticket.ticketNumber);
+      } catch (ticketError) {
+        console.error('❌ [WEBHOOK] Failed to generate ticket:', ticketError);
+        // Continue even if ticket generation fails
+      }
+
+      // Send confirmation emails asynchronously
+      setImmediate(async () => {
+        try {
+          console.log('📧 [WEBHOOK] Sending registration email to:', user.email);
+          await sendEventRegistrationEmail(user.email, user.name, event, ticket);
+          console.log('✅ [WEBHOOK] Registration email sent');
+        } catch (emailError) {
+          console.error('❌ [WEBHOOK] Failed to send registration email:', emailError);
+        }
+      });
+
+      // Send notification to host
+      setImmediate(async () => {
+        try {
+          await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
+          console.log('✅ [WEBHOOK] Host notification sent');
+        } catch (emailError) {
+          console.error('❌ [WEBHOOK] Failed to send host notification:', emailError);
+        }
+      });
+
+      // Send in-app booking confirmation notification
+      setImmediate(async () => {
+        try {
+          await notificationService.notifyBookingConfirmed(userId, event, ticket);
+          console.log('✅ [WEBHOOK] Booking confirmation notification sent');
+        } catch (notifError) {
+          console.error('❌ [WEBHOOK] Failed to send booking confirmation:', notifError);
+        }
+      });
+
+      console.log('✅ [WEBHOOK] Payment processed successfully - Registration and ticket created');
+
+      // Create success webhook log
+      webhookLog = await WebhookLog.create({
+        type: payload.type,
+        orderId: orderId,
+        paymentId: cfPaymentId,
+        amount: paymentAmount,
+        status: 'success',
+        signatureVerified: true,
+        processingTime: Date.now() - startTime,
+        payload: payload,
+        headers: {
+          signature: req.headers['x-webhook-signature'],
+          timestamp: req.headers['x-webhook-timestamp'],
+          userAgent: req.headers['user-agent']
+        },
+        responseStatus: 200,
+        responseMessage: 'Payment processed successfully',
+        userId: userId,
+        eventId: eventId,
+        ticketCreated: !!ticket,
+        ticketId: ticket?._id,
+        emailSent: true,
+        receivedAt: new Date(startTime),
+        processedAt: new Date()
+      });
+
     } else if (payload.type === 'PAYMENT_FAILED_WEBHOOK') {
       // Payment failed
-      console.log('Payment failed:', payload.data.order.order_id);
+      console.log('❌ [WEBHOOK] Payment failed:', payload.data?.order?.order_id);
+      
+      // Log failed payment
+      await WebhookLog.create({
+        type: payload.type,
+        orderId: payload.data?.order?.order_id || 'UNKNOWN',
+        paymentId: payload.data?.payment?.cf_payment_id,
+        amount: payload.data?.payment?.payment_amount,
+        status: 'failed',
+        signatureVerified: true,
+        processingTime: Date.now() - startTime,
+        error: {
+          message: 'Payment failed',
+          code: payload.data?.payment?.payment_status || 'PAYMENT_FAILED'
+        },
+        payload: payload,
+        headers: {
+          signature: req.headers['x-webhook-signature'],
+          timestamp: req.headers['x-webhook-timestamp'],
+          userAgent: req.headers['user-agent']
+        },
+        responseStatus: 200,
+        responseMessage: 'Payment failed acknowledged',
+        receivedAt: new Date(startTime),
+        processedAt: new Date()
+      });
     }
 
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('❌ [WEBHOOK] Critical error:', error);
+    console.error('❌ [WEBHOOK] Stack trace:', error.stack);
+    
+    // Log webhook error
+    try {
+      await WebhookLog.create({
+        type: payload?.type || 'UNKNOWN',
+        orderId: payload?.data?.order?.order_id || 'UNKNOWN',
+        status: 'failed',
+        signatureVerified: false,
+        processingTime: Date.now() - startTime,
+        error: {
+          message: error.message,
+          stack: error.stack,
+          code: error.code || 'UNKNOWN_ERROR'
+        },
+        payload: payload || { raw: req.body?.toString() },
+        headers: {
+          signature: req.headers['x-webhook-signature'],
+          timestamp: req.headers['x-webhook-timestamp'],
+          userAgent: req.headers['user-agent']
+        },
+        responseStatus: 500,
+        responseMessage: 'Webhook processing failed',
+        receivedAt: new Date(startTime),
+        processedAt: new Date()
+      });
+    } catch (logError) {
+      console.error('❌ [WEBHOOK] Failed to log error:', logError);
+    }
+    
     res.status(500).json({ message: 'Webhook processing failed' });
   }
 });

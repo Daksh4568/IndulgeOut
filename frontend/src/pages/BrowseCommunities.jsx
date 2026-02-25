@@ -244,17 +244,6 @@ const BrowseCommunities = () => {
           <p className="text-gray-400 text-base mb-4">
             Join communities and clubs for your interests and hobbies
           </p>
-          
-          {/* Manage Collaborations Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={() => navigate('/collaborations')}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full hover:scale-105 transition-transform flex items-center gap-2 shadow-lg hover:shadow-xl"
-            >
-              <FileText className="h-5 w-5" />
-              Manage Collaborations
-            </button>
-          </div>
         </div>
 
         {/* White Search Bar - Centered, not full width */}
@@ -567,10 +556,7 @@ const BrowseCommunities = () => {
                         {selectedCommunity.communityProfile.preferredCities.map((city, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {city}
                           </span>
@@ -587,10 +573,7 @@ const BrowseCommunities = () => {
                         {selectedCommunity.communityProfile.preferredCategories.map((cat, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {cat}
                           </span>
@@ -607,10 +590,7 @@ const BrowseCommunities = () => {
                         {selectedCommunity.communityProfile.preferredEventFormats.map((format, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {format}
                           </span>
@@ -627,10 +607,7 @@ const BrowseCommunities = () => {
                         {selectedCommunity.communityProfile.preferredAudienceTypes.map((audience, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {audience}
                           </span>
@@ -645,10 +622,7 @@ const BrowseCommunities = () => {
                       <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Attendee Event Size</h4>
                       <div className="flex flex-wrap gap-2">
                         <span
-                          className="px-4 py-2 rounded-lg text-white font-medium"
-                          style={{
-                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                          }}
+                          className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                         >
                           {selectedCommunity.communityProfile.attendeeEventSize}
                         </span>

@@ -11,7 +11,7 @@ import {
   TrendingUp, Gift, Crown, Award, UserPlus, 
   MapPinned, MessageCircle, Ticket, ChevronRight,
   Sparkles, Trophy, Target, Lock, ChevronLeft,
-  LayoutDashboard, HelpCircle, BarChart3, Download, User
+  LayoutDashboard, HelpCircle, BarChart3, Download, User, X
 } from 'lucide-react';
 
 const UserDashboard = () => {
@@ -30,6 +30,10 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showTicketViewer, setShowTicketViewer] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [selectedEventParticipants, setSelectedEventParticipants] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
   
   // Carousel refs
   const upcomingScrollRef = useRef(null);
@@ -151,6 +155,22 @@ const UserDashboard = () => {
     }
   };
 
+  // Fetch participants for an event
+  const fetchEventParticipants = async (eventId) => {
+    setLoadingParticipants(true);
+    try {
+      const response = await api.get(`/events/${eventId}/attendees`);
+      setParticipants(response.data.attendees || []);
+      setSelectedEventParticipants(eventId);
+      setShowParticipantsModal(true);
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      setParticipants([]);
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
   // ===== MY EVENTS SECTION =====
   const MyEventsSection = () => {
     const currentEvents = myEvents[activeTab] || [];
@@ -228,6 +248,18 @@ const UserDashboard = () => {
               <span className="absolute top-3 right-3 px-2 py-1 bg-green-500 text-white rounded text-xs font-semibold">
                 Booked
               </span>
+            )}
+            {isUpcoming && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fetchEventParticipants(event._id);
+                }}
+                className="absolute top-3 left-3 p-2 bg-black/60 backdrop-blur-sm rounded-lg hover:bg-black/80 transition-colors border border-white/20"
+                title="View Participants"
+              >
+                <Users className="h-4 w-4 text-white" />
+              </button>
             )}
           </div>
 
@@ -418,9 +450,8 @@ const UserDashboard = () => {
                 <button
                   key={idx}
                   onClick={() => navigate(`/explore?category=${interest}`)}
-                  className="px-6 py-3 text-white rounded-lg font-semibold transition-all hover:opacity-90"
+                  className="px-6 py-3 text-white rounded-lg font-semibold transition-all hover:opacity-90 bg-indigo-500 bg-opacity-25"
                   style={{ 
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                     fontFamily: 'Oswald, sans-serif'
                   }}
                 >
@@ -482,9 +513,7 @@ const UserDashboard = () => {
 
                     {/* Community Icon */}
                     <div className="flex justify-center mb-4 mt-2">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white" style={{ 
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                      }}>
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white bg-indigo-500 bg-opacity-25">
                         <Users className="h-8 w-8" />
                       </div>
                     </div>
@@ -551,9 +580,7 @@ const UserDashboard = () => {
 
                     {/* Community Icon */}
                     <div className="flex justify-center mb-4 mt-2">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white" style={{ 
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                      }}>
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white bg-indigo-500 bg-opacity-25">
                         <Users className="h-8 w-8" />
                       </div>
                     </div>
@@ -642,7 +669,7 @@ const UserDashboard = () => {
                   
                   {/* Profile Content (blurred) */}
                   <div className="flex flex-col items-center">
-                    <div className="h-16 w-16 rounded-full mb-3" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}></div>
+                    <div className="h-16 w-16 rounded-full mb-3 bg-indigo-500 bg-opacity-25"></div>
                     <div className="h-4 w-20 bg-gray-600 rounded mb-2"></div>
                     <div className="h-3 w-16 bg-gray-700 rounded"></div>
                   </div>
@@ -666,7 +693,7 @@ const UserDashboard = () => {
                   
                   {/* Profile Content (blurred) */}
                   <div className="flex flex-col items-center">
-                    <div className="h-16 w-16 rounded-full mb-3" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}></div>
+                    <div className="h-16 w-16 rounded-full mb-3 bg-indigo-500 bg-opacity-25"></div>
                     <div className="h-4 w-20 bg-gray-600 rounded mb-2"></div>
                     <div className="h-3 w-16 bg-gray-700 rounded"></div>
                   </div>
@@ -688,6 +715,95 @@ const UserDashboard = () => {
                 App Coming Soon
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ===== PARTICIPANTS MODAL =====
+  const ParticipantsModal = () => {
+    if (!showParticipantsModal) return null;
+
+    return (
+      <div 
+        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+        onClick={() => setShowParticipantsModal(false)}
+      >
+        <div 
+          className="bg-zinc-900 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden border border-gray-800"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="p-6 border-b border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h3 
+                className="text-xl font-bold text-white"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                Event Participants
+              </h3>
+              <button
+                onClick={() => setShowParticipantsModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-400">
+              {participants.length} {participants.length === 1 ? 'person' : 'people'} attending
+            </p>
+          </div>
+
+          {/* Participants List */}
+          <div className="overflow-y-auto max-h-[calc(80vh-140px)]">
+            {loadingParticipants ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+                <p className="mt-4 text-gray-400">Loading participants...</p>
+              </div>
+            ) : participants.length === 0 ? (
+              <div className="p-8 text-center">
+                <Users className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400">No participants yet</p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-2">
+                {participants.map((participant, index) => (
+                  <div
+                    key={participant._id || index}
+                    className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors"
+                  >
+                    {/* Profile Picture */}
+                    <div className="flex-shrink-0">
+                      {participant.profilePicture ? (
+                        <img
+                          src={getOptimizedCloudinaryUrl(participant.profilePicture)}
+                          alt={participant.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold bg-indigo-500 bg-opacity-25"
+                        >
+                          {participant.name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div className="flex-1 min-w-0">
+                      <p 
+                        className="font-medium text-white truncate"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        {participant.name}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -912,12 +1028,9 @@ const UserDashboard = () => {
               }}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === 'dashboard'
-                  ? 'text-white'
+                  ? 'text-white bg-indigo-500 bg-opacity-25'
                   : 'text-gray-400 hover:text-white'
               }`}
-              style={activeSidebarItem === 'dashboard' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
               title="dashboard"
             >
               <LayoutDashboard className="h-6 w-6" />
@@ -932,12 +1045,9 @@ const UserDashboard = () => {
               }}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === 'events'
-                  ? 'text-white'
+                  ? 'text-white bg-indigo-500 bg-opacity-25'
                   : 'text-gray-400 hover:text-white'
               }`}
-              style={activeSidebarItem === 'events' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
               title="My Events"
             >
               <Calendar className="h-6 w-6" />
@@ -952,12 +1062,9 @@ const UserDashboard = () => {
               }}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === 'people'
-                  ? 'text-white'
+                  ? 'text-white bg-indigo-500 bg-opacity-25'
                   : 'text-gray-400 hover:text-white'
               }`}
-              style={activeSidebarItem === 'people' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
               title="My People & Interests"
             >
               <Users className="h-6 w-6" />
@@ -972,12 +1079,9 @@ const UserDashboard = () => {
               }}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === 'rewards'
-                  ? 'text-white'
+                  ? 'text-white bg-indigo-500 bg-opacity-25'
                   : 'text-gray-400 hover:text-white'
               }`}
-              style={activeSidebarItem === 'rewards' ? {
-                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-              } : {}}
               title="Rewards & Status"
             >
               <Gift className="h-6 w-6" />
@@ -1043,13 +1147,10 @@ const UserDashboard = () => {
                         onClick={() => setActiveTab('upcoming')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           activeTab === 'upcoming'
-                            ? 'text-white'
+                            ? 'text-white bg-indigo-500 bg-opacity-25'
                             : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
-                        style={activeTab === 'upcoming' ? { 
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                          fontFamily: 'Oswald, sans-serif'
-                        } : { fontFamily: 'Oswald, sans-serif' }}
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
                       >
                         Upcoming
                       </button>
@@ -1057,13 +1158,10 @@ const UserDashboard = () => {
                         onClick={() => setActiveTab('past')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           activeTab === 'past'
-                            ? 'text-white'
+                            ? 'text-white bg-indigo-500 bg-opacity-25'
                             : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
-                        style={activeTab === 'past' ? { 
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                          fontFamily: 'Oswald, sans-serif'
-                        } : { fontFamily: 'Oswald, sans-serif' }}
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
                       >
                         Past
                       </button>
@@ -1071,13 +1169,10 @@ const UserDashboard = () => {
                         onClick={() => setActiveTab('saved')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           activeTab === 'saved'
-                            ? 'text-white'
+                            ? 'text-white bg-indigo-500 bg-opacity-25'
                             : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
-                        style={activeTab === 'saved' ? { 
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                          fontFamily: 'Oswald, sans-serif'
-                        } : { fontFamily: 'Oswald, sans-serif' }}
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
                       >
                         Saved
                       </button>
@@ -1119,7 +1214,7 @@ const UserDashboard = () => {
                 {/* Coming Soon Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
                   <div className="text-center px-4">
-                    <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+                    <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-500 bg-opacity-25">
                       <Gift className="h-8 w-8 text-white" />
                     </div>
                     <h3 className="text-2xl font-bold mb-2 text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
@@ -1146,6 +1241,9 @@ const UserDashboard = () => {
           }}
         />
       )}
+
+      {/* Participants Modal */}
+      <ParticipantsModal />
     </div>
   );
 };

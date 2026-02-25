@@ -590,10 +590,7 @@ const BrowseSponsors = () => {
                         {selectedBrand.preferredCities.map((city, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {city}
                           </span>
@@ -610,10 +607,7 @@ const BrowseSponsors = () => {
                         {selectedBrand.preferredCategories.map((cat, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {cat}
                           </span>
@@ -630,10 +624,7 @@ const BrowseSponsors = () => {
                         {selectedBrand.preferredEventFormats.map((format, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {format}
                           </span>
@@ -650,10 +641,7 @@ const BrowseSponsors = () => {
                         {selectedBrand.preferredCollaborationTypes.map((type, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {type}
                           </span>
@@ -670,10 +658,7 @@ const BrowseSponsors = () => {
                         {selectedBrand.preferredAudienceTypes.map((audience, idx) => (
                           <span
                             key={idx}
-                            className="px-4 py-2 rounded-lg text-white font-medium"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                            }}
+                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
                           >
                             {audience}
                           </span>

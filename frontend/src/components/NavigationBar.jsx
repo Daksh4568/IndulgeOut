@@ -195,12 +195,16 @@ export default function NavigationBar() {
                     >
                       DASHBOARD
                     </Link>
-                    <Link
-                      to="/explore"
-                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      EXPLORE
-                    </Link>
+                    
+                    {/* Explore - Only for Regular Users (not B2B stakeholders) */}
+                    {user.role !== 'host_partner' && (
+                      <Link
+                        to="/explore"
+                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        EXPLORE
+                      </Link>
+                    )}
                     
                     {/* Categories - For Regular Users Only */}
                     {user.role !== 'host_partner' && user.role !== 'admin' && (
@@ -216,10 +220,11 @@ export default function NavigationBar() {
                     {canBrowseCommunities() && (
                       <Link
                         to="/browse/communities"
-                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                        className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                          location.pathname.includes('/browse/communities') ? 'font-bold' : 'font-medium'
+                        }`}
                       >
-                        <Users className="h-4 w-4" />
-                        <span>COMMUNITIES</span>
+                        COMMUNITIES
                       </Link>
                     )}
                     
@@ -227,10 +232,11 @@ export default function NavigationBar() {
                     {canBrowseVenues() && !canBrowseSponsors() && (
                       <Link
                         to="/browse/venues"
-                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                        className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                          location.pathname.includes('/browse/venues') ? 'font-bold' : 'font-medium'
+                        }`}
                       >
-                        <Building2 className="h-4 w-4" />
-                        <span>VENUES</span>
+                        VENUES
                       </Link>
                     )}
                     
@@ -238,10 +244,11 @@ export default function NavigationBar() {
                     {canBrowseSponsors() && !canBrowseVenues() && (
                       <Link
                         to="/browse/sponsors"
-                        className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                        className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                          location.pathname.includes('/browse/sponsors') ? 'font-bold' : 'font-medium'
+                        }`}
                       >
-                        <Sparkles className="h-4 w-4" />
-                        <span>SPONSORS</span>
+                        SPONSORS
                       </Link>
                     )}
                   </>
@@ -473,16 +480,18 @@ export default function NavigationBar() {
                           </div>
                         </Link>
 
-                        {/* Explore Card */}
-                        <Link
-                          to="/explore"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>EXPLORE</span>
-                          </div>
-                        </Link>
+                        {/* Explore Card - Only for Regular Users (not B2B stakeholders) */}
+                        {user.role !== 'host_partner' && (
+                          <Link
+                            to="/explore"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl p-4 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-white font-semibold text-lg uppercase" style={{ fontFamily: 'Source Serif Pro, serif' }}>EXPLORE</span>
+                            </div>
+                          </Link>
+                        )}
                         
                         {/* Categories - For Regular Users Only */}
                         {user.role !== 'host_partner' && user.role !== 'admin' && (

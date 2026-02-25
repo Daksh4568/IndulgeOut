@@ -126,7 +126,7 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
           <div class="event-info">
             <h2 class="event-title">${ticket.event.title}</h2>
             <div class="info-row"><strong>📅 Date:</strong> ${new Date(ticket.event.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div class="info-row"><strong>🕒 Time:</strong> ${ticket.event.time}</div>
+            <div class="info-row"><strong>🕒 Time:</strong> ${ticket.event.startTime}${ticket.event.endTime ? ` - ${ticket.event.endTime}` : ''}</div>
             <div class="info-row"><strong>📍 Location:</strong> ${ticket.event.location.address}, ${ticket.event.location.city}</div>
             <div class="info-row"><strong>💵 Price:</strong> ₹${ticket.price.amount.toLocaleString('en-IN')}</div>
           </div>
@@ -269,7 +269,10 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
                 <Clock className="h-4 w-4 text-gray-500" />
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Time</p>
               </div>
-              <p className="text-white text-sm ml-6">{ticket.event.time}</p>
+              <p className="text-white text-sm ml-6">
+                {ticket.event.startTime}
+                {ticket.event.endTime && ` - ${ticket.event.endTime}`}
+              </p>
             </div>
 
             <div>

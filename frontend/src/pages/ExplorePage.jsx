@@ -543,7 +543,7 @@ export default function ExplorePage() {
           <>
             {/* Events Tab */}
             {tab === 'events' && (
-              <div className="space-y-12">
+              <div className="space-y-6">
                 {/* Upcoming Events Section - Horizontal Carousel - COMMENTED OUT
                 {!searchQuery && topEvents.length > 0 && (
                   <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden rounded-2xl p-6 sm:p-8">
@@ -999,62 +999,13 @@ export default function ExplorePage() {
 
             {/* Communities Tab */}
             {tab === 'communities' && (
-              <div className="space-y-12">
-                {/* Community Picks Section */}
-                <section>
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                      Community Picks
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400 text-base" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      Be a part of the most buzzing communities
-                    </p>
-                  </div>
-                  {featuredCommunities.length > 0 ? (
-                    <>
-                      {/* Mobile: Horizontal Carousel */}
-                      <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        <div className="flex gap-4 px-2">
-                          {featuredCommunities.slice(0, 4).map(community => (
-                            <div key={community._id} className="flex-none w-[85vw] snap-center">
-                              <CommunityCard
-                                community={community}
-                                onFavorite={handleFavorite}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Desktop: Grid Layout */}
-                      <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {featuredCommunities.slice(0, 4).map(community => (
-                          <CommunityCard
-                            key={community._id}
-                            community={community}
-                            onFavorite={handleFavorite}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-10">
-                      <p className="text-gray-600 dark:text-gray-400">
-                        No featured communities available
-                      </p>
-                    </div>
-                  )}
-                </section>
-
-                {/* All Communities Section with Lock Overlay */}
+              <div className="space-y-6">
+                {/* All Communities Section */}
                 <section className="relative">
                   <div className="mb-6">
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
                       All Communities
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-400 text-base" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                      Explore more communities
-                    </p>
                   </div>
                   
                   {/* Community Filter Chips */}
@@ -1145,7 +1096,7 @@ export default function ExplorePage() {
                                   <div key={community._id} className="flex-none w-[85vw] snap-center">
                                     <CommunityCard
                                       community={community}
-                                      isLocked={true}
+                                      onFavorite={handleFavorite}
                                     />
                                   </div>
                                 ))}
@@ -1154,39 +1105,13 @@ export default function ExplorePage() {
                             
                             {/* Desktop: Grid Layout */}
                             <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                              {/* Show paginated communities as locked/blurred */}
                               {paginatedCommunities.map(community => (
                                 <CommunityCard
                                   key={community._id}
                                   community={community}
-                                  isLocked={true}
+                                  onFavorite={handleFavorite}
                                 />
                               ))}
-                            </div>
-                            
-                            {/* Unlock Overlay - positioned higher in the grid */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '0%' }}>
-                              <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-8 text-center text-white max-w-md pointer-events-auto">
-                                <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
-                                  <Lock className="h-8 w-8 text-white" />
-                                </div>
-                                <h3 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                                  Unlock More Communities
-                                </h3>
-                                <a
-                                  href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-block text-white px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
-                                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
-                                >
-                                  App Coming Soon
-                                </a>
-
-                                {/* <p className=" mt-2 text-sm text-white/70" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                      Available on iOS & Android
-                                  </p> */}
-                              </div>
                             </div>
                           
                           {/* Pagination Controls for Communities */}

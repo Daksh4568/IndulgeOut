@@ -186,7 +186,7 @@ const getTicketDetails = async (ticketId) => {
     if (mongoose.Types.ObjectId.isValid(ticketId) && ticketId.length === 24) {
       // Try to find by ID first
       ticket = await Ticket.findById(ticketId)
-        .populate('event', 'title date time location categories maxParticipants host coHosts')
+        .populate('event', 'title date startTime endTime location categories maxParticipants host coHosts')
         .populate('user', 'name email phoneNumber')
         .populate('event.host', 'name email');
     }
@@ -194,7 +194,7 @@ const getTicketDetails = async (ticketId) => {
     // If not found by ID, try by ticket number
     if (!ticket) {
       ticket = await Ticket.findOne({ ticketNumber: ticketId })
-        .populate('event', 'title date time location categories maxParticipants host coHosts')
+        .populate('event', 'title date startTime endTime location categories maxParticipants host coHosts')
         .populate('user', 'name email phoneNumber')
         .populate('event.host', 'name email');
     }
@@ -224,7 +224,7 @@ const getUserTickets = async (userId, status = null) => {
     }
 
     const tickets = await Ticket.find(query)
-      .populate('event', 'title date time location categories maxParticipants')
+      .populate('event', 'title date startTime endTime location categories maxParticipants')
       .sort({ purchaseDate: -1 });
 
     return tickets;

@@ -495,17 +495,9 @@ const VenueDashboard = () => {
               onClick={() => setActiveSidebarItem("all")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === "all"
-                  ? "text-white"
+                  ? "bg-indigo-500 bg-opacity-25 text-white"
                   : "text-gray-600 hover:text-gray-400"
               }`}
-              style={
-                activeSidebarItem === "all"
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    }
-                  : {}
-              }
               title="Dashboard"
             >
               <Grid className="h-6 w-6" />
@@ -517,17 +509,9 @@ const VenueDashboard = () => {
               onClick={() => setActiveSidebarItem("actions")}
               className={`relative flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === "actions"
-                  ? "text-white"
+                  ? "bg-indigo-500 bg-opacity-25 text-white"
                   : "text-gray-600 hover:text-gray-400"
               }`}
-              style={
-                activeSidebarItem === "actions"
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    }
-                  : {}
-              }
               title="Actions Required"
             >
               {actionsRequired && actionsRequired.length > 0 && (
@@ -544,17 +528,9 @@ const VenueDashboard = () => {
               onClick={() => setActiveSidebarItem("collaborations")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === "collaborations"
-                  ? "text-white"
+                  ? "bg-indigo-500 bg-opacity-25 text-white"
                   : "text-gray-600 hover:text-gray-400"
               }`}
-              style={
-                activeSidebarItem === "collaborations"
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    }
-                  : {}
-              }
               title="Collaborations"
             >
               <Users2 className="h-6 w-6" />
@@ -566,17 +542,9 @@ const VenueDashboard = () => {
               onClick={() => setActiveSidebarItem("analytics")}
               className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
                 activeSidebarItem === "analytics"
-                  ? "text-white"
+                  ? "bg-indigo-500 bg-opacity-25 text-white"
                   : "text-gray-600 hover:text-gray-400"
               }`}
-              style={
-                activeSidebarItem === "analytics"
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
-                    }
-                  : {}
-              }
               title="Analytics"
             >
               <BarChart3 className="h-6 w-6" />
