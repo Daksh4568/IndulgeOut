@@ -413,8 +413,23 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   let payload = null;
   
   try {
-    // Parse payload
-    payload = JSON.parse(req.body.toString());
+    // Parse payload - handle both raw buffer and already-parsed object
+    let rawBody;
+    if (Buffer.isBuffer(req.body)) {
+      // Body is raw buffer (from express.raw middleware)
+      rawBody = req.body.toString();
+      payload = JSON.parse(rawBody);
+    } else if (typeof req.body === 'object') {
+      // Body already parsed by express.json() middleware
+      payload = req.body;
+      rawBody = JSON.stringify(payload);
+    } else if (typeof req.body === 'string') {
+      // Body is string
+      rawBody = req.body;
+      payload = JSON.parse(rawBody);
+    } else {
+      throw new Error('Invalid request body format');
+    }
     
     // Extract headers
     const signature = req.headers['x-webhook-signature'];
@@ -428,7 +443,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     });
 
     // Verify webhook signature (CRITICAL SECURITY CHECK)
-    const isSignatureValid = verifyCashfreeWebhook(req.body.toString(), signature, timestamp);
+    const isSignatureValid = verifyCashfreeWebhook(rawBody, signature, timestamp);
     
     if (!isSignatureValid && process.env.NODE_ENV === 'production') {
       console.error('❌ [WEBHOOK] Invalid signature - rejecting webhook');
