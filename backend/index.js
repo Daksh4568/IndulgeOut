@@ -29,6 +29,10 @@ const { initializeScheduledJobs } = require('./jobs/scheduledJobs.js');
 
 const app = express();
 
+// Trust proxy - Required for Vercel deployment
+// Allows Express to read X-Forwarded-* headers from reverse proxy
+app.set('trust proxy', true);
+
 // Global variable to cache the database connection
 let cachedDb = null;
 const connectDB = async () => {
