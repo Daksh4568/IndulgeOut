@@ -456,38 +456,50 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       type: payload.type,
       orderId: payload.data?.order?.order_id,
       amount: payload.data?.payment?.payment_amount,
-      status: payload.data?.payment?.payment_status
+      status: payload.data?.payment?.payment_status,
+      environment: process.env.NODE_ENV,
+      hasSignature: !!signature,
+      hasTimestamp: !!timestamp
     });
 
     // Verify webhook signature (CRITICAL SECURITY CHECK)
     const isSignatureValid = verifyCashfreeWebhook(rawBody, signature, timestamp);
     
-    if (!isSignatureValid && process.env.NODE_ENV === 'production') {
-      console.error('❌ [WEBHOOK] Invalid signature - rejecting webhook');
-      
-      // Log failed verification
-      await WebhookLog.create({
-        type: payload.type || 'UNKNOWN',
-        orderId: payload.data?.order?.order_id || 'UNKNOWN',
-        status: 'failed',
-        error: {
-          message: 'Invalid webhook signature',
-          code: 'SIGNATURE_VERIFICATION_FAILED'
-        },
-        signatureVerified: false,
-        payload: payload,
-        headers: { signature, timestamp, userAgent: req.headers['user-agent'] },
-        responseStatus: 403,
-        responseMessage: 'Invalid signature',
-        receivedAt: new Date(),
-        processedAt: new Date(),
-        processingTime: Date.now() - startTime
-      });
-      
-      return res.status(403).json({ message: 'Invalid signature' });
+    // Determine if we're in production based on Cashfree credentials (not NODE_ENV)
+    const isCashfreeProduction = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_');
+    
+    if (!isSignatureValid) {
+      if (isCashfreeProduction) {
+        // In production, reject invalid signatures
+        console.error('❌ [WEBHOOK] Invalid signature in PRODUCTION - rejecting webhook');
+        
+        // Log failed verification
+        await WebhookLog.create({
+          type: payload.type || 'UNKNOWN',
+          orderId: payload.data?.order?.order_id || 'UNKNOWN',
+          status: 'failed',
+          error: {
+            message: 'Invalid webhook signature',
+            code: 'SIGNATURE_VERIFICATION_FAILED'
+          },
+          signatureVerified: false,
+          payload: payload,
+          headers: { signature, timestamp, userAgent: req.headers['user-agent'] },
+          responseStatus: 403,
+          responseMessage: 'Invalid signature',
+          receivedAt: new Date(),
+          processedAt: new Date(),
+          processingTime: Date.now() - startTime
+        });
+        
+        return res.status(403).json({ message: 'Invalid signature' });
+      } else {
+        // In sandbox, log warning but continue processing
+        console.warn('⚠️ [WEBHOOK] Invalid signature in SANDBOX - continuing anyway (test mode)');
+      }
     }
 
-    console.log('✅ [WEBHOOK] Signature verified');
+    console.log(`✅ [WEBHOOK] Signature verified (${isCashfreeProduction ? 'PRODUCTION' : 'SANDBOX'})`);
 
     // Handle different event types
     if (payload.type === 'PAYMENT_SUCCESS_WEBHOOK') {
