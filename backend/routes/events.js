@@ -888,7 +888,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       eventId: event._id,
       eventTitle: event.title,
       eventDate: event.date,
-      eventTime: event.time,
+      eventTime: event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : 'TBD',
       eventLocation: event.location,
       coreMetrics: {
         eventViews: views,

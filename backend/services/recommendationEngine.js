@@ -490,7 +490,7 @@ class RecommendationEngine {
 
     // Time preference bonus
     const preferredTimes = user.preferences?.preferredEventTimes || [];
-    const eventTime = event.time?.toLowerCase() || '';
+    const eventTime = (event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '').toLowerCase();
     
     if (preferredTimes.length > 0) {
       const timeMatch = preferredTimes.some(time => {

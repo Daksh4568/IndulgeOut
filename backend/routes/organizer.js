@@ -444,7 +444,7 @@ router.get('/events', authMiddleware, async (req, res) => {
         _id: event._id,
         title: event.title,
         date: event.date,
-        time: event.time,
+        time: event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : 'TBD',
         startTime: event.startTime,
         endTime: event.endTime,
         location: event.location,

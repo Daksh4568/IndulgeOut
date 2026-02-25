@@ -241,7 +241,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       eventName: event.title,
       organizerName: event.host?.communityProfile?.communityName || event.host?.name,
       date: event.date,
-      time: event.time,
+      time: event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : 'TBD',
       expectedAttendance: event.capacity || event.maxParticipants,
       eventType: event.category
     }));

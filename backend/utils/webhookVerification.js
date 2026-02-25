@@ -16,20 +16,37 @@ const crypto = require('crypto');
  */
 function verifyCashfreeWebhook(payload, signature, timestamp) {
   try {
-    // Cashfree signature format: timestamp + '.' + signature
-    const signatureParts = signature.split('.');
-    if (signatureParts.length !== 2) {
+    // Handle both old and new Cashfree webhook formats
+    let receivedTimestamp;
+    let receivedSignature;
+    
+    // NEW FORMAT (2023-08-01): Separate headers for signature and timestamp
+    if (timestamp && !signature.includes('.')) {
+      receivedTimestamp = timestamp;
+      receivedSignature = signature;
+      console.log('🔐 [Webhook] Using NEW format: separate signature and timestamp headers');
+    } 
+    // OLD FORMAT: timestamp + '.' + signature combined
+    else if (signature.includes('.')) {
+      const signatureParts = signature.split('.');
+      if (signatureParts.length !== 2) {
+        console.error('❌ [Webhook Verification] Invalid signature format');
+        return false;
+      }
+      receivedTimestamp = signatureParts[0];
+      receivedSignature = signatureParts[1];
+      console.log('🔐 [Webhook] Using OLD format: combined timestamp.signature');
+    } else {
       console.error('❌ [Webhook Verification] Invalid signature format');
       return false;
     }
 
-    const receivedTimestamp = signatureParts[0];
-    const receivedSignature = signatureParts[1];
-
     // Verify timestamp (prevent replay attacks)
+    // Timestamp is in milliseconds, convert to seconds
     const currentTime = Math.floor(Date.now() / 1000);
     const webhookTime = parseInt(receivedTimestamp, 10);
-    const timeDifference = Math.abs(currentTime - webhookTime);
+    const webhookTimeSeconds = webhookTime > 9999999999 ? Math.floor(webhookTime / 1000) : webhookTime;
+    const timeDifference = Math.abs(currentTime - webhookTimeSeconds);
 
     // Reject webhooks older than 5 minutes (300 seconds)
     if (timeDifference > 300) {
@@ -45,18 +62,20 @@ function verifyCashfreeWebhook(payload, signature, timestamp) {
     const expectedSignature = crypto
       .createHmac('sha256', process.env.CASHFREE_SECRET_KEY)
       .update(signedPayload)
-      .digest('hex');
+      .digest('base64');
 
     // Compare signatures (constant-time comparison to prevent timing attacks)
     const isValid = crypto.timingSafeEqual(
-      Buffer.from(receivedSignature, 'hex'),
-      Buffer.from(expectedSignature, 'hex')
+      Buffer.from(receivedSignature, 'base64'),
+      Buffer.from(expectedSignature, 'base64')
     );
 
     if (isValid) {
       console.log('✅ [Webhook Verification] Signature verified successfully');
     } else {
       console.error('❌ [Webhook Verification] Signature mismatch');
+      console.error('   Expected:', expectedSignature.substring(0, 20) + '...');
+      console.error('   Received:', receivedSignature.substring(0, 20) + '...');
     }
 
     return isValid;

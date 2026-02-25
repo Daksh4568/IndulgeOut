@@ -178,7 +178,7 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
             <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #22c55e; margin: 20px 0;">
               <h3 style="color: #333; margin: 0 0 15px 0;">${event.title}</h3>
               <p style="color: #666; margin: 5px 0;"><strong>📅 Date:</strong> ${eventDate}</p>
-              <p style="color: #666; margin: 5px 0;"><strong>🕒 Time:</strong> ${event.time}</p>
+              <p style="color: #666; margin: 5px 0;"><strong>🕒 Time:</strong> ${event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || 'TBD'}</p>
               <p style="color: #666; margin: 5px 0;"><strong>📍 Location:</strong> ${event.location.address}, ${event.location.city}</p>
               <p style="color: #666; margin: 5px 0;"><strong>👥 Current Attendees:</strong> ${event.currentParticipants}/${event.maxParticipants}</p>
             </div>

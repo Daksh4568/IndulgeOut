@@ -267,7 +267,7 @@ const getEventTickets = async (eventId, status = null) => {
 const checkInTicket = async (ticketNumber, staffUserId) => {
   try {
     const ticket = await Ticket.findOne({ ticketNumber })
-      .populate('event', 'title date time location');
+      .populate('event', 'title date startTime endTime location');
 
     if (!ticket) {
       throw new Error('Ticket not found');
