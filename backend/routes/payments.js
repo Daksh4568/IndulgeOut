@@ -106,6 +106,11 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     };
 
     console.log('Creating Cashfree order with request:', request);
+    console.log('Using Cashfree credentials:', {
+      appId: process.env.CASHFREE_APP_ID ? process.env.CASHFREE_APP_ID.substring(0, 10) + '...' : 'MISSING',
+      secretKey: process.env.CASHFREE_SECRET_KEY ? process.env.CASHFREE_SECRET_KEY.substring(0, 10) + '...' : 'MISSING',
+      apiUrl: CASHFREE_API_URL
+    });
 
     // Create order with Cashfree using REST API
     const cashfreeResponse = await axios.post(
@@ -121,7 +126,19 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       }
     );
 
-    console.log('Cashfree response:', cashfreeResponse.data);
+    console.log('Cashfree response:', JSON.stringify(cashfreeResponse.data, null, 2));
+    console.log('Payment session ID:', cashfreeResponse.data.payment_session_id);
+
+    // Check if payment_session_id exists
+    if (!cashfreeResponse.data.payment_session_id) {
+      console.error('❌ payment_session_id is missing from Cashfree response!');
+      console.error('Full response:', cashfreeResponse.data);
+      return res.status(500).json({
+        success: false,
+        message: 'Payment gateway did not return session ID',
+        cashfreeResponse: cashfreeResponse.data
+      });
+    }
 
     res.json({
       success: true,
