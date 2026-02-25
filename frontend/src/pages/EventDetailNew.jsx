@@ -224,7 +224,9 @@ const EventDetail = () => {
             throw new Error('Cashfree SDK not loaded. Please refresh the page.');
           }
 
-          const cashfreeMode = import.meta.env.MODE === 'production' ? 'production' : 'sandbox';
+          // Use explicit Cashfree mode from environment variable, fallback to 'sandbox' for safety
+          const cashfreeMode = import.meta.env.VITE_CASHFREE_MODE || 'sandbox';
+          console.log('Initializing Cashfree in mode:', cashfreeMode);
           const cashfree = window.Cashfree({ mode: cashfreeMode });
 
           const checkoutOptions = {
