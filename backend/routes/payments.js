@@ -723,6 +723,55 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         receivedAt: new Date(startTime),
         processedAt: new Date()
       });
+    } else if (payload.type === 'PAYMENT_USER_DROPPED_WEBHOOK') {
+      // User closed payment window/abandoned payment
+      console.log('⚠️ [WEBHOOK] User dropped payment:', payload.data?.order?.order_id || 'UNKNOWN');
+      
+      // Log dropped payment
+      await WebhookLog.create({
+        type: payload.type,
+        orderId: payload.data?.order?.order_id || 'UNKNOWN',
+        paymentId: payload.data?.payment?.cf_payment_id,
+        amount: payload.data?.payment?.payment_amount,
+        status: 'dropped',
+        signatureVerified: true,
+        processingTime: Date.now() - startTime,
+        error: {
+          message: 'User abandoned payment',
+          code: 'USER_DROPPED'
+        },
+        payload: payload,
+        headers: {
+          signature: req.headers['x-webhook-signature'],
+          timestamp: req.headers['x-webhook-timestamp'],
+          userAgent: req.headers['user-agent']
+        },
+        responseStatus: 200,
+        responseMessage: 'User drop acknowledged',
+        receivedAt: new Date(startTime),
+        processedAt: new Date()
+      });
+    } else {
+      // Unknown webhook type - log and acknowledge
+      console.log('⚠️ [WEBHOOK] Unknown webhook type:', payload.type);
+      
+      await WebhookLog.create({
+        type: payload.type || 'UNKNOWN',
+        orderId: payload.data?.order?.order_id || 'UNKNOWN',
+        status: 'unknown',
+        signatureVerified: true,
+        processingTime: Date.now() - startTime,
+        payload: payload,
+        headers: {
+          signature: req.headers['x-webhook-signature'],
+          timestamp: req.headers['x-webhook-timestamp'],
+          userAgent: req.headers['user-agent']
+        },
+        responseStatus: 200,
+        responseMessage: 'Unknown webhook type acknowledged',
+        receivedAt: new Date(startTime),
+        processedAt: new Date()
+      });
     }
 
     res.status(200).json({ success: true });
