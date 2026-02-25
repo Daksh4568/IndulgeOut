@@ -609,8 +609,33 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       );
 
       if (!updatedEvent) {
-        console.error('❌ [WEBHOOK] Failed to register user (race condition or already registered)');
-        return res.status(400).json({ message: 'Registration failed' });
+        // User already registered - this is a duplicate webhook (Cashfree retries)
+        console.warn('⚠️ [WEBHOOK] User already registered - duplicate webhook detected, returning success');
+        
+        // Log duplicate webhook
+        await WebhookLog.create({
+          type: payload.type,
+          orderId: orderId,
+          paymentId: cfPaymentId,
+          amount: paymentAmount,
+          status: 'duplicate',
+          signatureVerified: !isCashfreeProduction ? false : isSignatureValid,
+          processingTime: Date.now() - startTime,
+          payload: payload,
+          headers: {
+            signature: req.headers['x-webhook-signature'],
+            timestamp: req.headers['x-webhook-timestamp'],
+            userAgent: req.headers['user-agent']
+          },
+          responseStatus: 200,
+          responseMessage: 'Duplicate webhook - user already registered',
+          userId: userId,
+          eventId: eventId,
+          receivedAt: new Date(startTime),
+          processedAt: new Date()
+        });
+        
+        return res.status(200).json({ success: true, message: 'Already processed' });
       }
 
       // Update user's registered events
