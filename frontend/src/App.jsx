@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider } from './contexts/AuthContext'
 import { NotificationProvider } from './contexts/NotificationContext'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -170,19 +171,21 @@ function App() {
   
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-          <AuthProvider>
-            <NotificationProvider>
-              <ToastContext.Provider value={toast}>
-                <ScrollToTop />
-                <AppContent />
-                <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
-              </ToastContext.Provider>
-            </NotificationProvider>
-          </AuthProvider>
-        </Router>
-      </ThemeProvider>
+      <HelmetProvider>
+        <ThemeProvider>
+          <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+            <AuthProvider>
+              <NotificationProvider>
+                <ToastContext.Provider value={toast}>
+                  <ScrollToTop />
+                  <AppContent />
+                  <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
+                </ToastContext.Provider>
+              </NotificationProvider>
+            </AuthProvider>
+          </Router>
+        </ThemeProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   )
 }

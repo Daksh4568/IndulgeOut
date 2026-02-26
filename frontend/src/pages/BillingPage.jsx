@@ -607,7 +607,7 @@ const BillingPage = () => {
                 ) : (
                   <>
                     <Ticket className="h-5 w-5" />
-                    <span>Get your Tickets</span>
+                    <span>Book Tickets</span>
                   </>
                 )}
               </button>

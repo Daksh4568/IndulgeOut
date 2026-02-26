@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { 
   Calendar, 
   Clock, 
@@ -297,9 +298,45 @@ const EventDetail = () => {
 
   const spotsLeft = event.maxParticipants - (event.currentParticipants || 0);
   const eventEnded = new Date(event.date) < new Date();
+  
+  // Prepare meta tags data
+  const eventUrl = window.location.href;
+  const eventImage = event.images && event.images.length > 0 
+    ? getOptimizedCloudinaryUrl(event.images[0]) 
+    : 'https://indulgeout.com/default-event-banner.jpg'; // Fallback image
+  const eventLocation = typeof event.location === 'string' 
+    ? event.location.split(',')[0] 
+    : (event.location?.city || 'Location TBA');
+  const eventDescription = event.description 
+    ? event.description.substring(0, 160) + '...'
+    : `Join us for ${event.title} on ${formatDate(event.date)}`;
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
+      <Helmet>
+        {/* Basic Meta Tags */}
+        <title>{event.title} | IndulgeOut</title>
+        <meta name="description" content={eventDescription} />
+        
+        {/* Open Graph Meta Tags (Facebook, LinkedIn, WhatsApp) */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={eventUrl} />
+        <meta property="og:title" content={event.title} />
+        <meta property="og:description" content={eventDescription} />
+        <meta property="og:image" content={eventImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="IndulgeOut" />
+        
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={eventUrl} />
+        <meta name="twitter:title" content={event.title} />
+        <meta name="twitter:description" content={eventDescription} />
+        <meta name="twitter:image" content={eventImage} />
+      </Helmet>
+      
+      <div className="min-h-screen bg-black">
       <NavigationBar />
 
       {/* Banner Section - Mobile (portrait with blur) - Keep for mobile */}
@@ -504,7 +541,7 @@ const EventDetail = () => {
                     className="text-base font-bold text-white mb-1"
                     style={{ fontFamily: 'Oswald, sans-serif' }}
                   >
-                    {event.venue || 'Event Venue'}
+                    {event.venue }
                   </h3>
                   <p 
                     className="text-gray-400 text-sm leading-relaxed"
@@ -636,10 +673,10 @@ const EventDetail = () => {
                   <div className="text-8xl">{getCategoryIcon(event.categories?.[0])}</div>
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
               
               {/* Save and Share Buttons - Glass Effect */}
-              <div className="absolute top-6 right-6 flex items-center gap-3">
+              <div className="absolute top-6 right-6 flex items-center gap-3 z-20 pointer-events-auto">
                 <button 
                   onClick={handleSaveEvent}
                   disabled={isSaving}
@@ -831,7 +868,7 @@ const EventDetail = () => {
                         className="text-xl font-bold text-white mb-1"
                         style={{ fontFamily: 'Oswald, sans-serif' }}
                       >
-                        {event.venue || 'Event Venue'}
+                        {event.venue}
                       </h3>
                       <p 
                         className="text-gray-400"
@@ -884,7 +921,7 @@ const EventDetail = () => {
                         className="text-xl font-bold text-white mb-2"
                         style={{ fontFamily: 'Oswald, sans-serif' }}
                       >
-                        {event.venue || 'Event Venue'}
+                        {event.venue}
                       </h3>
                       <p 
                         className="text-gray-400 leading-relaxed"
@@ -1071,7 +1108,7 @@ const EventDetail = () => {
                         className="font-semibold text-sm text-gray-900 dark:text-white mb-1"
                         style={{ fontFamily: 'Source Serif Pro, serif' }}
                       >
-                        {event.venue || 'Event Venue'}
+                        {event.venue}
                       </p>
                       <p 
                         className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed"
@@ -1187,7 +1224,7 @@ const EventDetail = () => {
                     ) : (
                       <>
                         <Ticket className="inline h-5 w-5 mr-2" />
-                        Book your Tickets
+                        Book Tickets
                       </>
                     )}
                   </button>
@@ -1334,6 +1371,7 @@ const EventDetail = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
