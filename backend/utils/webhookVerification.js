@@ -65,12 +65,23 @@ function verifyCashfreeWebhook(payload, signature, timestamp) {
     console.log('🔍 [DEBUG] Payload string length:', payloadString.length);
     console.log('🔍 [DEBUG] Timestamp used:', receivedTimestamp);
     console.log('🔍 [DEBUG] Signed payload length:', signedPayload.length);
-    console.log('🔍 [DEBUG] Signed payload preview:', signedPayload.substring(0, 100) + '...');
-    console.log('🔍 [DEBUG] Secret key starts with:', process.env.CASHFREE_SECRET_KEY?.substring(0, 15) + '...');
+    console.log('🔍 [DEBUG] Signed payload first 150 chars:', signedPayload.substring(0, 150));
+    console.log('🔍 [DEBUG] Signed payload last 100 chars:', signedPayload.substring(signedPayload.length - 100));
+    
+    // Use webhook-specific secret key (separate from API secret)
+    const webhookSecret = process.env.CASHFREE_WEBHOOK_SECRET || process.env.CASHFREE_SECRET_KEY;
+    console.log('🔍 [DEBUG] Webhook secret starts with:', webhookSecret?.substring(0, 15) + '...');
+    console.log('🔍 [DEBUG] Webhook secret length:', webhookSecret?.length);
+    console.log('🔍 [DEBUG] Received signature:', receivedSignature);
+    
+    if (!webhookSecret) {
+      console.error('❌ [Webhook Verification] No webhook secret configured');
+      return false;
+    }
 
     // Compute expected signature using HMAC-SHA256
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.CASHFREE_SECRET_KEY)
+      .createHmac('sha256', webhookSecret)
       .update(signedPayload)
       .digest('base64');
 

@@ -466,14 +466,19 @@ router.post('/webhook', async (req, res) => {
     });
     
     console.log('🔍 [DEBUG] Secret key starts with:', process.env.CASHFREE_SECRET_KEY?.substring(0, 15) + '...');
+    console.log('🔍 [DEBUG] Using secret key from env:', process.env.CASHFREE_SECRET_KEY ? 'YES' : 'NO');
 
     // Verify webhook signature (CRITICAL SECURITY CHECK)
+    // IMPORTANT: Pass the raw body string (not parsed object) to maintain exact formatting
     const isSignatureValid = verifyCashfreeWebhook(rawBody, signature, timestamp);
     
     // Determine if we're in production based on Cashfree credentials (not NODE_ENV)
     const isCashfreeProduction = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_');
     
-    if (!isSignatureValid) {
+    // Allow skipping signature verification in sandbox ONLY for debugging
+    const skipSignatureCheck = process.env.SKIP_WEBHOOK_SIGNATURE === 'true' && !isCashfreeProduction;
+    
+    if (!isSignatureValid && !skipSignatureCheck) {
       if (isCashfreeProduction) {
         // In production, reject invalid signatures
         console.error('❌ [WEBHOOK] Invalid signature in PRODUCTION - rejecting webhook');
@@ -500,11 +505,16 @@ router.post('/webhook', async (req, res) => {
         return res.status(403).json({ message: 'Invalid signature' });
       } else {
         // In sandbox, log warning but continue processing
-        console.warn('⚠️ [WEBHOOK] Invalid signature in SANDBOX - continuing anyway (test mode)');
+        if (skipSignatureCheck) {
+          console.warn('⚠️ [WEBHOOK] Signature verification DISABLED (SKIP_WEBHOOK_SIGNATURE=true) - FOR TESTING ONLY!');
+        } else {
+          console.warn('⚠️ [WEBHOOK] Invalid signature in SANDBOX - continuing anyway (test mode)');
+        }
       }
     }
 
-    console.log(`✅ [WEBHOOK] Signature verified (${isCashfreeProduction ? 'PRODUCTION' : 'SANDBOX'})`);
+    const verificationStatus = skipSignatureCheck ? 'SKIPPED' : (isSignatureValid ? 'VALID' : 'INVALID_BUT_SANDBOX');
+    console.log(`✅ [WEBHOOK] Signature ${verificationStatus} (${isCashfreeProduction ? 'PRODUCTION' : 'SANDBOX'})`);
 
     // Handle different event types
     if (payload.type === 'PAYMENT_SUCCESS_WEBHOOK') {
