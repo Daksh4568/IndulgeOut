@@ -351,52 +351,44 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       // Continue without failing the entire registration
     }
 
-    // Send confirmation emails asynchronously
-    setImmediate(async () => {
-      try {
-        console.log(`📧 [Payment Email] Sending registration email with ticket: ${ticket?.ticketNumber}`);
-        console.log(`🎫 [Payment Email] Ticket has QR: ${!!ticket?.qrCode}, QR Length: ${ticket?.qrCode?.length}`);
-        await sendEventRegistrationEmail(user.email, user.name, event, ticket);
-      } catch (emailError) {
-        console.error('Failed to send registration email:', emailError);
-      }
-    });
+    // Send confirmation emails synchronously (for Vercel serverless)
+    try {
+      console.log(`📧 [Payment Email] Sending registration email with ticket: ${ticket?.ticketNumber}`);
+      console.log(`🎫 [Payment Email] Ticket has QR: ${!!ticket?.qrCode}, QR Length: ${ticket?.qrCode?.length}`);
+      await sendEventRegistrationEmail(user.email, user.name, event, ticket);
+    } catch (emailError) {
+      console.error('Failed to send registration email:', emailError);
+    }
 
     // Send tickets to additional persons if provided (share the same ticket)
     if (additionalPersons && additionalPersons.length > 0 && ticket) {
       console.log(`📧 [Additional Persons] Sending tickets to ${additionalPersons.length} additional person(s)`);
-      setImmediate(async () => {
-        for (const person of additionalPersons) {
-          if (person.email && person.name) {
-            try {
-              // Send the same ticket to additional person (they share the booking)
-              await sendEventRegistrationEmail(person.email, person.name, event, ticket);
-              console.log(`✅ [Additional Person] Ticket sent to: ${person.email}`);
-            } catch (guestError) {
-              console.error(`❌ [Additional Person] Failed to send ticket to ${person.email}:`, guestError.message);
-            }
+      for (const person of additionalPersons) {
+        if (person.email && person.name) {
+          try {
+            // Send the same ticket to additional person (they share the booking)
+            await sendEventRegistrationEmail(person.email, person.name, event, ticket);
+            console.log(`✅ [Additional Person] Ticket sent to: ${person.email}`);
+          } catch (guestError) {
+            console.error(`❌ [Additional Person] Failed to send ticket to ${person.email}:`, guestError.message);
           }
         }
-      });
+      }
     }
 
-    setImmediate(async () => {
-      try {
-        await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
-      } catch (emailError) {
-        console.error('Failed to send host notification:', emailError);
-      }
-    });
+    try {
+      await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
+    } catch (emailError) {
+      console.error('Failed to send host notification:', emailError);
+    }
 
     // Send in-app booking confirmation notification to user
-    setImmediate(async () => {
-      try {
-        await notificationService.notifyBookingConfirmed(userId, event, ticket);
-        console.log(`✅ [Payment Flow] Booking confirmation notification sent to user ${userId}`);
-      } catch (notifError) {
-        console.error('Failed to send booking confirmation notification:', notifError);
-      }
-    });
+    try {
+      await notificationService.notifyBookingConfirmed(userId, event, ticket);
+      console.log(`✅ [Payment Flow] Booking confirmation notification sent to user ${userId}`);
+    } catch (notifError) {
+      console.error('Failed to send booking confirmation notification:', notifError);
+    }
 
     res.json({
       success: true,
@@ -691,35 +683,29 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       }
 
       // Send confirmation emails asynchronously
-      setImmediate(async () => {
-        try {
-          console.log('📧 [WEBHOOK] Sending registration email to:', user.email);
-          await sendEventRegistrationEmail(user.email, user.name, event, ticket);
-          console.log('✅ [WEBHOOK] Registration email sent');
-        } catch (emailError) {
-          console.error('❌ [WEBHOOK] Failed to send registration email:', emailError);
-        }
-      });
+      try {
+        console.log('📧 [WEBHOOK] Sending registration email to:', user.email);
+        await sendEventRegistrationEmail(user.email, user.name, event, ticket);
+        console.log('✅ [WEBHOOK] Registration email sent');
+      } catch (emailError) {
+        console.error('❌ [WEBHOOK] Failed to send registration email:', emailError);
+      }
 
       // Send notification to host
-      setImmediate(async () => {
-        try {
-          await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
-          console.log('✅ [WEBHOOK] Host notification sent');
-        } catch (emailError) {
-          console.error('❌ [WEBHOOK] Failed to send host notification:', emailError);
-        }
-      });
+      try {
+        await sendEventNotificationToHost(event.host.email, event.host.name, user, event);
+        console.log('✅ [WEBHOOK] Host notification sent');
+      } catch (emailError) {
+        console.error('❌ [WEBHOOK] Failed to send host notification:', emailError);
+      }
 
       // Send in-app booking confirmation notification
-      setImmediate(async () => {
-        try {
-          await notificationService.notifyBookingConfirmed(userId, event, ticket);
-          console.log('✅ [WEBHOOK] Booking confirmation notification sent');
-        } catch (notifError) {
-          console.error('❌ [WEBHOOK] Failed to send booking confirmation:', notifError);
-        }
-      });
+      try {
+        await notificationService.notifyBookingConfirmed(userId, event, ticket);
+        console.log('✅ [WEBHOOK] Booking confirmation notification sent');
+      } catch (notifError) {
+        console.error('❌ [WEBHOOK] Failed to send booking confirmation:', notifError);
+      }
 
       console.log('✅ [WEBHOOK] Payment processed successfully - Registration and ticket created');
 
