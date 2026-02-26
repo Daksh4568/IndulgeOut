@@ -5,6 +5,7 @@ import { CATEGORIES } from '../constants/categories';
 import NavigationBar from '../components/NavigationBar';
 import { API_URL } from '../config/api';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 /**
  * All Categories Page
@@ -121,7 +122,7 @@ const Categories = () => {
                             <div className="flex items-center gap-2 text-gray-700 mb-3">
                               <Calendar className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm font-bold" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                {formatDate(event.date)} · {event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '6:30 PM'}
+                                {formatDate(event.date)} · {event.startTime && event.endTime ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` : event.time || '6:30 PM'}
                               </span>
                             </div>
                             

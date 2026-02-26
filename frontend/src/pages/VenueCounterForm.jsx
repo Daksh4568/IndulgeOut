@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import { ArrowLeft, Check, X, Edit, AlertCircle, Send } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const VenueCounterForm = () => {
   const { id } = useParams();
@@ -232,7 +233,7 @@ const VenueCounterForm = () => {
             <p className="text-sm text-gray-400 mb-2">COMMUNITY PROPOSED</p>
             <p className="text-white">
               {currentField === 'seatingCapacity' && formData.seatingCapacity}
-              {currentField === 'eventDate' && `${formData.eventDate?.date} | ${formData.eventDate?.startTime} - ${formData.eventDate?.endTime}`}
+              {currentField === 'eventDate' && `${formData.eventDate?.date} | ${convert24To12Hour(formData.eventDate?.startTime)} - ${convert24To12Hour(formData.eventDate?.endTime)}`}
               {currentField === 'audioVisual' && 'Audio/Visual equipment requested'}
               {currentField === 'barFood' && 'Bar & Food services requested'}
             </p>
@@ -473,7 +474,7 @@ const VenueCounterForm = () => {
                 weekday: 'short',
                 day: '2-digit',
                 month: 'short'
-              })} | {formData.eventDate?.startTime} - {formData.eventDate?.endTime}
+              })} | {convert24To12Hour(formData.eventDate?.startTime)} - {convert24To12Hour(formData.eventDate?.endTime)}
             </p>
             {formData.showBackupDate && formData.backupDate?.date && (
               <p className="text-sm text-gray-400 mt-1">
@@ -481,12 +482,12 @@ const VenueCounterForm = () => {
                   weekday: 'short',
                   day: '2-digit',
                   month: 'short'
-                })} | {formData.backupDate?.startTime} - {formData.backupDate?.endTime}
+                })} | {convert24To12Hour(formData.backupDate?.startTime)} - {convert24To12Hour(formData.backupDate?.endTime)}
               </p>
             )}
             {fieldResponses.eventDate?.action === 'modify' && (
               <p className="text-yellow-400 text-sm mt-2">
-                Your counter: {fieldResponses.eventDate?.modifiedValue?.date} | {fieldResponses.eventDate?.modifiedValue?.startTime} - {fieldResponses.eventDate?.modifiedValue?.endTime}
+                Your counter: {fieldResponses.eventDate?.modifiedValue?.date} | {convert24To12Hour(fieldResponses.eventDate?.modifiedValue?.startTime)} - {convert24To12Hour(fieldResponses.eventDate?.modifiedValue?.endTime)}
               </p>
             )}
             {renderFieldActionButtons('eventDate')}

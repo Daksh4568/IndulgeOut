@@ -78,15 +78,33 @@ const OTPLogin = () => {
         // Route based on user role
         const { user } = response.data
         
+        // Check if there's a redirect URL stored (e.g., from billing page)
+        const redirectUrl = sessionStorage.getItem('redirectAfterSignup')
+        
         let targetRoute = '/dashboard'
-        if (user.role === 'admin') {
+        
+        // For B2C users, check if redirect exists (from billing page)
+        if (user.role === 'user' && redirectUrl) {
+          targetRoute = redirectUrl
+          sessionStorage.removeItem('redirectAfterSignup')
+          console.log('🚀 Redirecting B2C user back to:', targetRoute)
+        } else if (user.role === 'admin') {
           targetRoute = '/admin/dashboard'
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'community_organizer') {
           targetRoute = '/organizer/dashboard'
+          // Clear billing redirect for non-B2C users
+          sessionStorage.removeItem('redirectAfterSignup')
+          sessionStorage.removeItem('ticketSelection')
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'venue') {
           targetRoute = '/venue/dashboard'
+          // Clear billing redirect for non-B2C users
+          sessionStorage.removeItem('redirectAfterSignup')
+          sessionStorage.removeItem('ticketSelection')
         } else if (user.role === 'host_partner' && user.hostPartnerType === 'brand_sponsor') {
           targetRoute = '/brand/dashboard'
+          // Clear billing redirect for non-B2C users
+          sessionStorage.removeItem('redirectAfterSignup')
+          sessionStorage.removeItem('ticketSelection')
         }
         
         console.log('🚀 Navigating to:', targetRoute)

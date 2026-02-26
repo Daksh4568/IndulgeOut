@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import { ArrowLeft, Check, X, FileText, AlertCircle } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const CounterDetailsView = () => {
   const { id } = useParams();
@@ -181,7 +182,7 @@ const CounterDetailsView = () => {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
-    })} | ${eventDate.startTime || ''} - ${eventDate.endTime || ''}`;
+    })} | ${convert24To12Hour(eventDate.startTime || '')} - ${convert24To12Hour(eventDate.endTime || '')}`;
 
     if (!backupDate?.date) return primary;
 
@@ -189,7 +190,7 @@ const CounterDetailsView = () => {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
-    })} | ${backupDate.startTime || ''} - ${backupDate.endTime || ''}`;
+    })} | ${convert24To12Hour(backupDate.startTime || '')} - ${convert24To12Hour(backupDate.endTime || '')}`;
 
     return `${primary} (Backup: ${backup})`;
   };

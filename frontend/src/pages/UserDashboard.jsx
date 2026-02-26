@@ -6,6 +6,7 @@ import NavigationBar from '../components/NavigationBar';
 import TicketViewer from '../components/TicketViewer';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { convert24To12Hour } from '../utils/timeUtils';
 import { 
   Calendar, MapPin, Clock, Users, Heart, Star, 
   TrendingUp, Gift, Crown, Award, UserPlus, 
@@ -276,7 +277,11 @@ const UserDashboard = () => {
               </div>
               <div className="flex items-center text-xs text-gray-400">
                 <Clock className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                <span>{event.time}</span>
+                <span>
+                  {event.startTime && event.endTime 
+                    ? `${event.startTime.includes('AM') || event.startTime.includes('PM') ? event.startTime : convert24To12Hour(event.startTime)} - ${event.endTime.includes('AM') || event.endTime.includes('PM') ? event.endTime : convert24To12Hour(event.endTime)}`
+                    : event.time}
+                </span>
               </div>
               <div className="flex items-center text-xs text-gray-400">
                 <MapPin className="h-3.5 w-3.5 mr-2 flex-shrink-0" />

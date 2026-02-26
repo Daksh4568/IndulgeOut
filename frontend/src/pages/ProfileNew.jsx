@@ -736,10 +736,10 @@ const ProfileNew = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Profile Card (Spans 2 columns) */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Profile Card with Purple Gradient Header */}
+              {/* Profile Card with Indigo Header */}
               <div className="bg-[#171717] rounded-lg overflow-hidden transition-card">
-                {/* Purple gradient header */}
-                <div className="bg-gradient-to-br from-[#7878E9] to-[#3D3DD4] p-4 sm:p-6 relative">
+                {/* Indigo header - secondary color */}
+                <div className="bg-indigo-500 bg-opacity-25 p-4 sm:p-6 relative">
                   <button 
                     onClick={() => handleEditSection('profile')}
                     className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 px-2.5 py-1.5 sm:px-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-xs sm:text-sm font-medium"
@@ -1290,12 +1290,11 @@ const ProfileNew = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* LEFT COLUMN - Spans 2 columns */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Profile Card with Purple Gradient Header */}
+              {/* Profile Card with Indigo Header */}
               <div className="bg-[#171717] rounded-lg overflow-hidden transition-card">
-                {/* Purple gradient header */}
+                {/* Indigo header - secondary color */}
                 <div 
-                  className="p-4 sm:p-6 relative"
-                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                  className="p-4 sm:p-6 relative bg-indigo-500 bg-opacity-25"
                 >
                   <button 
                     onClick={() => handleEditSection('profile')}
@@ -2014,6 +2013,24 @@ const ProfileNew = () => {
 
                 <div className="max-h-[800px] overflow-y-auto space-y-5 pr-2">{editingSection === 'hosting' ? (
                         <div className="space-y-4">
+                          {/* Save and Cancel Buttons at Top */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSaveHostingPreferences}
+                              disabled={saving}
+                              className="flex-1 text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                            >
+                              {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button
+                              onClick={() => setEditingSection(null)}
+                              className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
                           <div>
                         <label className="block text-sm text-gray-400 mb-2">Preferred Cities</label>
                         <input 
@@ -2021,7 +2038,7 @@ const ProfileNew = () => {
                           value={hostingForm.preferredCities.join(', ')}
                           onChange={(e) => setHostingForm({ ...hostingForm, preferredCities: e.target.value.split(',').map(c => c.trim()) })}
                           placeholder="Mumbai, Delhi, Bangalore"
-                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
                         />
                       </div>
 
@@ -2139,33 +2156,19 @@ const ProfileNew = () => {
                         </div>
                       )}
 
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Niche Community Description</label>
-                        <textarea 
-                          value={hostingForm.nicheCommunityDescription}
-                          onChange={(e) => setHostingForm({ ...hostingForm, nicheCommunityDescription: e.target.value })}
-                          rows="3"
-                          placeholder="Describe your community's niche..."
-                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="flex gap-2 pt-4">
-                        <button
-                          onClick={handleSaveHostingPreferences}
-                          disabled={saving}
-                          className="flex-1 text-white px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
-                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
-                        >
-                          {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
-                        <button
-                          onClick={() => setEditingSection(null)}
-                          className="px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                      {/* Niche Community Description - Only show if Niche Community is selected */}
+                      {hostingForm.preferredAudienceTypes.includes('Niche Community') && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Niche Community Description</label>
+                          <textarea 
+                            value={hostingForm.nicheCommunityDescription}
+                            onChange={(e) => setHostingForm({ ...hostingForm, nicheCommunityDescription: e.target.value })}
+                            rows="3"
+                            placeholder="Describe your community's niche..."
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-5">
@@ -2181,8 +2184,7 @@ const ProfileNew = () => {
                               profileData.brandProfile.preferredCities).map((city, idx) => (
                               <span 
                                 key={idx} 
-                                className="px-2.5 py-1 text-white rounded-md text-xs font-medium"
-                                style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                                className="px-2.5 py-1 text-white rounded-md text-xs font-medium bg-indigo-500 bg-opacity-25"
                               >
                                 {city}
                               </span>
@@ -2289,16 +2291,18 @@ const ProfileNew = () => {
                         )}
                       </div>
 
-                      {/* Niche Description */}
-                      {(isCommunityOrganizer || isBrandSponsor) && (
+                      {/* Niche Community Description - Show only if Niche Community is in preferred audience types */}
+                      {((isCommunityOrganizer && profileData.communityProfile?.preferredAudienceTypes?.includes('Niche Community') && profileData.communityProfile?.nicheCommunityDescription) ||
+                        (isVenue && profileData.venueProfile?.preferredAudienceTypes?.includes('Niche Community') && profileData.venueProfile?.nicheCommunityDescription) ||
+                        (isBrandSponsor && profileData.brandProfile?.preferredAudienceTypes?.includes('Niche Community') && profileData.brandProfile?.nicheCommunityDescription)) && (
                         <div>
-                          <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">
-                            {isCommunityOrganizer ? 'Niche Community:' : 'Niche Community'}
-                          </p>
+                          <p className="text-xs text-gray-500 uppercase font-semibold mb-2 tracking-wide">Niche Community</p>
                           <p className="text-gray-300 text-xs leading-relaxed">
                             {isCommunityOrganizer 
-                              ? (profileData.communityProfile?.nicheCommunityDescription || <span className="text-gray-500 italic">Not specified</span>)
-                              : (profileData.brandProfile?.nicheCommunityDescription || <span className="text-gray-500 italic">Not specified</span>)
+                              ? profileData.communityProfile?.nicheCommunityDescription
+                              : isVenue
+                              ? profileData.venueProfile?.nicheCommunityDescription
+                              : profileData.brandProfile?.nicheCommunityDescription
                             }
                           </p>
                         </div>

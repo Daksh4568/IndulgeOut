@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
+import LoginPromptModal from '../components/LoginPromptModal';
 import { ArrowLeft, Users, Ticket, CreditCard, CheckCircle2, UserPlus, X } from 'lucide-react';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const BillingPage = () => {
   const { eventId } = useParams();
@@ -30,14 +32,26 @@ const BillingPage = () => {
   const [questionnaireResponses, setQuestionnaireResponses] = useState([]);
   const [questionnaireAnswered, setQuestionnaireAnswered] = useState(false);
 
+  // Login prompt modal
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // Check if user is registered
+  const [isRegistered, setIsRegistered] = useState(false);
+
   useEffect(() => {
-    if (!user) {
-      toast.error('Please login to continue');
-      navigate('/login');
-      return;
-    }
+    // Allow non-logged-in users to view billing page and select tickets
     fetchEventDetails();
-  }, [eventId, user]);
+  }, [eventId]);
+
+  useEffect(() => {
+    // Check if user is already registered for this event
+    if (user && event) {
+      const userIsRegistered = event.participants?.some(
+        (participant) => participant.user === user.id || participant.user?._id === user.id
+      );
+      setIsRegistered(userIsRegistered);
+    }
+  }, [user, event]);
 
   const fetchEventDetails = async () => {
     try {
@@ -48,12 +62,39 @@ const BillingPage = () => {
       console.log('📊 Grouping Offers:', eventData.groupingOffers);
       setEvent(eventData);
 
-      // Set default selection
-      if (eventData.groupingOffers?.enabled && eventData.groupingOffers.tiers.length > 0) {
-        // Find first valid tier (people > 0)
-        const firstValidTier = eventData.groupingOffers.tiers.find(tier => tier.people > 0);
-        if (firstValidTier) {
-          setSelectedTier(firstValidTier);
+      // Check if there's saved ticket selection data (user returning after signup)
+      const savedTicketData = sessionStorage.getItem('ticketSelection');
+      
+      if (savedTicketData) {
+        const ticketData = JSON.parse(savedTicketData);
+        console.log('🎫 Restoring saved ticket selection:', ticketData);
+        
+        // Restore tier selection by matching people count
+        if (ticketData.selectedTierPeople && eventData.groupingOffers?.enabled) {
+          const matchingTier = eventData.groupingOffers.tiers.find(
+            tier => tier.people === ticketData.selectedTierPeople
+          );
+          if (matchingTier) {
+            setSelectedTier(matchingTier);
+            console.log('✅ Restored tier:', matchingTier);
+          }
+        }
+        
+        // Restore other selections
+        if (ticketData.quantity) setQuantity(ticketData.quantity);
+        if (ticketData.addAnotherPerson) setAddAnotherPerson(ticketData.addAnotherPerson);
+        if (ticketData.additionalPerson) setAdditionalPerson(ticketData.additionalPerson);
+        
+        // Clear the saved data
+        sessionStorage.removeItem('ticketSelection');
+      } else {
+        // Set default selection only if no saved data
+        if (eventData.groupingOffers?.enabled && eventData.groupingOffers.tiers.length > 0) {
+          // Find first valid tier (people > 0)
+          const firstValidTier = eventData.groupingOffers.tiers.find(tier => tier.people > 0);
+          if (firstValidTier) {
+            setSelectedTier(firstValidTier);
+          }
         }
       }
     } catch (error) {
@@ -110,6 +151,23 @@ const BillingPage = () => {
   };
 
   const handleProceedToPayment = async () => {
+    // Check if user is logged in
+    if (!user) {
+      // Store current URL for redirect after signup
+      sessionStorage.setItem('redirectAfterSignup', window.location.pathname);
+      // Store ticket selection data (store tier identifier, not the object)
+      const ticketData = {
+        selectedTierPeople: selectedTier?.people, // Store people count as identifier
+        quantity,
+        addAnotherPerson,
+        additionalPerson
+      };
+      console.log('💾 Saving ticket selection:', ticketData);
+      sessionStorage.setItem('ticketSelection', JSON.stringify(ticketData));
+      setShowLoginPrompt(true);
+      return;
+    }
+
     try {
       // Check if questionnaire needs to be answered first
       if (event?.questionnaire?.enabled && event.questionnaire.questions?.length > 0 && !questionnaireAnswered) {
@@ -292,16 +350,35 @@ const BillingPage = () => {
                   <h4 className="text-lg font-semibold text-white mb-2">{event.title}</h4>
                   <p className="text-gray-400 text-sm">
                     {formatDate(event.date)} | {event.startTime && event.endTime 
-                      ? `${event.startTime} - ${event.endTime}` 
+                      ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` 
                       : event.time}
                   </p>
                   <p className="text-gray-400 text-sm mt-1">{event.location?.city}</p>
                 </div>
               </div>
 
-              {/* Ticket Selection */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-white mb-4">Choose your Ticket</h4>
+              {isRegistered ? (
+                /* Already Registered Message */
+                <div className="bg-green-500/10 border border-green-500 rounded-xl p-6 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                  <h4 className="text-xl font-bold text-white mb-2">You're Already Registered!</h4>
+                  <p className="text-gray-300 mb-4">
+                    You have successfully registered for this event. Your ticket has been sent to your email.
+                  </p>
+                  <button
+                    onClick={() => navigate('/user/dashboard')}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                  >
+                    <Ticket className="h-5 w-5" />
+                    View Your Ticket
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Ticket Selection */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-white mb-4">Choose your Ticket</h4>
 
                 {event.groupingOffers?.enabled && event.groupingOffers.tiers?.some(tier => tier.people > 0) ? (
                   // Show grouping offers
@@ -422,7 +499,7 @@ const BillingPage = () => {
               </div>
 
               {/* Questionnaire Responses Display */}
-              {questionnaireAnswered && questionnaireResponses.length > 0 && (
+              {!isRegistered && questionnaireAnswered && questionnaireResponses.length > 0 && (
                 <div className="mt-6">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-green-400" />
@@ -440,13 +517,40 @@ const BillingPage = () => {
                   </div>
                 </div>
               )}
+              </>
+              )}
             </div>
           </div>
 
           {/* Right Side - Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800 sticky top-24">
-              <h3 className="text-xl font-bold text-white mb-6">Order Summary</h3>
+              {isRegistered ? (
+                <>
+                  <h3 className="text-xl font-bold text-white mb-6">Registration Confirmed</h3>
+                  
+                  <div className="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                    <CheckCircle2 className="h-10 w-10 text-green-400 mx-auto mb-3" />
+                    <p className="text-white text-center font-semibold mb-2">You're all set!</p>
+                    <p className="text-gray-300 text-sm text-center">
+                      Your ticket has been sent to your email
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => navigate('/user/dashboard')}
+                    className="w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center space-x-2"
+                    style={{
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    }}
+                  >
+                    <Ticket className="h-5 w-5" />
+                    <span>View Your Ticket</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold text-white mb-6">Order Summary</h3>
 
               {/* Ticket Info */}
               <div className="space-y-4 mb-6">
@@ -508,12 +612,15 @@ const BillingPage = () => {
                 )}
               </button>
 
-              {spotsLeft > 0 && spotsLeft <= 10 && (
+              {!isRegistered && spotsLeft > 0 && spotsLeft <= 10 && (
                 <div className="mt-4 flex items-center justify-center space-x-2 text-green-400">
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="text-sm">{spotsLeft} spots available</span>
                 </div>
               )}
+              </>
+              )}
+
             </div>
           </div>
         </div>
@@ -586,6 +693,14 @@ const BillingPage = () => {
           </div>
         </div>
       )}
+
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        eventTitle={event?.title}
+        message="Sign in to book your tickets"
+      />
     </div>
   );
 };

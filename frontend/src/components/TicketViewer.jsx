@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, MapPin, Calendar, Clock, Ticket as TicketIcon, QrCode } from 'lucide-react';
 import { api } from '../config/api';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const TicketViewer = ({ ticketId, eventId, onClose }) => {
   const [ticket, setTicket] = useState(null);
@@ -46,6 +47,17 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
 
   const handleDownload = () => {
     if (!ticket) return;
+
+    // Convert times to 12-hour format
+    const formatTime = (time) => {
+      if (!time) return '';
+      if (time.includes('AM') || time.includes('PM')) return time;
+      return convert24To12Hour(time);
+    };
+
+    const startTime = formatTime(ticket.event.startTime);
+    const endTime = formatTime(ticket.event.endTime);
+    const timeDisplay = endTime ? `${startTime} - ${endTime}` : startTime;
 
     // Create a printable version of the ticket
     const printWindow = window.open('', '_blank');
@@ -126,7 +138,7 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
           <div class="event-info">
             <h2 class="event-title">${ticket.event.title}</h2>
             <div class="info-row"><strong>📅 Date:</strong> ${new Date(ticket.event.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div class="info-row"><strong>🕒 Time:</strong> ${ticket.event.startTime}${ticket.event.endTime ? ` - ${ticket.event.endTime}` : ''}</div>
+            <div class="info-row"><strong>🕒 Time:</strong> ${timeDisplay}</div>
             <div class="info-row"><strong>📍 Location:</strong> ${ticket.event.location.address}, ${ticket.event.location.city}</div>
             <div class="info-row"><strong>💵 Price:</strong> ₹${ticket.price.amount.toLocaleString('en-IN')}</div>
           </div>
@@ -270,8 +282,12 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Time</p>
               </div>
               <p className="text-white text-sm ml-6">
-                {ticket.event.startTime}
-                {ticket.event.endTime && ` - ${ticket.event.endTime}`}
+                {ticket.event.startTime && (ticket.event.startTime.includes('AM') || ticket.event.startTime.includes('PM')) 
+                  ? ticket.event.startTime 
+                  : convert24To12Hour(ticket.event.startTime)}
+                {ticket.event.endTime && ` - ${ticket.event.endTime && (ticket.event.endTime.includes('AM') || ticket.event.endTime.includes('PM')) 
+                  ? ticket.event.endTime 
+                  : convert24To12Hour(ticket.event.endTime)}`}
               </p>
             </div>
 

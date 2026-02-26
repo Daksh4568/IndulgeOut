@@ -173,6 +173,10 @@ const HostSignup = () => {
       // Refresh auth context
       await refreshUser();
 
+      // Clear any stored redirect URLs (in case user came from billing page)
+      sessionStorage.removeItem('redirectAfterSignup');
+      sessionStorage.removeItem('ticketSelection');
+
       // Redirect to organizer dashboard
       navigate("/organizer/dashboard");
     } catch (err) {

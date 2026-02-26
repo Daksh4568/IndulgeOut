@@ -48,7 +48,7 @@ const LoginPromptModal = ({ isOpen, onClose, eventTitle, message }) => {
 
             {/* Create Account Button */}
             <Link
-              to="/register"
+              to="/signup"
               onClick={onClose}
               className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-full transition-all"
             >

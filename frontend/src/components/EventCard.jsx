@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
   const [isFavorited, setIsFavorited] = useState(isSaved);
@@ -32,6 +33,11 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
   };
 
   const formatTime = (timeString) => {
+    if (!timeString) return '';
+    // Convert to 12-hour format if it's in 24-hour format
+    if (!timeString.includes('AM') && !timeString.includes('PM')) {
+      return convert24To12Hour(timeString);
+    }
     return timeString;
   };
 
@@ -136,7 +142,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
           <div className="flex items-center gap-2 text-gray-300">
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
             <span className="text-xs sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              {formatDate(event.date)} • {event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : formatTime(event.time)}
+              {formatDate(event.date)} • {event.startTime && event.endTime ? `${formatTime(event.startTime)} - ${formatTime(event.endTime)}` : formatTime(event.time)}
             </span>
           </div>
 

@@ -13,6 +13,7 @@ import NavigationBar from '../components/NavigationBar';
 import ShareModal from '../components/ShareModal';
 import { api } from '../config/api';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const CommunityOrganizerDashboard = () => {
   const navigate = useNavigate();
@@ -471,7 +472,7 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
+                            <span>{event.startTime && event.endTime ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` : event.time || '7:00 PM - 10:00 PM'}</span>
                           </div>
                         </div>
 
@@ -614,7 +615,7 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
+                            <span>{event.startTime && event.endTime ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` : event.time || '7:00 PM - 10:00 PM'}</span>
                           </div>
                         </div>
 
@@ -774,7 +775,7 @@ const CommunityOrganizerDashboard = () => {
                         </div>
                         <div className="flex items-center text-sm text-gray-400">
                           <Clock className="h-4 w-4 mr-2" />
-                          <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
+                          <span>{event.startTime && event.endTime ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` : event.time || '7:00 PM - 10:00 PM'}</span>
                         </div>
                       </div>
 
@@ -918,7 +919,7 @@ const CommunityOrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-400">
                             <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || '7:00 PM - 10:00 PM'}</span>
+                            <span>{event.startTime && event.endTime ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` : event.time || '7:00 PM - 10:00 PM'}</span>
                           </div>
                         </div>
 

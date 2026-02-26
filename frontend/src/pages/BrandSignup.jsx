@@ -109,6 +109,9 @@ const BrandSignup = () => {
       localStorage.setItem("user", JSON.stringify(response.data.user));
       // Refresh auth context to update navbar
       await refreshUser();
+      // Clear any stored redirect URLs (in case user came from billing page)
+      sessionStorage.removeItem('redirectAfterSignup');
+      sessionStorage.removeItem('ticketSelection');
       // Redirect to brand dashboard
       navigate("/brand/dashboard");
     } catch (err) {

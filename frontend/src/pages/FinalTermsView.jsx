@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import { ArrowLeft, Check, Download, FileText, Calendar, DollarSign } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const FinalTermsView = () => {
   const { id } = useParams();
@@ -47,7 +48,7 @@ const FinalTermsView = () => {
     });
 
     const timeStr = eventDate.startTime && eventDate.endTime
-      ? ` | ${eventDate.startTime} - ${eventDate.endTime}`
+      ? ` | ${convert24To12Hour(eventDate.startTime)} - ${convert24To12Hour(eventDate.endTime)}`
       : '';
 
     return `${dateStr}${timeStr}`;

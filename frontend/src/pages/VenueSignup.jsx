@@ -137,6 +137,9 @@ const VenueSignup = () => {
       localStorage.setItem("user", JSON.stringify(response.data.user));
       // Refresh auth context to update navbar
       await refreshUser();
+      // Clear any stored redirect URLs (in case user came from billing page)
+      sessionStorage.removeItem('redirectAfterSignup');
+      sessionStorage.removeItem('ticketSelection');
       // Redirect to venue dashboard
       navigate("/venue/dashboard");
     } catch (err) {

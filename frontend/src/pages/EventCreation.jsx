@@ -15,6 +15,7 @@ import {
   Search,
 } from "lucide-react";
 import NavigationBar from "../components/NavigationBar";
+import TimeInput from "../components/TimeInput";
 import { api, API_URL } from "../config/api.js";
 import { useAuth } from "../contexts/AuthContext";
 import { ToastContext } from "../App";
@@ -1014,6 +1015,19 @@ const EventCreation = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate images are uploaded
+    if (uploadedImages.length === 0) {
+      toast.error("Please upload at least one image for your event");
+      return;
+    }
+    
+    // Validate categories are selected
+    if (formData.categories.length === 0) {
+      toast.error("Please select at least one category");
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -1043,20 +1057,29 @@ const EventCreation = () => {
         response = await api.put(`/events/${eventId}`, eventData);
         console.log("Event updated successfully:", response.data);
         toast.success("Event updated successfully!");
+        
+        // Small delay to ensure toast is visible before navigation
+        setTimeout(() => {
+          navigate("/organizer/dashboard");
+        }, 500);
       } else {
         // Create new event
         response = await api.post("/events", eventData);
         console.log("Event created successfully:", response.data);
         toast.success("Event created successfully!");
+        
+        // Small delay to ensure toast is visible before navigation
+        setTimeout(() => {
+          navigate("/organizer/dashboard");
+        }, 500);
       }
-
-      // Navigate back to dashboard
-      navigate("/organizer/dashboard");
     } catch (error) {
       console.error(
         `Failed to ${isEditMode ? "update" : "create"} event:`,
         error,
       );
+      console.error("Error details:", error.response?.data || error.message);
+      
       if (error.response) {
         // Server responded with error status
         const errorMessage =
@@ -1071,9 +1094,15 @@ const EventCreation = () => {
         } else {
           toast.error(errorMessage);
         }
-      } else {
+      } else if (error.request) {
+        // Request was made but no response received
         toast.error(
-          "Network error. Please check if the backend server is running.",
+          "No response from server. Please check if the backend is running.",
+        );
+      } else {
+        // Something else went wrong
+        toast.error(
+          error.message || "An unexpected error occurred. Please try again.",
         );
       }
     } finally {
@@ -1098,12 +1127,12 @@ const EventCreation = () => {
       />
 
       {/* Navigation Bar */}
-      <div className="relative z-10">
+      <div className="relative z-50">
         <NavigationBar />
       </div>
 
       {/* Form Container */}
-      <div className="relative z-10 flex items-center justify-center px-4 py-8 min-h-[calc(100vh-80px)]">
+      <div className="relative z-0 flex items-center justify-center px-4 py-8 min-h-[calc(100vh-80px)]">
         {/* Glass Morphism Card */}
         <div
           className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
@@ -1185,7 +1214,7 @@ const EventCreation = () => {
                 </button>
 
                 {showCategoryDropdown && (
-                  <div className="absolute z-50 mt-2 w-full bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                  <div className="absolute z-40 mt-2 w-full bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                     <div className="p-4 space-y-2">
                       {EVENT_CATEGORIES.map((category) => (
                         <label
@@ -1248,32 +1277,20 @@ const EventCreation = () => {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white text-sm font-medium mb-2">
-                      Start Time <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="time"
-                      name="startTime"
-                      value={formData.startTime}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white text-sm font-medium mb-2">
-                      End Time <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="time"
-                      name="endTime"
-                      value={formData.endTime}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                      required
-                    />
-                  </div>
+                  <TimeInput
+                    name="startTime"
+                    value={formData.startTime}
+                    onChange={handleInputChange}
+                    label="Start Time"
+                    required
+                  />
+                  <TimeInput
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleInputChange}
+                    label="End Time"
+                    required
+                  />
                 </div>
               </div>
 
@@ -1315,7 +1332,7 @@ const EventCreation = () => {
 
                   {showLocationSuggestions &&
                     locationSuggestions.length > 0 && (
-                      <div className="absolute z-50 w-full mt-2 bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                      <div className="absolute z-40 w-full mt-2 bg-zinc-900 border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                         {locationSuggestions.map((suggestion, index) => (
                           <button
                             key={suggestion.place_id || index}

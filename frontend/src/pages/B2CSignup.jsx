@@ -58,8 +58,15 @@ const B2CSignup = () => {
       // Refresh auth context to update navbar
       await refreshUser();
 
-      // Redirect to Explore page so users can browse and register for events
-      navigate("/explore");
+      // Check if there's a redirect URL stored (e.g., from billing page)
+      const redirectUrl = sessionStorage.getItem('redirectAfterSignup');
+      if (redirectUrl) {
+        sessionStorage.removeItem('redirectAfterSignup');
+        navigate(redirectUrl);
+      } else {
+        // Redirect to Explore page so users can browse and register for events
+        navigate("/explore");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to register");
     } finally {

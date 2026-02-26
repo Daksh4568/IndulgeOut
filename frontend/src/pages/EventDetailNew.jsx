@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { convert24To12Hour } from '../utils/timeUtils';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -392,7 +393,7 @@ const EventDetail = () => {
               <Clock className="h-5 w-5 text-indigo-400 flex-shrink-0" />
               <p className="text-sm font-medium text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                 {event.startTime && event.endTime 
-                  ? `${event.startTime} - ${event.endTime}` 
+                  ? `${convert24To12Hour(event.startTime || event.startTime)} - ${convert24To12Hour(event.endTime || event.endTime)}` 
                   : event.time || '08:00'}
               </p>
             </div>
@@ -607,24 +608,28 @@ const EventDetail = () => {
           {/* Left Column - Banner + All Content Sections */}
           <div className="md:col-span-2 space-y-8">
             {/* Banner Image */}
-            <div className="relative w-full h-[500px] rounded-2xl overflow-hidden bg-black">
+            <div className="relative w-full h-[500px] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-black">
               {event.images && event.images.length > 0 ? (
                 <>
-                  {/* Blurred background layer */}
-                  <div className="absolute inset-0 -z-10">
+                  {/* Blurred background layer - subtle */}
+                  <div className="absolute inset-0">
                     <img
                       src={getOptimizedCloudinaryUrl(event.images[0])}
                       alt=""
-                      className="w-full h-full object-cover blur-3xl scale-110"
-                      style={{ opacity: 0.3 }}
+                      className="w-full h-full object-cover blur-3xl scale-125"
+                    />
+                    {/* Gradient overlay for depth */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/40"></div>
+                  </div>
+                  {/* Main image - centered, showing at least 80% of photo */}
+                  <div className="relative w-full h-full flex items-center justify-center z-10 px-4">
+                    <img
+                      src={getOptimizedCloudinaryUrl(event.images[0])}
+                      alt={event.title}
+                      className="max-w-full max-h-full object-contain"
+                      style={{ maxWidth: '95%', maxHeight: '95%' }}
                     />
                   </div>
-                  {/* Main image */}
-                  <img
-                    src={getOptimizedCloudinaryUrl(event.images[0])}
-                    alt={event.title}
-                    className="relative w-full h-full object-cover"
-                  />
                 </>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center">
@@ -1046,7 +1051,7 @@ const EventDetail = () => {
                         style={{ fontFamily: 'Source Serif Pro, serif' }}
                       >
                         {event.startTime && event.endTime 
-                          ? `${event.startTime} - ${event.endTime}` 
+                          ? `${convert24To12Hour(event.startTime || event.startTime)} - ${convert24To12Hour(event.endTime || event.endTime)}` 
                           : event.time || '08:00'}
                       </p>
                     </div>
