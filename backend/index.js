@@ -83,17 +83,19 @@ app.options('*', cors(corsOptions));
 app.use(compression());
 
 // Body parser with size limits to prevent DoS attacks
-// ⚠️ IMPORTANT: Skip JSON parsing for webhook endpoint (needs raw body for signature verification)
+// ⚠️ IMPORTANT: Webhook endpoint needs raw body for signature verification
+// Apply raw body parser ONLY to webhook, skip express.json for that route
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
+// Apply JSON parser to all OTHER routes
 app.use((req, res, next) => {
   if (req.path === '/api/payments/webhook') {
-    // Keep raw body for webhook signature verification
-    express.raw({ type: 'application/json' })(req, res, next);
-  } else {
-    next();
+    // Skip JSON parsing for webhook - already handled by raw parser above
+    return next();
   }
+  express.json({ limit: '10mb' })(req, res, next);
 });
 
-app.use(express.json({ limit: '10mb' })); // Limit JSON payloads to 10MB
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request timeout middleware - prevent hanging requests

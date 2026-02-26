@@ -747,7 +747,7 @@ const EventAnalytics = () => {
           </div>
 
           {/* Attendees Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             {filteredAttendees.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-16 w-16 text-gray-600 mx-auto mb-4" />

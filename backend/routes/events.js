@@ -127,9 +127,13 @@ router.get('/my-hosted', authMiddleware, async (req, res) => {
         return sum + ticketRevenue;
       }, 0);
       
-      // Convert to plain object and add revenue
+      // Calculate actual attendee count from tickets (sum of quantities)
+      const actualAttendees = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
+      
+      // Convert to plain object and add calculated fields
       const eventObj = event.toObject();
       eventObj.revenue = revenue;
+      eventObj.currentParticipants = actualAttendees; // Override with correct value
       return eventObj;
     }));
 
@@ -689,11 +693,16 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       .populate('checkInBy', 'name')
       .sort({ purchaseDate: -1 });
     
-    // Calculate total slots (sum of all quantities for actual attendee count)
-    const totalSlots = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
+    // Calculate total slots from ACTIVE tickets only (exclude cancelled)
+    // This represents the actual number of attendees/spots booked
+    const totalSlots = tickets
+      .filter(t => t.status !== 'cancelled')
+      .reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
     
-    // Calculate statistics - use totalSlots for actual attendee/booking count
-    const totalRegistered = totalSlots; // Total bookings = total spots booked
+    // Use totalSlots as the source of truth for analytics
+    const totalRegistered = totalSlots;
+    
+    // Calculate statistics from tickets for detailed breakdown
     const checkedIn = tickets.filter(t => t.status === 'checked_in').reduce((sum, t) => sum + (t.quantity || 1), 0);
     const notCheckedIn = tickets.filter(t => t.status === 'active').reduce((sum, t) => sum + (t.quantity || 1), 0);
     const cancelled = tickets.filter(t => t.status === 'cancelled').reduce((sum, t) => sum + (t.quantity || 1), 0);
@@ -733,6 +742,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         return sum + ticketRevenue;
       }, 0);
     
+    // Calculate average per attendee (divide by number of spots, not tickets sold)
     const avgPerAttendee = totalRegistered > 0 ? (totalRevenue / totalRegistered).toFixed(2) : 0;
     
     // Group revenue by ticket type
@@ -904,7 +914,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         revenueByTicketType: Object.values(revenueByType)
       },
       attendance: {
-        ticketsSold: tickets.length,
+        ticketsSold: tickets.filter(t => t.status !== 'cancelled').length,
         totalAttendees: totalRegistered,
         actualCheckIns: checkedIn,
         showUpRate: parseFloat(showUpRate),

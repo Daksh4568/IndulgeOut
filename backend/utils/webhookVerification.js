@@ -59,6 +59,10 @@ function verifyCashfreeWebhook(payload, signature, timestamp) {
     // Create signature payload: timestamp.rawBody
     const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
     const signedPayload = `${receivedTimestamp}.${payloadString}`;
+    
+    // Debug logging (show first 100 chars)
+    console.log('🔍 [DEBUG] Payload type:', typeof payload);
+    console.log('🔍 [DEBUG] Signed payload preview:', signedPayload.substring(0, 100) + '...');
 
     // Compute expected signature using HMAC-SHA256
     const expectedSignature = crypto

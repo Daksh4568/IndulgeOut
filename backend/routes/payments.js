@@ -423,20 +423,26 @@ router.post('/webhook', async (req, res) => {
   let payload = null;
   
   try {
+    // Debug: Log the raw body type
+    console.log('🔍 [DEBUG] req.body type:', typeof req.body, 'isBuffer:', Buffer.isBuffer(req.body));
+    
     // Parse payload - handle both raw buffer and already-parsed object
     let rawBody;
     if (Buffer.isBuffer(req.body)) {
       // Body is raw buffer (from express.raw middleware)
-      rawBody = req.body.toString();
+      rawBody = req.body.toString('utf8');
       payload = JSON.parse(rawBody);
+      console.log('✅ [DEBUG] Using raw buffer body (correct for signature verification)');
     } else if (typeof req.body === 'object') {
       // Body already parsed by express.json() middleware
       payload = req.body;
       rawBody = JSON.stringify(payload);
+      console.warn('⚠️ [DEBUG] Body already parsed - signature verification may fail!');
     } else if (typeof req.body === 'string') {
       // Body is string
       rawBody = req.body;
       payload = JSON.parse(rawBody);
+      console.log('✅ [DEBUG] Using string body');
     } else {
       throw new Error('Invalid request body format');
     }
