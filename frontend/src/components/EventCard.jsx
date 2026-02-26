@@ -1,4 +1,4 @@
-import { MapPin, Calendar, Users, Heart, IndianRupee } from 'lucide-react';
+import { MapPin, Calendar, Heart, IndianRupee } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
@@ -145,14 +145,6 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
             <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
             <span className="text-xs sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               {event.location?.city}, {event.location?.state}
-            </span>
-          </div>
-
-          {/* Attendees */}
-          <div className="flex items-center gap-2 text-gray-300">
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              {event.currentParticipants || 0} attending
             </span>
           </div>
 

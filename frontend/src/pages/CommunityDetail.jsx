@@ -4,7 +4,6 @@ import { api } from '../config/api.js';
 import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import Footer from '../components/Footer';
-import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { 
   Users, 
   Calendar,
@@ -599,7 +598,7 @@ const CommunityDetail = () => {
                       onMouseLeave={handleMouseLeave}
                     >
                       <img 
-                        src={getOptimizedCloudinaryUrl(community.images[currentImageIndex])}
+                        src={community.images[currentImageIndex]}
                         alt={`Community Highlight ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover transition-opacity duration-300 pointer-events-none select-none"
                         draggable="false"
@@ -659,7 +658,7 @@ const CommunityDetail = () => {
                       <div className="relative h-48 bg-gray-800">
                         {event.images && event.images.length > 0 ? (
                           <img
-                            src={getOptimizedCloudinaryUrl(event.images[0])}
+                            src={event.images[0]}
                             alt={event.title}
                             className="w-full h-full object-cover"
                           />
@@ -679,11 +678,14 @@ const CommunityDetail = () => {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-400 mb-3" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                           <MapPin className="h-3 w-3" />
-                          <span className="line-clamp-1">{event.location?.city || event.location?.address || event.city || 'Venue TBD'}</span>
+                          <span className="line-clamp-1">{event.venue || 'TBD'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                             ₹{event.ticketPrice || 0} onwards
+                          </span>
+                          <span className="px-2 py-0.5 bg-green-900/30 text-green-400 rounded text-xs">
+                            {event.registrations?.length || 0} attending
                           </span>
                         </div>
                         <button 

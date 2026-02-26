@@ -46,7 +46,7 @@ const EventDetail = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [openFAQ, setOpenFAQ] = useState(null);
-  const [currentHighlight, setCurrentHighlight] = useState(0);
+  const [currentHighlight, setCurrentHighlight] = useState(null);
   
   const viewTracked = useRef(false);
 
@@ -301,53 +301,7 @@ const EventDetail = () => {
     <div className="min-h-screen bg-black">
       <NavigationBar />
 
-      {/* Banner Section - Desktop (landscape) */}
-      <div className="hidden md:block relative w-full h-[600px] overflow-hidden bg-black">
-        {event.images && event.images.length > 0 ? (
-          <>
-            {/* Blurred background layer */}
-            <div className="absolute inset-0 -z-10">
-              <img
-                src={getOptimizedCloudinaryUrl(event.images[0])}
-                alt=""
-                className="w-full h-full object-cover blur-3xl scale-110"
-                style={{ opacity: 0.3 }}
-              />
-            </div>
-            {/* Main image - contains to show full photo */}
-            <img
-              src={getOptimizedCloudinaryUrl(event.images[0])}
-              alt={event.title}
-              className="relative w-full h-full object-contain"
-              style={{ maxHeight: '600px' }}
-            />
-          </>
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center">
-            <div className="text-8xl">{getCategoryIcon(event.categories?.[0])}</div>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-        
-        {/* Banner Text Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-12">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="bg-indigo-600 px-3 py-1 rounded-full text-sm font-medium text-white">
-                {event.categories?.[0] || 'Event'}
-              </span>
-            </div>
-            <h1 
-              className="text-5xl font-bold text-white mb-4"
-              style={{ fontFamily: 'Oswald, sans-serif' }}
-            >
-              {event.title}
-            </h1>
-          </div>
-        </div>
-      </div>
-
-      {/* Banner Section - Mobile (portrait with blur) */}
+      {/* Banner Section - Mobile (portrait with blur) - Keep for mobile */}
       <div className="block md:hidden relative w-full h-[65vh] overflow-hidden bg-black">
         {event.images && event.images.length > 0 ? (
           <>
@@ -375,52 +329,359 @@ const EventDetail = () => {
             <div className="text-8xl">{getCategoryIcon(event.categories?.[0])}</div>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
         
-        {/* Banner Text Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="bg-indigo-600 px-3 py-1 rounded-full text-xs font-medium text-white">
-              {event.categories?.[0] || 'Event'}
-            </span>
-          </div>
-          <h1 
-            className="text-2xl font-bold text-white leading-tight"
-            style={{ fontFamily: 'Oswald, sans-serif' }}
+        {/* Save and Share Buttons - Glass Effect */}
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-20 pointer-events-auto">
+          <button 
+            onClick={handleSaveEvent}
+            disabled={isSaving}
+            className={`p-2 rounded-full backdrop-blur-md transition-all ${
+              isSaved 
+                ? 'bg-white/20 text-red-500 border border-white/30' 
+                : 'bg-black/20 text-white border border-white/20 hover:bg-white/30'
+            } disabled:opacity-50`}
           >
-            {event.title}
-          </h1>
+            <Heart className={`h-3.5 w-3.5 ${isSaved ? 'fill-current' : ''}`} />
+          </button>
+          <button 
+            onClick={handleShare}
+            className="p-2 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Main Content - Two Column Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-56 lg:pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+        
+        {/* ========== MOBILE CONTENT ========== */}
+        <div className="md:hidden space-y-6">
           
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          {/* Event Name & Category */}
+          <div>
+            <h1 
+              className="text-2xl font-bold text-white leading-tight mb-3"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              {event.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              {event.categories?.map((cat, idx) => (
+                <span key={idx} className="bg-indigo-600/20 border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-medium text-indigo-300">
+                  {cat}
+                </span>
+              )) || (
+                <span className="bg-indigo-600/20 border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-medium text-indigo-300">
+                  Event
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Date, Time, Location */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                {formatDate(event.date)}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                {event.startTime && event.endTime 
+                  ? `${event.startTime} - ${event.endTime}` 
+                  : event.time || '08:00'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <MapPin className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                {event.venue 
+                  ? event.venue 
+                  : typeof event.location === 'string' 
+                    ? (() => {
+                        const parts = event.location.split(',').map(s => s.trim());
+                        return parts[0] || 'Location TBA';
+                      })()
+                    : event.location?.address 
+                      ? event.location.address.split(',')[0].trim()
+                      : event.location?.city || 'Location TBA'}
+              </p>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <hr className="border-gray-800" />
+
+          {/* About the Event */}
+          <section>
+            <h2 
+              className="text-xl font-bold text-white mb-3"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              About the Event
+            </h2>
+            <div className="text-gray-300 text-sm leading-relaxed" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              {(() => {
+                const desc = event.description || '';
+                if (!desc) return <p>Details coming soon.</p>;
+                
+                // Split by double newlines for paragraphs, then handle single newlines
+                const paragraphs = desc.split(/\n\s*\n/).filter(p => p.trim());
+                const visibleParagraphs = showMore ? paragraphs : paragraphs.slice(0, 1);
+                
+                return visibleParagraphs.map((paragraph, idx) => (
+                  <div key={idx} className={idx < visibleParagraphs.length - 1 ? 'mb-4' : ''}>
+                    {paragraph.split('\n').map((line, lineIdx) => (
+                      <React.Fragment key={lineIdx}>
+                        {line.trim()}
+                        {lineIdx < paragraph.split('\n').length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                ));
+              })()}
+              {event.description && event.description.length > 200 && (
+                <button
+                  onClick={() => setShowMore(!showMore)}
+                  className="text-indigo-400 hover:text-indigo-300 mt-3 flex items-center gap-1 text-sm font-medium"
+                >
+                  {showMore ? 'Show less' : 'Show more'}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </div>
+          </section>
+
+          {/* Host */}
+          <section>
+            <h2 
+              className="text-lg font-bold text-white mb-2"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              Host
+            </h2>
+            <div className="flex items-center gap-3 bg-zinc-900 rounded-xl px-3 py-2.5 border border-gray-800">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                {event.host?.profilePicture ? (
+                  <img 
+                    src={event.host.profilePicture} 
+                    alt={event.host.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm text-white font-bold">
+                    {event.host?.name?.charAt(0) || 'H'}
+                  </span>
+                )}
+              </div>
+              <h3 
+                className="text-sm font-bold text-white"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                {event.host?.name || 'Event Organizer'}
+              </h3>
+            </div>
+          </section>
+
+          {/* Venue */}
+          <section>
+            <h2 
+              className="text-xl font-bold text-white mb-3"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              Venue
+            </h2>
+            <div className="bg-zinc-900 rounded-xl p-4 border border-gray-800">
+              <div className="flex items-start gap-3 mb-3">
+                <MapPin className="h-5 w-5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 
+                    className="text-base font-bold text-white mb-1"
+                    style={{ fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    {event.venue || 'Event Venue'}
+                  </h3>
+                  <p 
+                    className="text-gray-400 text-sm leading-relaxed"
+                    style={{ fontFamily: 'Source Serif Pro, serif' }}
+                  >
+                    {typeof event.location === 'string' 
+                      ? event.location 
+                      : (() => {
+                          const loc = event.location;
+                          if (!loc) return 'Venue address not available';
+                          if (loc.address) return loc.address;
+                          const parts = [loc.city, loc.state, loc.zipCode].filter(Boolean);
+                          return parts.length > 0 ? parts.join(', ') : 'Venue address not available';
+                        })()}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const address = typeof event.location === 'string' 
+                    ? event.location 
+                    : event.location?.address || event.location?.city || '';
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors border border-gray-700"
+              >
+                <Navigation className="h-4 w-4" />
+                <span className="text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                  Get Directions
+                </span>
+              </button>
+            </div>
+          </section>
+
+          {/* Highlights Grid */}
+          {highlights.length > 0 && (
+            <section>
+              <h2 
+                className="text-xl font-bold text-white mb-3"
+                style={{ fontFamily: 'Oswald, sans-serif' }}
+              >
+                Highlights
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                {highlights.map((image, index) => (
+                  <div 
+                    key={index}
+                    onClick={() => setCurrentHighlight(index)}
+                    className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group"
+                  >
+                    <img
+                      src={getOptimizedCloudinaryUrl(image)}
+                      alt={`Highlight ${index + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Terms and Conditions */}
+          <section>
+            <div className="bg-zinc-900 rounded-xl border border-gray-800">
+              <button
+                onClick={() => setOpenFAQ(openFAQ === 'terms' ? null : 'terms')}
+                className="w-full px-5 py-4 flex items-center justify-between text-left"
+              >
+                <span 
+                  className="font-semibold text-base text-white"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  Terms And Conditions
+                </span>
+                <ChevronDown 
+                  className={`h-5 w-5 text-gray-400 transition-transform ${
+                    openFAQ === 'terms' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {openFAQ === 'terms' && (
+                <div 
+                  className="px-5 pb-4 text-gray-400 leading-relaxed space-y-2 text-sm"
+                  style={{ fontFamily: 'Source Serif Pro, serif' }}
+                >
+                  <p>1. All registrations are subject to availability and confirmation.</p>
+                  <p>2. Tickets once booked cannot be cancelled or refunded.</p>
+                  <p>3. Entry is subject to valid ticket and photo ID verification.</p>
+                  <p>4. Organizers reserve the right to deny entry without refund.</p>
+                  <p>5. Participants are expected to maintain decorum and respect fellow attendees.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* ========== DESKTOP CONTENT ========== */}
+        {/* Desktop: Two Column Layout - Content Left, Sticky Card Right */}
+        <div className="hidden md:grid md:grid-cols-3 md:gap-8">
+          {/* Left Column - Banner + All Content Sections */}
+          <div className="md:col-span-2 space-y-8">
+            {/* Banner Image */}
+            <div className="relative w-full h-[500px] rounded-2xl overflow-hidden bg-black">
+              {event.images && event.images.length > 0 ? (
+                <>
+                  {/* Blurred background layer */}
+                  <div className="absolute inset-0 -z-10">
+                    <img
+                      src={getOptimizedCloudinaryUrl(event.images[0])}
+                      alt=""
+                      className="w-full h-full object-cover blur-3xl scale-110"
+                      style={{ opacity: 0.3 }}
+                    />
+                  </div>
+                  {/* Main image */}
+                  <img
+                    src={getOptimizedCloudinaryUrl(event.images[0])}
+                    alt={event.title}
+                    className="relative w-full h-full object-cover"
+                  />
+                </>
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center">
+                  <div className="text-8xl">{getCategoryIcon(event.categories?.[0])}</div>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+              
+              {/* Save and Share Buttons - Glass Effect */}
+              <div className="absolute top-6 right-6 flex items-center gap-3">
+                <button 
+                  onClick={handleSaveEvent}
+                  disabled={isSaving}
+                  className={`p-2.5 rounded-full backdrop-blur-md transition-all ${
+                    isSaved 
+                      ? 'bg-white/20 text-red-500 border border-white/30' 
+                      : 'bg-black/20 text-white border border-white/20 hover:bg-white/30'
+                  } disabled:opacity-50`}
+                >
+                  <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                </button>
+                <button 
+                  onClick={handleShare}
+                  className="p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
             
             {/* About the Event */}
             <section>
               <h2 
-                className="text-3xl font-bold text-white mb-4"
+                className="text-2xl font-bold text-white mb-4"
                 style={{ fontFamily: 'Oswald, sans-serif' }}
               >
                 About the Event
               </h2>
-              <div className="text-gray-400">
-                {(event.description || 'Get ready to step into experiences where conversations flow naturally and connections feel effortless. From lively social mixers filled with energy, to meaningful conversations that stay with you. Mingle & Meet brings together moments that turn strangers into connections and interactions into lasting memories.')
-                  .split('\n\n')
-                  .filter(para => para.trim())
-                  .map((paragraph, idx, arr) => (
-                    <p 
-                      key={idx}
-                      className={`${showMore || idx === 0 ? '' : 'hidden'} ${idx < arr.length - 1 ? 'mb-4' : ''}`}
-                      style={{ fontFamily: 'Source Serif Pro, serif', lineHeight: '1.6' }}
-                    >
-                      {paragraph.trim()}
-                    </p>
-                  ))}
+              <div className="text-gray-400 leading-relaxed" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                {(() => {
+                  const desc = event.description || '';
+                  if (!desc) return <p>Details coming soon.</p>;
+                  
+                  const paragraphs = desc.split(/\n\s*\n/).filter(p => p.trim());
+                  const visibleParagraphs = showMore ? paragraphs : paragraphs.slice(0, 1);
+                  
+                  return visibleParagraphs.map((paragraph, idx) => (
+                    <div key={idx} className={idx < visibleParagraphs.length - 1 ? 'mb-4' : ''}>
+                      {paragraph.split('\n').map((line, lineIdx) => (
+                        <React.Fragment key={lineIdx}>
+                          {line.trim()}
+                          {lineIdx < paragraph.split('\n').length - 1 && <br />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  ));
+                })()}
                 {event.description && event.description.length > 200 && (
                   <button
                     onClick={() => setShowMore(!showMore)}
@@ -519,13 +780,13 @@ const EventDetail = () => {
             {/* Host */}
             <section>
               <h2 
-                className="text-3xl font-bold text-white mb-4"
+                className="text-xl font-bold text-white mb-3"
                 style={{ fontFamily: 'Oswald, sans-serif' }}
               >
                 Host
               </h2>
-              <div className="flex items-start gap-4 bg-zinc-900 rounded-xl p-6 border border-gray-800">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center gap-3 bg-zinc-900 rounded-xl px-4 py-3 border border-gray-800">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                   {event.host?.profilePicture ? (
                     <img 
                       src={event.host.profilePicture} 
@@ -533,38 +794,24 @@ const EventDetail = () => {
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-2xl text-white font-bold">
+                    <span className="text-lg text-white font-bold">
                       {event.host?.name?.charAt(0) || 'H'}
                     </span>
                   )}
                 </div>
-                <div>
-                  <h3 
-                    className="text-xl font-bold text-white mb-1"
-                    style={{ fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    {event.host?.name || 'Event Organizer'}
-                  </h3>
-                  <p 
-                    className="text-sm text-indigo-400 mb-2"
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    {event.host?.hostPartnerType === 'community_organizer' ? 'Musical Band' : 'Event Organizer'}
-                  </p>
-                  <p 
-                    className="text-gray-400"
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    {event.host?.bio || 'Passionate about creating memorable experiences and bringing people together.'}
-                  </p>
-                </div>
+                <h3 
+                  className="text-lg font-bold text-white"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  {event.host?.name || 'Event Organizer'}
+                </h3>
               </div>
             </section>
 
             {/* Venue */}
             <section>
               <h2 
-                className="text-3xl font-bold text-white mb-4"
+                className="text-2xl font-bold text-white mb-4"
                 style={{ fontFamily: 'Oswald, sans-serif' }}
               >
                 Venue
@@ -678,85 +925,30 @@ const EventDetail = () => {
               </div>
             </section>
 
-            {/* Highlights Carousel */}
+            {/* Highlights Grid */}
             {highlights.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 
-                    className="text-3xl font-bold text-white"
-                    style={{ fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    Highlights
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={prevHighlight}
-                      className="p-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white transition-colors"
+                <h2 
+                  className="text-2xl font-bold text-white mb-4"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  Highlights
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {highlights.map((image, index) => (
+                    <div 
+                      key={index}
+                      onClick={() => setCurrentHighlight(index)}
+                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group"
                     >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={nextHighlight}
-                      className="p-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white transition-colors"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Desktop view - landscape */}
-                <div className="hidden md:block relative rounded-2xl overflow-hidden h-[500px] bg-black">
-                  {/* Blurred background layer */}
-                  <div className="absolute inset-0 -z-10">
-                    <img
-                      src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
-                      alt=""
-                      className="w-full h-full object-cover blur-3xl scale-110"
-                      style={{ opacity: 0.3 }}
-                    />
-                  </div>
-                  {/* Main image */}
-                  <img
-                    src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
-                    alt={`Highlight ${currentHighlight + 1}`}
-                    className="relative w-full h-full object-contain"
-                  />
-                  {/* Dot indicators */}
-                  <div className="flex absolute bottom-4 left-1/2 transform -translate-x-1/2 gap-2">
-                    {highlights.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentHighlight(index)}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                          index === currentHighlight 
-                            ? 'bg-white w-8' 
-                            : 'bg-white/50'
-                        }`}
+                      <img
+                        src={getOptimizedCloudinaryUrl(image)}
+                        alt={`Highlight ${index + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mobile view - portrait with blur */}
-                <div className="block md:hidden relative rounded-2xl overflow-hidden h-[55vh] bg-black">
-                  {/* Blurred background layer */}
-                  <div className="absolute inset-0 -z-10">
-                    <img
-                      src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
-                      alt=""
-                      className="w-full h-full object-cover blur-3xl scale-125"
-                      style={{ opacity: 0.4 }}
-                    />
-                  </div>
-                  {/* Sharp foreground image */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <img
-                      src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
-                      alt={`Highlight ${currentHighlight + 1}`}
-                      className="w-full h-full object-contain max-h-full"
-                      style={{ objectFit: 'contain' }}
-                    />
-                  </div>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
@@ -799,282 +991,205 @@ const EventDetail = () => {
           </div>
 
           {/* Right Column - Sticky Event Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-xl lg:sticky lg:top-24 border border-gray-200 dark:border-gray-800">
-              
-              {/* Host Profile Small */}
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  {event.host?.profilePicture ? (
-                    <img 
-                      src={event.host.profilePicture} 
-                      alt={event.host.name}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xl text-white font-bold">
-                      {event.host?.name?.charAt(0) || 'H'}
+          <div className="md:col-span-1">
+            <div className="sticky top-24">
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-800">
+                
+                {/* Event Name */}
+                <div className="mb-5">
+                  <h1 
+                    className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-3"
+                    style={{ fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    {event.title}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-indigo-600 px-3 py-1 rounded-full text-xs font-medium text-white">
+                      {event.categories?.[0] || 'Event'}
                     </span>
-                  )}
+                  </div>
                 </div>
-                <div>
+
+                {/* Event Details */}
+                <div className="space-y-4 mb-5 pb-5 border-b border-gray-200 dark:border-gray-800">
+                  {/* Date */}
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p 
+                        className="text-xs text-gray-500 dark:text-gray-400 mb-0.5"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        Date
+                      </p>
+                      <p 
+                        className="font-semibold text-sm text-gray-900 dark:text-white"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        {formatDate(event.date)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Time */}
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p 
+                        className="text-xs text-gray-500 dark:text-gray-400 mb-0.5"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        Time
+                      </p>
+                      <p 
+                        className="font-semibold text-sm text-gray-900 dark:text-white"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        {event.startTime && event.endTime 
+                          ? `${event.startTime} - ${event.endTime}` 
+                          : event.time || '08:00'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Venue */}
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p 
+                        className="text-xs text-gray-500 dark:text-gray-400 mb-0.5"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        Venue
+                      </p>
+                      <p 
+                        className="font-semibold text-sm text-gray-900 dark:text-white mb-1"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        {event.venue || 'Event Venue'}
+                      </p>
+                      <p 
+                        className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed"
+                        style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      >
+                        {typeof event.location === 'string' 
+                          ? (() => {
+                              const parts = event.location.split(',').map(s => s.trim());
+                              const addressParts = parts.filter(part => 
+                                !part.toLowerCase().includes('bangalore') && 
+                                !part.toLowerCase().includes('bengaluru') &&
+                                !part.toLowerCase().includes('karnataka') &&
+                                !part.toLowerCase().includes('india')
+                              ).slice(0, 3);
+                              return addressParts.length > 0 ? addressParts.join(', ') : parts.slice(0, 2).join(', ');
+                            })()
+                          : (() => {
+                              const loc = event.location;
+                              if (!loc) return 'Address details coming soon';
+                              if (loc.address) {
+                                const parts = loc.address.split(',').map(s => s.trim());
+                                const addressParts = parts.filter(part => 
+                                  !part.toLowerCase().includes('bangalore') && 
+                                  !part.toLowerCase().includes('bengaluru') &&
+                                  !part.toLowerCase().includes('karnataka') &&
+                                  !part.toLowerCase().includes('india')
+                                ).slice(0, 3);
+                                return addressParts.length > 0 ? addressParts.join(', ') : parts.slice(0, 2).join(', ');
+                              }
+                              const parts = [loc.city, loc.state].filter(Boolean);
+                              return parts.length > 0 ? parts.join(', ') : 'Address details coming soon';
+                            })()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div className="mb-5 text-center py-3 bg-gray-50 dark:bg-zinc-800 rounded-lg">
                   <p 
-                    className="text-sm text-gray-500 dark:text-gray-400"
+                    className="text-xs text-gray-500 dark:text-gray-400 mb-0.5"
                     style={{ fontFamily: 'Source Serif Pro, serif' }}
                   >
-                    Hosted by
+                    Starting from
                   </p>
-                  <p 
-                    className="font-semibold text-gray-900 dark:text-white"
-                    style={{ fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    {event.host?.name || 'Event Organizer'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Event Details */}
-              <div className="space-y-4 mb-6">
-                {/* Date */}
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <div>
+                  {(event.price?.amount === 0 || !event.price) ? (
                     <p 
-                      className="text-sm text-gray-500 dark:text-gray-400"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
+                      className="text-2xl font-bold text-green-600"
+                      style={{ fontFamily: 'Oswald, sans-serif' }}
                     >
-                      Date
+                      FREE
                     </p>
-                    <p 
-                      className="font-medium text-gray-900 dark:text-white"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      {formatDate(event.date)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Time */}
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <div>
-                    <p 
-                      className="text-sm text-gray-500 dark:text-gray-400"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      Time
-                    </p>
-                    <p 
-                      className="font-medium text-gray-900 dark:text-white"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      {event.startTime && event.endTime 
-                        ? `${event.startTime} - ${event.endTime}` 
-                        : event.time || '08:00'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <p 
-                      className="text-sm text-gray-500 dark:text-gray-400 mb-1"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      Location
-                    </p>
-                    <p 
-                      className="font-medium text-gray-900 dark:text-white text-sm leading-relaxed"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      {typeof event.location === 'string' 
-                        ? event.location 
-                        : (() => {
-                            const loc = event.location;
-                            if (!loc) return event.venue || 'Venue TBD';
-                            // If address exists, just show it (it should be complete)
-                            if (loc.address) {
-                              return loc.address;
-                            }
-                            // Otherwise build from city/state/zipCode
-                            const parts = [loc.city, loc.state, loc.zipCode].filter(Boolean);
-                            return parts.length > 0 ? parts.join(', ') : (event.venue || 'Venue TBD');
-                          })()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Participants */}
-                <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <div>
-                    <p 
-                      className="text-sm text-gray-500 dark:text-gray-400"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      Participants
-                    </p>
-                    <p 
-                      className="font-medium text-gray-900 dark:text-white"
-                      style={{ fontFamily: 'Source Serif Pro, serif' }}
-                    >
-                      {event.currentParticipants || 0}/{event.maxParticipants} joined
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Price - Hidden on Mobile */}
-              <div className="hidden lg:block mb-6 text-center py-4 bg-gray-50 dark:bg-zinc-800 rounded-xl">
-                <p 
-                  className="text-sm text-gray-500 dark:text-gray-400 mb-1"
-                  style={{ fontFamily: 'Source Serif Pro, serif' }}
-                >
-                  Starting from
-                </p>
-                {(event.price?.amount === 0 || !event.price) ? (
-                  <p 
-                    className="text-3xl font-bold text-green-600"
-                    style={{ fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    FREE
-                  </p>
-                ) : (
-                  <p 
-                    className="text-3xl font-bold text-gray-900 dark:text-white"
-                    style={{ fontFamily: 'Oswald, sans-serif' }}
-                  >
-                    ₹{event.price?.amount}
-                  </p>
-                )}
-              </div>
-
-
-
-              {/* CTA Button - Hidden on Mobile */}
-              {isRegistered ? (
-                <button
-                  onClick={() => navigate('/user/dashboard')}
-                  className="hidden lg:block w-full py-3 rounded-md font-semibold text-lg transition-all transform hover:scale-105 hover:opacity-90 shadow-2xl text-white"
-                  style={{ 
-                    background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                    fontFamily: 'Oswald, sans-serif'
-                  }}
-                >
-                  <Ticket className="inline h-5 w-5 mr-2" />
-                  View Ticket
-                </button>
-              ) : user && user.role !== 'user' ? (
-                <div className="hidden lg:block w-full py-3 px-4 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-center">
-                  <p 
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    Only regular users can register
-                  </p>
-                </div>
-              ) : (
-                <button
-                  onClick={() => navigate(`/billing/${event._id}`)}
-                  disabled={spotsLeft === 0 || eventEnded}
-                  className={`hidden lg:block w-full py-3 rounded-md font-semibold text-lg transition-all transform shadow-2xl ${
-                    eventEnded || spotsLeft === 0
-                      ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-                      : 'hover:scale-105 hover:opacity-90 text-white'
-                  }`}
-                  style={
-                    eventEnded || spotsLeft === 0
-                      ? { fontFamily: 'Oswald, sans-serif' }
-                      : { 
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                          fontFamily: 'Oswald, sans-serif'
-                        }
-                  }
-                >
-                  {eventEnded ? (
-                    <>
-                      <Clock className="inline h-5 w-5 mr-2" />
-                      Event Ended
-                    </>
-                  ) : spotsLeft === 0 ? (
-                    <>
-                      <XCircle className="inline h-5 w-5 mr-2" />
-                      Event Full
-                    </>
                   ) : (
-                    <>
-                      <Ticket className="inline h-5 w-5 mr-2" />
-                      Book your Tickets
-                    </>
+                    <p 
+                      className="text-2xl font-bold text-gray-900 dark:text-white"
+                      style={{ fontFamily: 'Oswald, sans-serif' }}
+                    >
+                      ₹{event.price?.amount}
+                    </p>
                   )}
-                </button>
-              )}
+                </div>
 
-              {/* Availability Alert */}
-              {!eventEnded && spotsLeft > 0 && (
-                <div className={`mt-4 p-3 rounded-lg ${
-                  spotsLeft === 0 ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
-                  spotsLeft <= 10 ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 animate-pulse' :
-                  spotsLeft <= 50 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' :
-                  'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                }`}>
-                  <p 
-                    className={`text-sm font-medium text-center ${
-                      spotsLeft === 0 ? 'text-red-800 dark:text-red-200' :
-                      spotsLeft <= 10 ? 'text-orange-800 dark:text-orange-200' :
-                      spotsLeft <= 50 ? 'text-yellow-800 dark:text-yellow-200' :
-                      'text-green-800 dark:text-green-200'
+                {/* CTA Button */}
+                {isRegistered ? (
+                  <button
+                    onClick={() => navigate('/user/dashboard')}
+                    className="w-full py-3 rounded-xl font-semibold text-base transition-all transform hover:scale-105 hover:opacity-90 shadow-lg text-white"
+                    style={{ 
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                      fontFamily: 'Oswald, sans-serif'
+                    }}
+                  >
+                    <Ticket className="inline h-5 w-5 mr-2" />
+                    View Ticket
+                  </button>
+                ) : user && user.role !== 'user' ? (
+                  <div className="w-full py-3 px-4 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-center">
+                    <p 
+                      className="text-sm text-gray-600 dark:text-gray-400"
+                      style={{ fontFamily: 'Source Serif Pro, serif' }}
+                    >
+                      Only regular users can register
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => navigate(`/billing/${event._id}`)}
+                    disabled={spotsLeft === 0 || eventEnded}
+                    className={`w-full py-3 rounded-xl font-semibold text-base transition-all transform shadow-lg ${
+                      eventEnded || spotsLeft === 0
+                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                        : 'hover:scale-105 hover:opacity-90 text-white'
                     }`}
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
+                    style={
+                      eventEnded || spotsLeft === 0
+                        ? { fontFamily: 'Oswald, sans-serif' }
+                        : { 
+                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                            fontFamily: 'Oswald, sans-serif'
+                          }
+                    }
                   >
-                    {spotsLeft === 0 ? '🚫 Event is Full' :
-                     spotsLeft <= 10 ? `⚡ Only ${spotsLeft} spots left!` :
-                     `✅ ${spotsLeft} spots available`}
-                  </p>
-                </div>
-              )}
-
-              {/* Limited seats notice */}
-              {!eventEnded && spotsLeft > 0 && spotsLeft <= event.maxParticipants * 0.2 && (
-                <p 
-                  className="text-center text-xs text-gray-500 dark:text-gray-400 mt-3"
-                  style={{ fontFamily: 'Source Serif Pro, serif' }}
-                >
-                  ⚠️ Limited seats available - Book now!
-                </p>
-              )}
-
-              {/* Save and Share */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-center gap-6">
-                  <button 
-                    onClick={handleSaveEvent}
-                    disabled={isSaving}
-                    className={`flex items-center gap-2 transition-colors ${
-                      isSaved 
-                        ? 'text-red-500 hover:text-red-600' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-red-500'
-                    } disabled:opacity-50`}
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    <Heart className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
-                    {isSaved ? 'Saved' : 'Save'}
+                    {eventEnded ? (
+                      <>
+                        <Clock className="inline h-5 w-5 mr-2" />
+                        Event Ended
+                      </>
+                    ) : spotsLeft === 0 ? (
+                      <>
+                        <XCircle className="inline h-5 w-5 mr-2" />
+                        Event Full
+                      </>
+                    ) : (
+                      <>
+                        <Ticket className="inline h-5 w-5 mr-2" />
+                        Book your Tickets
+                      </>
+                    )}
                   </button>
-                  <button 
-                    onClick={handleShare}
-                    className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-indigo-500 transition-colors"
-                    style={{ fontFamily: 'Source Serif Pro, serif' }}
-                  >
-                    <Share2 className="h-5 w-5" />
-                    Share
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -1096,127 +1211,123 @@ const EventDetail = () => {
         onCopyLink={copyEventLink}
       />
 
-      {/* Mobile Sticky Bottom Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t-4 border-indigo-500 dark:border-indigo-600 px-5 py-4 z-50 shadow-2xl rounded-t-3xl">
-        <div className="space-y-3">
-          {/* Top Row: Date, Venue, and Price */}
-          <div className="flex items-start justify-between gap-4">
-            {/* Left Side - Date and Venue */}
-            <div className="flex-1 space-y-2 min-w-0">
-              {/* Date */}
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white truncate" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                  {new Date(event.date).toLocaleDateString('en-US', { 
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short'
-                  })}
-                </span>
-              </div>
-
-              {/* Venue */}
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 flex-shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight line-clamp-2" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                  {(() => {
-                    if (typeof event.location === 'string') {
-                      // Parse full address string to extract street/area name only (no city/state)
-                      const locationParts = event.location.split(',').map(s => s.trim());
-                      // Filter out city names and take first 2 parts (street, area)
-                      const addressParts = locationParts.filter(part => 
-                        !part.toLowerCase().includes('bangalore') && 
-                        !part.toLowerCase().includes('bengaluru') &&
-                        !part.toLowerCase().includes('karnataka') &&
-                        !part.toLowerCase().includes('india')
-                      ).slice(0, 2);
-                      return addressParts.length > 0 ? addressParts.join(', ') : 'Location TBA';
-                    } else if (event.location) {
-                      const loc = event.location;
-                      // Prioritize street/address over city/state
-                      const address = loc.address || loc.street || '';
-                      if (address) {
-                        // Extract street name and area from full address (exclude city/state)
-                        const addressParts = address.split(',').map(s => s.trim());
-                        const filteredParts = addressParts.filter(part => 
-                          !part.toLowerCase().includes('bangalore') && 
-                          !part.toLowerCase().includes('bengaluru') &&
-                          !part.toLowerCase().includes('karnataka') &&
-                          !part.toLowerCase().includes('india')
-                        ).slice(0, 2);
-                        return filteredParts.length > 0 ? filteredParts.join(', ') : 'Location TBA';
-                      }
-                      return 'Location TBA';
-                    } else {
-                      return 'Location TBA';
-                    }
-                  })()}
-                </span>
-              </div>
-            </div>
-
-            {/* Right Side - Price */}
-            <div className="text-right flex-shrink-0">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                Starting from
+      {/* Mobile Sticky Bottom Bar - District Style */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <div className="rounded-t-3xl" style={{ background: 'linear-gradient(90deg, #7878E9 0%, #3D3DD4 100%)', paddingTop: '3px' }}>
+        <div className="bg-zinc-900 rounded-t-3xl px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          {/* Price */}
+          <div className="flex-shrink-0">
+            <p className="text-xs text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              Starts from
+            </p>
+            {(event.price?.amount === 0 || !event.price) ? (
+              <p className="text-xl font-bold text-green-500" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                FREE
               </p>
-              {(event.price?.amount === 0 || !event.price) ? (
-                <p className="text-2xl font-bold text-green-600" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                  FREE
-                </p>
-              ) : (
-                <p className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                  ₹{event.price?.amount}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* CTA Button - Centered */}
-          <div className="flex justify-center">
-            {isRegistered ? (
-              <button
-                onClick={() => navigate('/user/dashboard')}
-                className="px-8 py-4 rounded-xl font-bold text-base transition-all text-white shadow-lg"
-                style={{ 
-                  background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                  fontFamily: 'Oswald, sans-serif'
-                }}
-              >
-                View Ticket
-              </button>
-            ) : user && user.role !== 'user' ? (
-              <button
-                disabled
-                className="px-8 py-4 rounded-xl font-bold text-base bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
-              >
-                Not Available
-              </button>
             ) : (
-              <button
-                onClick={() => navigate(`/billing/${event._id}`)}
-                disabled={spotsLeft === 0 || eventEnded}
-                className={`px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg ${
-                  eventEnded || spotsLeft === 0
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-                    : 'text-white'
-                }`}
-                style={
-                  eventEnded || spotsLeft === 0
-                    ? { fontFamily: 'Oswald, sans-serif' }
-                    : { 
-                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                        fontFamily: 'Oswald, sans-serif'
-                      }
-                }
-              >
-                {eventEnded ? 'Event Ended' : spotsLeft === 0 ? 'Event Full' : 'Get your Tickets'}
-              </button>
+              <p className="text-xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                ₹{event.price?.amount}
+              </p>
             )}
           </div>
+
+          {/* CTA Button */}
+          {isRegistered ? (
+            <button
+              onClick={() => navigate('/user/dashboard')}
+              className="flex-1 max-w-[220px] py-3 rounded-lg font-bold text-sm text-white text-center transition-all uppercase tracking-wide"
+              style={{ 
+                background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                fontFamily: 'Oswald, sans-serif'
+              }}
+            >
+              VIEW TICKET
+            </button>
+          ) : user && user.role !== 'user' ? (
+            <button
+              disabled
+              className="flex-1 max-w-[220px] py-3 rounded-lg font-bold text-sm bg-gray-700 text-gray-500 cursor-not-allowed uppercase tracking-wide"
+              style={{ fontFamily: 'Oswald, sans-serif' }}
+            >
+              NOT AVAILABLE
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate(`/billing/${event._id}`)}
+              disabled={spotsLeft === 0 || eventEnded}
+              className={`flex-1 max-w-[220px] py-3 rounded-lg font-bold text-sm text-center transition-all uppercase tracking-wide ${
+                eventEnded || spotsLeft === 0
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'text-white'
+              }`}
+              style={
+                eventEnded || spotsLeft === 0
+                  ? { fontFamily: 'Oswald, sans-serif' }
+                  : { 
+                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                      fontFamily: 'Oswald, sans-serif'
+                    }
+              }
+            >
+              {eventEnded ? 'EVENT ENDED' : spotsLeft === 0 ? 'EVENT FULL' : 'BOOK TICKETS'}
+            </button>
+          )}
+        </div>
+        </div>
         </div>
       </div>
+
+      {/* Highlight Image Lightbox */}
+      {currentHighlight !== null && highlights.length > 0 && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setCurrentHighlight(null)}
+        >
+          <button
+            onClick={() => setCurrentHighlight(null)}
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all z-10"
+          >
+            <XCircle className="h-6 w-6" />
+          </button>
+          
+          {/* Navigation Arrows */}
+          {highlights.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentHighlight((prev) => prev === 0 ? highlights.length - 1 : prev - 1);
+                }}
+                className="absolute left-6 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all z-10"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentHighlight((prev) => prev === highlights.length - 1 ? 0 : prev + 1);
+                }}
+                className="absolute right-6 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all z-10"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+          
+          {/* Image Counter */}
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-medium">
+            {currentHighlight + 1} / {highlights.length}
+          </div>
+          
+          <img
+            src={getOptimizedCloudinaryUrl(highlights[currentHighlight])}
+            alt={`Highlight ${currentHighlight + 1}`}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

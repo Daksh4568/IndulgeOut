@@ -931,9 +931,10 @@ export default function ExplorePage() {
                                   onClick={() => setEventsPage(page)}
                                   className={`px-4 py-2 rounded-lg font-medium ${
                                     page === eventsPage
-                                      ? 'bg-orange-500 text-white'
+                                      ? 'text-white'
                                       : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
                                   }`}
+                                  style={page === eventsPage ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
                                 >
                                   {page}
                                 </button>
