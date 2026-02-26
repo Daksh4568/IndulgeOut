@@ -416,7 +416,8 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
 });
 
 // Webhook for payment status updates
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+// Note: Raw body parsing handled by global middleware in index.js
+router.post('/webhook', async (req, res) => {
   const startTime = Date.now();
   let webhookLog = null;
   let payload = null;
