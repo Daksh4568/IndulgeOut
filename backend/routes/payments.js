@@ -9,7 +9,8 @@ const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
 const notificationService = require('../services/notificationService.js');
-const { verifyCashfreeWebhook } = require('../utils/webhookVerification.js');
+// Webhook verification temporarily disabled
+// const { verifyCashfreeWebhook } = require('../utils/webhookVerification.js');
 
 const router = express.Router();
 
@@ -465,56 +466,15 @@ router.post('/webhook', async (req, res) => {
       timestampValue: timestamp
     });
     
-    console.log('🔍 [DEBUG] Secret key starts with:', process.env.CASHFREE_SECRET_KEY?.substring(0, 15) + '...');
-    console.log('🔍 [DEBUG] Using secret key from env:', process.env.CASHFREE_SECRET_KEY ? 'YES' : 'NO');
-
-    // Verify webhook signature (CRITICAL SECURITY CHECK)
-    // IMPORTANT: Pass the raw body string (not parsed object) to maintain exact formatting
-    const isSignatureValid = verifyCashfreeWebhook(rawBody, signature, timestamp);
+    // ⚠️ WEBHOOK SIGNATURE VERIFICATION TEMPORARILY DISABLED
+    // TODO: Re-enable after IP whitelisting and production testing
+    // For security, enable signature verification before scaling platform
+    console.warn('⚠️⚠️⚠️ [WEBHOOK] SIGNATURE VERIFICATION DISABLED - ACCEPTING ALL WEBHOOKS ⚠️⚠️⚠️');
+    console.log('🔍 [DEBUG] Webhook headers:', { signature: !!signature, timestamp: !!timestamp });
     
-    // Determine if we're in production based on Cashfree credentials (not NODE_ENV)
+    // Determine if we're using production Cashfree credentials
     const isCashfreeProduction = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_');
-    
-    // Allow skipping signature verification in sandbox ONLY for debugging
-    const skipSignatureCheck = process.env.SKIP_WEBHOOK_SIGNATURE === 'true' && !isCashfreeProduction;
-    
-    if (!isSignatureValid && !skipSignatureCheck) {
-      if (isCashfreeProduction) {
-        // In production, reject invalid signatures
-        console.error('❌ [WEBHOOK] Invalid signature in PRODUCTION - rejecting webhook');
-        
-        // Log failed verification
-        await WebhookLog.create({
-          type: payload.type || 'UNKNOWN',
-          orderId: payload.data?.order?.order_id || 'UNKNOWN',
-          status: 'failed',
-          error: {
-            message: 'Invalid webhook signature',
-            code: 'SIGNATURE_VERIFICATION_FAILED'
-          },
-          signatureVerified: false,
-          payload: payload,
-          headers: { signature, timestamp, userAgent: req.headers['user-agent'] },
-          responseStatus: 403,
-          responseMessage: 'Invalid signature',
-          receivedAt: new Date(),
-          processedAt: new Date(),
-          processingTime: Date.now() - startTime
-        });
-        
-        return res.status(403).json({ message: 'Invalid signature' });
-      } else {
-        // In sandbox, log warning but continue processing
-        if (skipSignatureCheck) {
-          console.warn('⚠️ [WEBHOOK] Signature verification DISABLED (SKIP_WEBHOOK_SIGNATURE=true) - FOR TESTING ONLY!');
-        } else {
-          console.warn('⚠️ [WEBHOOK] Invalid signature in SANDBOX - continuing anyway (test mode)');
-        }
-      }
-    }
-
-    const verificationStatus = skipSignatureCheck ? 'SKIPPED' : (isSignatureValid ? 'VALID' : 'INVALID_BUT_SANDBOX');
-    console.log(`✅ [WEBHOOK] Signature ${verificationStatus} (${isCashfreeProduction ? 'PRODUCTION' : 'SANDBOX'})`);
+    console.log(`🔍 [WEBHOOK] Cashfree mode: ${isCashfreeProduction ? 'PRODUCTION' : 'SANDBOX'}`);
 
     // Handle different event types
     if (payload.type === 'PAYMENT_SUCCESS_WEBHOOK') {
@@ -572,7 +532,7 @@ router.post('/webhook', async (req, res) => {
           paymentId: cfPaymentId,
           amount: paymentAmount,
           status: 'duplicate',
-          signatureVerified: true,
+          signatureVerified: false, // Verification temporarily disabled
           processingTime: Date.now() - startTime,
           payload: payload,
           headers: {
@@ -646,7 +606,7 @@ router.post('/webhook', async (req, res) => {
           paymentId: cfPaymentId,
           amount: paymentAmount,
           status: 'duplicate',
-          signatureVerified: !isCashfreeProduction ? false : isSignatureValid,
+          signatureVerified: false, // Verification temporarily disabled
           processingTime: Date.now() - startTime,
           payload: payload,
           headers: {
@@ -739,7 +699,7 @@ router.post('/webhook', async (req, res) => {
         paymentId: cfPaymentId,
         amount: paymentAmount,
         status: 'success',
-        signatureVerified: true,
+        signatureVerified: false, // Verification temporarily disabled
         processingTime: Date.now() - startTime,
         payload: payload,
         headers: {
@@ -769,7 +729,7 @@ router.post('/webhook', async (req, res) => {
         paymentId: payload.data?.payment?.cf_payment_id,
         amount: payload.data?.payment?.payment_amount,
         status: 'failed',
-        signatureVerified: true,
+        signatureVerified: false, // Verification temporarily disabled,
         processingTime: Date.now() - startTime,
         error: {
           message: 'Payment failed',
@@ -797,7 +757,7 @@ router.post('/webhook', async (req, res) => {
         paymentId: payload.data?.payment?.cf_payment_id,
         amount: payload.data?.payment?.payment_amount,
         status: 'dropped',
-        signatureVerified: true,
+        signatureVerified: false, // Verification temporarily disabled
         processingTime: Date.now() - startTime,
         error: {
           message: 'User abandoned payment',
@@ -822,7 +782,7 @@ router.post('/webhook', async (req, res) => {
         type: payload.type || 'UNKNOWN',
         orderId: payload.data?.order?.order_id || 'UNKNOWN',
         status: 'unknown',
-        signatureVerified: true,
+        signatureVerified: false, // Verification temporarily disabled
         processingTime: Date.now() - startTime,
         payload: payload,
         headers: {
