@@ -60,9 +60,13 @@ function verifyCashfreeWebhook(payload, signature, timestamp) {
     const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
     const signedPayload = `${receivedTimestamp}.${payloadString}`;
     
-    // Debug logging (show first 100 chars)
+    // Debug logging
     console.log('🔍 [DEBUG] Payload type:', typeof payload);
+    console.log('🔍 [DEBUG] Payload string length:', payloadString.length);
+    console.log('🔍 [DEBUG] Timestamp used:', receivedTimestamp);
+    console.log('🔍 [DEBUG] Signed payload length:', signedPayload.length);
     console.log('🔍 [DEBUG] Signed payload preview:', signedPayload.substring(0, 100) + '...');
+    console.log('🔍 [DEBUG] Secret key starts with:', process.env.CASHFREE_SECRET_KEY?.substring(0, 15) + '...');
 
     // Compute expected signature using HMAC-SHA256
     const expectedSignature = crypto

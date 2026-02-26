@@ -64,7 +64,7 @@ const EventCreation = () => {
     maxParticipants: "",
     price: {
       amount: 0,
-      currency: "USD",
+      currency: "INR",
     },
     community: "",
     coHosts: [],

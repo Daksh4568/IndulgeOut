@@ -433,6 +433,8 @@ router.post('/webhook', async (req, res) => {
       rawBody = req.body.toString('utf8');
       payload = JSON.parse(rawBody);
       console.log('✅ [DEBUG] Using raw buffer body (correct for signature verification)');
+      console.log('🔍 [DEBUG] Raw body length:', rawBody.length);
+      console.log('🔍 [DEBUG] Raw body first 200 chars:', rawBody.substring(0, 200));
     } else if (typeof req.body === 'object') {
       // Body already parsed by express.json() middleware
       payload = req.body;
@@ -458,8 +460,12 @@ router.post('/webhook', async (req, res) => {
       status: payload.data?.payment?.payment_status,
       environment: process.env.NODE_ENV,
       hasSignature: !!signature,
-      hasTimestamp: !!timestamp
+      hasTimestamp: !!timestamp,
+      signatureLength: signature?.length,
+      timestampValue: timestamp
     });
+    
+    console.log('🔍 [DEBUG] Secret key starts with:', process.env.CASHFREE_SECRET_KEY?.substring(0, 15) + '...');
 
     // Verify webhook signature (CRITICAL SECURITY CHECK)
     const isSignatureValid = verifyCashfreeWebhook(rawBody, signature, timestamp);
