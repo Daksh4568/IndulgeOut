@@ -612,12 +612,6 @@ const BillingPage = () => {
                 )}
               </button>
 
-              {!isRegistered && spotsLeft > 0 && spotsLeft <= 10 && (
-                <div className="mt-4 flex items-center justify-center space-x-2 text-green-400">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span className="text-sm">{spotsLeft} spots available</span>
-                </div>
-              )}
               </>
               )}
 
