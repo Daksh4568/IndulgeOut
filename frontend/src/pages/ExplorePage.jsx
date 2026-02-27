@@ -496,7 +496,51 @@ export default function ExplorePage() {
           </div>
 
           {/* Tab Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+          <div className="flex sm:hidden gap-3 overflow-x-auto pb-2 px-4 -mx-4 snap-x snap-proximity" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <style>{`
+              .flex.sm\\:hidden.overflow-x-auto::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+            <button
+              onClick={() => handleTabChange('events')}
+              className={`flex-none snap-start px-8 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+                tab === 'events'
+                  ? 'text-white shadow-xl'
+                  : 'bg-[#3A3A52] text-gray-300'
+              }`}
+              style={tab === 'events' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
+            >
+              Events
+            </button>
+            <button
+              onClick={() => handleTabChange('communities')}
+              className={`flex-none snap-start px-8 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+                tab === 'communities'
+                  ? 'text-white shadow-xl'
+                  : 'bg-[#3A3A52] text-gray-300'
+              }`}
+              style={tab === 'communities' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
+            >
+              Communities
+            </button>
+            <button
+              onClick={() => handleTabChange('people')}
+              className={`flex-none snap-start px-8 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+                tab === 'people'
+                  ? 'text-white shadow-xl'
+                  : 'bg-[#3A3A52] text-gray-300'
+              }`}
+              style={tab === 'people' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
+            >
+              People
+            </button>
+            {/* Padding element to ensure last button is fully visible */}
+            <div className="flex-none w-4"></div>
+          </div>
+          
+          {/* Desktop Tab Buttons */}
+          <div className="hidden sm:flex gap-4 justify-center max-w-md sm:max-w-none mx-auto">
             <button
               onClick={() => handleTabChange('events')}
               className={`w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-2 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 ${
@@ -535,7 +579,8 @@ export default function ExplorePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">\n        {loading ? (
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        {loading ? (
           <div className="text-center py-20">
             <div className="animate-spin h-12 w-12 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">Loading...</p>
@@ -711,8 +756,14 @@ export default function ExplorePage() {
                     </h2>
                   </div>
                   
-                  {/* Filter Chips - Filters button first, then permanent chips, Clear button last */}
-                  <div className="flex flex-wrap gap-2 mb-6">
+                  {/* Filter Chips - Horizontal scroll on mobile, wrap on desktop */}
+                  <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <style>{`
+                      .overflow-x-auto::-webkit-scrollbar {
+                        display: none;
+                      }
+                    `}</style>
+                    <div className="flex sm:flex-wrap gap-2 mb-6 min-w-max sm:min-w-0">
                     {/* Filters Button */}
                     <FilterBar
                       onFilterChange={handleFilterChange}
@@ -876,6 +927,9 @@ export default function ExplorePage() {
                         </button>
                       );
                     })()}
+                    {/* Padding element for mobile to ensure last button is fully visible */}
+                    <div className="flex-none w-4 sm:hidden"></div>
+                  </div>
                   </div>
                   
                   {events.length > 0 ? (

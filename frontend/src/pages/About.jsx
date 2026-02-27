@@ -36,8 +36,8 @@ const About = () => {
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
       <NavigationBar />
       {/* Hero Section with Polaroids and Envelope */}
-      <section className="py-20 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
-        <div className="relative w-full max-w-6xl mx-auto">
+      <section className="py-24 md:py-32 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+        <div className="relative w-full max-w-7xl mx-auto">
           {/* Mobile Layout - Top Polaroids */}
           <div className="md:hidden flex gap-4 justify-center mb-8 z-30 relative">
             {/* Polaroid 1 - Top Left on Mobile */}
@@ -76,12 +76,12 @@ const About = () => {
 
           {/* Desktop Layout - Polaroids: 2 Left, 2 Right (No Overlap) */}
           <div className="hidden md:block absolute inset-0 z-10">
-            <div className="h-full w-full flex justify-between px-6 lg:px-10 pt-4 pb-6 -mt-12">
+            <div className="h-full w-full flex justify-between px-6 lg:px-10 pt-8 pb-10 -mt-16">
               {/* Left Column */}
               <div className="flex flex-col justify-between items-start">
                 {/* Polaroid 1 - Top Left */}
-                <div className="transform -rotate-12 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-2 shadow-2xl">
+                <div className="transform -rotate-12 w-44 lg:w-48 xl:w-52">
+                  <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
                         src="/images/about1.jpg"
@@ -92,13 +92,13 @@ const About = () => {
                         }}
                       />
                     </div>
-                    <div className="h-2"></div>
+                    <div className="h-3"></div>
                   </div>
                 </div>
 
                 {/* Polaroid 2 - Bottom Left */}
-                <div className="transform rotate-6 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-2 shadow-2xl">
+                <div className="transform rotate-6 w-44 lg:w-48 xl:w-52">
+                  <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
                         src="/images/about2.jpg"
@@ -109,7 +109,7 @@ const About = () => {
                         }}
                       />
                     </div>
-                    <div className="h-2"></div>
+                    <div className="h-3"></div>
                   </div>
                 </div>
               </div>
@@ -117,8 +117,8 @@ const About = () => {
               {/* Right Column */}
               <div className="flex flex-col justify-between items-end">
                 {/* Polaroid 3 - Top Right */}
-                <div className="transform rotate-12 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-2 shadow-2xl">
+                <div className="transform rotate-12 w-44 lg:w-48 xl:w-52">
+                  <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
                         src="/images/about3.jpg"
@@ -129,13 +129,13 @@ const About = () => {
                         }}
                       />
                     </div>
-                    <div className="h-2"></div>
+                    <div className="h-3"></div>
                   </div>
                 </div>
 
                 {/* Polaroid 4 - Bottom Right */}
-                <div className="transform -rotate-6 w-36 lg:w-40 xl:w-44">
-                  <div className="bg-white p-2 shadow-2xl">
+                <div className="transform -rotate-6 w-44 lg:w-48 xl:w-52">
+                  <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
                         src="/images/about4.jpg"
@@ -146,7 +146,7 @@ const About = () => {
                         }}
                       />
                     </div>
-                    <div className="h-2"></div>
+                    <div className="h-3"></div>
                   </div>
                 </div>
               </div>
@@ -174,7 +174,7 @@ const About = () => {
 
             <div
               onClick={() => setIsLetterOpen(true)}
-              className="relative w-64 h-44 md:w-80 md:h-56 cursor-pointer transform hover:scale-105 transition-transform duration-300"
+              className="relative w-64 h-44 md:w-96 md:h-64 lg:w-[420px] lg:h-72 cursor-pointer transform hover:scale-105 transition-transform duration-300"
             >
               {/* Envelope Image */}
               <img
@@ -226,7 +226,7 @@ const About = () => {
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">Our Purpose</h2>
-          <p className="text-gray-400 text-center mb-16 max-w-3xl mx-auto">
+          <p className="text-gray-400 text-center mb-16 max-w-5xl mx-auto md:whitespace-nowrap">
             Great offline experiences exist—but discovery, access, and collaboration remain fragmented and we bring them together.
           </p>
 

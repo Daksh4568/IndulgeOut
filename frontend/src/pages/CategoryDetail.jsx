@@ -190,7 +190,7 @@ const CategoryDetail = () => {
       {/* Category Info Bar */}
       <section className="bg-gray-900 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
             <div className="flex items-start gap-3 p-4 bg-gray-800/50 rounded-lg sm:bg-transparent sm:p-0">
               <Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
               <div>
@@ -310,7 +310,7 @@ const CategoryDetail = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div className="relative h-[250px] sm:h-[300px] md:h-[400px] rounded-xl overflow-hidden">
               <img 
-                src="/images/Media (10).jpg" 
+                src="/images/Media (5).jpg" 
                 alt="Highlight 1" 
                 className="w-full h-full object-cover"
               />

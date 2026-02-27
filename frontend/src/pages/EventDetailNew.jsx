@@ -300,10 +300,12 @@ const EventDetail = () => {
   const eventEnded = new Date(event.date) < new Date();
   
   // Prepare meta tags data
-  const eventUrl = window.location.href;
+  const eventUrl = typeof window !== 'undefined' ? window.location.href : '';
+  // Get full Cloudinary URL (not optimized) for better social media compatibility
+  // If no image, og:image will simply not be set (handled below)
   const eventImage = event.images && event.images.length > 0 
-    ? getOptimizedCloudinaryUrl(event.images[0]) 
-    : 'https://indulgeout.com/default-event-banner.jpg'; // Fallback image
+    ? event.images[0] 
+    : null;
   const eventLocation = typeof event.location === 'string' 
     ? event.location.split(',')[0] 
     : (event.location?.city || 'Location TBA');
@@ -323,9 +325,13 @@ const EventDetail = () => {
         <meta property="og:url" content={eventUrl} />
         <meta property="og:title" content={event.title} />
         <meta property="og:description" content={eventDescription} />
-        <meta property="og:image" content={eventImage} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
+        {eventImage && (
+          <>
+            <meta property="og:image" content={eventImage} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+          </>
+        )}
         <meta property="og:site_name" content="IndulgeOut" />
         
         {/* Twitter Card Meta Tags */}
@@ -333,7 +339,7 @@ const EventDetail = () => {
         <meta name="twitter:url" content={eventUrl} />
         <meta name="twitter:title" content={event.title} />
         <meta name="twitter:description" content={eventDescription} />
-        <meta name="twitter:image" content={eventImage} />
+        {eventImage && <meta name="twitter:image" content={eventImage} />}
       </Helmet>
       
       <div className="min-h-screen bg-black">
@@ -374,19 +380,19 @@ const EventDetail = () => {
           <button 
             onClick={handleSaveEvent}
             disabled={isSaving}
-            className={`p-2 rounded-full backdrop-blur-md transition-all ${
+            className={`p-2 rounded-full backdrop-blur-md transition-all flex items-center justify-center ${
               isSaved 
-                ? 'bg-white/20 text-red-500 border border-white/30' 
-                : 'bg-black/20 text-white border border-white/20 hover:bg-white/30'
+                ? 'bg-white/10 text-red-500 border border-white/20' 
+                : 'bg-black/10 text-white border border-white/20 hover:bg-white/20'
             } disabled:opacity-50`}
           >
-            <Heart className={`h-3.5 w-3.5 ${isSaved ? 'fill-current' : ''}`} />
+            <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
           </button>
           <button 
             onClick={handleShare}
-            className="p-2 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all"
+            className="p-2 rounded-full bg-black/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all flex items-center justify-center"
           >
-            <Share2 className="h-3.5 w-3.5" />
+            <Share2 className="h-4 w-4" />
           </button>
         </div>
       </div>

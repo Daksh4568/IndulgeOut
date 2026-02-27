@@ -299,14 +299,14 @@ const Categories = () => {
           </h2>
           
           <p 
-            className="text-gray-300 text-base sm:text-lg mb-8 max-w-2xl mx-auto font-bold"
+            className="text-gray-300 text-base sm:text-lg mb-8 max-w-4xl mx-auto font-bold md:whitespace-nowrap"
             style={{ fontFamily: 'Source Serif Pro, serif' }}
           >
-            Be the change. Create your own event and bring people together around your unique passion.
+            Be the change. Create your own event. Bring people together around your unique passion.
           </p>
 
           <button
-            onClick={() => navigate('/host-partner')}
+            onClick={() => navigate('/signup/host')}
             className="text-white px-8 sm:px-12 py-3 sm:py-3.5 rounded-md text-base sm:text-lg font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-2xl"
             style={{ 
               background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
