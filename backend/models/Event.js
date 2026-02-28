@@ -144,6 +144,27 @@ const eventSchema = new mongoose.Schema({
       }
     }]
   },
+  // Store questionnaire responses submitted by users (before payment)
+  questionnaireSubmissions: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    responses: [{
+      question: String,
+      answer: String
+    }],
+    submittedAt: {
+      type: Date,
+      default: Date.now
+    },
+    isPaid: {
+      type: Boolean,
+      default: false
+    },
+    ticketNumber: String // Populated after payment
+  }],
   images: [String],
   tags: [String],
   requirements: [String],

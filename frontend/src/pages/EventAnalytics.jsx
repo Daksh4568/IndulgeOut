@@ -46,6 +46,12 @@ const EventAnalytics = () => {
   const [sortBy, setSortBy] = useState("name");
   const [showResponsesModal, setShowResponsesModal] = useState(false);
   const [selectedAttendee, setSelectedAttendee] = useState(null);
+  
+  // Questionnaire Submissions state
+  const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
+  const [questionnaireSubmissions, setQuestionnaireSubmissions] = useState(null);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -74,6 +80,21 @@ const EventAnalytics = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const fetchQuestionnaireSubmissions = async () => {
+    try {
+      setLoadingSubmissions(true);
+      const response = await api.get(`/events/${eventId}/questionnaire-submissions`);
+      setQuestionnaireSubmissions(response.data);
+      console.log("📝 Questionnaire submissions:", response.data);
+      setShowQuestionnaireModal(true);
+    } catch (error) {
+      console.error("❌ Error fetching questionnaire submissions:", error);
+      alert(error.response?.data?.message || "Failed to load questionnaire submissions");
+    } finally {
+      setLoadingSubmissions(false);
     }
   };
 
@@ -297,6 +318,22 @@ const EventAnalytics = () => {
                 <QrCode className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 <span className="hidden sm:inline">Scan Tickets</span>
                 <span className="sm:hidden">Scan</span>
+              </button>
+
+              <button
+                onClick={fetchQuestionnaireSubmissions}
+                disabled={loadingSubmissions}
+                className="flex-1 sm:flex-none flex items-center justify-center px-4 sm:px-5 py-2 sm:py-2.5 text-sm sm:text-base text-white rounded-xl transition-all shadow-lg"
+                style={{
+                  background: loadingSubmissions 
+                    ? 'linear-gradient(180deg, rgba(120, 120, 233, 0.5) 11%, rgba(61, 61, 212, 0.5) 146%)'
+                    : 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                  opacity: loadingSubmissions ? 0.7 : 1
+                }}
+              >
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span className="hidden sm:inline">Questionnaire</span>
+                <span className="sm:hidden">Q&A</span>
               </button>
 
               <button
@@ -776,9 +813,6 @@ const EventAnalytics = () => {
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Check-in Time
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/50">
@@ -860,23 +894,6 @@ const EventAnalytics = () => {
                           <span className="text-gray-600">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {attendee.questionnaireResponses && attendee.questionnaireResponses.length > 0 && (
-                          <button
-                            onClick={() => {
-                              setSelectedAttendee(attendee);
-                              setShowResponsesModal(true);
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-all hover:opacity-90"
-                            style={{
-                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                            }}
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            Responses
-                          </button>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -912,6 +929,190 @@ const EventAnalytics = () => {
             
             <div className="p-6 space-y-4">
               {selectedAttendee.questionnaireResponses.map((response, index) => (
+                <div key={index} className="bg-gray-750 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="font-semibold text-sm" style={{ color: '#7878E9' }}>Q{index + 1}:</span>
+                    <p className="text-gray-300 font-medium flex-1">{response.question}</p>
+                  </div>
+                  <div className="flex items-start gap-2 pl-6">
+                    <span className="text-green-400 font-semibold text-sm">A:</span>
+                    <p className="text-gray-400 flex-1">{response.answer || "No answer provided"}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Questionnaire Submissions Modal */}
+      {showQuestionnaireModal && (
+        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-5xl w-full max-h-[85vh] overflow-hidden border border-gray-700 flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-zinc-900 border-b border-gray-700 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <FileText className="h-5 w-5" style={{ color: '#7878E9' }} />
+                  Questionnaire Submissions
+                </h3>
+                {questionnaireSubmissions && (
+                  <div className="flex gap-3 mt-2">
+                    <span className="text-sm text-gray-400">
+                      Total: <span className="font-semibold text-white">{questionnaireSubmissions.total}</span>
+                    </span>
+                    <span className="text-sm text-gray-400">
+                      Paid: <span className="font-semibold text-green-400">{questionnaireSubmissions.paid}</span>
+                    </span>
+                    <span className="text-sm text-gray-400">
+                      Unpaid: <span className="font-semibold text-orange-400">{questionnaireSubmissions.unpaid}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setShowQuestionnaireModal(false);
+                  setSelectedSubmission(null);
+                }}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingSubmissions ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                </div>
+              ) : questionnaireSubmissions?.submissions?.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">No questionnaire submissions yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {questionnaireSubmissions?.submissions?.map((submission) => (
+                    <div 
+                      key={submission.id} 
+                      className="bg-gray-800 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        {/* User Info */}
+                        <div className="flex items-center gap-3 flex-1">
+                          {submission.user.profilePicture ? (
+                            <img 
+                              src={submission.user.profilePicture} 
+                              alt={submission.user.name}
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
+                              {submission.user.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium truncate">{submission.user.name}</p>
+                            <p className="text-gray-400 text-sm truncate">{submission.user.email}</p>
+                          </div>
+                        </div>
+
+                        {/* Submitted Date */}
+                        <div className="text-right hidden sm:block">
+                          <p className="text-xs text-gray-500">Submitted</p>
+                          <p className="text-sm text-gray-300">
+                            {new Date(submission.submittedAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-2">
+                          {submission.isPaid ? (
+                            <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">
+                              ✓ Paid
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded-full border border-orange-500/30">
+                              Unpaid
+                            </span>
+                          )}
+                        </div>
+
+                        {/* View Button */}
+                        <button
+                          onClick={() => setSelectedSubmission(submission)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-all hover:opacity-90"
+                          style={{
+                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          }}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          View
+                        </button>
+                      </div>
+
+                      {/* Ticket Number (if paid) */}
+                      {submission.ticketNumber && (
+                        <div className="mt-2 pt-2 border-t border-gray-700">
+                          <p className="text-xs text-gray-500">
+                            Ticket: <span className="text-gray-300 font-mono">{submission.ticketNumber}</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Submission Detail Modal */}
+      {selectedSubmission && (
+        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-700">
+            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-semibold text-white">
+                  Response Details
+                </h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  {selectedSubmission.user.name} • {selectedSubmission.user.email}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  {selectedSubmission.isPaid ? (
+                    <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded border border-green-500/30">
+                      ✓ Paid
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded border border-orange-500/30">
+                      Unpaid
+                    </span>
+                  )}
+                  {selectedSubmission.ticketNumber && (
+                    <span className="text-xs text-gray-500">
+                      Ticket: <span className="text-gray-300 font-mono">{selectedSubmission.ticketNumber}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedSubmission(null)}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {selectedSubmission.responses.map((response, index) => (
                 <div key={index} className="bg-gray-750 p-4 rounded-lg border border-gray-700">
                   <div className="flex items-start gap-2 mb-2">
                     <span className="font-semibold text-sm" style={{ color: '#7878E9' }}>Q{index + 1}:</span>

@@ -361,6 +361,29 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       // Continue without failing the entire registration
     }
 
+    // Update questionnaire submission as paid (if exists)
+    if (ticket && ticket.ticketNumber) {
+      try {
+        const questionnaireUpdate = await Event.findOneAndUpdate(
+          {
+            _id: event._id,
+            'questionnaireSubmissions.user': userId
+          },
+          {
+            $set: {
+              'questionnaireSubmissions.$.isPaid': true,
+              'questionnaireSubmissions.$.ticketNumber': ticket.ticketNumber
+            }
+          }
+        );
+        if (questionnaireUpdate) {
+          console.log('✅ [VERIFY-PAYMENT] Questionnaire marked as paid for user:', userId);
+        }
+      } catch (qError) {
+        console.error('⚠️ [VERIFY-PAYMENT] Failed to update questionnaire isPaid flag:', qError);
+      }
+    }
+
     // Send confirmation emails synchronously (for Vercel serverless)
     try {
       console.log(`📧 [Payment Email] Sending registration email with ticket: ${ticket?.ticketNumber}`);
@@ -695,6 +718,29 @@ router.post('/webhook', async (req, res) => {
       } catch (ticketError) {
         console.error('❌ [WEBHOOK] Failed to generate ticket:', ticketError);
         // Continue even if ticket generation fails
+      }
+
+      // Update questionnaire submission as paid (if exists)
+      if (ticket && ticket.ticketNumber) {
+        try {
+          const questionnaireUpdate = await Event.findOneAndUpdate(
+            {
+              _id: eventId,
+              'questionnaireSubmissions.user': userId
+            },
+            {
+              $set: {
+                'questionnaireSubmissions.$.isPaid': true,
+                'questionnaireSubmissions.$.ticketNumber': ticket.ticketNumber
+              }
+            }
+          );
+          if (questionnaireUpdate) {
+            console.log('✅ [WEBHOOK] Questionnaire marked as paid for user:', userId);
+          }
+        } catch (qError) {
+          console.error('⚠️ [WEBHOOK] Failed to update questionnaire isPaid flag:', qError);
+        }
       }
 
       // Send confirmation emails asynchronously

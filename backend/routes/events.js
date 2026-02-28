@@ -647,6 +647,74 @@ router.post('/:id/view', async (req, res) => {
   }
 });
 
+// @route   POST /api/events/:id/submit-questionnaire
+// @desc    Submit questionnaire responses (before payment)
+// @access  Private (authenticated users only)
+router.post('/:id/submit-questionnaire', authMiddleware, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.userId || req.user.id;
+    const { responses } = req.body;
+
+    console.log(`📝 Questionnaire submission for event ${eventId} by user ${userId}`);
+
+    // Validate questionnaire responses
+    if (!responses || !Array.isArray(responses) || responses.length === 0) {
+      return res.status(400).json({ message: 'Questionnaire responses are required' });
+    }
+
+    // Check if all answers are provided
+    const allAnswered = responses.every(r => r.question && r.answer && r.answer.trim() !== '');
+    if (!allAnswered) {
+      return res.status(400).json({ message: 'All questions must be answered' });
+    }
+
+    // Find the event
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check if questionnaire is enabled
+    if (!event.questionnaire?.enabled) {
+      return res.status(400).json({ message: 'This event does not have a questionnaire' });
+    }
+
+    // Check if user already submitted (update if exists, create if not)
+    const existingSubmissionIndex = event.questionnaireSubmissions.findIndex(
+      sub => sub.user.toString() === userId
+    );
+
+    if (existingSubmissionIndex !== -1) {
+      // Update existing submission
+      event.questionnaireSubmissions[existingSubmissionIndex].responses = responses;
+      event.questionnaireSubmissions[existingSubmissionIndex].submittedAt = new Date();
+      console.log(`✅ Updated existing questionnaire submission for user ${userId}`);
+    } else {
+      // Create new submission
+      event.questionnaireSubmissions.push({
+        user: userId,
+        responses: responses,
+        submittedAt: new Date(),
+        isPaid: false
+      });
+      console.log(`✅ Created new questionnaire submission for user ${userId}`);
+    }
+
+    await event.save();
+
+    res.json({
+      success: true,
+      message: 'Questionnaire submitted successfully',
+      submittedAt: new Date()
+    });
+
+  } catch (error) {
+    console.error('❌ Submit questionnaire error:', error);
+    res.status(500).json({ message: 'Failed to submit questionnaire' });
+  }
+});
+
 // @route   GET /api/events/:id/analytics
 // @desc    Get event attendance analytics with check-in status (organizer only)
 // @access  Private
@@ -935,6 +1003,69 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error fetching event analytics:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
+});
+
+// @route   GET /api/events/:id/questionnaire-submissions
+// @desc    Get all questionnaire submissions for an event (organizer only)
+// @access  Private
+router.get('/:id/questionnaire-submissions', authMiddleware, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId)
+      .populate('questionnaireSubmissions.user', 'name email profilePicture');
+    
+    if (!event) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Event not found' 
+      });
+    }
+    
+    // Authorization: Only event host or co-hosts can view submissions
+    const isAuthorized = 
+      event.host.toString() === req.user.id ||
+      (event.coHosts && event.coHosts.some(coHost => coHost.toString() === req.user.id));
+    
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view questionnaire submissions'
+      });
+    }
+
+    // Format submissions
+    const submissions = event.questionnaireSubmissions.map(sub => ({
+      id: sub._id,
+      user: {
+        id: sub.user._id,
+        name: sub.user.name,
+        email: sub.user.email,
+        profilePicture: sub.user.profilePicture
+      },
+      responses: sub.responses,
+      submittedAt: sub.submittedAt,
+      isPaid: sub.isPaid,
+      ticketNumber: sub.ticketNumber
+    }));
+
+    console.log(`📊 Found ${submissions.length} questionnaire submissions for event ${eventId}`);
+
+    res.json({
+      success: true,
+      submissions: submissions,
+      total: submissions.length,
+      paid: submissions.filter(s => s.isPaid).length,
+      unpaid: submissions.filter(s => !s.isPaid).length
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching questionnaire submissions:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',

@@ -136,7 +136,7 @@ const BillingPage = () => {
     };
   };
 
-  const handleQuestionnaireSubmit = () => {
+  const handleQuestionnaireSubmit = async () => {
     // Validate all questions are answered
     const allAnswered = questionnaireResponses.every(response => response.answer && response.answer.trim() !== '');
     
@@ -145,9 +145,19 @@ const BillingPage = () => {
       return;
     }
 
-    setQuestionnaireAnswered(true);
-    setShowQuestionnaireModal(false);
-    toast.success('Questionnaire submitted successfully');
+    try {
+      // Save questionnaire responses immediately to database
+      await api.post(`/events/${eventId}/submit-questionnaire`, {
+        responses: questionnaireResponses
+      });
+
+      setQuestionnaireAnswered(true);
+      setShowQuestionnaireModal(false);
+      toast.success('Questionnaire submitted successfully');
+    } catch (error) {
+      console.error('❌ Failed to submit questionnaire:', error);
+      toast.error('Failed to save questionnaire. Please try again.');
+    }
   };
 
   const handleProceedToPayment = async () => {
