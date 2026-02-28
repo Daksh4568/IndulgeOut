@@ -170,9 +170,8 @@ const eventSchema = new mongoose.Schema({
   // Used by webhook to retrieve data before payment completion
   // Keyed by orderId, automatically cleaned up after processing
   pendingOrders: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed,
-    default: new Map()
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   analytics: {
     views: {
