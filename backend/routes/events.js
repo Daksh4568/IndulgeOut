@@ -678,13 +678,11 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     const questionnaireMap = new Map();
     if (event.participants && event.participants.length > 0) {
       event.participants.forEach(participant => {
-        if (participant.user && participant.questionnaireResponses) {
+        if (participant.user && participant.questionnaireResponses && participant.questionnaireResponses.length > 0) {
           questionnaireMap.set(participant.user._id.toString(), participant.questionnaireResponses);
         }
       });
     }
-    
-    console.log(`📊 Analytics: Found ${questionnaireMap.size} participants with questionnaire responses`);
     
     // Get all tickets for this event with user details
     const Ticket = require('../models/Ticket');

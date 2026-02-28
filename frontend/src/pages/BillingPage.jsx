@@ -170,7 +170,13 @@ const BillingPage = () => {
 
     try {
       // Check if questionnaire needs to be answered first
-      if (event?.questionnaire?.enabled && event.questionnaire.questions?.length > 0 && !questionnaireAnswered) {
+      // Validate based on actual responses, not just the flag
+      const needsQuestionnaire = event?.questionnaire?.enabled && 
+                                 event.questionnaire.questions?.length > 0;
+      const hasValidResponses = questionnaireResponses.length > 0 && 
+                                questionnaireResponses.every(r => r.answer && r.answer.trim() !== '');
+      
+      if (needsQuestionnaire && !hasValidResponses) {
         // Initialize questionnaire responses if not already done
         if (questionnaireResponses.length === 0) {
           const initialResponses = event.questionnaire.questions.map((q) => ({
@@ -203,6 +209,9 @@ const BillingPage = () => {
       const pricing = calculatePricing();
       
       // Prepare billing data
+      // Include questionnaire responses if they exist and have been filled out
+      const validResponses = questionnaireResponses.filter(r => r.answer && r.answer.trim() !== '');
+      
       const billingData = {
         quantity: pricing.numberOfPeople,
         totalAmount: pricing.grandTotal,
@@ -210,7 +219,7 @@ const BillingPage = () => {
         gstAndOtherCharges: pricing.gstAndOtherCharges,
         platformFees: pricing.platformFees,
         additionalPersons: addAnotherPerson ? [additionalPerson] : [],
-        questionnaireResponses: questionnaireAnswered ? questionnaireResponses : [],
+        questionnaireResponses: validResponses, // Always include if responses exist
       };
 
       // Add grouping offer details if applicable
@@ -232,7 +241,8 @@ const BillingPage = () => {
           gstAndOtherCharges: 0,
           platformFees: 0,
           totalAmount: 0,
-          additionalPersons: billingData.additionalPersons
+          additionalPersons: billingData.additionalPersons,
+          questionnaireResponses: billingData.questionnaireResponses || []
         };
 
         if (billingData.groupingOffer) {
