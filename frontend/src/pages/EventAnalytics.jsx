@@ -947,24 +947,24 @@ const EventAnalytics = () => {
 
       {/* Questionnaire Submissions Modal */}
       {showQuestionnaireModal && (
-        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 rounded-xl max-w-5xl w-full max-h-[85vh] overflow-hidden border border-gray-700 flex flex-col">
+        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-5xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden border border-gray-700 flex flex-col">
             {/* Modal Header */}
-            <div className="bg-zinc-900 border-b border-gray-700 p-6 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-                  <FileText className="h-5 w-5" style={{ color: '#7878E9' }} />
-                  Questionnaire Submissions
+            <div className="bg-zinc-900 border-b border-gray-700 p-4 sm:p-6 flex justify-between items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" style={{ color: '#7878E9' }} />
+                  <span className="truncate">Questionnaire Submissions</span>
                 </h3>
                 {questionnaireSubmissions && (
-                  <div className="flex gap-3 mt-2">
-                    <span className="text-sm text-gray-400">
+                  <div className="flex flex-wrap gap-2 sm:gap-3 mt-2">
+                    <span className="text-xs sm:text-sm text-gray-400">
                       Total: <span className="font-semibold text-white">{questionnaireSubmissions.total}</span>
                     </span>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-xs sm:text-sm text-gray-400">
                       Paid: <span className="font-semibold text-green-400">{questionnaireSubmissions.paid}</span>
                     </span>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-xs sm:text-sm text-gray-400">
                       Unpaid: <span className="font-semibold text-orange-400">{questionnaireSubmissions.unpaid}</span>
                     </span>
                   </div>
@@ -975,14 +975,14 @@ const EventAnalytics = () => {
                   setShowQuestionnaireModal(false);
                   setSelectedSubmission(null);
                 }}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
               >
-                <X className="h-5 w-5 text-gray-400" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
               </button>
             </div>
             
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6">
               {loadingSubmissions ? (
                 <div className="flex items-center justify-center h-40">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
@@ -993,36 +993,37 @@ const EventAnalytics = () => {
                   <p className="text-gray-400">No questionnaire submissions yet</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {questionnaireSubmissions?.submissions?.map((submission) => (
                     <div 
                       key={submission.id} 
-                      className="bg-gray-800 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-all"
+                      className="bg-gray-800 rounded-lg border border-gray-700 p-3 sm:p-4 hover:border-gray-600 transition-all"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        {/* User Info */}
-                        <div className="flex items-center gap-3 flex-1">
+                      {/* Mobile Layout: Stack everything */}
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                        {/* User Info + Status (Mobile: Row, Desktop: Separate) */}
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                           {submission.user.profilePicture ? (
                             <img 
                               src={submission.user.profilePicture} 
                               alt={submission.user.name}
-                              className="h-10 w-10 rounded-full object-cover"
+                              className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover flex-shrink-0"
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
+                            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-sm sm:text-base font-semibold flex-shrink-0">
                               {submission.user.name.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-white font-medium truncate">{submission.user.name}</p>
-                            <p className="text-gray-400 text-sm truncate">{submission.user.email}</p>
+                            <p className="text-white text-sm sm:text-base font-medium truncate">{submission.user.name}</p>
+                            <p className="text-gray-400 text-xs sm:text-sm truncate">{submission.user.email}</p>
                           </div>
                         </div>
 
-                        {/* Submitted Date */}
-                        <div className="text-right hidden sm:block">
+                        {/* Submitted Date (Desktop Only) */}
+                        <div className="text-right hidden lg:block flex-shrink-0">
                           <p className="text-xs text-gray-500">Submitted</p>
-                          <p className="text-sm text-gray-300">
+                          <p className="text-sm text-gray-300 whitespace-nowrap">
                             {new Date(submission.submittedAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -1031,38 +1032,50 @@ const EventAnalytics = () => {
                           </p>
                         </div>
 
-                        {/* Status Badge */}
-                        <div className="flex items-center gap-2">
+                        {/* Status Badge + View Button (Mobile: Row at bottom, Desktop: Stay in line) */}
+                        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-2">
+                          {/* Status Badge */}
                           {submission.isPaid ? (
-                            <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">
+                            <span className="px-2 sm:px-3 py-1 bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-semibold rounded-full border border-green-500/30 whitespace-nowrap">
                               ✓ Paid
                             </span>
                           ) : (
-                            <span className="px-3 py-1 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded-full border border-orange-500/30">
+                            <span className="px-2 sm:px-3 py-1 bg-orange-500/20 text-orange-400 text-[10px] sm:text-xs font-semibold rounded-full border border-orange-500/30 whitespace-nowrap">
                               Unpaid
                             </span>
                           )}
-                        </div>
 
-                        {/* View Button */}
-                        <button
-                          onClick={() => setSelectedSubmission(submission)}
-                          className="flex items-center gap-2 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-all hover:opacity-90"
-                          style={{
-                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                          }}
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          View
-                        </button>
+                          {/* View Button */}
+                          <button
+                            onClick={() => setSelectedSubmission(submission)}
+                            className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-white text-[10px] sm:text-xs font-medium rounded-lg transition-all hover:opacity-90 whitespace-nowrap"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                            }}
+                          >
+                            <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            <span>View</span>
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Ticket Number (if paid) */}
-                      {submission.ticketNumber && (
-                        <div className="mt-2 pt-2 border-t border-gray-700">
-                          <p className="text-xs text-gray-500">
-                            Ticket: <span className="text-gray-300 font-mono">{submission.ticketNumber}</span>
-                          </p>
+                      {/* Ticket Number + Submitted Date (Mobile) */}
+                      {(submission.ticketNumber || submission.submittedAt) && (
+                        <div className="mt-2 pt-2 border-t border-gray-700 flex flex-wrap items-center gap-3 text-xs">
+                          {submission.ticketNumber && (
+                            <span className="text-gray-500">
+                              Ticket: <span className="text-gray-300 font-mono">{submission.ticketNumber}</span>
+                            </span>
+                          )}
+                          <span className="text-gray-500 lg:hidden">
+                            Submitted: <span className="text-gray-300">
+                              {new Date(submission.submittedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </span>
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1076,28 +1089,31 @@ const EventAnalytics = () => {
 
       {/* Submission Detail Modal */}
       {selectedSubmission && (
-        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-700">
-            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 p-6 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-semibold text-white">
+        <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-[60] p-2 sm:p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[90vh] sm:max-h-[80vh] overflow-y-auto border border-gray-700">
+            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 p-4 sm:p-6 flex justify-between items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-semibold text-white">
                   Response Details
                 </h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  {selectedSubmission.user.name} • {selectedSubmission.user.email}
+                <p className="text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                  {selectedSubmission.user.name}
                 </p>
-                <div className="flex items-center gap-2 mt-2">
+                <p className="text-xs text-gray-500 truncate">
+                  {selectedSubmission.user.email}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   {selectedSubmission.isPaid ? (
-                    <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded border border-green-500/30">
+                    <span className="px-2 py-1 bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-semibold rounded border border-green-500/30 whitespace-nowrap">
                       ✓ Paid
                     </span>
                   ) : (
-                    <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded border border-orange-500/30">
+                    <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-[10px] sm:text-xs font-semibold rounded border border-orange-500/30 whitespace-nowrap">
                       Unpaid
                     </span>
                   )}
                   {selectedSubmission.ticketNumber && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-[10px] sm:text-xs text-gray-500 truncate">
                       Ticket: <span className="text-gray-300 font-mono">{selectedSubmission.ticketNumber}</span>
                     </span>
                   )}
@@ -1105,22 +1121,22 @@ const EventAnalytics = () => {
               </div>
               <button
                 onClick={() => setSelectedSubmission(null)}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
               >
-                <X className="h-5 w-5 text-gray-400" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
               {selectedSubmission.responses.map((response, index) => (
-                <div key={index} className="bg-gray-750 p-4 rounded-lg border border-gray-700">
+                <div key={index} className="bg-gray-750 p-3 sm:p-4 rounded-lg border border-gray-700">
                   <div className="flex items-start gap-2 mb-2">
-                    <span className="font-semibold text-sm" style={{ color: '#7878E9' }}>Q{index + 1}:</span>
-                    <p className="text-gray-300 font-medium flex-1">{response.question}</p>
+                    <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ color: '#7878E9' }}>Q{index + 1}:</span>
+                    <p className="text-gray-300 text-sm sm:text-base font-medium flex-1">{response.question}</p>
                   </div>
-                  <div className="flex items-start gap-2 pl-6">
-                    <span className="text-green-400 font-semibold text-sm">A:</span>
-                    <p className="text-gray-400 flex-1">{response.answer || "No answer provided"}</p>
+                  <div className="flex items-start gap-2 pl-4 sm:pl-6">
+                    <span className="text-green-400 font-semibold text-xs sm:text-sm flex-shrink-0">A:</span>
+                    <p className="text-gray-400 text-sm sm:text-base flex-1 break-words">{response.answer || "No answer provided"}</p>
                   </div>
                 </div>
               ))}
