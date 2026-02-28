@@ -15,53 +15,87 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
   useEffect(() => {
     if (!isScanning) return;
 
-    // Initialize scanner
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // Initialize scanner with iOS-compatible config
+    const scannerConfig = {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0,
+      showTorchButtonIfSupported: true,
+      showZoomSliderIfSupported: !isIOS, // Disable zoom on iOS
+      disableFlip: false,
+      rememberLastUsedCamera: true,
+      supportedScanTypes: undefined, // Let library auto-detect
+    };
+
+    // Add video constraints based on platform
+    if (isIOS) {
+      // iOS Safari requires simpler video constraints
+      scannerConfig.videoConstraints = {
+        facingMode: "environment" // Use back camera
+      };
+    } else {
+      // Android and other browsers support advanced constraints
+      scannerConfig.videoConstraints = {
+        facingMode: { ideal: "environment" },
+        advanced: [{ zoom: 1.5 }]
+      };
+    }
+
     const html5QrcodeScanner = new Html5QrcodeScanner(
       "qr-reader",
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: true,
-        defaultZoomValueIfSupported: 2,
-        disableFlip: false,
-        videoConstraints: {
-          facingMode: { ideal: "environment" }, // Use back camera on mobile
-          advanced: [{ zoom: 1.5 }]
-        }
-      },
+      scannerConfig,
       false
     );
 
     // Success callback
     const onScanSuccessCallback = (decodedText, decodedResult) => {
-      // Validate decoded text
-      if (!decodedText || typeof decodedText !== 'string') {
-        console.error('❌ Invalid QR scan data:', decodedText);
-        onScanError?.('Invalid QR code data');
-        return;
-      }
-
-      const decodedString = String(decodedText).trim();
-      if (!decodedString) {
-        console.error('❌ Empty QR scan data');
-        onScanError?.('Empty QR code');
-        return;
-      }
-
-      console.log(`✅ QR Code scanned: ${decodedString}`);
-      
-      // Prevent duplicate scans (same data within 2 seconds)
-      if (lastScannedData === decodedString) {
-        console.log('⚠️ Duplicate scan detected, ignoring...');
-        return;
-      }
-      
-      setLastScannedData(decodedString);
-      
-      // Parse QR data (expected to be JSON from ticket)
       try {
+        // Robust validation for iOS Safari compatibility
+        if (decodedText === null || decodedText === undefined) {
+          console.error('❌ Null/undefined QR scan data');
+          onScanError?.('Invalid QR code data');
+          return;
+        }
+
+        // Convert to string safely (handle iOS Safari quirks)
+        let decodedString;
+        if (typeof decodedText === 'string') {
+          decodedString = decodedText.trim();
+        } else if (typeof decodedText === 'object' && decodedText !== null) {
+          // Some iOS versions might return an object
+          decodedString = JSON.stringify(decodedText);
+        } else {
+          // Fallback: try to convert to string
+          try {
+            decodedString = String(decodedText).trim();
+          } catch (err) {
+            console.error('❌ Cannot convert QR data to string:', err);
+            onScanError?.('Invalid QR code format');
+            return;
+          }
+        }
+
+        if (!decodedString || decodedString.length === 0) {
+          console.error('❌ Empty QR scan data');
+          onScanError?.('Empty QR code');
+          return;
+        }
+
+        console.log(`✅ QR Code scanned: ${decodedString}`);
+        
+        // Prevent duplicate scans (same data within 2 seconds)
+        if (lastScannedData === decodedString) {
+          console.log('⚠️ Duplicate scan detected, ignoring...');
+          return;
+        }
+        
+        setLastScannedData(decodedString);
+        
+        // Parse QR data (expected to be JSON from ticket)
         let ticketData;
         try {
           ticketData = JSON.parse(decodedString);
@@ -75,29 +109,49 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
         // Clear last scanned data after 3 seconds to allow rescanning
         setTimeout(() => setLastScannedData(null), 3000);
       } catch (error) {
-        console.error('❌ Error parsing QR data:', error);
-        onScanError?.('Invalid QR code format');
+        console.error('❌ Error in scan success callback:', error);
+        onScanError?.('Error processing QR code');
       }
     };
 
     // Error callback
     const onScanErrorCallback = (errorMessage) => {
       // Suppress common scanning errors (these are expected during scanning)
-      if (!errorMessage.includes('No MultiFormat Readers')) {
-        // console.log('Scanning...', errorMessage);
+      // iOS Safari sometimes throws different error messages
+      const suppressedErrors = [
+        'No MultiFormat Readers',
+        'NotFoundException',
+        'NotFoundError',
+        'NotAllowedError: Permission denied'
+      ];
+      
+      const shouldSuppress = suppressedErrors.some(err => 
+        errorMessage && typeof errorMessage === 'string' && errorMessage.includes(err)
+      );
+      
+      if (!shouldSuppress) {
+        console.log('📷 Scanner status:', errorMessage);
       }
     };
 
-    // Start scanning
-    html5QrcodeScanner.render(onScanSuccessCallback, onScanErrorCallback);
-    setScanner(html5QrcodeScanner);
-    setScannerReady(true);
+    // Start scanning with error handling for iOS
+    try {
+      html5QrcodeScanner.render(onScanSuccessCallback, onScanErrorCallback);
+      setScanner(html5QrcodeScanner);
+      setScannerReady(true);
+    } catch (error) {
+      console.error('❌ Error initializing scanner:', error);
+      onScanError?.('Failed to initialize camera. Please check permissions.');
+    }
 
-    // Cleanup
+    // Cleanup - Important for iOS Safari
     return () => {
-      html5QrcodeScanner.clear().catch(error => {
-        console.error('❌ Error stopping scanner:', error);
-      });
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch(error => {
+          // iOS Safari sometimes throws errors during cleanup, ignore them
+          console.log('Scanner cleanup:', error.message || error);
+        });
+      }
     };
   }, [isScanning, onScanSuccess, onScanError]); // Removed lastScannedData to prevent reinitializations
 
