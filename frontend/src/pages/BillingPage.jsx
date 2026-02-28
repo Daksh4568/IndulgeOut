@@ -262,7 +262,10 @@ const BillingPage = () => {
       const paymentResponse = await api.post('/payments/create-order', {
         eventId: event._id,
         quantity: pricing.numberOfPeople,
-        amount: pricing.grandTotal
+        amount: pricing.grandTotal,
+        questionnaireResponses: billingData.questionnaireResponses || [],
+        groupingOffer: billingData.groupingOffer || null,
+        additionalPersons: billingData.additionalPersons || []
       });
 
       if (paymentResponse.data.success) {

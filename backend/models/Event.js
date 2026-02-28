@@ -166,6 +166,14 @@ const eventSchema = new mongoose.Schema({
     default: false
   },
   registrationDeadline: Date,
+  // Temporary storage for order metadata (questionnaire responses, etc.)
+  // Used by webhook to retrieve data before payment completion
+  // Keyed by orderId, automatically cleaned up after processing
+  pendingOrders: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed,
+    default: new Map()
+  },
   analytics: {
     views: {
       type: Number,

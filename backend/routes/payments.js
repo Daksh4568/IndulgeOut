@@ -34,10 +34,10 @@ console.log('🔑 Cashfree Configuration:', {
 // Create payment order
 router.post('/create-order', authMiddleware, async (req, res) => {
   try {
-    const { eventId, amount, quantity = 1 } = req.body;
+    const { eventId, amount, quantity = 1, questionnaireResponses = [], groupingOffer, additionalPersons = [] } = req.body;
     const userId = req.user.userId || req.user.id;
 
-    console.log('Payment order request:', { eventId, userId, amount, quantity });
+    console.log('Payment order request:', { eventId, userId, amount, quantity, hasQuestionnaireResponses: questionnaireResponses.length > 0 });
 
     // Fetch event details
     const event = await Event.findById(eventId).populate('host', 'name email');
@@ -87,6 +87,24 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     // Create unique order ID with quantity
     const orderId = `ORDER_${Date.now()}_${userId}_${eventId}_${quantity || 1}`;
+    
+    // Store questionnaire responses and additional data temporarily in order metadata
+    // This will be retrieved by the webhook handler
+    const orderMetadata = {
+      questionnaireResponses: questionnaireResponses || [],
+      groupingOffer: groupingOffer || null,
+      additionalPersons: additionalPersons || [],
+      createdAt: new Date()
+    };
+    
+    // Store in database for webhook retrieval
+    await Event.findByIdAndUpdate(eventId, {
+      $set: {
+        [`pendingOrders.${orderId}`]: orderMetadata
+      }
+    });
+    
+    console.log('📝 Stored order metadata for webhook:', { orderId, hasResponses: questionnaireResponses.length > 0 });
 
     // Create Cashfree order request
     const request = {
@@ -566,6 +584,25 @@ router.post('/webhook', async (req, res) => {
         totalPaid: paymentAmount
       });
 
+      // Retrieve questionnaire responses from stored order metadata
+      let questionnaireResponses = [];
+      let groupingOffer = null;
+      
+      const eventWithMetadata = await Event.findById(eventId);
+      if (eventWithMetadata?.pendingOrders?.[orderId]) {
+        const orderMetadata = eventWithMetadata.pendingOrders[orderId];
+        questionnaireResponses = orderMetadata.questionnaireResponses || [];
+        groupingOffer = orderMetadata.groupingOffer || null;
+        console.log('✅ [WEBHOOK] Retrieved order metadata:', { orderId, hasResponses: questionnaireResponses.length > 0 });
+        
+        // Clean up the pending order metadata
+        await Event.findByIdAndUpdate(eventId, {
+          $unset: { [`pendingOrders.${orderId}`]: '' }
+        });
+      } else {
+        console.warn('⚠️ [WEBHOOK] No order metadata found for:', orderId);
+      }
+      
       // Prepare participant data
       const participantData = {
         user: userId,
@@ -576,8 +613,13 @@ router.post('/webhook', async (req, res) => {
         paymentId: cfPaymentId,
         orderId: orderId,
         amountPaid: basePrice, // Use base price for revenue calculation
-        questionnaireResponses: []
+        questionnaireResponses: questionnaireResponses
       };
+      
+      // Add grouping offer if exists
+      if (groupingOffer) {
+        participantData.groupingOffer = groupingOffer;
+      }
 
       // Register user for event (atomic operation)
       const updatedEvent = await Event.findOneAndUpdate(
