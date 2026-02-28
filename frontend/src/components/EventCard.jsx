@@ -41,7 +41,34 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
     return timeString;
   };
 
-  const isPastEvent = new Date(event.date) < new Date();
+  // Check if event has ended by considering both date and end time
+  const isEventEnded = () => {
+    const eventDate = new Date(event.date);
+    const now = new Date();
+    
+    if (event.endTime) {
+      // Parse end time (e.g., "08:30 PM")
+      const timeMatch = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const period = timeMatch[3].toUpperCase();
+        
+        // Convert to 24-hour format
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        
+        eventDate.setHours(hours, minutes, 0, 0);
+        return eventDate < now;
+      }
+    }
+    
+    // If no end time, consider event lasts until end of day
+    eventDate.setHours(23, 59, 59, 999);
+    return eventDate < now;
+  };
+
+  const isPastEvent = isEventEnded();
 
   const getPriceBadge = () => {
     if (event.price?.amount === 0) {
