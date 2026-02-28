@@ -409,19 +409,58 @@ router.get('/events', authMiddleware, async (req, res) => {
     }).sort({ date: 1 });
     console.log('[Events] Draft events found:', draftEvents.length);
 
-    // Live: Published events with future dates
-    const liveEvents = await Event.find({
+    // Helper function to parse time string (e.g., "08:30 PM") and create full datetime
+    const parseEventEndTime = (event) => {
+      const eventDate = new Date(event.date);
+      
+      if (event.endTime) {
+        // Parse time like "08:30 PM"
+        const timeMatch = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          const minutes = parseInt(timeMatch[2]);
+          const period = timeMatch[3].toUpperCase();
+          
+          // Convert to 24-hour format
+          if (period === 'PM' && hours !== 12) hours += 12;
+          if (period === 'AM' && hours === 12) hours = 0;
+          
+          eventDate.setHours(hours, minutes, 0, 0);
+          return eventDate;
+        }
+      }
+      
+      // If no end time, consider event lasts until end of day
+      eventDate.setHours(23, 59, 59, 999);
+      return eventDate;
+    };
+
+    // Live: Published events that haven't ended yet
+    // First get all published events (don't filter by date in query)
+    const allPublishedEvents = await Event.find({
       host: userId,
-      status: 'published',
-      date: { $gte: now }
+      status: 'published'
     }).sort({ date: 1 });
+    
+    // Filter to only events that haven't ended yet
+    const liveEvents = allPublishedEvents.filter(event => {
+      const eventEndDateTime = parseEventEndTime(event);
+      return eventEndDateTime >= now;
+    });
     console.log('[Events] Live events found:', liveEvents.length);
 
-    // Past: All events (draft, published, completed, cancelled) with past dates
-    const pastEvents = await Event.find({
-      host: userId,
-      date: { $lt: now }
+    // Past: All events that have ended
+    const allEventsForPast = await Event.find({
+      host: userId
     }).sort({ date: -1 });
+    
+    const pastEvents = allEventsForPast.filter(event => {
+      // Skip draft events from past (they stay in draft)
+      if (event.status === 'draft') return false;
+      
+      const eventEndDateTime = parseEventEndTime(event);
+      return eventEndDateTime < now;
+    });
     console.log('[Events] Past events found:', pastEvents.length);
 
     // Calculate fill percentage and revenue for each event
