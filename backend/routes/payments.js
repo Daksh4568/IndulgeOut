@@ -88,38 +88,13 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     // Create unique order ID with quantity
     const orderId = `ORDER_${Date.now()}_${userId}_${eventId}_${quantity || 1}`;
     
-    // Store questionnaire responses and additional data temporarily in order metadata
-    // This will be retrieved by the webhook handler
-    const orderMetadata = {
-      questionnaireResponses: questionnaireResponses || [],
-      groupingOffer: groupingOffer || null,
-      additionalPersons: additionalPersons || [],
-      createdAt: new Date()
-    };
-    
-    // Store in database for webhook retrieval (non-blocking)
-    // If this fails, payment will still work but responses won't be saved
-    Event.findByIdAndUpdate(
-      eventId, 
-      {
-        $set: {
-          [`pendingOrders.${orderId}`]: orderMetadata
-        }
-      },
-      { new: true }
-    ).then(updateResult => {
-      if (!updateResult) {
-        console.error('❌ Failed to store order metadata - event not found or update failed');
-      } else {
-        console.log('📝 Stored order metadata for webhook:', { 
-          orderId, 
-          hasResponses: questionnaireResponses.length > 0,
-          responsesCount: questionnaireResponses.length
-        });
-      }
-    }).catch(metadataError => {
-      console.error('❌ Error storing order metadata:', metadataError);
-      // Continue anyway - webhook will just not have responses
+    // TODO: Temporarily disabled metadata storage due to Cashfree sandbox issues
+    // Responses will be handled via PaymentCallback sessionStorage instead
+    // Re-enable this once Cashfree sandbox is stable
+    console.log('📝 Questionnaire responses received (will be processed via callback):', {
+      orderId,
+      hasResponses: questionnaireResponses.length > 0,
+      responsesCount: questionnaireResponses.length
     });
 
     // Create Cashfree order request
@@ -601,23 +576,22 @@ router.post('/webhook', async (req, res) => {
       });
 
       // Retrieve questionnaire responses from stored order metadata
+      // TEMPORARILY DISABLED - Responses will come from PaymentCallback instead
       let questionnaireResponses = [];
       let groupingOffer = null;
       
-      const eventWithMetadata = await Event.findById(eventId);
-      if (eventWithMetadata?.pendingOrders?.[orderId]) {
-        const orderMetadata = eventWithMetadata.pendingOrders[orderId];
-        questionnaireResponses = orderMetadata.questionnaireResponses || [];
-        groupingOffer = orderMetadata.groupingOffer || null;
-        console.log('✅ [WEBHOOK] Retrieved order metadata:', { orderId, hasResponses: questionnaireResponses.length > 0 });
-        
-        // Clean up the pending order metadata
-        await Event.findByIdAndUpdate(eventId, {
-          $unset: { [`pendingOrders.${orderId}`]: '' }
-        });
-      } else {
-        console.warn('⚠️ [WEBHOOK] No order metadata found for:', orderId);
-      }
+      console.log('⚠️ [WEBHOOK] Metadata retrieval disabled - responses will be empty');
+      
+      // TODO: Re-enable when Cashfree sandbox is stable
+      // const eventWithMetadata = await Event.findById(eventId);
+      // if (eventWithMetadata?.pendingOrders?.[orderId]) {
+      //   const orderMetadata = eventWithMetadata.pendingOrders[orderId];
+      //   questionnaireResponses = orderMetadata.questionnaireResponses || [];
+      //   groupingOffer =orderMetadata.groupingOffer || null;
+      //   await Event.findByIdAndUpdate(eventId, {
+      //     $unset: { [`pendingOrders.${orderId}`]: '' }
+      //   });
+      // }
       
       // Prepare participant data
       const participantData = {
