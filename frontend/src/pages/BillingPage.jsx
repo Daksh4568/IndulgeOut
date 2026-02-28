@@ -281,6 +281,15 @@ const BillingPage = () => {
         // Use explicit Cashfree mode from environment variable, fallback to 'sandbox' for safety
         const cashfreeMode = import.meta.env.VITE_CASHFREE_MODE || 'sandbox';
         console.log('Initializing Cashfree in mode:', cashfreeMode);
+        console.log('Payment session ID:', paymentResponse.data.payment_session_id);
+        console.log('Order ID:', paymentResponse.data.order_id);
+        
+        // Validate session ID
+        if (!paymentResponse.data.payment_session_id || paymentResponse.data.payment_session_id.length < 20) {
+          console.error('Invalid payment session ID received:', paymentResponse.data.payment_session_id);
+          throw new Error('Invalid payment session. Please try again.');
+        }
+        
         const cashfree = window.Cashfree({ mode: cashfreeMode });
 
         const checkoutOptions = {
@@ -288,7 +297,15 @@ const BillingPage = () => {
           returnUrl: `${window.location.origin}/payment-callback?order_id=${paymentResponse.data.order_id}`
         };
 
-        await cashfree.checkout(checkoutOptions);
+        console.log('Checkout options:', checkoutOptions);
+        
+        try {
+          const result = await cashfree.checkout(checkoutOptions);
+          console.log('Cashfree checkout result:', result);
+        } catch (cashfreeError) {
+          console.error('Cashfree checkout error:', cashfreeError);
+          throw new Error('Payment gateway error. Please try again or contact support.');
+        }
       }
     } catch (error) {
       console.error('Payment initialization error:', error);

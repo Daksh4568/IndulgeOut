@@ -97,18 +97,17 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       createdAt: new Date()
     };
     
-    try {
-      // Store in database for webhook retrieval
-      const updateResult = await Event.findByIdAndUpdate(
-        eventId, 
-        {
-          $set: {
-            [`pendingOrders.${orderId}`]: orderMetadata
-          }
-        },
-        { new: true }
-      );
-      
+    // Store in database for webhook retrieval (non-blocking)
+    // If this fails, payment will still work but responses won't be saved
+    Event.findByIdAndUpdate(
+      eventId, 
+      {
+        $set: {
+          [`pendingOrders.${orderId}`]: orderMetadata
+        }
+      },
+      { new: true }
+    ).then(updateResult => {
       if (!updateResult) {
         console.error('❌ Failed to store order metadata - event not found or update failed');
       } else {
@@ -118,10 +117,10 @@ router.post('/create-order', authMiddleware, async (req, res) => {
           responsesCount: questionnaireResponses.length
         });
       }
-    } catch (metadataError) {
+    }).catch(metadataError => {
       console.error('❌ Error storing order metadata:', metadataError);
       // Continue anyway - webhook will just not have responses
-    }
+    });
 
     // Create Cashfree order request
     const request = {
