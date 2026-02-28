@@ -21,13 +21,39 @@ router.get('/my-events', authMiddleware, async (req, res) => {
     .populate('host', 'name')
     .sort({ date: 1 });
 
+    // Helper function to check if event has ended (considers end time)
+    const hasEventEnded = (event) => {
+      const eventDate = new Date(event.date);
+      
+      if (event.endTime) {
+        // Parse time like "08:30 PM"
+        const timeMatch = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          const minutes = parseInt(timeMatch[2]);
+          const period = timeMatch[3].toUpperCase();
+          
+          // Convert to 24-hour format
+          if (period === 'PM' && hours !== 12) hours += 12;
+          if (period === 'AM' && hours === 12) hours = 0;
+          
+          eventDate.setHours(hours, minutes, 0, 0);
+          return eventDate < now;
+        }
+      }
+      
+      // If no end time, consider event lasts until end of day
+      eventDate.setHours(23, 59, 59, 999);
+      return eventDate < now;
+    };
+
     // Separate into upcoming and past
     const upcoming = [];
     const past = [];
 
     allEvents.forEach(event => {
-      const eventDate = new Date(event.date);
       const participant = event.participants.find(p => p.user.toString() === userId);
+      const eventEnded = hasEventEnded(event);
       
       const eventData = {
         _id: event._id,
@@ -48,9 +74,10 @@ router.get('/my-events', authMiddleware, async (req, res) => {
         price: event.price?.amount || 0
       };
 
-      if (eventDate >= now && participant?.status !== 'attended' && participant?.status !== 'cancelled') {
+      // Event is upcoming if it hasn't ended and user hasn't attended/cancelled
+      if (!eventEnded && participant?.status !== 'attended' && participant?.status !== 'cancelled') {
         upcoming.push(eventData);
-      } else if (eventDate < now || participant?.status === 'attended') {
+      } else if (eventEnded || participant?.status === 'attended') {
         past.push(eventData);
       }
     });
