@@ -15,77 +15,114 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
   useEffect(() => {
     if (!isScanning) return;
 
-    // Detect iOS
+    // Detect platform
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(navigator.userAgent);
 
-    // Initialize scanner with iOS-compatible config
+    // Initialize scanner optimized for both printed and screen QR codes
     const scannerConfig = {
-      fps: 10,
-      qrbox: { width: 250, height: 250 },
+      fps: 25, // Optimized FPS for better detection (higher = faster but more CPU)
+      qrbox: function(viewfinderWidth, viewfinderHeight) {
+        // Dynamic QR box sizing - optimized for various distances
+        // Use 65% for better balance between detection area and precision
+        const minEdgePercentage = 0.65;
+        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+        return {
+          width: qrboxSize,
+          height: qrboxSize
+        };
+      },
       aspectRatio: 1.0,
-      showTorchButtonIfSupported: true,
-      showZoomSliderIfSupported: !isIOS, // Disable zoom on iOS
-      disableFlip: false,
+      showTorchButtonIfSupported: true, // Flashlight for low light
+      showZoomSliderIfSupported: !isIOS, // Zoom not supported on iOS Safari
+      defaultZoomValueIfSupported: 2, // Default zoom for Android
+      disableFlip: false, // Allow horizontal flip
       rememberLastUsedCamera: true,
-      supportedScanTypes: undefined, // Let library auto-detect
+      // Don't restrict format - let library detect any QR/barcode format
+      formatsToSupport: undefined,
+      // Enhanced settings for screen scanning
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true // Use native detector when available (faster)
+      },
+      verbose: false // Disable verbose logging in production
     };
 
-    // Add video constraints based on platform
+    // Platform-specific video constraints
     if (isIOS) {
-      // iOS Safari requires simpler video constraints
+      // iOS Safari constraints - simpler but optimized
       scannerConfig.videoConstraints = {
-        facingMode: "environment" // Use back camera
+        facingMode: "environment", // Back camera
+        // Request high resolution for better QR detection
+        width: { min: 640, ideal: 1920, max: 2560 },
+        height: { min: 480, ideal: 1080, max: 1440 },
+        // iOS 15+ supports these
+        frameRate: { ideal: 30, max: 60 }
+      };
+    } else if (isAndroid) {
+      // Android-optimized constraints with advanced features
+      scannerConfig.videoConstraints = {
+        facingMode: { exact: "environment" }, // Prefer back camera
+        // High resolution for screen-to-screen scanning
+        width: { min: 640, ideal: 1920, max: 3840 },
+        height: { min: 480, ideal: 1080, max: 2160 },
+        frameRate: { ideal: 30, max: 60 },
+        // Android-specific optimizations
+        focusMode: "continuous",
+        exposureMode: "continuous",
+        whiteBalanceMode: "continuous"
       };
     } else {
-      // Android and other browsers support advanced constraints
+      // Fallback for other browsers (desktop, etc.)
       scannerConfig.videoConstraints = {
         facingMode: { ideal: "environment" },
-        advanced: [{ zoom: 1.5 }]
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
       };
     }
 
     const html5QrcodeScanner = new Html5QrcodeScanner(
       "qr-reader",
       scannerConfig,
-      false
+      false // verbose
     );
 
     // Success callback
     const onScanSuccessCallback = (decodedText, decodedResult) => {
       try {
-        // Robust validation for iOS Safari compatibility
+        // Robust validation for cross-platform compatibility
         if (decodedText === null || decodedText === undefined) {
           console.error('❌ Null/undefined QR scan data');
-          onScanError?.('Invalid QR code data');
-          return;
+          return; // Don't show error, just skip
         }
 
-        // Convert to string safely (handle iOS Safari quirks)
+        // Convert to string safely (handle platform quirks)
         let decodedString;
         if (typeof decodedText === 'string') {
           decodedString = decodedText.trim();
         } else if (typeof decodedText === 'object' && decodedText !== null) {
-          // Some iOS versions might return an object
+          // Some platforms might return an object
           decodedString = JSON.stringify(decodedText);
+        } else if (typeof decodedText === 'number') {
+          // Handle numeric QR codes
+          decodedString = String(decodedText);
         } else {
           // Fallback: try to convert to string
           try {
             decodedString = String(decodedText).trim();
           } catch (err) {
             console.error('❌ Cannot convert QR data to string:', err);
-            onScanError?.('Invalid QR code format');
             return;
           }
         }
 
         if (!decodedString || decodedString.length === 0) {
           console.error('❌ Empty QR scan data');
-          onScanError?.('Empty QR code');
           return;
         }
 
-        console.log(`✅ QR Code scanned: ${decodedString}`);
+        console.log(`✅ QR Code detected: ${decodedString.substring(0, 50)}...`);
         
         // Prevent duplicate scans (same data within 2 seconds)
         if (lastScannedData === decodedString) {
@@ -98,12 +135,22 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
         // Parse QR data (expected to be JSON from ticket)
         let ticketData;
         try {
+          // Try parsing as JSON first
           ticketData = JSON.parse(decodedString);
         } catch {
-          // If not JSON, assume it's just the ticket number
+          // If not JSON, treat as plain ticket number
           ticketData = { ticketNumber: decodedString };
         }
         
+        // Validate ticket data has required field
+        if (!ticketData || !ticketData.ticketNumber) {
+          console.error('❌ Invalid ticket data structure');
+          onScanError?.('Invalid ticket QR code');
+          setLastScannedData(null);
+          return;
+        }
+        
+        console.log('✅ Valid ticket scanned:', ticketData.ticketNumber);
         onScanSuccess(ticketData);
         
         // Clear last scanned data after 3 seconds to allow rescanning
@@ -111,26 +158,40 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
       } catch (error) {
         console.error('❌ Error in scan success callback:', error);
         onScanError?.('Error processing QR code');
+        setLastScannedData(null);
       }
     };
 
-    // Error callback
+    // Error callback - suppress expected scanning errors
     const onScanErrorCallback = (errorMessage) => {
-      // Suppress common scanning errors (these are expected during scanning)
-      // iOS Safari sometimes throws different error messages
+      // These errors are expected during normal scanning operation
       const suppressedErrors = [
         'No MultiFormat Readers',
-        'NotFoundException',
-        'NotFoundError',
-        'NotAllowedError: Permission denied'
+        'NotFoundException', // No QR code in frame
+        'NotFoundError', // Camera not found
+        'NotAllowedError', // Permission issues
+        'NotReadableError', // Camera busy
+        'OverconstrainedError', // Constraints not supported
+        'AbortError', // User cancelled
+        'QR code parse error', // Parse failures during scan
+        'No QR code found' // Detection failures
       ];
       
-      const shouldSuppress = suppressedErrors.some(err => 
-        errorMessage && typeof errorMessage === 'string' && errorMessage.includes(err)
-      );
+      // Check if this is a suppressed error
+      const shouldSuppress = suppressedErrors.some(err => {
+        if (typeof errorMessage === 'string') {
+          return errorMessage.includes(err);
+        } else if (typeof errorMessage === 'object' && errorMessage?.message) {
+          return errorMessage.message.includes(err);
+        }
+        return false;
+      });
       
-      if (!shouldSuppress) {
-        console.log('📷 Scanner status:', errorMessage);
+      // Only log non-suppressed errors (potential issues)
+      if (!shouldSuppress && errorMessage) {
+        console.log('📷 Scanner info:', 
+          typeof errorMessage === 'string' ? errorMessage : errorMessage?.message || 'Unknown'
+        );
       }
     };
 
@@ -175,9 +236,15 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
               Scan Ticket QR Code
             </h3>
           </div>
-          <p className="text-xs sm:text-sm text-gray-400">
-            Position the QR code within the frame
+          <p className="text-xs sm:text-sm text-gray-400 mb-2">
+            Position the QR code within the scanning frame
           </p>
+          {/* Scanning tips for better success rate */}
+          <div className="text-[10px] sm:text-xs text-gray-500 space-y-1 bg-gray-800 bg-opacity-50 rounded-lg p-2">
+            <p>💡 <strong>Digital tickets:</strong> Max brightness, avoid glare</p>
+            <p>📏 <strong>Distance:</strong> Hold 15-30cm (6-12 inches) away</p>
+            <p>📱 <strong>Stability:</strong> Keep both devices steady 2-3 seconds</p>
+          </div>
         </div>
 
         {/* Scanner Container */}
