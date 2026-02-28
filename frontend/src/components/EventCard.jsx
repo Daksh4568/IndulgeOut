@@ -41,53 +41,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
     return timeString;
   };
 
-  // Helper function to parse time string (e.g., "04:30 PM") and combine with date
-  const combineDateTime = (dateString, timeString) => {
-    if (!dateString || !timeString) return new Date(dateString);
-    
-    const date = new Date(dateString);
-    
-    // Parse time string (handles formats like "04:30 PM" or "4:30 PM")
-    const timeMatch = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (!timeMatch) return date;
-    
-    let hours = parseInt(timeMatch[1]);
-    const minutes = parseInt(timeMatch[2]);
-    const period = timeMatch[3].toUpperCase();
-    
-    // Convert to 24-hour format
-    if (period === 'PM' && hours !== 12) {
-      hours += 12;
-    } else if (period === 'AM' && hours === 12) {
-      hours = 0;
-    }
-    
-    date.setHours(hours, minutes, 0, 0);
-    return date;
-  };
-
-  // Check if event has ended by comparing current time with event end time
-  const isPastEvent = (() => {
-    const now = new Date();
-    const eventDate = new Date(event.date);
-    
-    // If event has end time, use it to determine if event ended
-    if (event.endTime) {
-      const eventEndDateTime = combineDateTime(event.date, event.endTime);
-      return eventEndDateTime < now;
-    }
-    
-    // If only start time is available, use it
-    if (event.startTime) {
-      const eventStartDateTime = combineDateTime(event.date, event.startTime);
-      return eventStartDateTime < now;
-    }
-    
-    // Fallback: just compare dates (event ends at end of day)
-    const endOfEventDay = new Date(eventDate);
-    endOfEventDay.setHours(23, 59, 59, 999);
-    return endOfEventDay < now;
-  })();
+  const isPastEvent = new Date(event.date) < new Date();
 
   const getPriceBadge = () => {
     if (event.price?.amount === 0) {
