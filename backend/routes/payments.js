@@ -34,10 +34,24 @@ console.log('🔑 Cashfree Configuration:', {
 // Create payment order
 router.post('/create-order', authMiddleware, async (req, res) => {
   try {
-    const { eventId, amount, quantity = 1, questionnaireResponses = [], groupingOffer, additionalPersons = [] } = req.body;
+    const { 
+      eventId, 
+      amount, 
+      quantity = 1, 
+      basePrice,              // ✅ Receive base price
+      gstAndOtherCharges,     // ✅ Receive GST
+      platformFees,           // ✅ Receive platform fees
+      questionnaireResponses = [], 
+      groupingOffer, 
+      additionalPersons = [] 
+    } = req.body;
     const userId = req.user.userId || req.user.id;
 
-    console.log('Payment order request:', { eventId, userId, amount, quantity, hasQuestionnaireResponses: questionnaireResponses.length > 0 });
+    console.log('Payment order request:', { 
+      eventId, userId, amount, quantity, 
+      basePrice, gstAndOtherCharges, platformFees,
+      hasQuestionnaireResponses: questionnaireResponses.length > 0 
+    });
 
     // Fetch event details
     const event = await Event.findById(eventId).populate('host', 'name email');
@@ -116,6 +130,7 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     };
 
     console.log('Creating Cashfree order with request:', request);
+    console.log('Fee breakdown to be stored:', { basePrice, gstAndOtherCharges, platformFees });
     console.log('Using Cashfree credentials:', {
       appId: process.env.CASHFREE_APP_ID ? process.env.CASHFREE_APP_ID.substring(0, 10) + '...' : 'MISSING',
       secretKey: process.env.CASHFREE_SECRET_KEY ? process.env.CASHFREE_SECRET_KEY.substring(0, 10) + '...' : 'MISSING',
@@ -138,6 +153,16 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     console.log('Cashfree response:', JSON.stringify(cashfreeResponse.data, null, 2));
     console.log('Payment session ID:', cashfreeResponse.data.payment_session_id);
+
+    // Store fee breakdown in session for verify-payment to retrieve
+    // This ensures fees are persisted even if webhook fires first
+    if (!global.pendingPaymentFees) global.pendingPaymentFees = {};
+    global.pendingPaymentFees[orderId] = {
+      basePrice: basePrice || 0,
+      gstAndOtherCharges: gstAndOtherCharges || 0,
+      platformFees: platformFees || 0,
+      createdAt: Date.now()
+    };
 
     // Check if payment_session_id exists
     if (!cashfreeResponse.data.payment_session_id) {
@@ -187,15 +212,26 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       quantity = 1,
       groupingOffer,
       additionalPersons = [],
-      questionnaireResponses = [],
-      basePrice, // Base price from frontend (already calculated correctly)
-      gstAndOtherCharges,
-      platformFees,
-      totalAmount
+      questionnaireResponses = []
+      // Note: basePrice, gst, platformFees will be retrieved from global store or req.body
     } = req.body;
     const userId = req.user.userId || req.user.id;
 
     console.log('Verifying payment:', { orderId, eventId, userId });
+
+    // Retrieve fee breakdown from global store (set by create-order)
+    const storedFees = global.pendingPaymentFees?.[orderId] || {};
+    const basePrice = req.body.basePrice || storedFees.basePrice || 0;
+    const gstAndOtherCharges = req.body.gstAndOtherCharges || storedFees.gstAndOtherCharges || 0;
+    const platformFees = req.body.platformFees || storedFees.platformFees || 0;
+    const totalAmount = req.body.totalAmount || (basePrice + gstAndOtherCharges + platformFees);
+    
+    // Clean up stored fees
+    if (global.pendingPaymentFees?.[orderId]) {
+      delete global.pendingPaymentFees[orderId];
+    }
+    
+    console.log('Fee breakdown retrieved:', { basePrice, gstAndOtherCharges, platformFees, totalAmount });
 
     // Fetch order status from Cashfree using REST API
     const cashfreeResponse = await axios.get(
@@ -334,10 +370,23 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         registeredAt: new Date(),
         slotsBooked: ticketQuantity,
         orderId: orderId,
-        basePrice: basePrice || 0, // Base price from frontend (revenue amount)
+        basePrice: basePrice || 0, // Base price from frontend (organizer's revenue - ticket price only)
         gstAndOtherCharges: gstAndOtherCharges || 0,
         platformFees: platformFees || 0
       };
+      
+      // Validation: Ensure basePrice is properly set
+      if (!basePrice || basePrice === 0) {
+        console.warn('⚠️ [Payment Ticket] basePrice is missing or zero! This will affect revenue calculation.');
+      }
+      
+      // Validation: Check if basePrice + fees approximately equals totalAmount
+      if (basePrice && totalAmount) {
+        const calculatedTotal = basePrice + (gstAndOtherCharges || 0) + (platformFees || 0);
+        if (Math.abs(calculatedTotal - totalAmount) > 1) {
+          console.warn(`⚠️ [Payment Ticket] Amount mismatch! basePrice(${basePrice}) + fees(${(gstAndOtherCharges || 0) + (platformFees || 0)}) = ${calculatedTotal} but totalAmount = ${totalAmount}`);
+        }
+      }
       
       if (groupingOffer) {
         ticketMetadata.groupingOffer = groupingOffer.tierLabel;
@@ -586,17 +635,33 @@ router.post('/webhook', async (req, res) => {
       // Use quantity from order ID
       const ticketQuantity = orderQuantity;
 
-      // Calculate base price (revenue without payment gateway fees)
-      // Base price = ticket price × quantity
+      // Calculate base price (organizer's revenue - just the ticket price without fees)
+      // Base price = ticket price × quantity (NO platform fee deduction, that's only gateway+GST)
       const ticketPrice = event.price?.amount || event.ticketPrice || 0;
-      const basePrice = ticketPrice * ticketQuantity;
+      const basePrice = ticketPrice * ticketQuantity; // This is organizer's revenue
+      
+      // Calculate fees from payment amount
+      // Total paid = basePrice + GST (2.6%) + Platform Fee (3%)
+      // So fees = totalPaid - basePrice
+      const totalFees = paymentAmount - basePrice;
+      const gstAndOtherCharges = parseFloat((totalFees * 0.46).toFixed(2)); // 46% of fees is GST
+      const platformFees = parseFloat((totalFees * 0.54).toFixed(2));       // 54% of fees is platform
       
       console.log('💰 [WEBHOOK] Price calculation:', {
         ticketPrice,
         quantity: ticketQuantity,
         basePrice,
-        totalPaid: paymentAmount
+        totalPaid: paymentAmount,
+        gstAndOtherCharges,
+        platformFees,
+        note: 'basePrice = organizer revenue (ticket price only), totalPaid includes gateway (3%) + GST (2.6%)'
       });
+      
+      // Validation: Check if totalPaid approximately equals basePrice + 5.6% fees
+      const expectedTotal = basePrice * 1.056;
+      if (Math.abs(expectedTotal - paymentAmount) > 2) {
+        console.warn(`⚠️ [WEBHOOK] Payment amount mismatch! Expected ${expectedTotal.toFixed(2)} (basePrice + 5.6% fees) but got ${paymentAmount}`);
+      }
 
       // Retrieve questionnaire responses from stored order metadata
       // TEMPORARILY DISABLED - Responses will come from PaymentCallback instead
@@ -709,9 +774,11 @@ router.post('/webhook', async (req, res) => {
             registeredAt: new Date(),
             slotsBooked: ticketQuantity,
             orderId: orderId,
-            basePrice: basePrice, // For revenue calculation
-            totalPaid: paymentAmount, // Total including fees
-            ticketPrice: ticketPrice // Per-ticket price
+            basePrice: basePrice,                     // ✅ Organizer revenue
+            gstAndOtherCharges: gstAndOtherCharges,   // ✅ GST breakdown
+            platformFees: platformFees,               // ✅ Platform fee breakdown
+            totalPaid: paymentAmount,                 // ✅ Total customer paid
+            ticketPrice: ticketPrice                  // Per-ticket price
           }
         });
         console.log('✅ [WEBHOOK] Ticket generated:', ticket.ticketNumber);

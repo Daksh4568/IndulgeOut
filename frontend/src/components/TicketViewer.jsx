@@ -25,7 +25,7 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
         // Get all user tickets and find the one for this event
         const allTickets = await api.get('/tickets/my-tickets');
         const eventTicket = allTickets.data.tickets.find(
-          t => t.event._id === eventId || t.event === eventId
+          t => t.event && (t.event._id === eventId || t.event === eventId)
         );
         
         if (eventTicket) {
@@ -34,6 +34,11 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
           // No ticket found - user should register first
           throw new Error('No ticket found for this event. Please register for the event first.');
         }
+      }
+
+      // Validate ticket has event data
+      if (!response.data.ticket.event) {
+        throw new Error('Ticket event information is missing. The event may have been deleted.');
       }
 
       setTicket(response.data.ticket);
@@ -46,7 +51,7 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
   };
 
   const handleDownload = () => {
-    if (!ticket) return;
+    if (!ticket || !ticket.event) return;
 
     // Convert times to 12-hour format
     const formatTime = (time) => {
@@ -228,6 +233,32 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
   }
 
   if (!ticket) return null;
+
+  // Additional safety check for event data
+  if (!ticket.event) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
+        <div className="bg-black border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-bold text-white">Event Data Missing</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <p className="text-red-400">The event information for this ticket is missing. The event may have been deleted.</p>
+          <button
+            onClick={onClose}
+            className="mt-4 w-full bg-gradient-to-r from-[#7878E9] to-[#3D3DD4] text-white py-2 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">

@@ -24,6 +24,7 @@ const userDashboardRoutes = require('./routes/userDashboard.js');
 const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
 const notificationRoutes = require('./routes/notifications.js');
+const settlementRoutes = require('./routes/settlements.js');
 
 // Import scheduled jobs
 const { initializeScheduledJobs } = require('./jobs/scheduledJobs.js');
@@ -139,6 +140,7 @@ app.use('/api/explore', exploreRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/organizer', organizerRoutes);
+app.use('/api/settlements', settlementRoutes);
 app.use('/api/venues', venueRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/collaborations', collaborationRoutes);

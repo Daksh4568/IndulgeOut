@@ -1240,4 +1240,1120 @@ router.get('/revenue', requirePermission('view_analytics'), async (req, res) => 
   }
 });
 
+// ==================== EVENT AUDIT & REPORTS ====================
+
+/**
+ * GET /api/admin/events/all-with-revenue
+ * Get all events with revenue metrics for admin dashboard
+ */
+router.get('/events/all-with-revenue', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status, organizerId } = req.query;
+    
+    console.log('📊 [Admin Events] Fetching all events with revenue...');
+    
+    const Ticket = require('../models/Ticket');
+    
+    // Build query
+    const query = {};
+    if (status) query.status = status;
+    if (organizerId) query.host = organizerId;
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Get events with organizer info
+    const events = await Event.find(query)
+      .populate('host', 'name email communityProfile')
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+    
+    const total = await Event.countDocuments(query);
+    
+    console.log(`📊 [Admin Events] Found ${events.length} events`);
+    
+    // Enrich with revenue and ticket data
+    const enrichedEvents = await Promise.all(events.map(async (event) => {
+      // Get tickets for this event
+      const tickets = await Ticket.find({
+        event: event._id,
+        status: { $ne: 'cancelled' }
+      }).lean();
+      
+      // Calculate revenue metrics
+      const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+      const totalPaid = tickets.reduce((sum, t) => sum + (t.metadata?.totalPaid || 0), 0);
+      
+      // Settlement status
+      const settledCount = tickets.filter(t => t.settlementStatus === 'settled').length;
+      const pendingCount = tickets.filter(t => t.settlementStatus === 'pending' || t.settlementStatus === 'captured').length;
+      
+      // Reconciliation status
+      const verifiedCount = tickets.filter(t => t.reconciliationStatus === 'verified').length;
+      const mismatchCount = tickets.filter(t => t.reconciliationStatus === 'mismatch').length;
+      const needsReviewCount = tickets.filter(t => t.reconciliationStatus === 'manual_review').length;
+      
+      return {
+        _id: event._id,
+        title: event.title,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+        status: event.status,
+        maxParticipants: event.maxParticipants,
+        currentParticipants: event.currentParticipants,
+        organizer: {
+          id: event.host._id,
+          name: event.host.name,
+          email: event.host.email,
+          communityName: event.host.communityProfile?.communityName
+        },
+        revenue: {
+          totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+          totalPaid: parseFloat(totalPaid.toFixed(2)),
+          ticketCount: tickets.length,
+          avgTicketPrice: tickets.length > 0 ? parseFloat((totalRevenue / tickets.length).toFixed(2)) : 0
+        },
+        settlement: {
+          settled: settledCount,
+          pending: pendingCount,
+          settledPercentage: tickets.length > 0 ? parseFloat(((settledCount / tickets.length) * 100).toFixed(1)) : 0
+        },
+        reconciliation: {
+          verified: verifiedCount,
+          mismatches: mismatchCount,
+          needsReview: needsReviewCount,
+          total: tickets.length,
+          verifiedPercentage: tickets.length > 0 ? parseFloat(((verifiedCount / tickets.length) * 100).toFixed(1)) : 0
+        },
+        hasIssues: mismatchCount > 0 || needsReviewCount > 0
+      };
+    }));
+    
+    res.json({
+      events: enrichedEvents,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        limit: parseInt(limit)
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ [Admin Events] Error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch events',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/events/:eventId/audit-report
+ * Download detailed audit report for any event (admin access)
+ */
+router.get('/events/:eventId/audit-report', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { format = 'csv' } = req.query;
+    
+    console.log('📊 [Admin Report] Generating audit report for event:', eventId);
+    
+    const Ticket = require('../models/Ticket');
+    
+    // Get event with organizer
+    const event = await Event.findById(eventId)
+      .populate('host', 'name email communityProfile');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Get all tickets
+    const tickets = await Ticket.find({
+      event: eventId,
+      status: { $ne: 'cancelled' }
+    }).populate('user', 'name email phoneNumber')
+      .sort({ purchaseDate: -1 });
+    
+    console.log(`📊 [Admin Report] Found ${tickets.length} tickets`);
+    
+    // Calculate metrics
+    const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    
+    // Calculate total paid by summing base + fees for each ticket
+    const totalPaid = tickets.reduce((sum, t) => {
+      const basePrice = t.metadata?.basePrice || 0;
+      let gstCharges = t.metadata?.gstAndOtherCharges || 0;
+      let platformFees = t.metadata?.platformFees || 0;
+      
+      // If fees missing, estimate from price difference
+      if (gstCharges === 0 && platformFees === 0 && basePrice > 0) {
+        const actualPrice = typeof t.price === 'number' ? t.price : (t.price?.amount || 0);
+        const diff = actualPrice - basePrice;
+        if (diff > basePrice * 0.01) {
+          gstCharges = diff * 0.46;
+          platformFees = diff * 0.54;
+        }
+      }
+      
+      return sum + basePrice + gstCharges + platformFees;
+    }, 0);
+    
+    const totalGatewayFees = totalPaid - totalRevenue; // Total fees = total paid - base revenue
+    
+    const settledCount = tickets.filter(t => t.settlementStatus === 'settled').length;
+    const pendingCount = tickets.filter(t => t.settlementStatus === 'pending' || t.settlementStatus === 'captured').length;
+    const verifiedCount = tickets.filter(t => t.reconciliationStatus === 'verified').length;
+    const mismatchCount = tickets.filter(t => t.reconciliationStatus === 'mismatch').length;
+    
+    const report = {
+      generatedAt: new Date().toISOString(),
+      generatedBy: 'Admin',
+      event: {
+        id: event._id,
+        title: event.title,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+        maxParticipants: event.maxParticipants,
+        currentParticipants: event.currentParticipants
+      },
+      organizer: {
+        name: event.host.name,
+        email: event.host.email,
+        communityName: event.host.communityProfile?.communityName
+      },
+      summary: {
+        totalTickets: tickets.length,
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+        totalPaidByUsers: parseFloat(totalPaid.toFixed(2)),
+        totalGatewayFees: parseFloat(totalGatewayFees.toFixed(2)),
+        avgTicketPrice: tickets.length > 0 ? parseFloat((totalRevenue / tickets.length).toFixed(2)) : 0,
+        settlement: {
+          settled: settledCount,
+          pending: pendingCount,
+          settledPercentage: tickets.length > 0 ? parseFloat(((settledCount / tickets.length) * 100).toFixed(1)) : 0
+        },
+        reconciliation: {
+          verified: verifiedCount,
+          mismatches: mismatchCount,
+          pending: tickets.length - verifiedCount - mismatchCount,
+          verifiedPercentage: tickets.length > 0 ? parseFloat(((verifiedCount / tickets.length) * 100).toFixed(1)) : 0
+        }
+      },
+      tickets: tickets.map(t => {
+        const basePrice = t.metadata?.basePrice || 0;
+        
+        // Get stored fee values if they exist
+        let gstCharges = t.metadata?.gstAndOtherCharges || 0;
+        let platformFees = t.metadata?.platformFees || 0;
+        
+        // If fees are not recorded, try to calculate from price difference
+        if (gstCharges === 0 && platformFees === 0 && basePrice > 0) {
+          const actualPrice = typeof t.price === 'number' ? t.price : (t.price?.amount || 0);
+          const priceDifference = actualPrice - basePrice;
+          
+          // Only estimate fees if there's a meaningful difference (more than 1% of base)
+          if (priceDifference > basePrice * 0.01) {
+            // Split the difference: 46% GST, 54% platform fee
+            gstCharges = parseFloat((priceDifference * 0.46).toFixed(2));
+            platformFees = parseFloat((priceDifference * 0.54).toFixed(2));
+          }
+        }
+        
+        // Calculate total paid = base + all fees (this is what customer actually paid)
+        const totalPaidByUser = parseFloat((basePrice + gstCharges + platformFees).toFixed(2));
+        
+        return {
+        ticketNumber: t.ticketNumber,
+        userName: t.user?.name || 'N/A',
+        userEmail: t.user?.email || 'N/A',
+        userPhone: t.user?.phoneNumber || 'N/A',
+        purchaseDate: t.purchaseDate,
+        quantity: t.quantity || 1,
+        ticketType: t.metadata?.ticketType || 'general',
+        basePrice: basePrice,
+        gstAndOtherCharges: gstCharges,
+        platformFees: platformFees,
+        totalPaidByUser: totalPaidByUser,
+        orderId: t.metadata?.orderId,
+        paymentId: t.paymentId,
+        paymentMethod: t.gatewayResponse?.paymentMethod || 'N/A',
+        paymentStatus: t.gatewayResponse?.paymentStatus || 'N/A',
+        gatewayPaymentAmount: totalPaidByUser, // Amount received by gateway from customer
+        settlementStatus: t.settlementStatus,
+        settlementDate: t.settlementDate,
+        settlementUTR: t.settlementUTR,
+        settlementAmount: t.settlementAmount || 0, // Amount transferred to organizer's bank
+        reconciliationStatus: t.reconciliationStatus,
+        lastReconciliationDate: t.lastReconciliationDate,
+        reconciliationNotes: t.reconciliationNotes,
+        checkInStatus: t.status,
+        checkInTime: t.checkInTime
+      };})
+    };
+    
+    if (format === 'csv') {
+      const fields = [
+        'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
+        'quantity', 'ticketType', 'basePrice', 'gstAndOtherCharges', 'platformFees',
+        'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
+        'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
+        'reconciliationStatus', 'lastReconciliationDate', 'reconciliationNotes',
+        'checkInStatus', 'checkInTime'
+      ];
+      
+      const totalSettledAmount = tickets.filter(t => t.settlementStatus === 'settled').reduce((sum, t) => sum + (t.settlementAmount || 0), 0);
+      
+      const csvRows = [];
+      csvRows.push(`# ========================================`);
+      csvRows.push(`# ADMIN AUDIT REPORT`);
+      csvRows.push(`# ========================================`);
+      csvRows.push(`# Event: ${event.title}`);
+      csvRows.push(`# Organizer: ${event.host.name} (${event.host.email})`);
+      csvRows.push(`# Community: ${event.host.communityProfile?.communityName || 'N/A'}`);
+      csvRows.push(`# Generated: ${new Date().toISOString()}`);
+      csvRows.push(`# Total Tickets: ${tickets.length}`);
+      csvRows.push(`# Total Revenue (User Paid): ₹${totalPaid.toFixed(2)}`);
+      csvRows.push(`# Base Revenue (Organizer Share): ₹${totalRevenue.toFixed(2)}`);
+      csvRows.push(`# Gateway Fees Deducted: ₹${totalGatewayFees.toFixed(2)}`);
+      csvRows.push(`#`);
+      csvRows.push(`# SETTLEMENT STATUS:`);
+      csvRows.push(`#   - Settled: ${settledCount} tickets (${report.summary.settlement.settledPercentage}%)`);
+      csvRows.push(`#   - Amount Settled to Organizer Bank: ₹${totalSettledAmount.toFixed(2)}`);
+      csvRows.push(`#   - Pending Settlement: ${pendingCount} tickets`);
+      csvRows.push(`#   - Settlement = When Cashfree transfers money to organizer's bank account`);
+      csvRows.push(`#`);
+      csvRows.push(`# RECONCILIATION STATUS:`);
+      csvRows.push(`#   - Verified with Cashfree: ${verifiedCount} (${report.summary.reconciliation.verifiedPercentage}%)`);
+      csvRows.push(`#   - Mismatches Found: ${mismatchCount}`);
+      csvRows.push(`#   - Pending Verification: ${tickets.length - verifiedCount - mismatchCount}`);
+      csvRows.push(`#   - Reconciliation = Daily verification that payment was actually received by Cashfree`);
+      csvRows.push(`#`);
+      csvRows.push(`# FIELD EXPLANATIONS:`);
+      csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
+      csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
+      csvRows.push(`#   - basePrice: Organizer's share before gateway fees`);
+      csvRows.push(`#   - settlementAmount: Final amount transferred to organizer's bank`);
+      csvRows.push(`#   - orderId: Cashfree order ID for verification`);
+      csvRows.push(`#   - reconciliationStatus: verified = Payment confirmed with Cashfree API`);
+      csvRows.push(`#   - lastReconciliationDate: When we last verified this payment with Cashfree`);
+      csvRows.push(`# ========================================`);
+      csvRows.push('');
+      csvRows.push(fields.join(','));
+      
+      report.tickets.forEach(ticket => {
+        const row = fields.map(field => {
+          let value = ticket[field];
+          if (field.includes('Date') || field.includes('Time')) {
+            value = value ? new Date(value).toISOString() : '';
+          }
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            value = `"${value.replace(/"/g, '""')}"`;
+          }
+          return value !== null && value !== undefined ? value : '';
+        });
+        csvRows.push(row.join(','));
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="admin-audit-${eventId}-${Date.now()}.csv"`);
+      res.send(csvRows.join('\n'));
+    } else {
+      res.json(report);
+    }
+    
+  } catch (error) {
+    console.error('❌ [Admin Report] Error:', error);
+    res.status(500).json({
+      message: 'Failed to generate audit report',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/reports/reconciliation-issues
+ * Get all tickets with reconciliation issues (mismatches, manual review)
+ */
+router.get('/reports/reconciliation-issues', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const Ticket = require('../models/Ticket');
+    
+    console.log('⚠️ [Admin] Fetching reconciliation issues...');
+    
+    // Get tickets with issues
+    const issueTickets = await Ticket.find({
+      $or: [
+        { reconciliationStatus: 'mismatch' },
+        { reconciliationStatus: 'manual_review' }
+      ]
+    })
+      .populate('event', 'title date host')
+      .populate('user', 'name email')
+      .sort({ lastReconciliationDate: -1 })
+      .limit(100)
+      .lean();
+    
+    // Populate host manually
+    const enrichedTickets = await Promise.all(issueTickets.map(async (ticket) => {
+      if (ticket.event && ticket.event.host) {
+        const host = await User.findById(ticket.event.host).select('name email communityProfile').lean();
+        return {
+          ...ticket,
+          event: {
+            ...ticket.event,
+            hostData: host
+          }
+        };
+      }
+      return ticket;
+    }));
+    
+    console.log(`⚠️ [Admin] Found ${enrichedTickets.length} tickets with issues`);
+    
+    // Group by issue type
+    const mismatches = enrichedTickets.filter(t => t.reconciliationStatus === 'mismatch');
+    const needsReview = enrichedTickets.filter(t => t.reconciliationStatus === 'manual_review');
+    
+    res.json({
+      summary: {
+        total: enrichedTickets.length,
+        mismatches: mismatches.length,
+        needsReview: needsReview.length
+      },
+      issues: enrichedTickets.map(t => ({
+        ticketNumber: t.ticketNumber,
+        eventTitle: t.event?.title,
+        eventDate: t.event?.date,
+        organizer: {
+          name: t.event?.hostData?.name,
+          email: t.event?.hostData?.email,
+          communityName: t.event?.hostData?.communityProfile?.communityName
+        },
+        user: {
+          name: t.user?.name,
+          email: t.user?.email
+        },
+        purchaseDate: t.purchaseDate,
+        basePrice: t.metadata?.basePrice,
+        totalPaid: t.metadata?.totalPaid,
+        orderId: t.metadata?.orderId,
+        reconciliationStatus: t.reconciliationStatus,
+        reconciliationNotes: t.reconciliationNotes,
+        lastReconciliationDate: t.lastReconciliationDate
+      }))
+    });
+    
+  } catch (error) {
+    console.error('❌ [Admin Issues] Error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch reconciliation issues',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/reports/settlement-pending
+ * Get all tickets with pending settlements (aging analysis)
+ */
+router.get('/reports/settlement-pending', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const Ticket = require('../models/Ticket');
+    
+    console.log('🏦 [Admin] Fetching pending settlements...');
+    
+    // Get pending/captured tickets
+    const pendingTickets = await Ticket.find({
+      settlementStatus: { $in: ['pending', 'captured'] },
+      reconciliationStatus: 'verified' // Only reconciled payments
+    })
+      .populate('event', 'title date host')
+      .populate('user', 'name email')
+      .sort({ purchaseDate: 1 }) // Oldest first
+      .lean();
+    
+    // Populate host data
+    const enrichedTickets = await Promise.all(pendingTickets.map(async (ticket) => {
+      if (ticket.event && ticket.event.host) {
+        const host = await User.findById(ticket.event.host).select('name email communityProfile').lean();
+        
+        // Calculate days pending
+        const daysPending = Math.floor((new Date() - new Date(ticket.purchaseDate)) / (24 * 60 * 60 * 1000));
+        
+        return {
+          ...ticket,
+          daysPending,
+          event: {
+            ...ticket.event,
+            hostData: host
+          }
+        };
+      }
+      return ticket;
+    }));
+    
+    // Categorize by age
+    const aging = {
+      fresh: enrichedTickets.filter(t => t.daysPending <= 2),           // 0-2 days (normal)
+      pending: enrichedTickets.filter(t => t.daysPending > 2 && t.daysPending <= 5),  // 3-5 days
+      overdue: enrichedTickets.filter(t => t.daysPending > 5 && t.daysPending <= 10), // 6-10 days
+      critical: enrichedTickets.filter(t => t.daysPending > 10)          // 10+ days (escalate)
+    };
+    
+    console.log(`🏦 [Admin] Settlements: ${aging.fresh.length} fresh, ${aging.pending.length} pending, ${aging.overdue.length} overdue, ${aging.critical.length} critical`);
+    
+    res.json({
+      summary: {
+        total: enrichedTickets.length,
+        fresh: aging.fresh.length,
+        pending: aging.pending.length,
+        overdue: aging.overdue.length,
+        critical: aging.critical.length,
+        totalAmount: enrichedTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0)
+      },
+      aging: {
+        fresh: aging.fresh.slice(0, 10).map(t => formatSettlementTicket(t)),
+        pending: aging.pending.slice(0, 10).map(t => formatSettlementTicket(t)),
+        overdue: aging.overdue.map(t => formatSettlementTicket(t)),
+        critical: aging.critical.map(t => formatSettlementTicket(t))
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ [Admin Settlements] Error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch pending settlements',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to format settlement ticket data
+function formatSettlementTicket(ticket) {
+  return {
+    ticketNumber: ticket.ticketNumber,
+    eventTitle: ticket.event?.title,
+    organizer: {
+      name: ticket.event?.hostData?.name,
+      email: ticket.event?.hostData?.email,
+      communityName: ticket.event?.hostData?.communityProfile?.communityName
+    },
+    purchaseDate: ticket.purchaseDate,
+    daysPending: ticket.daysPending,
+    basePrice: ticket.metadata?.basePrice,
+    orderId: ticket.metadata?.orderId,
+    settlementStatus: ticket.settlementStatus
+  };
+}
+
+// ==================== ORGANIZER MANAGEMENT ====================
+
+/**
+ * GET /api/admin/organizers
+ * Get all community organizers with basic stats
+ */
+router.get('/organizers', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search, city, verified } = req.query;
+    
+    const query = {
+      role: 'host_partner',
+      hostPartnerType: 'community_organizer'
+    };
+    
+    // Search filter
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { 'communityProfile.communityName': { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // City filter
+    if (city) {
+      query['communityProfile.city'] = { $regex: city, $options: 'i' };
+    }
+    
+    // KYC verification filter
+    if (verified !== undefined) {
+      query['payoutDetails.isVerified'] = verified === 'true';
+    }
+    
+    const skip = (page - 1) * limit;
+    
+    const [organizers, total] = await Promise.all([
+      User.find(query)
+        .select('name email phoneNumber communityProfile payoutDetails createdAt location')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      User.countDocuments(query)
+    ]);
+    
+    // Enrich with event count for each organizer
+    const enrichedOrganizers = await Promise.all(
+      organizers.map(async (organizer) => {
+        const [eventCount, activeEvents, totalRevenue] = await Promise.all([
+          Event.countDocuments({ host: organizer._id }),
+          Event.countDocuments({ 
+            host: organizer._id, 
+            status: 'live',
+            date: { $gte: new Date() }
+          }),
+          // Get total tickets sold
+          Event.aggregate([
+            { $match: { host: organizer._id } },
+            { 
+              $project: { 
+                currentParticipants: 1 
+              } 
+            },
+            { 
+              $group: { 
+                _id: null, 
+                totalTickets: { $sum: '$currentParticipants' } 
+              } 
+            }
+          ])
+        ]);
+        
+        return {
+          _id: organizer._id,
+          name: organizer.name,
+          email: organizer.email,
+          phoneNumber: organizer.phoneNumber,
+          communityName: organizer.communityProfile?.communityName || 'N/A',
+          city: organizer.communityProfile?.city || organizer.location?.city || 'N/A',
+          category: organizer.communityProfile?.primaryCategory || organizer.communityProfile?.category?.[0] || 'N/A',
+          logo: organizer.communityProfile?.logo,
+          memberCount: organizer.communityProfile?.memberCount || 0,
+          kycVerified: organizer.payoutDetails?.isVerified || false,
+          stats: {
+            totalEvents: eventCount,
+            activeEvents: activeEvents,
+            totalTicketsSold: totalRevenue[0]?.totalTickets || 0
+          },
+          joinedDate: organizer.createdAt
+        };
+      })
+    );
+    
+    res.json({
+      organizers: enrichedOrganizers,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching organizers:', error);
+    res.status(500).json({ message: 'Server error while fetching organizers' });
+  }
+});
+
+/**
+ * GET /api/admin/organizers/:organizerId
+ * Get complete organizer details including KYC
+ */
+router.get('/organizers/:organizerId', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { organizerId } = req.params;
+    
+    const organizer = await User.findOne({
+      _id: organizerId,
+      role: 'host_partner',
+      hostPartnerType: 'community_organizer'
+    }).lean();
+    
+    if (!organizer) {
+      return res.status(404).json({ message: 'Organizer not found' });
+    }
+    
+    // Get event statistics
+    const [eventStats, totalRevenue, recentEvents] = await Promise.all([
+      Event.aggregate([
+        { $match: { host: organizer._id } },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      // Calculate total revenue from tickets
+      Event.aggregate([
+        { $match: { host: organizer._id } },
+        {
+          $group: {
+            _id: null,
+            totalTicketsSold: { $sum: '$currentParticipants' },
+            totalEvents: { $sum: 1 }
+          }
+        }
+      ]),
+      // Get recent events
+      Event.find({ host: organizer._id })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('title date status currentParticipants maxParticipants price location')
+        .lean()
+    ]);
+    
+    // Format event stats
+    const statusCounts = {};
+    eventStats.forEach(stat => {
+      statusCounts[stat._id] = stat.count;
+    });
+    
+    // Fetch Ticket model to get actual revenue from this organizer
+    const Ticket = require('../models/Ticket');
+    const ticketRevenue = await Ticket.aggregate([
+      { 
+        $lookup: {
+          from: 'events',
+          localField: 'event',
+          foreignField: '_id',
+          as: 'eventDetails'
+        }
+      },
+      { $unwind: '$eventDetails' },
+      { $match: { 'eventDetails.host': organizer._id } },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$price.amount' },
+          totalTickets: { $sum: 1 },
+          settledAmount: {
+            $sum: {
+              $cond: [
+                { $eq: ['$settlementStatus', 'settled'] },
+                '$settlementAmount',
+                0
+              ]
+            }
+          },
+          pendingSettlement: {
+            $sum: {
+              $cond: [
+                { $in: ['$settlementStatus', ['pending', 'captured']] },
+                '$price.amount',
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+    
+    const response = {
+      organizer: {
+        _id: organizer._id,
+        name: organizer.name,
+        email: organizer.email,
+        phoneNumber: organizer.phoneNumber,
+        isPhoneVerified: organizer.otpVerification?.isPhoneVerified || false,
+        profilePicture: organizer.profilePicture,
+        bio: organizer.bio,
+        location: organizer.location,
+        joinedDate: organizer.createdAt,
+        lastActive: organizer.updatedAt
+      },
+      communityProfile: {
+        communityName: organizer.communityProfile?.communityName,
+        city: organizer.communityProfile?.city,
+        category: organizer.communityProfile?.category || [],
+        primaryCategory: organizer.communityProfile?.primaryCategory,
+        communityType: organizer.communityProfile?.communityType,
+        communityDescription: organizer.communityProfile?.communityDescription,
+        shortBio: organizer.communityProfile?.shortBio,
+        logo: organizer.communityProfile?.logo,
+        coverImage: organizer.communityProfile?.coverImage,
+        socialLinks: {
+          instagram: organizer.communityProfile?.instagram,
+          facebook: organizer.communityProfile?.facebook,
+          website: organizer.communityProfile?.website,
+          linkedin: organizer.communityProfile?.linkedin
+        },
+        pastEventPhotos: organizer.communityProfile?.pastEventPhotos || [],
+        pastEventExperience: organizer.communityProfile?.pastEventExperience,
+        typicalAudienceSize: organizer.communityProfile?.typicalAudienceSize,
+        established: organizer.communityProfile?.established,
+        memberCount: organizer.communityProfile?.memberCount || 0,
+        contactPerson: organizer.communityProfile?.contactPerson,
+        preferences: {
+          preferredCities: organizer.communityProfile?.preferredCities || [],
+          preferredCategories: organizer.communityProfile?.preferredCategories || [],
+          preferredEventFormats: organizer.communityProfile?.preferredEventFormats || [],
+          preferredAudienceTypes: organizer.communityProfile?.preferredAudienceTypes || [],
+          nicheCommunityDescription: organizer.communityProfile?.nicheCommunityDescription
+        }
+      },
+      payoutDetails: {
+        accountHolderName: organizer.payoutDetails?.accountHolderName,
+        accountNumber: organizer.payoutDetails?.accountNumber ? 
+          `****${organizer.payoutDetails.accountNumber.slice(-4)}` : null,
+        ifscCode: organizer.payoutDetails?.ifscCode,
+        billingAddress: organizer.payoutDetails?.billingAddress,
+        upiId: organizer.payoutDetails?.upiId,
+        gstNumber: organizer.payoutDetails?.gstNumber,
+        idProofDocument: organizer.payoutDetails?.idProofDocument,
+        isVerified: organizer.payoutDetails?.isVerified || false,
+        verifiedAt: organizer.payoutDetails?.verifiedAt,
+        lastUpdated: organizer.payoutDetails?.lastUpdated
+      },
+      eventStats: {
+        total: (statusCounts.draft || 0) + (statusCounts.live || 0) + (statusCounts.completed || 0) + (statusCounts.cancelled || 0),
+        draft: statusCounts.draft || 0,
+        live: statusCounts.live || 0,
+        completed: statusCounts.completed || 0,
+        cancelled: statusCounts.cancelled || 0
+      },
+      revenueStats: {
+        totalRevenue: ticketRevenue[0]?.totalRevenue || 0,
+        totalTicketsSold: ticketRevenue[0]?.totalTickets || 0,
+        settledAmount: ticketRevenue[0]?.settledAmount || 0,
+        pendingSettlement: ticketRevenue[0]?.pendingSettlement || 0,
+        currency: 'INR'
+      },
+      recentEvents
+    };
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching organizer details:', error);
+    res.status(500).json({ message: 'Server error while fetching organizer details' });
+  }
+});
+
+/**
+ * GET /api/admin/organizers/:organizerId/events
+ * Get all events by a specific organizer
+ */
+router.get('/organizers/:organizerId/events', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { organizerId } = req.params;
+    const { page = 1, limit = 20, status, category, sortBy = 'createdAt', order = 'desc' } = req.query;
+    
+    // Verify organizer exists
+    const organizer = await User.findOne({
+      _id: organizerId,
+      role: 'host_partner',
+      hostPartnerType: 'community_organizer'
+    });
+    
+    if (!organizer) {
+      return res.status(404).json({ message: 'Organizer not found' });
+    }
+    
+    const query = { host: organizerId };
+    
+    if (status) query.status = status;
+    if (category) query.categories = category;
+    
+    const skip = (page - 1) * limit;
+    const sortOrder = order === 'asc' ? 1 : -1;
+    
+    const [events, total] = await Promise.all([
+      Event.find(query)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Event.countDocuments(query)
+    ]);
+    
+    // Enrich with ticket and revenue data
+    const Ticket = require('../models/Ticket');
+    const enrichedEvents = await Promise.all(
+      events.map(async (event) => {
+        const tickets = await Ticket.find({ event: event._id }).lean();
+        
+        const totalRevenue = tickets.reduce((sum, ticket) => 
+          sum + (ticket.price?.amount || 0), 0
+        );
+        
+        const settledRevenue = tickets
+          .filter(t => t.settlementStatus === 'settled')
+          .reduce((sum, ticket) => sum + (ticket.settlementAmount || ticket.price?.amount || 0), 0);
+        
+        const activeTickets = tickets.filter(t => t.status === 'active').length;
+        const checkedInTickets = tickets.filter(t => t.status === 'checked_in').length;
+        
+        return {
+          _id: event._id,
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          categories: event.categories,
+          format: event.format,
+          status: event.status,
+          price: event.price,
+          maxParticipants: event.maxParticipants,
+          currentParticipants: event.currentParticipants,
+          eventImage: event.eventImage,
+          createdAt: event.createdAt,
+          revenue: {
+            totalRevenue,
+            settledRevenue,
+            pendingRevenue: totalRevenue - settledRevenue,
+            ticketsSold: tickets.length,
+            activeTickets,
+            checkedInTickets
+          }
+        };
+      })
+    );
+    
+    res.json({
+      organizer: {
+        _id: organizer._id,
+        name: organizer.name,
+        communityName: organizer.communityProfile?.communityName
+      },
+      events: enrichedEvents,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching organizer events:', error);
+    res.status(500).json({ message: 'Server error while fetching organizer events' });
+  }
+});
+
+/**
+ * GET /api/admin/events/:eventId/complete-details
+ * Get complete event details with tickets, analytics, and audit data
+ */
+router.get('/events/:eventId/complete-details', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const event = await Event.findById(eventId)
+      .populate('host', 'name email communityProfile payoutDetails')
+      .populate('coHosts', 'name email')
+      .lean();
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Get all tickets for this event
+    const Ticket = require('../models/Ticket');
+    const tickets = await Ticket.find({ event: eventId })
+      .populate('user', 'name email phoneNumber')
+      .sort({ purchaseDate: -1 })
+      .lean();
+    
+    // Calculate comprehensive analytics
+    const totalRevenue = tickets.reduce((sum, ticket) => 
+      sum + (ticket.price?.amount || 0), 0
+    );
+    
+    const settledRevenue = tickets
+      .filter(t => t.settlementStatus === 'settled')
+      .reduce((sum, ticket) => sum + (ticket.settlementAmount || ticket.price?.amount || 0), 0);
+    
+    const ticketsByStatus = {
+      active: tickets.filter(t => t.status === 'active').length,
+      checked_in: tickets.filter(t => t.status === 'checked_in').length,
+      cancelled: tickets.filter(t => t.status === 'cancelled').length,
+      refunded: tickets.filter(t => t.status === 'refunded').length
+    };
+    
+    const settlementStats = {
+      pending: tickets.filter(t => t.settlementStatus === 'pending').length,
+      captured: tickets.filter(t => t.settlementStatus === 'captured').length,
+      settled: tickets.filter(t => t.settlementStatus === 'settled').length,
+      reconciled: tickets.filter(t => t.settlementStatus === 'reconciled').length,
+      failed: tickets.filter(t => t.settlementStatus === 'failed').length
+    };
+    
+    const reconciliationStats = {
+      verified: tickets.filter(t => t.reconciliationStatus === 'verified').length,
+      mismatch: tickets.filter(t => t.reconciliationStatus === 'mismatch').length,
+      manual_review: tickets.filter(t => t.reconciliationStatus === 'manual_review').length,
+      pending: tickets.filter(t => t.reconciliationStatus === 'pending').length
+    };
+    
+    // Payment method breakdown
+    const paymentMethods = {};
+    tickets.forEach(ticket => {
+      const method = ticket.gatewayResponse?.paymentMethod || 'unknown';
+      paymentMethods[method] = (paymentMethods[method] || 0) + 1;
+    });
+    
+    // Daily ticket sales
+    const dailySales = {};
+    tickets.forEach(ticket => {
+      const date = new Date(ticket.purchaseDate).toISOString().split('T')[0];
+      if (!dailySales[date]) {
+        dailySales[date] = { count: 0, revenue: 0 };
+      }
+      dailySales[date].count++;
+      dailySales[date].revenue += ticket.price?.amount || 0;
+    });
+    
+    // Format attendee list with purchase details
+    const attendees = tickets.map(ticket => ({
+      ticketNumber: ticket.ticketNumber,
+      user: {
+        _id: ticket.user?._id,
+        name: ticket.user?.name,
+        email: ticket.user?.email,
+        phoneNumber: ticket.user?.phoneNumber
+      },
+      purchaseDate: ticket.purchaseDate,
+      price: ticket.price?.amount,
+      orderId: ticket.metadata?.orderId,
+      paymentId: ticket.paymentId,
+      paymentMethod: ticket.gatewayResponse?.paymentMethod,
+      status: ticket.status,
+      checkInTime: ticket.checkInTime,
+      settlementStatus: ticket.settlementStatus,
+      settlementDate: ticket.settlementDate,
+      settlementUTR: ticket.settlementUTR,
+      reconciliationStatus: ticket.reconciliationStatus,
+      lastReconciliationDate: ticket.lastReconciliationDate
+    }));
+    
+    const response = {
+      event: {
+        _id: event._id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        endDate: event.endDate,
+        endTime: event.endTime,
+        location: event.location,
+        categories: event.categories,
+        format: event.format,
+        status: event.status,
+        price: event.price,
+        maxParticipants: event.maxParticipants,
+        currentParticipants: event.currentParticipants,
+        eventImage: event.eventImage,
+        galleryImages: event.galleryImages,
+        ageLimit: event.ageLimit,
+        policies: event.policies,
+        requirements: event.requirements,
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt
+      },
+      organizer: {
+        _id: event.host._id,
+        name: event.host.name,
+        email: event.host.email,
+        communityName: event.host.communityProfile?.communityName,
+        logo: event.host.communityProfile?.logo,
+        kycVerified: event.host.payoutDetails?.isVerified || false,
+        accountNumber: event.host.payoutDetails?.accountNumber ? 
+          `****${event.host.payoutDetails.accountNumber.slice(-4)}` : null,
+        ifscCode: event.host.payoutDetails?.ifscCode,
+        upiId: event.host.payoutDetails?.upiId
+      },
+      coHosts: event.coHosts || [],
+      analytics: {
+        totalTickets: tickets.length,
+        ticketsByStatus,
+        totalRevenue,
+        settledRevenue,
+        pendingRevenue: totalRevenue - settledRevenue,
+        settlementPercentage: totalRevenue > 0 ? 
+          ((settledRevenue / totalRevenue) * 100).toFixed(2) : 0,
+        checkInRate: tickets.length > 0 ? 
+          ((ticketsByStatus.checked_in / tickets.length) * 100).toFixed(2) : 0,
+        settlementStats,
+        reconciliationStats,
+        paymentMethods,
+        dailySales: Object.entries(dailySales).map(([date, data]) => ({
+          date,
+          ticketsSold: data.count,
+          revenue: data.revenue
+        })).sort((a, b) => new Date(a.date) - new Date(b.date))
+      },
+      attendees,
+      hasIssues: reconciliationStats.mismatch > 0 || reconciliationStats.manual_review > 0
+    };
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching complete event details:', error);
+    res.status(500).json({ message: 'Server error while fetching event details' });
+  }
+});
+
+/**
+ * PUT /api/admin/organizers/:organizerId/verify-kyc
+ * Verify or reject organizer KYC details
+ */
+router.put('/organizers/:organizerId/verify-kyc', requirePermission('manage_payments'), async (req, res) => {
+  try {
+    const { organizerId } = req.params;
+    const { isVerified, notes } = req.body;
+    
+    const organizer = await User.findOne({
+      _id: organizerId,
+      role: 'host_partner',
+      hostPartnerType: 'community_organizer'
+    });
+    
+    if (!organizer) {
+      return res.status(404).json({ message: 'Organizer not found' });
+    }
+    
+    organizer.payoutDetails = organizer.payoutDetails || {};
+    organizer.payoutDetails.isVerified = isVerified;
+    if (isVerified) {
+      organizer.payoutDetails.verifiedAt = new Date();
+    }
+    organizer.payoutDetails.lastUpdated = new Date();
+    
+    await organizer.save();
+    
+    // Send notification to organizer
+    const notificationService = require('../services/notificationService');
+    await notificationService.createNotification({
+      recipient: organizerId,
+      type: isVerified ? 'kyc_approved' : 'kyc_rejected',
+      category: 'account',
+      priority: 'high',
+      title: isVerified ? '✅ KYC Verified' : '❌ KYC Verification Failed',
+      message: isVerified 
+        ? 'Your KYC details have been verified. You can now receive payouts.' 
+        : `Your KYC verification was not successful. ${notes || 'Please update your details and try again.'}`,
+      actionUrl: '/organizer/profile/payout-details'
+    });
+    
+    res.json({
+      message: `KYC ${isVerified ? 'verified' : 'rejected'} successfully`,
+      payoutDetails: {
+        isVerified: organizer.payoutDetails.isVerified,
+        verifiedAt: organizer.payoutDetails.verifiedAt,
+        lastUpdated: organizer.payoutDetails.lastUpdated
+      }
+    });
+  } catch (error) {
+    console.error('Error updating KYC status:', error);
+    res.status(500).json({ message: 'Server error while updating KYC status' });
+  }
+});
+
 module.exports = router;

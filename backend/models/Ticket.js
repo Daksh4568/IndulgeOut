@@ -83,6 +83,10 @@ const ticketSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
+    totalPaid: {
+      type: Number,
+      default: 0
+    },
     // Additional metadata
     registrationSource: String,
     registeredAt: Date,
@@ -93,6 +97,41 @@ const ticketSchema = new mongoose.Schema({
     guestName: String,
     guestEmail: String,
     primaryUserId: mongoose.Schema.Types.ObjectId
+  },
+  // Settlement tracking fields
+  settlementStatus: {
+    type: String,
+    enum: ['pending', 'captured', 'settled', 'reconciled', 'failed'],
+    default: 'pending'
+  },
+  settlementDate: {
+    type: Date
+  },
+  settlementUTR: {
+    type: String // Bank transaction reference number
+  },
+  settlementAmount: {
+    type: Number // Final amount settled to organizer (after gateway fees)
+  },
+  gatewayResponse: {
+    paymentId: String,
+    paymentMethod: String,
+    paymentStatus: String,
+    bank: String,
+    wallet: String,
+    cardType: String,
+    lastFourDigits: String
+  },
+  reconciliationStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'mismatch', 'manual_review'],
+    default: 'pending'
+  },
+  lastReconciliationDate: {
+    type: Date
+  },
+  reconciliationNotes: {
+    type: String
   }
 }, {
   timestamps: true
@@ -102,6 +141,10 @@ const ticketSchema = new mongoose.Schema({
 ticketSchema.index({ user: 1, event: 1 });
 ticketSchema.index({ ticketNumber: 1 });
 ticketSchema.index({ status: 1 });
+ticketSchema.index({ settlementStatus: 1 });
+ticketSchema.index({ reconciliationStatus: 1 });
+ticketSchema.index({ purchaseDate: 1 });
+ticketSchema.index({ 'metadata.orderId': 1 });
 
 // Compound unique index to prevent duplicate tickets for same user-event combination
 ticketSchema.index({ user: 1, event: 1 }, { unique: true });

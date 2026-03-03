@@ -9,7 +9,7 @@ const AdminDashboard = () => {
   
   // State management
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, proposals, counters, flagged, analytics, all-collaborations
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, proposals, counters, flagged, analytics, all-collaborations, organizers
   const [stats, setStats] = useState(null);
   const [collabAnalytics, setCollabAnalytics] = useState(null);
   
@@ -23,6 +23,15 @@ const AdminDashboard = () => {
   // Counters state
   const [pendingCounters, setPendingCounters] = useState([]);
   const [selectedCounter, setSelectedCounter] = useState(null);
+  
+  // Organizers state
+  const [organizers, setOrganizers] = useState([]);
+  const [selectedOrganizer, setSelectedOrganizer] = useState(null);
+  const [organizerEvents, setOrganizerEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventDetails, setEventDetails] = useState(null);
+  const [organizerFilters, setOrganizerFilters] = useState({ search: '', city: '', verified: '' });
+  const [currentView, setCurrentView] = useState('list'); // list, organizer-details, event-details
   
   // Modals state
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -72,6 +81,10 @@ const AdminDashboard = () => {
           break;
         case 'all-collaborations':
           fetchAllCollaborations();
+          break;
+        case 'organizers':
+          fetchOrganizers();
+          setCurrentView('list');
           break;
         default:
           break;
@@ -165,6 +178,109 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Organizer Fetch Functions
+  const fetchOrganizers = async () => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      if (organizerFilters.search) queryParams.append('search', organizerFilters.search);
+      if (organizerFilters.city) queryParams.append('city', organizerFilters.city);
+      if (organizerFilters.verified) queryParams.append('verified', organizerFilters.verified);
+      
+      const response = await api.get(`/admin/organizers?${queryParams}`);
+      setOrganizers(response.data.organizers || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching organizers:', err);
+      setError('Failed to fetch organizers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOrganizerDetails = async (organizerId) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/admin/organizers/${organizerId}`);
+      setSelectedOrganizer(response.data);
+      // Also fetch their events
+      const eventsResponse = await api.get(`/admin/organizers/${organizerId}/events`);
+      setOrganizerEvents(eventsResponse.data.events || []);
+      setCurrentView('organizer-details');
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching organizer details:', err);
+      setError('Failed to fetch organizer details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEventDetails = async (eventId) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/admin/events/${eventId}/complete-details`);
+      setEventDetails(response.data);
+      setCurrentView('event-details');
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching event details:', err);
+      setError('Failed to fetch event details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyKYC = async (organizerId, isVerified) => {
+    try {
+      await api.put(`/admin/organizers/${organizerId}/verify-kyc`, {
+        isVerified,
+        notes: isVerified ? 'KYC verified by admin' : 'Please update your KYC details'
+      });
+      alert(`KYC ${isVerified ? 'verified' : 'rejected'} successfully`);
+      // Refresh organizer details
+      fetchOrganizerDetails(organizerId);
+    } catch (err) {
+      console.error('Error verifying KYC:', err);
+      alert('Failed to update KYC status');
+    }
+  };
+
+  const downloadAuditReport = async (eventId, eventTitle) => {
+    try {
+      const response = await api.get(`/admin/events/${eventId}/audit-report`, {
+        params: { format: 'csv' },
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `audit-${eventTitle.replace(/\s+/g, '-')}-${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading audit report:', err);
+      alert('Failed to download audit report');
+    }
+  };
+
+  const handleBackToOrganizers = () => {
+    setCurrentView('list');
+    setSelectedOrganizer(null);
+    setOrganizerEvents([]);
+    setSelectedEvent(null);
+    setEventDetails(null);
+  };
+
+  const handleBackToOrganizerDetails = () => {
+    setCurrentView('organizer-details');
+    setSelectedEvent(null);
+    setEventDetails(null);
   };
 
   const fetchProposalDetails = async (id) => {
@@ -499,6 +615,7 @@ const AdminDashboard = () => {
             <nav className="flex space-x-8">
               {[
                 { id: 'dashboard', label: 'Overview', badge: null },
+                { id: 'organizers', label: 'Organizers', badge: null },
                 { id: 'proposals', label: 'Pending Proposals', badge: pendingProposals.length || null },
                 { id: 'counters', label: 'Pending Counters', badge: pendingCounters.length || null },
                 { id: 'all-collaborations', label: 'All Collaborations', badge: null },
@@ -1416,6 +1533,575 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Organizers Tab */}
+        {activeTab === 'organizers' && (
+          <div>
+            {currentView === 'list' && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Community Organizers</h2>
+                  <p className="text-gray-600 dark:text-gray-400">Manage community organizers, verify KYC, and track events</p>
+                </div>
+
+                {/* Filters */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+                      <input
+                        type="text"
+                        placeholder="Name, email, community..."
+                        value={organizerFilters.search}
+                        onChange={(e) => {
+                          setOrganizerFilters({ ...organizerFilters, search: e.target.value });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') fetchOrganizers();
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+                      <input
+                        type="text"
+                        placeholder="Filter by city..."
+                        value={organizerFilters.city}
+                        onChange={(e) => {
+                          setOrganizerFilters({ ...organizerFilters, city: e.target.value });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') fetchOrganizers();
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KYC Status</label>
+                      <select
+                        value={organizerFilters.verified}
+                        onChange={(e) => {
+                          setOrganizerFilters({ ...organizerFilters, verified: e.target.value });
+                          fetchOrganizers();
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">All</option>
+                        <option value="true">Verified</option>
+                        <option value="false">Unverified</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    onClick={fetchOrganizers}
+                    className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+
+                {/* Organizers Grid */}
+                {organizers.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {organizers.map((organizer) => (
+                      <div key={organizer._id} className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
+                        <div className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center space-x-3">
+                              {organizer.logo ? (
+                                <img src={organizer.logo} alt={organizer.communityName} className="w-16 h-16 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-2xl font-bold">
+                                  {organizer.communityName?.charAt(0) || organizer.name?.charAt(0)}
+                                </div>
+                              )}
+                              <div>
+                                <h3 className="font-bold text-gray-900 dark:text-white">{organizer.communityName}</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{organizer.name}</p>
+                              </div>
+                            </div>
+                            {organizer.kycVerified ? (
+                              <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
+                                ✓ Verified
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
+                                ⚠ Unverified
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 text-sm mb-4">
+                            <p className="text-gray-600 dark:text-gray-400">
+                              📍 {organizer.city}
+                            </p>
+                            <p className="text-gray-600 dark:text-gray-400">
+                              📧 {organizer.email}
+                            </p>
+                            {organizer.phoneNumber && (
+                              <p className="text-gray-600 dark:text-gray-400">
+                                📞 {organizer.phoneNumber}
+                              </p>
+                            )}
+                            <p className="text-gray-600 dark:text-gray-400">
+                              🏷️ {organizer.category}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-gray-900 dark:text-white">{organizer.stats.totalEvents}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Events</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-green-600">{organizer.stats.activeEvents}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Active</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-purple-600">{organizer.stats.totalTicketsSold}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Tickets</p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => fetchOrganizerDetails(organizer._id)}
+                            className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                          >
+                            View Details →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 dark:text-gray-400">No organizers found</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentView === 'organizer-details' && selectedOrganizer && (
+              <div>
+                {/* Header */}
+                <div className="mb-6">
+                  <button
+                    onClick={handleBackToOrganizers}
+                    className="mb-4 px-4 py-2 text-purple-600 hover:text-purple-800 flex items-center space-x-2"
+                  >
+                    <span>←</span>
+                    <span>Back to Organizers</span>
+                  </button>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-4">
+                      {selectedOrganizer.communityProfile.logo ? (
+                        <img src={selectedOrganizer.communityProfile.logo} alt={selectedOrganizer.communityProfile.communityName} className="w-20 h-20 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-3xl font-bold">
+                          {selectedOrganizer.communityProfile.communityName?.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.communityName}</h2>
+                        <p className="text-gray-600 dark:text-gray-400">{selectedOrganizer.organizer.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">{selectedOrganizer.organizer.email}</p>
+                      </div>
+                    </div>
+                    {selectedOrganizer.payoutDetails.isVerified ? (
+                      <span className="px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-full">
+                        ✓ KYC Verified
+                      </span>
+                    ) : (
+                      <span className="px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-800 rounded-full">
+                        ⚠ KYC Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Events</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{selectedOrganizer.eventStats.total}</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
+                    <p className="text-3xl font-bold text-green-600">₹{(selectedOrganizer.revenueStats.totalRevenue / 1000).toFixed(1)}k</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Tickets Sold</p>
+                    <p className="text-3xl font-bold text-purple-600">{selectedOrganizer.revenueStats.totalTicketsSold}</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Pending Settlement</p>
+                    <p className="text-3xl font-bold text-orange-600">₹{(selectedOrganizer.revenueStats.pendingSettlement / 1000).toFixed(1)}k</p>
+                  </div>
+                </div>
+
+                {/* KYC Details Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">KYC & Payout Details</h3>
+                    {!selectedOrganizer.payoutDetails.isVerified && (
+                      <div className="space-x-2">
+                        <button
+                          onClick={() => handleVerifyKYC(selectedOrganizer.organizer._id, true)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          ✓ Verify KYC
+                        </button>
+                        <button
+                          onClick={() => handleVerifyKYC(selectedOrganizer.organizer._id, false)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          ✗ Reject KYC
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Account Holder Name</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.accountHolderName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Account Number</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.accountNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">IFSC Code</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.ifscCode || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">UPI ID</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.upiId || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">GST Number</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.gstNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Billing Address</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.billingAddress || 'Not provided'}</p>
+                    </div>
+                    {selectedOrganizer.payoutDetails.idProofDocument && (
+                      <div className="col-span-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">ID Proof Document</p>
+                        <a
+                          href={selectedOrganizer.payoutDetails.idProofDocument}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-block"
+                        >
+                          View Document →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Community Profile */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Community Profile</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Description</p>
+                      <p className="text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.communityDescription || 'No description'}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">City</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.city}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Member Count</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.memberCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Community Type</p>
+                        <p className="font-semibold text-gray-900 dark:text-white capitalize">{selectedOrganizer.communityProfile.communityType}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Categories</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {selectedOrganizer.communityProfile.category?.map((cat, idx) => (
+                            <span key={idx} className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {selectedOrganizer.communityProfile.socialLinks && (
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Social Links</p>
+                        <div className="flex space-x-4">
+                          {selectedOrganizer.communityProfile.socialLinks.instagram && (
+                            <a href={selectedOrganizer.communityProfile.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800">
+                              Instagram
+                            </a>
+                          )}
+                          {selectedOrganizer.communityProfile.socialLinks.facebook && (
+                            <a href={selectedOrganizer.communityProfile.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800">
+                              Facebook
+                            </a>
+                          )}
+                          {selectedOrganizer.communityProfile.socialLinks.website && (
+                            <a href={selectedOrganizer.communityProfile.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800">
+                              Website
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Events Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Hosted Events</h3>
+                  {organizerEvents.length > 0 ? (
+                    <div className="space-y-4">
+                      {organizerEvents.map((event) => (
+                        <div key={event._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-400 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2">{event.title}</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                                <div>
+                                  <p className="text-gray-600 dark:text-gray-400">Date</p>
+                                  <p className="font-semibold text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600 dark:text-gray-400">Status</p>
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                    event.status === 'live' ? 'bg-green-100 text-green-800' :
+                                    event.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                    event.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {event.status}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600 dark:text-gray-400">Tickets Sold</p>
+                                  <p className="font-semibold text-gray-900 dark:text-white">{event.currentParticipants || 0} / {event.maxParticipants}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600 dark:text-gray-400">Revenue</p>
+                                  <p className="font-semibold text-green-600">₹{(event.revenue?.totalRevenue / 1000 || 0).toFixed(1)}k</p>
+                                </div>
+                              </div>
+                              <div className="flex space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                                <span>📍 {event.location?.city || 'TBA'}</span>
+                                <span>•</span>
+                                <span>🎫 {event.revenue?.ticketsSold || 0} tickets</span>
+                                <span>•</span>
+                                <span>✅ {event.revenue?.checkedInTickets || 0} checked-in</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => fetchEventDetails(event._id)}
+                              className="ml-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            >
+                              View Details →
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">No events found</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {currentView === 'event-details' && eventDetails && (
+              <div>
+                {/* Header */}
+                <div className="mb-6">
+                  <button
+                    onClick={handleBackToOrganizerDetails}
+                    className="mb-4 px-4 py-2 text-purple-600 hover:text-purple-800 flex items-center space-x-2"
+                  >
+                    <span>←</span>
+                    <span>Back to Organizer</span>
+                  </button>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{eventDetails.event.title}</h2>
+                      <p className="text-gray-600 dark:text-gray-400">{eventDetails.event.description?.substring(0, 150)}...</p>
+                      <div className="flex items-center space-x-4 mt-4 text-sm">
+                        <span className="flex items-center space-x-2">
+                          <span>📅</span>
+                          <span>{new Date(eventDetails.event.date).toLocaleDateString()}</span>
+                        </span>
+                        <span className="flex items-center space-x-2">
+                          <span>📍</span>
+                          <span>{eventDetails.event.location?.city}</span>
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          eventDetails.event.status === 'live' ? 'bg-green-100 text-green-800' :
+                          eventDetails.event.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {eventDetails.event.status}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => downloadAuditReport(eventDetails.event._id, eventDetails.event.title)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      📄 Download Audit Report
+                    </button>
+                  </div>
+                </div>
+
+                {/* Analytics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Tickets</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{eventDetails.analytics.totalTickets}</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
+                    <p className="text-2xl font-bold text-green-600">₹{(eventDetails.analytics.totalRevenue / 1000).toFixed(1)}k</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Settled</p>
+                    <p className="text-2xl font-bold text-blue-600">₹{(eventDetails.analytics.settledRevenue / 1000).toFixed(1)}k</p>
+                    <p className="text-xs text-gray-500">{eventDetails.analytics.settlementPercentage}%</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Check-in Rate</p>
+                    <p className="text-2xl font-bold text-purple-600">{eventDetails.analytics.checkInRate}%</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Issues</p>
+                    <p className={`text-2xl font-bold ${eventDetails.hasIssues ? 'text-red-600' : 'text-green-600'}`}>
+                      {eventDetails.hasIssues ? '⚠️ Yes' : '✓ None'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ticket Status Breakdown */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Ticket Status</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Active</span>
+                        <span className="font-bold text-gray-900 dark:text-white">{eventDetails.analytics.ticketsByStatus.active}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Checked In</span>
+                        <span className="font-bold text-green-600">{eventDetails.analytics.ticketsByStatus.checked_in}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Cancelled</span>
+                        <span className="font-bold text-red-600">{eventDetails.analytics.ticketsByStatus.cancelled}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Refunded</span>
+                        <span className="font-bold text-orange-600">{eventDetails.analytics.ticketsByStatus.refunded}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Settlement Status</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Settled</span>
+                        <span className="font-bold text-green-600">{eventDetails.analytics.settlementStats.settled}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Captured</span>
+                        <span className="font-bold text-blue-600">{eventDetails.analytics.settlementStats.captured}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Pending</span>
+                        <span className="font-bold text-yellow-600">{eventDetails.analytics.settlementStats.pending}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Failed</span>
+                        <span className="font-bold text-red-600">{eventDetails.analytics.settlementStats.failed}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Attendees List */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Attendees ({eventDetails.attendees.length})</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Ticket #</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Purchase Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Settlement</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Reconciliation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {eventDetails.attendees.map((attendee) => (
+                          <tr key={attendee.ticketNumber} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td className="px-4 py-3 text-sm font-mono text-gray-900 dark:text-white">{attendee.ticketNumber}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">{attendee.user?.name}</p>
+                                <p className="text-xs text-gray-500">{attendee.user?.email}</p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{new Date(attendee.purchaseDate).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">₹{attendee.price}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                attendee.status === 'checked_in' ? 'bg-green-100 text-green-800' :
+                                attendee.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {attendee.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                attendee.settlementStatus === 'settled' ? 'bg-green-100 text-green-800' :
+                                attendee.settlementStatus === 'captured' ? 'bg-blue-100 text-blue-800' :
+                                attendee.settlementStatus === 'failed' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {attendee.settlementStatus}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                attendee.reconciliationStatus === 'verified' ? 'bg-green-100 text-green-800' :
+                                attendee.reconciliationStatus === 'mismatch' ? 'bg-red-100 text-red-800' :
+                                attendee.reconciliationStatus === 'manual_review' ? 'bg-orange-100 text-orange-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {attendee.reconciliationStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
           </div>

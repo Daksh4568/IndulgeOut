@@ -55,6 +55,20 @@ function initializeScheduledJobs() {
   });
   scheduledTasks.push(lowBookingAlertJob);
   
+  // Daily payment reconciliation - runs daily at 2:00 AM
+  const dailyReconciliationJob = cron.schedule('0 2 * * *', async () => {
+    console.log('💰 Running daily payment reconciliation job...');
+    await runDailyReconciliation();
+  });
+  scheduledTasks.push(dailyReconciliationJob);
+  
+  // Monthly settlement report - runs on 1st of every month at 3:00 AM
+  const monthlyReportJob = cron.schedule('0 3 1 * *', async () => {
+    console.log('📊 Running monthly settlement report job...');
+    await generateMonthlySettlementReports();
+  });
+  scheduledTasks.push(monthlyReportJob);
+  
   console.log('✅ Scheduled jobs initialized:');
   console.log('   - Event reminders: Daily at 9:00 AM');
   console.log('   - Rating requests: Daily at 10:00 AM');
@@ -62,6 +76,8 @@ function initializeScheduledJobs() {
   console.log('   - Draft event reminders: Wednesdays at 10:00 AM');
   console.log('   - KYC reminders: Fridays at 11:00 AM');
   console.log('   - Low booking alerts: Daily at 8:00 AM');
+  console.log('   - Payment reconciliation: Daily at 2:00 AM');
+  console.log('   - Monthly settlement reports: 1st of month at 3:00 AM');
 }
 
 /**
@@ -482,6 +498,383 @@ async function sendLowBookingAlerts() {
 }
 
 /**
+ * Run daily payment reconciliation - verifies payments with Cashfree
+ * Runs every day at 2:00 AM
+ */
+async function runDailyReconciliation() {
+  try {
+    const axios = require('axios');
+    const Ticket = require('../models/Ticket.js');
+    
+    // Determine Cashfree API URL
+    const CASHFREE_API_URL = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_')
+      ? 'https://api.cashfree.com'
+      : 'https://sandbox.cashfree.com';
+    
+    console.log('💰 Starting daily payment reconciliation...');
+    
+    // Get yesterday's date range
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Find all tickets purchased yesterday that need reconciliation
+    const tickets = await Ticket.find({
+      purchaseDate: { $gte: yesterday, $lt: today },
+      status: { $ne: 'cancelled' },
+      reconciliationStatus: 'pending'
+    });
+    
+    console.log(`📊 Found ${tickets.length} tickets to reconcile from ${yesterday.toDateString()}`);
+    
+    let verified = 0;
+    let mismatches = 0;
+    let failed = 0;
+    
+    for (const ticket of tickets) {
+      try {
+        // Ensure price.amount is set for old tickets (backward compatibility)
+        if (typeof ticket.price === 'number') {
+          // Old format: price was stored as number, convert to object
+          const oldPrice = ticket.price;
+          ticket.price = { amount: oldPrice, currency: 'INR' };
+        } else if (!ticket.price || ticket.price.amount === undefined || ticket.price.amount === null) {
+          if (!ticket.price) {
+            ticket.price = { currency: 'INR' };
+          }
+          ticket.price.amount = ticket.metadata?.basePrice || ticket.metadata?.totalPaid || 0;
+        }
+        
+        const orderId = ticket.metadata?.orderId;
+        
+        if (!orderId) {
+          console.warn(`⚠️ Ticket ${ticket.ticketNumber} missing orderId - marking for manual review`);
+          ticket.reconciliationStatus = 'manual_review';
+          ticket.reconciliationNotes = 'Missing orderId';
+          ticket.lastReconciliationDate = new Date();
+          await ticket.save({ validateBeforeSave: false });
+          failed++;
+          continue;
+        }
+        
+        // Fetch order details from Cashfree
+        const cashfreeResponse = await axios.get(
+          `${CASHFREE_API_URL}/pg/orders/${orderId}`,
+          {
+            headers: {
+              'x-client-id': process.env.CASHFREE_APP_ID,
+              'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+              'x-api-version': '2023-08-01'
+            }
+          }
+        );
+        
+        const order = cashfreeResponse.data;
+        
+        // Check payment status
+        if (order.order_status === 'PAID') {
+          const cashfreeAmount = order.order_amount;
+          const expectedAmount = ticket.metadata?.totalPaid || (ticket.metadata?.basePrice * 1.056);
+          
+          // Allow ±₹2 tolerance for rounding
+          const difference = Math.abs(cashfreeAmount - expectedAmount);
+          
+          if (difference <= 2) {
+            // Amount matches - mark as verified
+            ticket.reconciliationStatus = 'verified';
+            ticket.settlementStatus = 'captured';
+            ticket.lastReconciliationDate = new Date();
+            
+            // Store gateway response
+            if (!ticket.gatewayResponse) {
+              ticket.gatewayResponse = {};
+            }
+            ticket.gatewayResponse.paymentStatus = order.order_status;
+            ticket.gatewayResponse.paymentMethod = order.payment_method || 'unknown';
+            
+            verified++;
+            console.log(`✅ Verified: ${ticket.ticketNumber} (${orderId})`);
+          } else {
+            // Amount mismatch - needs review
+            ticket.reconciliationStatus = 'mismatch';
+            ticket.reconciliationNotes = `Amount mismatch: Expected ₹${expectedAmount}, Cashfree shows ₹${cashfreeAmount} (diff: ₹${difference})`;
+            ticket.lastReconciliationDate = new Date();
+            
+            mismatches++;
+            console.warn(`⚠️ Mismatch: ${ticket.ticketNumber} - expected ₹${expectedAmount}, got ₹${cashfreeAmount}`);
+          }
+          
+          await ticket.save({ validateBeforeSave: false });
+        } else {
+          // Payment not successful
+          ticket.reconciliationStatus = 'manual_review';
+          ticket.reconciliationNotes = `Cashfree status: ${order.order_status}`;
+          ticket.lastReconciliationDate = new Date();
+          await ticket.save({ validateBeforeSave: false });
+          failed++;
+          console.warn(`⚠️ Payment not successful: ${ticket.ticketNumber} (${order.order_status})`);
+        }
+        
+        // Rate limiting - wait 100ms between requests
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`❌ Error reconciling ticket ${ticket.ticketNumber}:`, error.message);
+        ticket.reconciliationStatus = 'manual_review';
+        ticket.reconciliationNotes = `Reconciliation error: ${error.message}`;
+        ticket.lastReconciliationDate = new Date();
+        await ticket.save({ validateBeforeSave: false });
+        failed++;
+      }
+    }
+    
+    // Check for settlement updates for older tickets
+    const ticketsToCheckSettlement = await Ticket.find({
+      settlementStatus: 'captured',
+      purchaseDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+    }).limit(20); // Reduced to avoid Cashfree rate limits (429 errors)
+    
+    console.log(`🏦 Checking settlement status for ${ticketsToCheckSettlement.length} captured payments...`);
+    
+    let settled = 0;
+    for (const ticket of ticketsToCheckSettlement) {
+      try {
+        // Ensure price.amount is set for old tickets (backward compatibility)
+        if (typeof ticket.price === 'number') {
+          // Old format: price was stored as number, convert to object
+          const oldPrice = ticket.price;
+          ticket.price = { amount: oldPrice, currency: 'INR' };
+        } else if (!ticket.price || ticket.price.amount === undefined || ticket.price.amount === null) {
+          if (!ticket.price) {
+            ticket.price = { currency: 'INR' };
+          }
+          ticket.price.amount = ticket.metadata?.basePrice || ticket.metadata?.totalPaid || 0;
+        }
+        
+        const orderId = ticket.metadata?.orderId;
+        if (!orderId) continue;
+        
+        // Fetch settlement details with retry logic for rate limiting
+        let settlementResponse;
+        let retries = 0;
+        while (retries < 3) {
+          try {
+            settlementResponse = await axios.get(
+              `${CASHFREE_API_URL}/pg/orders/${orderId}/settlements`,
+              {
+                headers: {
+                  'x-client-id': process.env.CASHFREE_APP_ID,
+                  'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+                  'x-api-version': '2023-08-01'
+                }
+              }
+            );
+            break; // Success, exit retry loop
+          } catch (err) {
+            if (err.response?.status === 429 && retries < 2) {
+              // Rate limited, wait longer and retry
+              retries++;
+              const waitTime = 2000 * retries; // 2s, 4s
+              console.log(`⏳ Rate limited for ${ticket.ticketNumber}, waiting ${waitTime}ms (retry ${retries}/2)`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+            } else {
+              throw err; // Re-throw if not 429 or max retries reached
+            }
+          }
+        }
+        
+        if (settlementResponse.data && settlementResponse.data.length > 0) {
+          const settlement = settlementResponse.data[0];
+          
+          if (settlement.settlement_status === 'SUCCESS') {
+            ticket.settlementStatus = 'settled';
+            ticket.settlementDate = new Date(settlement.settlement_date);
+            ticket.settlementUTR = settlement.settlement_utr;
+            ticket.settlementAmount = settlement.settlement_amount;
+            await ticket.save({ validateBeforeSave: false });
+            
+            settled++;
+            console.log(`✅ Settlement confirmed: ${ticket.ticketNumber} (UTR: ${settlement.settlement_utr})`);
+          }
+        }
+        
+        // Increased delay to avoid rate limiting (1 second between requests)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (error) {
+        // Handle different error types
+        if (error.response?.status === 429) {
+          console.error(`❌ Rate limit exceeded for ${ticket.ticketNumber} after retries`);
+        } else if (error.response?.status === 404) {
+          // Settlement not available yet - skip silently
+        } else {
+          console.error(`Error checking settlement for ${ticket.ticketNumber}:`, error.message);
+        }
+      }
+    }
+    
+    console.log(`✨ Daily reconciliation completed:`);
+    console.log(`   ✅ Verified: ${verified}`);
+    console.log(`   ⚠️ Mismatches: ${mismatches}`);
+    console.log(`   ❌ Failed: ${failed}`);
+    console.log(`   🏦 Settled: ${settled}`);
+    
+    // Send alert if there are mismatches
+    if (mismatches > 0 || failed > 5) {
+      console.warn(`🚨 ALERT: ${mismatches} mismatches and ${failed} failed reconciliations detected!`);
+      
+      // Send notification to all admin users
+      try {
+        const adminUsers = await User.find({ role: 'admin' }).select('_id name email');
+        
+        for (const admin of adminUsers) {
+          await notificationService.createNotification({
+            recipient: admin._id,
+            type: 'payment_reconciliation_alert',
+            category: 'action_required',
+            priority: 'high',
+            title: '🚨 Payment Reconciliation Alert',
+            message: `Daily reconciliation found ${mismatches} payment mismatches and ${failed} failed verifications. Immediate review required.`,
+            actionUrl: '/admin/reports/reconciliation',
+            metadata: {
+              verified,
+              mismatches,
+              failed,
+              settled,
+              date: yesterday.toISOString()
+            }
+          });
+        }
+        
+        console.log(`✅ Alert sent to ${adminUsers.length} admin users`);
+      } catch (notifError) {
+        console.error('❌ Error sending admin alerts:', notifError.message);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in runDailyReconciliation:', error);
+  }
+}
+
+/**
+ * Generate monthly settlement reports for all organizers
+ * Runs on 1st of every month at 3:00 AM
+ */
+async function generateMonthlySettlementReports() {
+  try {
+    const Ticket = require('../models/Ticket.js');
+    const fs = require('fs');
+    const path = require('path');
+    
+    console.log('📊 Generating monthly settlement reports...');
+    
+    // Get last month's date range
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const monthName = lastMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    console.log(`📅 Generating reports for: ${monthName}`);
+    
+    // Get all tickets from last month
+    const tickets = await Ticket.find({
+      purchaseDate: { $gte: lastMonth, $lt: thisMonth },
+      status: { $ne: 'cancelled' }
+    }).populate('event', 'title host')
+      .populate('user', 'name email');
+    
+    console.log(`📊 Found ${tickets.length} tickets from ${monthName}`);
+    
+    // Group tickets by organizer
+    const organizerTickets = new Map();
+    
+    for (const ticket of tickets) {
+      if (!ticket.event || !ticket.event.host) continue;
+      
+      const organizerId = ticket.event.host.toString();
+      
+      if (!organizerTickets.has(organizerId)) {
+        organizerTickets.set(organizerId, []);
+      }
+      
+      organizerTickets.get(organizerId).push(ticket);
+    }
+    
+    console.log(`👥 Generating reports for ${organizerTickets.size} organizers...`);
+    
+    // Create reports directory if it doesn't exist
+    const reportsDir = path.join(__dirname, '../reports');
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true });
+    }
+    
+    const monthDir = path.join(reportsDir, lastMonth.toISOString().substring(0, 7)); // YYYY-MM
+    if (!fs.existsSync(monthDir)) {
+      fs.mkdirSync(monthDir, { recursive: true });
+    }
+    
+    let reportsGenerated = 0;
+    
+    for (const [organizerId, tickets] of organizerTickets.entries()) {
+      try {
+        const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+        const totalSettled = tickets.filter(t => t.settlementStatus === 'settled').length;
+        const totalPending = tickets.filter(t => t.settlementStatus === 'pending' || t.settlementStatus === 'captured').length;
+        const totalAmount = tickets.reduce((sum, t) => sum + (t.settlementAmount || 0), 0);
+        
+        const report = {
+          organizerId,
+          month: monthName,
+          generatedAt: new Date().toISOString(),
+          summary: {
+            totalTickets: tickets.length,
+            totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+            totalSettledAmount: parseFloat(totalAmount.toFixed(2)),
+            ticketsSettled: totalSettled,
+            ticketsPending: totalPending
+          },
+          tickets: tickets.map(t => ({
+            ticketNumber: t.ticketNumber,
+            eventTitle: t.event?.title,
+            userName: t.user?.name,
+            userEmail: t.user?.email,
+            purchaseDate: t.purchaseDate,
+            basePrice: t.metadata?.basePrice,
+            totalPaid: t.metadata?.totalPaid,
+            orderId: t.metadata?.orderId,
+            settlementStatus: t.settlementStatus,
+            settlementDate: t.settlementDate,
+            settlementUTR: t.settlementUTR,
+            settlementAmount: t.settlementAmount,
+            reconciliationStatus: t.reconciliationStatus
+          }))
+        };
+        
+        // Save report as JSON
+        const reportPath = path.join(monthDir, `organizer_${organizerId}.json`);
+        fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+        
+        reportsGenerated++;
+        console.log(`✅ Report generated for organizer ${organizerId}: ${tickets.length} tickets, ₹${totalRevenue}`);
+        
+      } catch (error) {
+        console.error(`❌ Error generating report for organizer ${organizerId}:`, error.message);
+      }
+    }
+    
+    console.log(`✨ Monthly report generation completed: ${reportsGenerated} reports generated`);
+    
+  } catch (error) {
+    console.error('❌ Error in generateMonthlySettlementReports:', error);
+  }
+}
+
+/**
  * Stop all scheduled tasks (for cleanup/testing)
  */
 function stopAllJobs() {
@@ -499,5 +892,7 @@ module.exports = {
   sendProfileIncompleteReminders,
   sendDraftEventReminders,
   sendKYCPendingReminders,
-  sendLowBookingAlerts
+  sendLowBookingAlerts,
+  runDailyReconciliation,
+  generateMonthlySettlementReports
 };

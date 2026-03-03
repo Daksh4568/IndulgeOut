@@ -577,7 +577,7 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     const calculateEventRevenue = async (eventId) => {
       const tickets = await Ticket.find({ event: eventId, status: { $ne: 'cancelled' } });
       const revenue = tickets.reduce((sum, ticket) => {
-        // Use basePrice from metadata (order amount without fees)
+        // Use basePrice from metadata (organizer's revenue - ticket price only, NO fees deducted)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
       }, 0);
@@ -629,16 +629,17 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     }
     console.log(`📈 [Earnings] Month Growth: ${monthGrowth}%`);
 
-    // Calculate pending payout (assuming 85% payout after 15% platform fee)
+    // Calculate pending payout (NO platform fee deduction - organizer gets full basePrice)
     // Only from completed/past events
     const pastEvents = allEvents.filter(event => new Date(event.date) < now);
     const pastRevenuePromises = pastEvents.map(event => calculateEventRevenue(event._id));
     const pastRevenues = await Promise.all(pastRevenuePromises);
     const totalRevenue = pastRevenues.reduce((sum, rev) => sum + rev, 0);
     
-    const platformFeePercentage = 15; // 15% platform fee
-    const pendingPayout = Math.round(totalRevenue * (1 - platformFeePercentage / 100));
-    console.log(`💵 [Earnings] Pending Payout: ₹${pendingPayout} (${100 - platformFeePercentage}% of ₹${totalRevenue})`);
+    // NO platform fee deduction - organizer earns 100% of basePrice (ticket price)
+    // Payment gateway fees (3%) and GST (2.6%) are added on top by frontend
+    const pendingPayout = totalRevenue;
+    console.log(`💵 [Earnings] Pending Payout: ₹${pendingPayout} (100% of ticket basePrice)`);
 
     // Calculate next payout date (example: 1st of next month)
     const nextPayoutDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -664,6 +665,181 @@ router.get('/earnings', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('❌ [Earnings] Error fetching earnings:', error);
     res.status(500).json({ message: 'Server error fetching earnings' });
+  }
+});
+
+// ==================== REVENUE AUDIT ====================
+/**
+ * GET /api/organizer/revenue-audit
+ * Audit revenue accuracy by cross-verifying with Cashfree payment records
+ */
+router.get('/revenue-audit', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    console.log('🔍 [Revenue Audit] Starting audit for userId:', userId);
+
+    // Import required models
+    const Ticket = require('../models/Ticket');
+    const axios = require('axios');
+
+    // Get all events by this organizer
+    const events = await Event.find({ host: userId }).select('_id title');
+    const eventIds = events.map(e => e._id);
+
+    // Get all non-cancelled tickets for these events
+    const tickets = await Ticket.find({
+      event: { $in: eventIds },
+      status: { $ne: 'cancelled' }
+    }).populate('event', 'title');
+
+    console.log(`🔍 [Revenue Audit] Found ${tickets.length} tickets across ${events.length} events`);
+
+    // Calculate internal revenue from tickets
+    const internalRevenue = tickets.reduce((sum, ticket) => {
+      const ticketRevenue = ticket.metadata?.basePrice || 0;
+      return sum + ticketRevenue;
+    }, 0);
+
+    // Track tickets without basePrice (potential issue)
+    const ticketsWithoutBasePrice = tickets.filter(t => !t.metadata?.basePrice);
+    
+    // Track tickets without orderId (potential issue)
+    const ticketsWithoutOrderId = tickets.filter(t => !t.metadata?.orderId);
+
+    // Get unique order IDs
+    const orderIds = [...new Set(tickets.map(t => t.metadata?.orderId).filter(Boolean))];
+    
+    console.log(`🔍 [Revenue Audit] Verifying ${orderIds.length} Cashfree orders...`);
+
+    // Determine Cashfree API URL
+    const CASHFREE_API_URL = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_')
+      ? 'https://api.cashfree.com'
+      : 'https://sandbox.cashfree.com';
+
+    let cashfreeVerifiedTotal = 0;
+    let cashfreeOrdersChecked = 0;
+    let cashfreeOrdersFailed = 0;
+    const mismatches = [];
+
+    // Verify each order with Cashfree (with rate limiting)
+    for (const orderId of orderIds) {
+      try {
+        const cashfreeResponse = await axios.get(
+          `${CASHFREE_API_URL}/pg/orders/${orderId}`,
+          {
+            headers: {
+              'x-client-id': process.env.CASHFREE_APP_ID,
+              'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+              'x-api-version': '2023-08-01'
+            }
+          }
+        );
+
+        cashfreeOrdersChecked++;
+
+        if (cashfreeResponse.data.order_status === 'PAID') {
+          const cashfreeAmount = cashfreeResponse.data.order_amount;
+          cashfreeVerifiedTotal += cashfreeAmount;
+
+          // Find matching ticket(s) for this order
+          const matchingTickets = tickets.filter(t => t.metadata?.orderId === orderId);
+          
+          if (matchingTickets.length > 0) {
+            const ticketBasePriceTotal = matchingTickets.reduce((sum, t) => {
+              return sum + (t.metadata?.basePrice || 0);
+            }, 0);
+
+            // Calculate expected total with fees (basePrice + 2.6% GST + 3% gateway)
+            const expectedTotal = ticketBasePriceTotal * 1.056; // 5.6% total fees
+
+            // Allow 2 rupees difference for rounding
+            if (Math.abs(expectedTotal - cashfreeAmount) > 2) {
+              mismatches.push({
+                orderId,
+                eventTitle: matchingTickets[0].event?.title,
+                ticketNumbers: matchingTickets.map(t => t.ticketNumber),
+                ticketBasePrice: ticketBasePriceTotal,
+                expectedTotalWithFees: parseFloat(expectedTotal.toFixed(2)),
+                cashfreeAmount,
+                difference: parseFloat((cashfreeAmount - expectedTotal).toFixed(2))
+              });
+            }
+          }
+        }
+
+        // Rate limiting - wait 100ms between requests
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        cashfreeOrdersFailed++;
+        console.error(`❌ [Revenue Audit] Failed to verify orderId ${orderId}:`, error.message);
+      }
+    }
+
+    // Calculate expected Cashfree total (with fees)
+    const expectedCashfreeTotal = internalRevenue * 1.056; // basePrice + 5.6% fees
+
+    // Warnings
+    const warnings = [];
+    if (ticketsWithoutBasePrice.length > 0) {
+      warnings.push(`${ticketsWithoutBasePrice.length} tickets missing basePrice in metadata`);
+    }
+    if (ticketsWithoutOrderId.length > 0) {
+      warnings.push(`${ticketsWithoutOrderId.length} tickets missing orderId in metadata`);
+    }
+    if (cashfreeOrdersFailed > 0) {
+      warnings.push(`${cashfreeOrdersFailed} Cashfree orders failed to verify`);
+    }
+    if (mismatches.length > 0) {
+      warnings.push(`${mismatches.length} order amount mismatches found`);
+    }
+
+    const auditPassed = 
+      mismatches.length === 0 && 
+      ticketsWithoutBasePrice.length === 0 && 
+      Math.abs(cashfreeVerifiedTotal - expectedCashfreeTotal) < 10;
+
+    console.log(`✅ [Revenue Audit] Complete - Status: ${auditPassed ? 'PASS' : 'FAIL'}`);
+
+    res.json({
+      auditPassed,
+      summary: {
+        organizerRevenue: internalRevenue, // What organizer earns (basePrice only)
+        expectedCashfreeTotal: parseFloat(expectedCashfreeTotal.toFixed(2)), // With fees
+        cashfreeVerifiedTotal: parseFloat(cashfreeVerifiedTotal.toFixed(2)),
+        difference: parseFloat((cashfreeVerifiedTotal - expectedCashfreeTotal).toFixed(2))
+      },
+      tickets: {
+        total: tickets.length,
+        withoutBasePrice: ticketsWithoutBasePrice.length,
+        withoutOrderId: ticketsWithoutOrderId.length
+      },
+      cashfree: {
+        ordersToVerify: orderIds.length,
+        ordersVerified: cashfreeOrdersChecked,
+        ordersFailed: cashfreeOrdersFailed
+      },
+      mismatches,
+      warnings,
+      ticketsWithIssues: {
+        missingBasePrice: ticketsWithoutBasePrice.map(t => ({
+          ticketNumber: t.ticketNumber,
+          eventTitle: t.event?.title,
+          priceAmount: t.price?.amount
+        })),
+        missingOrderId: ticketsWithoutOrderId.map(t => ({
+          ticketNumber: t.ticketNumber,
+          eventTitle: t.event?.title
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [Revenue Audit] Error:', error);
+    res.status(500).json({ 
+      message: 'Revenue audit failed',
+      error: error.message 
+    });
   }
 });
 
@@ -865,6 +1041,396 @@ router.get('/insights', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error fetching insights:', error);
     res.status(500).json({ message: 'Server error fetching insights' });
+  }
+});
+
+// ==================== REPORTS & EXPORTS ====================
+/**
+ * GET /api/organizer/reports/event/:eventId
+ * Generate detailed event report with payment audit trail
+ */
+router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { eventId } = req.params;
+    const { format = 'json' } = req.query; // json or csv
+    
+    console.log('📊 [Reports] Generating event report:', { eventId, userId, format });
+    
+    // Verify event ownership
+    const event = await Event.findOne({ _id: eventId, host: userId })
+      .populate('host', 'name email communityProfile');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found or access denied' });
+    }
+    
+    // Import Ticket model
+    const Ticket = require('../models/Ticket');
+    
+    // Get all tickets for this event
+    const tickets = await Ticket.find({
+      event: eventId,
+      status: { $ne: 'cancelled' }
+    }).populate('user', 'name email phoneNumber')
+      .sort({ purchaseDate: -1 });
+    
+    console.log(`📊 [Reports] Found ${tickets.length} tickets for event: ${event.title}`);
+    
+    // Calculate summary metrics
+    const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    
+    // Calculate total paid by summing base + fees for each ticket
+    const totalPaid = tickets.reduce((sum, t) => {
+      const basePrice = t.metadata?.basePrice || 0;
+      let gstCharges = t.metadata?.gstAndOtherCharges || 0;
+      let platformFees = t.metadata?.platformFees || 0;
+      
+      // If fees missing, estimate from price difference
+      if (gstCharges === 0 && platformFees === 0 && basePrice > 0) {
+        const actualPrice = typeof t.price === 'number' ? t.price : (t.price?.amount || 0);
+        const diff = actualPrice - basePrice;
+        if (diff > basePrice * 0.01) {
+          gstCharges = diff * 0.46;
+          platformFees = diff * 0.54;
+        }
+      }
+      
+      return sum + basePrice + gstCharges + platformFees;
+    }, 0);
+    
+    const totalGatewayFees = totalPaid - totalRevenue; // Total fees = total paid - base revenue
+    
+    const settledCount = tickets.filter(t => t.settlementStatus === 'settled').length;
+    const pendingCount = tickets.filter(t => t.settlementStatus === 'pending' || t.settlementStatus === 'captured').length;
+    const verifiedCount = tickets.filter(t => t.reconciliationStatus === 'verified').length;
+    const mismatchCount = tickets.filter(t => t.reconciliationStatus === 'mismatch').length;
+    
+    const totalSettledAmount = tickets
+      .filter(t => t.settlementStatus === 'settled')
+      .reduce((sum, t) => sum + (t.settlementAmount || 0), 0);
+    
+    const report = {
+      generatedAt: new Date().toISOString(),
+      generatedBy: userId,
+      event: {
+        id: event._id,
+        title: event.title,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+        maxParticipants: event.maxParticipants,
+        currentParticipants: event.currentParticipants
+      },
+      organizer: {
+        name: event.host.name,
+        email: event.host.email,
+        communityName: event.host.communityProfile?.communityName
+      },
+      summary: {
+        totalTickets: tickets.length,
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+        totalPaidByUsers: parseFloat(totalPaid.toFixed(2)),
+        totalGatewayFees: parseFloat(totalGatewayFees.toFixed(2)),
+        avgTicketPrice: tickets.length > 0 ? parseFloat((totalRevenue / tickets.length).toFixed(2)) : 0,
+        settlement: {
+          settled: settledCount,
+          pending: pendingCount,
+          totalSettledAmount: parseFloat(totalSettledAmount.toFixed(2)),
+          settledPercentage: tickets.length > 0 ? parseFloat(((settledCount / tickets.length) * 100).toFixed(1)) : 0
+        },
+        reconciliation: {
+          verified: verifiedCount,
+          mismatches: mismatchCount,
+          pending: tickets.length - verifiedCount - mismatchCount,
+          verifiedPercentage: tickets.length > 0 ? parseFloat(((verifiedCount / tickets.length) * 100).toFixed(1)) : 0
+        }
+      },
+      tickets: tickets.map(t => {
+        const basePrice = t.metadata?.basePrice || 0;
+        
+        // Get stored fee values if they exist
+        let gstCharges = t.metadata?.gstAndOtherCharges || 0;
+        let platformFees = t.metadata?.platformFees || 0;
+        
+        // If fees are not recorded, try to calculate from price difference
+        if (gstCharges === 0 && platformFees === 0 && basePrice > 0) {
+          const actualPrice = typeof t.price === 'number' ? t.price : (t.price?.amount || 0);
+          const priceDifference = actualPrice - basePrice;
+          
+          // Only estimate fees if there's a meaningful difference (more than 1% of base)
+          if (priceDifference > basePrice * 0.01) {
+            // Split the difference: 46% GST, 54% platform fee
+            gstCharges = parseFloat((priceDifference * 0.46).toFixed(2));
+            platformFees = parseFloat((priceDifference * 0.54).toFixed(2));
+          }
+        }
+        
+        // Calculate total paid = base + all fees (this is what customer actually paid)
+        const totalPaidByUser = parseFloat((basePrice + gstCharges + platformFees).toFixed(2));
+        
+        return {
+        ticketNumber: t.ticketNumber,
+        userName: t.user?.name || 'N/A',
+        userEmail: t.user?.email || 'N/A',
+        userPhone: t.user?.phoneNumber || 'N/A',
+        purchaseDate: t.purchaseDate,
+        quantity: t.quantity || 1,
+        ticketType: t.metadata?.ticketType || 'general',
+        basePrice: basePrice,
+        gstAndOtherCharges: gstCharges,
+        platformFees: platformFees,
+        totalPaidByUser: totalPaidByUser,
+        orderId: t.metadata?.orderId,
+        paymentId: t.paymentId,
+        paymentMethod: t.gatewayResponse?.paymentMethod || 'N/A',
+        paymentStatus: t.gatewayResponse?.paymentStatus || 'N/A',
+        gatewayPaymentAmount: totalPaidByUser, // Amount received by gateway from customer
+        settlementStatus: t.settlementStatus,
+        settlementDate: t.settlementDate,
+        settlementUTR: t.settlementUTR,
+        settlementAmount: t.settlementAmount || 0, // Amount transferred to your bank
+        reconciliationStatus: t.reconciliationStatus,
+        lastReconciliationDate: t.lastReconciliationDate,
+        reconciliationNotes: t.reconciliationNotes,
+        checkInStatus: t.status,
+        checkInTime: t.checkInTime
+      };})
+    };
+    
+    // Return JSON or CSV based on format
+    if (format === 'csv') {
+      // Convert to CSV
+      const fields = [
+        'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
+        'quantity', 'ticketType', 'basePrice', 'gstAndOtherCharges', 'platformFees',
+        'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
+        'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
+        'reconciliationStatus', 'lastReconciliationDate', 'reconciliationNotes',
+        'checkInStatus', 'checkInTime'
+      ];
+      
+      const csvRows = [];
+      
+      // Add summary as header comments
+      csvRows.push(`# ========================================`);
+      csvRows.push(`# EVENT AUDIT REPORT`);
+      csvRows.push(`# ========================================`);
+      csvRows.push(`# Event: ${event.title}`);
+      csvRows.push(`# Generated: ${new Date().toISOString()}`);
+      csvRows.push(`# Total Tickets: ${tickets.length}`);
+      csvRows.push(`# Total Revenue (User Paid): ₹${totalPaid.toFixed(2)}`);
+      csvRows.push(`# Base Revenue (Your Share): ₹${totalRevenue.toFixed(2)}`);
+      csvRows.push(`# Gateway Fees Deducted: ₹${totalGatewayFees.toFixed(2)}`);
+      csvRows.push(`#`);
+      csvRows.push(`# SETTLEMENT STATUS:`);
+      csvRows.push(`#   - Settled: ${settledCount} tickets (${report.summary.settlement.settledPercentage}%)`);
+      csvRows.push(`#   - Amount Settled to Bank: ₹${totalSettledAmount.toFixed(2)}`);
+      csvRows.push(`#   - Pending Settlement: ${pendingCount} tickets`);
+      csvRows.push(`#   - Settlement = When Cashfree transfers money to your bank account`);
+      csvRows.push(`#`);
+      csvRows.push(`# RECONCILIATION STATUS:`);
+      csvRows.push(`#   - Verified with Cashfree: ${verifiedCount} (${report.summary.reconciliation.verifiedPercentage}%)`);
+      csvRows.push(`#   - Mismatches Found: ${mismatchCount}`);
+      csvRows.push(`#   - Pending Verification: ${tickets.length - verifiedCount - mismatchCount}`);
+      csvRows.push(`#   - Reconciliation = Daily verification that payment was actually received by Cashfree`);
+      csvRows.push(`#`);
+      csvRows.push(`# FIELD EXPLANATIONS:`);
+      csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
+      csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
+      csvRows.push(`#   - basePrice: Your share before gateway fees`);
+      csvRows.push(`#   - settlementAmount: Final amount transferred to your bank`);
+      csvRows.push(`#   - orderId: Cashfree order ID for verification`);
+      csvRows.push(`#   - reconciliationStatus: verified = Payment confirmed with Cashfree API`);
+      csvRows.push(`#   - lastReconciliationDate: When we last verified this payment with Cashfree`);
+      csvRows.push(`# ========================================`);
+      csvRows.push('');
+      
+      // Add header row
+      csvRows.push(fields.join(','));
+      
+      // Add data rows
+      report.tickets.forEach(ticket => {
+        const row = fields.map(field => {
+          let value = ticket[field];
+          
+          // Format dates
+          if (field.includes('Date') || field.includes('Time')) {
+            value = value ? new Date(value).toISOString() : '';
+          }
+          
+          // Escape commas and quotes in strings
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            value = `"${value.replace(/"/g, '""')}"`;
+          }
+          
+          return value !== null && value !== undefined ? value : '';
+        });
+        
+        csvRows.push(row.join(','));
+      });
+      
+      const csvContent = csvRows.join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="event-report-${eventId}-${Date.now()}.csv"`);
+      res.send(csvContent);
+    } else {
+      // Return JSON
+      res.json(report);
+    }
+    
+  } catch (error) {
+    console.error('❌ [Reports] Error generating event report:', error);
+    res.status(500).json({
+      message: 'Failed to generate event report',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/organizer/reports/monthly
+ * Generate monthly settlement report for organizer
+ */
+router.get('/reports/monthly', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { month, year, format = 'json' } = req.query;
+    
+    // Default to last month if not specified
+    const now = new Date();
+    const targetMonth = month ? parseInt(month) - 1 : now.getMonth() - 1;
+    const targetYear = year ? parseInt(year) : (targetMonth < 0 ? now.getFullYear() - 1 : now.getFullYear());
+    const adjustedMonth = targetMonth < 0 ? 11 : targetMonth;
+    
+    const startDate = new Date(targetYear, adjustedMonth, 1);
+    const endDate = new Date(targetYear, adjustedMonth + 1, 1);
+    
+    const monthName = startDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    console.log('📊 [Monthly Report] Generating for:', { userId, monthName, format });
+    
+    // Import Ticket model
+    const Ticket = require('../models/Ticket');
+    
+    // Get all events by this organizer
+    const events = await Event.find({ host: userId }).select('_id title date');
+    const eventIds = events.map(e => e._id);
+    
+    // Get all tickets in date range
+    const tickets = await Ticket.find({
+      event: { $in: eventIds },
+      purchaseDate: { $gte: startDate, $lt: endDate },
+      status: { $ne: 'cancelled' }
+    }).populate('event', 'title date')
+      .populate('user', 'name email');
+    
+    console.log(`📊 [Monthly Report] Found ${tickets.length} tickets for ${monthName}`);
+    
+    // Calculate metrics
+    const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    const totalSettled = tickets.filter(t => t.settlementStatus === 'settled').length;
+    const totalSettledAmount = tickets
+      .filter(t => t.settlementStatus === 'settled')
+      .reduce((sum, t) => sum + (t.settlementAmount || 0), 0);
+    
+    // Group by event
+    const eventBreakdown = {};
+    tickets.forEach(ticket => {
+      const eventId = ticket.event._id.toString();
+      const eventTitle = ticket.event.title;
+      
+      if (!eventBreakdown[eventId]) {
+        eventBreakdown[eventId] = {
+          eventTitle,
+          eventDate: ticket.event.date,
+          tickets: 0,
+          revenue: 0,
+          settled: 0
+        };
+      }
+      
+      eventBreakdown[eventId].tickets++;
+      eventBreakdown[eventId].revenue += (ticket.metadata?.basePrice || 0);
+      if (ticket.settlementStatus === 'settled') {
+        eventBreakdown[eventId].settled++;
+      }
+    });
+    
+    const report = {
+      month: monthName,
+      generatedAt: new Date().toISOString(),
+      organizerId: userId,
+      summary: {
+        totalTickets: tickets.length,
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+        totalEvents: Object.keys(eventBreakdown).length,
+        settled: {
+          tickets: totalSettled,
+          amount: parseFloat(totalSettledAmount.toFixed(2)),
+          percentage: tickets.length > 0 ? parseFloat(((totalSettled / tickets.length) * 100).toFixed(1)) : 0
+        }
+      },
+      eventBreakdown: Object.values(eventBreakdown).map(e => ({
+        ...e,
+        revenue: parseFloat(e.revenue.toFixed(2))
+      })),
+      tickets: tickets.map(t => ({
+        ticketNumber: t.ticketNumber,
+        eventTitle: t.event?.title,
+        userName: t.user?.name,
+        purchaseDate: t.purchaseDate,
+        basePrice: t.metadata?.basePrice,
+        orderId: t.metadata?.orderId,
+        settlementStatus: t.settlementStatus,
+        settlementDate: t.settlementDate,
+        settlementUTR: t.settlementUTR,
+        settlementAmount: t.settlementAmount
+      }))
+    };
+    
+    if (format === 'csv') {
+      const fields = [
+        'ticketNumber', 'eventTitle', 'userName', 'purchaseDate', 'basePrice',
+        'orderId', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount'
+      ];
+      
+      const csvRows = [];
+      csvRows.push(`# Monthly Settlement Report: ${monthName}`);
+      csvRows.push(`# Total Revenue: ₹${totalRevenue.toFixed(2)}`);
+      csvRows.push(`# Settled: ${totalSettled}/${tickets.length} tickets`);
+      csvRows.push('');
+      csvRows.push(fields.join(','));
+      
+      report.tickets.forEach(ticket => {
+        const row = fields.map(field => {
+          let value = ticket[field];
+          if (field.includes('Date')) {
+            value = value ? new Date(value).toISOString() : '';
+          }
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            value = `"${value.replace(/"/g, '""')}"`;
+          }
+          return value !== null && value !== undefined ? value : '';
+        });
+        csvRows.push(row.join(','));
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="monthly-report-${monthName.replace(' ', '-')}.csv"`);
+      res.send(csvRows.join('\n'));
+    } else {
+      res.json(report);
+    }
+    
+  } catch (error) {
+    console.error('❌ [Monthly Report] Error:', error);
+    res.status(500).json({
+      message: 'Failed to generate monthly report',
+      error: error.message
+    });
   }
 });
 

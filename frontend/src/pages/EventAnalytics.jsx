@@ -23,13 +23,13 @@ import {
   Phone,
   ChevronDown,
   Filter,
-  Award,
+  FileText,
   MapPin,
+  Award,
   UserX,
   Zap,
   TrendingDown,
   X,
-  FileText,
 } from "lucide-react";
 
 const EventAnalytics = () => {
@@ -805,6 +805,12 @@ const EventAnalytics = () => {
                       Ticket Number
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Purchase Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Order ID
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Ticket Type
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -861,6 +867,49 @@ const EventAnalytics = () => {
                           <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full">
                             × {attendee.quantity} Spots
                           </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-300">
+                          {attendee.purchaseDate ? (
+                            <div>
+                              <div>
+                                {new Date(attendee.purchaseDate).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(attendee.purchaseDate).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-600">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {attendee.orderId ? (
+                          <div className="text-xs">
+                            <div className="font-mono text-blue-400 truncate max-w-[200px]" title={attendee.orderId}>
+                              {attendee.orderId.substring(0, 20)}...
+                            </div>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(attendee.orderId);
+                                // Optional: Show a toast notification
+                              }}
+                              className="text-gray-500 hover:text-gray-300 mt-1 text-[10px]"
+                            >
+                              📋 Copy
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

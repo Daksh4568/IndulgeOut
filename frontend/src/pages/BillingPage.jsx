@@ -273,6 +273,9 @@ const BillingPage = () => {
         eventId: event._id,
         quantity: pricing.numberOfPeople,
         amount: pricing.grandTotal,
+        basePrice: pricing.basePrice,              // ✅ Add base price
+        gstAndOtherCharges: pricing.gstAndOtherCharges, // ✅ Add GST
+        platformFees: pricing.platformFees,        // ✅ Add platform fees
         questionnaireResponses: billingData.questionnaireResponses || [],
         groupingOffer: billingData.groupingOffer || null,
         additionalPersons: billingData.additionalPersons || []

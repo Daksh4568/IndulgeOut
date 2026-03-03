@@ -116,12 +116,13 @@ router.get('/my-hosted', authMiddleware, async (req, res) => {
       .populate('participants.user', 'name email')
       .sort({ date: 1 });
 
-    // Calculate revenue for each event from tickets
+    // Calculate revenue for each event from tickets (organizer's share only)
     const Ticket = require('../models/Ticket');
     const eventsWithRevenue = await Promise.all(events.map(async (event) => {
       const tickets = await Ticket.find({ event: event._id, status: { $ne: 'cancelled' } });
       
-      // Calculate revenue using basePrice from metadata (order amount without fees)
+      // Calculate revenue using basePrice from metadata (organizer's revenue - ticket price only)
+      // This is what organizer earns (100% of ticket basePrice, NO platform fee deduction)
       const revenue = tickets.reduce((sum, ticket) => {
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
@@ -794,18 +795,20 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           quantity: ticket.quantity || 1,
           status: ticket.status,
           purchaseDate: ticket.purchaseDate,
+          orderId: ticket.metadata?.orderId || null, // For payment verification
           checkInTime: ticket.checkInTime,
           checkInBy: ticket.checkInBy?.name || null,
           questionnaireResponses: questionnaireResponses
         };
       });
     
-    // Calculate revenue metrics (use basePrice from metadata, don't multiply by quantity as it's already the total)
+    // Calculate revenue metrics (organizer's share - basePrice only, NO platform fee)
+    // basePrice = ticket price × quantity (organizer earns 100% of this)
+    // Payment gateway (3%) and GST (2.6%) are added on top by frontend, not deducted here
     const totalRevenue = tickets
       .filter(t => t.status !== 'cancelled')
       .reduce((sum, ticket) => {
-        // Use basePrice from metadata (order amount without fees)
-        // If not available, fall back to ticket.price.amount (but don't multiply by quantity)
+        // Use basePrice from metadata (organizer's revenue - ticket price only)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
       }, 0);
@@ -822,7 +825,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           revenueByType[ticketType] = { type: ticketType, count: 0, revenue: 0 };
         }
         revenueByType[ticketType].count += ticket.quantity || 1;
-        // Use basePrice from metadata (order amount without fees)
+        // Use basePrice from metadata (organizer's revenue - ticket price only)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         revenueByType[ticketType].revenue += ticketRevenue;
       }
