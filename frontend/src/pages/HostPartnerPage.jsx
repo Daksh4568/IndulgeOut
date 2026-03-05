@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Building2, Sparkles, Search, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Building2, Award, Search, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 
 const HostPartnerPage = () => {
@@ -35,7 +35,7 @@ const HostPartnerPage = () => {
     },
     
     {
-      icon: <Sparkles className="h-12 w-12" />,
+      icon: <Award className="h-12 w-12" />,
       title: "Brands & Sponsors",
       subtitle: "For brands seeking experiential marketing",
       perfectFor: [

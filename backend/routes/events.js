@@ -116,17 +116,25 @@ router.get('/my-hosted', authMiddleware, async (req, res) => {
       .populate('participants.user', 'name email')
       .sort({ date: 1 });
 
-    // Calculate revenue for each event from tickets (organizer's share only)
+    // Calculate revenue for each event from tickets (organizer's share minus coupon discounts)
     const Ticket = require('../models/Ticket');
     const eventsWithRevenue = await Promise.all(events.map(async (event) => {
       const tickets = await Ticket.find({ event: event._id, status: { $ne: 'cancelled' } });
       
       // Calculate revenue using basePrice from metadata (organizer's revenue - ticket price only)
       // This is what organizer earns (100% of ticket basePrice, NO platform fee deduction)
-      const revenue = tickets.reduce((sum, ticket) => {
+      const revenueBeforeDiscount = tickets.reduce((sum, ticket) => {
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
       }, 0);
+      
+      // Calculate total coupon discounts from participants
+      const totalCouponDiscount = event.participants
+        .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+        .reduce((sum, p) => sum + (p.couponUsed.discountApplied || 0), 0);
+      
+      // Final revenue = basePrice - coupon discounts
+      const revenue = revenueBeforeDiscount - totalCouponDiscount;
       
       // Calculate actual attendee count from tickets (sum of quantities)
       const actualAttendees = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
@@ -259,7 +267,8 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       basePrice,
       gstAndOtherCharges,
       platformFees,
-      totalAmount
+      totalAmount,
+      couponCode // NEW: Coupon code from frontend
     } = req.body;
     
     // Check if user is allowed to register (only regular users, not host_partner or admin)
@@ -284,7 +293,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       ticketQuantity = Math.min(Math.max(parseInt(quantity) || 1, 1), 10);
     }
     
-    console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}, groupingOffer=${JSON.stringify(groupingOffer)}`);
+    console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}, groupingOffer=${JSON.stringify(groupingOffer)}, couponCode=${couponCode || 'none'}`);
     
     // First check if user is already registered
     const existingEvent = await Event.findById(req.params.id);
@@ -309,6 +318,30 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       });
     }
     
+    // ==================== COUPON VALIDATION ====================
+    let couponData = null;
+    let finalAmount = totalAmount;
+    
+    if (couponCode && couponCode.trim()) {
+      console.log(`🎟️ Validating coupon: ${couponCode} for user ${userId}`);
+      const couponValidation = await existingEvent.validateCoupon(couponCode, userId, basePrice);
+      
+      if (couponValidation.valid) {
+        couponData = couponValidation.coupon;
+        finalAmount = totalAmount - couponData.discountApplied;
+        console.log(`✅ Coupon validated: ${couponCode}, discount: ₹${couponData.discountApplied}, new total: ₹${finalAmount}`);
+        
+        // Apply the coupon (increment usage count)
+        await existingEvent.applyCoupon(couponCode, userId, couponData.discountApplied);
+      } else {
+        console.log(`❌ Invalid coupon: ${couponCode}, reason: ${couponValidation.message}`);
+        return res.status(400).json({ 
+          message: `Coupon error: ${couponValidation.message}` 
+        });
+      }
+    }
+    // ==================== END COUPON VALIDATION ====================
+    
     // Prepare participant data
     const participantData = {
       user: userId,
@@ -324,6 +357,16 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         tierLabel: groupingOffer.tierLabel,
         tierPeople: groupingOffer.tierPeople,
         tierPrice: groupingOffer.tierPrice
+      };
+    }
+    
+    // Add coupon details if applicable
+    if (couponData) {
+      participantData.couponUsed = {
+        code: couponData.code,
+        discountType: couponData.discountType,
+        discountValue: couponData.discountValue,
+        discountApplied: couponData.discountApplied
       };
     }
     
@@ -412,10 +455,19 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         ticketMetadata.tierPeople = groupingOffer.tierPeople;
       }
       
+      // Add coupon information to ticket metadata
+      if (couponData) {
+        ticketMetadata.couponCode = couponData.code;
+        ticketMetadata.couponDiscount = couponData.discountApplied;
+        ticketMetadata.originalAmount = totalAmount;
+        ticketMetadata.discountType = couponData.discountType;
+        ticketMetadata.discountValue = couponData.discountValue;
+      }
+      
       ticket = await ticketService.generateTicket({
         userId: userId,
         eventId: event._id,
-        amount: totalAmount || (event.price?.amount || 0) * ticketQuantity,
+        amount: finalAmount || (event.price?.amount || 0) * ticketQuantity, // Use finalAmount after coupon discount
         paymentId: req.body.paymentId || null,
         ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
         quantity: ticketQuantity,
@@ -500,6 +552,11 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         date: event.date,
         currentParticipants: event.currentParticipants
       },
+      coupon: couponData ? {
+        code: couponData.code,
+        discountApplied: couponData.discountApplied,
+        finalAmount: finalAmount
+      } : null,
       additionalTicketsSent: additionalPersons.length
     });
   } catch (error) {
@@ -753,7 +810,18 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       });
     }
     
+    // Create a map of userId to couponUsed for quick lookup
+    const couponMap = new Map();
+    if (event.participants && event.participants.length > 0) {
+      event.participants.forEach(participant => {
+        if (participant.user && participant.couponUsed && participant.couponUsed.code) {
+          couponMap.set(participant.user._id.toString(), participant.couponUsed);
+        }
+      });
+    }
+    
     console.log(`📊 Analytics: Found ${questionnaireMap.size} participants with questionnaire responses`);
+    console.log(`🎟️ Analytics: Found ${couponMap.size} participants who used coupons`);
     
     // Get all tickets for this event with user details
     const Ticket = require('../models/Ticket');
@@ -782,6 +850,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       .map(ticket => {
         const userId = ticket.user._id.toString();
         const questionnaireResponses = questionnaireMap.get(userId) || [];
+        const couponUsed = couponMap.get(userId) || null;
         
         return {
           ticketId: ticket._id, // Unique ticket ID for React key
@@ -798,14 +867,16 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           orderId: ticket.metadata?.orderId || null, // For payment verification
           checkInTime: ticket.checkInTime,
           checkInBy: ticket.checkInBy?.name || null,
-          questionnaireResponses: questionnaireResponses
+          questionnaireResponses: questionnaireResponses,
+          couponUsed: couponUsed // Include coupon data if user applied one
         };
       });
     
-    // Calculate revenue metrics (organizer's share - basePrice only, NO platform fee)
+    // Calculate revenue metrics (organizer's share - basePrice minus coupon discounts)
     // basePrice = ticket price × quantity (organizer earns 100% of this)
     // Payment gateway (3%) and GST (2.6%) are added on top by frontend, not deducted here
-    const totalRevenue = tickets
+    // Subtract coupon discounts from total revenue
+    const totalRevenueBeforeDiscount = tickets
       .filter(t => t.status !== 'cancelled')
       .reduce((sum, ticket) => {
         // Use basePrice from metadata (organizer's revenue - ticket price only)
@@ -813,11 +884,28 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         return sum + ticketRevenue;
       }, 0);
     
+    // Calculate total coupon discounts from participants
+    const totalCouponDiscount = event.participants
+      .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+      .reduce((sum, p) => sum + (p.couponUsed.discountApplied || 0), 0);
+    
+    // Final revenue = basePrice - coupon discounts
+    const totalRevenue = totalRevenueBeforeDiscount - totalCouponDiscount;
+    
+    console.log(`💰 [ANALYTICS] Revenue calculation:`, {
+      totalRevenueBeforeDiscount,
+      totalCouponDiscount,
+      totalRevenue: totalRevenue,
+      numberOfCouponsUsed: event.participants.filter(p => p.couponUsed).length
+    });
+    
     // Calculate average per attendee (divide by number of spots, not tickets sold)
     const avgPerAttendee = totalRegistered > 0 ? (totalRevenue / totalRegistered).toFixed(2) : 0;
     
-    // Group revenue by ticket type
+    // Group revenue by ticket type (after coupon discounts)
     const revenueByType = {};
+    
+    // First, build revenue map with base prices
     tickets.forEach(ticket => {
       if (ticket.status !== 'cancelled') {
         const ticketType = ticket.metadata?.ticketType || 'general';
@@ -828,6 +916,21 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         // Use basePrice from metadata (organizer's revenue - ticket price only)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         revenueByType[ticketType].revenue += ticketRevenue;
+      }
+    });
+    
+    // Then, subtract coupon discounts from each ticket type
+    // Note: We subtract proportionally, but for simplicity, we'll subtract from the ticket type the user had
+    event.participants.forEach(participant => {
+      if (participant.couponUsed && participant.couponUsed.discountApplied > 0) {
+        // Find the corresponding ticket to get the ticket type
+        const participantTicket = tickets.find(t => t.user && t.user._id.toString() === participant.user._id.toString());
+        if (participantTicket && participantTicket.status !== 'cancelled') {
+          const ticketType = participantTicket.metadata?.ticketType || 'general';
+          if (revenueByType[ticketType]) {
+            revenueByType[ticketType].revenue -= participant.couponUsed.discountApplied;
+          }
+        }
       }
     });
     
@@ -981,6 +1084,8 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       },
       revenue: {
         totalRevenue,
+        totalRevenueBeforeDiscount,
+        totalCouponDiscount,
         avgPerAttendee: parseFloat(avgPerAttendee),
         revenueByTicketType: Object.values(revenueByType)
       },
@@ -994,6 +1099,21 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       demandTiming,
       audienceQuality,
       feedback,
+      coupons: event.coupons && event.coupons.enabled ? {
+        enabled: true,
+        codes: event.coupons.codes.map(coupon => ({
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          maxUses: coupon.maxUses,
+          currentUses: coupon.currentUses,
+          maxUsesPerUser: coupon.maxUsesPerUser,
+          expiryDate: coupon.expiryDate,
+          isActive: coupon.isActive,
+          usedBy: coupon.usedBy,
+          createdAt: coupon.createdAt
+        }))
+      } : { enabled: false, codes: [] },
       statistics: {
         totalTickets: totalRegistered,
         totalSlots,
@@ -1128,6 +1248,45 @@ router.get('/:id/attendees', authMiddleware, async (req, res) => {
       success: false,
       message: 'Internal server error',
       error: error.message 
+    });
+  }
+});
+
+// @route   POST /api/events/:id/validate-coupon
+// @desc    Validate a coupon code for an event
+// @access  Private
+router.post('/:id/validate-coupon', authMiddleware, async (req, res) => {
+  try {
+    const { couponCode, basePrice } = req.body;
+    const userId = req.user.userId || req.user.id;
+
+    // Validate input
+    if (!couponCode || !basePrice) {
+      return res.status(400).json({ 
+        valid: false,
+        message: 'Coupon code and base price are required' 
+      });
+    }
+
+    // Find the event
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ 
+        valid: false,
+        message: 'Event not found' 
+      });
+    }
+
+    // Validate the coupon
+    const validationResult = await event.validateCoupon(couponCode, userId, basePrice);
+
+    res.json(validationResult);
+  } catch (error) {
+    console.error('Validate coupon error:', error);
+    res.status(500).json({ 
+      valid: false,
+      message: 'Error validating coupon code' 
     });
   }
 });

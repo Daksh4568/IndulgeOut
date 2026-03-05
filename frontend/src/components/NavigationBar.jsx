@@ -111,7 +111,9 @@ export default function NavigationBar() {
                 {/* Explore */}
                 <Link
                   to="/explore"
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                    location.pathname === '/explore' ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                  }`}
                 >
                   EXPLORE
                 </Link>
@@ -119,7 +121,9 @@ export default function NavigationBar() {
                 {/* Categories */}
                 <Link
                   to="/categories"
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                    location.pathname === '/categories' ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                  }`}
                 >
                   CATEGORIES
                 </Link>
@@ -127,7 +131,9 @@ export default function NavigationBar() {
                 {/* Host & Partner */}
                 <Link
                   to="/host-partner"
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                    location.pathname === '/host-partner' ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                  }`}
                 >
                   HOST & PARTNER
                 </Link>
@@ -135,7 +141,9 @@ export default function NavigationBar() {
                 {/* About */}
                 <Link
                   to="/about"
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                    location.pathname === '/about' ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                  }`}
                 >
                   ABOUT
                 </Link>
@@ -150,7 +158,7 @@ export default function NavigationBar() {
                     <Link
                       to={getDashboardRoute()}
                       className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
-                        location.pathname.includes('/organizer/dashboard') ? 'font-bold' : 'font-medium'
+                        location.pathname.includes('/organizer/dashboard') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                       }`}
                     >
                       DASHBOARD
@@ -160,7 +168,7 @@ export default function NavigationBar() {
                     <button
                       onClick={handleCreateEvent}
                       className={`flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm uppercase transition-colors ${
-                        location.pathname.includes('/create-event') ? 'font-bold' : 'font-medium'
+                        location.pathname.includes('/create-event') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                       }`}
                     >
                       <span>CREATE EVENT</span>
@@ -170,7 +178,7 @@ export default function NavigationBar() {
                     <Link
                       to="/browse/sponsors"
                       className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
-                        location.pathname.includes('/browse/sponsors') ? 'font-bold' : 'font-medium'
+                        location.pathname.includes('/browse/sponsors') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                       }`}
                     >
                       SPONSORS
@@ -180,7 +188,7 @@ export default function NavigationBar() {
                     <Link
                       to="/browse/venues"
                       className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
-                        location.pathname.includes('/browse/venues') ? 'font-bold' : 'font-medium'
+                        location.pathname.includes('/browse/venues') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                       }`}
                     >
                       VENUES
@@ -191,7 +199,9 @@ export default function NavigationBar() {
                     {/* Other User Types Navigation */}
                     <Link
                       to={getDashboardRoute()}
-                      className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                        location.pathname.includes('/dashboard') || location.pathname.includes('/venue/dashboard') || location.pathname.includes('/brand/dashboard') || location.pathname.includes('/admin/dashboard') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                      }`}
                     >
                       DASHBOARD
                     </Link>
@@ -200,7 +210,9 @@ export default function NavigationBar() {
                     {user.role !== 'host_partner' && (
                       <Link
                         to="/explore"
-                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                        className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                          location.pathname === '/explore' ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                        }`}
                       >
                         EXPLORE
                       </Link>
@@ -210,7 +222,9 @@ export default function NavigationBar() {
                     {user.role !== 'host_partner' && user.role !== 'admin' && (
                       <Link
                         to="/categories"
-                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                        className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
+                          location.pathname === '/categories' ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
+                        }`}
                       >
                         CATEGORIES
                       </Link>
@@ -221,7 +235,7 @@ export default function NavigationBar() {
                       <Link
                         to="/browse/communities"
                         className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
-                          location.pathname.includes('/browse/communities') ? 'font-bold' : 'font-medium'
+                          location.pathname.includes('/browse/communities') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                         }`}
                       >
                         COMMUNITIES
@@ -233,7 +247,7 @@ export default function NavigationBar() {
                       <Link
                         to="/browse/venues"
                         className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
-                          location.pathname.includes('/browse/venues') ? 'font-bold' : 'font-medium'
+                          location.pathname.includes('/browse/venues') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                         }`}
                       >
                         VENUES
@@ -245,7 +259,7 @@ export default function NavigationBar() {
                       <Link
                         to="/browse/sponsors"
                         className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm transition-colors ${
-                          location.pathname.includes('/browse/sponsors') ? 'font-bold' : 'font-medium'
+                          location.pathname.includes('/browse/sponsors') ? 'font-bold bg-indigo-500 bg-opacity-25' : 'font-medium'
                         }`}
                       >
                         SPONSORS

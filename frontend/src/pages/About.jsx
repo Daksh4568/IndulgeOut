@@ -156,7 +156,7 @@ const About = () => {
           {/* Envelope in Center */}
           <div className="relative z-20 flex flex-col items-center justify-center md:mt-0">
             {/* Tap here bubble with arrow - Figma style */}
-            <div className="relative mb-8 md:block hidden">
+            <div className="relative mb-2 md:block hidden">
               <div className="relative">
                 {/* Speech bubble */}
                 <div className="bg-zinc-900 px-6 py-3 rounded-full text-sm font-medium border-2 border-gray-600 relative">
@@ -164,10 +164,10 @@ const About = () => {
                   {/* Bubble tail pointing down-left */}
                   {/* <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gray-800 border-b-2 border-l-2 border-gray-600 rotate-45"></div> */}
                 </div>
-                {/* Curved arrow pointing to envelope */}
-                <svg className="absolute top-full left-1/2 transform translate-x-8 translate-y-1 w-20 h-20" viewBox="0 0 100 100">
-                  <path d="M20,10 Q40,20 50,40 T60,70" stroke="white" strokeWidth="2" fill="none" opacity="0.8" />
-                  <path d="M60,70 L55,65 M60,70 L65,68" stroke="white" strokeWidth="2" fill="none" opacity="0.8" />
+                {/* Curved arrow pointing to envelope - adjusted positioning */}
+                <svg className="absolute top-full left-1/2 transform translate-x-8 -translate-y-1 w-20 h-24" viewBox="0 0 100 120">
+                  <path d="M20,5 Q40,15 50,40 T60,90" stroke="white" strokeWidth="2" fill="none" opacity="0.8" />
+                  <path d="M60,90 L55,85 M60,90 L65,88" stroke="white" strokeWidth="2" fill="none" opacity="0.8" />
                 </svg>
               </div>
             </div>

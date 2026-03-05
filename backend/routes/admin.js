@@ -1282,7 +1282,16 @@ router.get('/events/all-with-revenue', requirePermission('view_analytics'), asyn
       }).lean();
       
       // Calculate revenue metrics
-      const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+      const totalRevenueBeforeDiscount = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+      
+      // Calculate total coupon discount from event participants
+      const totalCouponDiscount = (event.participants || []).reduce((sum, participant) => {
+        return sum + (participant.couponUsed?.discountApplied || 0);
+      }, 0);
+      
+      // Final revenue after coupon discounts
+      const totalRevenue = totalRevenueBeforeDiscount - totalCouponDiscount;
+      
       const totalPaid = tickets.reduce((sum, t) => sum + (t.metadata?.totalPaid || 0), 0);
       
       // Settlement status
@@ -1382,7 +1391,17 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     console.log(`📊 [Admin Report] Found ${tickets.length} tickets`);
     
     // Calculate metrics
-    const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    const totalRevenueBeforeDiscount = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    
+    // Calculate total coupon discount from event participants
+    const totalCouponDiscount = (event.participants || []).reduce((sum, participant) => {
+      return sum + (participant.couponUsed?.discountApplied || 0);
+    }, 0);
+    
+    console.log(`💰 [Admin Report] Revenue: ₹${totalRevenueBeforeDiscount} - ₹${totalCouponDiscount} (coupon) = ₹${totalRevenueBeforeDiscount - totalCouponDiscount}`);
+    
+    // Final revenue after coupon discounts
+    const totalRevenue = totalRevenueBeforeDiscount - totalCouponDiscount;
     
     // Calculate total paid by summing base + fees for each ticket
     const totalPaid = tickets.reduce((sum, t) => {
@@ -1430,6 +1449,8 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       },
       summary: {
         totalTickets: tickets.length,
+        totalRevenueBeforeDiscount: parseFloat(totalRevenueBeforeDiscount.toFixed(2)),
+        totalCouponDiscount: parseFloat(totalCouponDiscount.toFixed(2)),
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         totalPaidByUsers: parseFloat(totalPaid.toFixed(2)),
         totalGatewayFees: parseFloat(totalGatewayFees.toFixed(2)),

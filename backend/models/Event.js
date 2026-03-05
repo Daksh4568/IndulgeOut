@@ -95,6 +95,12 @@ const eventSchema = new mongoose.Schema({
       tierPeople: Number,
       tierPrice: Number
     },
+    couponUsed: {
+      code: String,
+      discountType: String,
+      discountValue: Number,
+      discountApplied: Number
+    },
     questionnaireResponses: [{
       question: String,
       answer: String
@@ -165,6 +171,69 @@ const eventSchema = new mongoose.Schema({
     },
     ticketNumber: String // Populated after payment
   }],
+  // Coupon/Promo Code System
+  coupons: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    codes: [{
+      code: {
+        type: String,
+        required: true,
+        uppercase: true,
+        trim: true
+      },
+      discountType: {
+        type: String,
+        enum: ['percentage', 'fixed'],
+        required: true
+      },
+      discountValue: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      maxUses: {
+        type: Number,
+        default: null, // null means unlimited
+        min: 0
+      },
+      currentUses: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      maxUsesPerUser: {
+        type: Number,
+        default: 1,
+        min: 1
+      },
+      expiryDate: {
+        type: Date,
+        default: null // null means no expiry
+      },
+      isActive: {
+        type: Boolean,
+        default: true
+      },
+      usedBy: [{
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        usedAt: {
+          type: Date,
+          default: Date.now
+        },
+        discountApplied: Number
+      }],
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
+  },
   images: [String],
   tags: [String],
   requirements: [String],
@@ -413,6 +482,141 @@ eventSchema.methods.updateConversionRate = async function() {
   }
   this.analytics.lastUpdated = new Date();
   await this.save();
+};
+
+// ==================== COUPON VALIDATION METHODS ====================
+
+/**
+ * Validate a coupon code for a user
+ * @param {String} couponCode - The coupon code to validate
+ * @param {String} userId - The user ID trying to use the coupon
+ * @param {Number} basePrice - The base ticket price
+ * @returns {Object} - Validation result with discount details or error
+ */
+eventSchema.methods.validateCoupon = async function(couponCode, userId, basePrice) {
+  try {
+    // Check if coupons are enabled for this event
+    if (!this.coupons || !this.coupons.enabled) {
+      return {
+        valid: false,
+        message: 'Coupons are not available for this event'
+      };
+    }
+
+    // Find the coupon
+    const coupon = this.coupons.codes.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+    
+    if (!coupon) {
+      return {
+        valid: false,
+        message: 'Invalid coupon code'
+      };
+    }
+
+    // Check if coupon is active
+    if (!coupon.isActive) {
+      return {
+        valid: false,
+        message: 'This coupon is no longer active'
+      };
+    }
+
+    // Check expiry date
+    if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) {
+      return {
+        valid: false,
+        message: 'This coupon has expired'
+      };
+    }
+
+    // Check max uses limit
+    if (coupon.maxUses !== null && coupon.currentUses >= coupon.maxUses) {
+      return {
+        valid: false,
+        message: `This coupon has reached its usage limit (${coupon.maxUses} uses)`
+      };
+    }
+
+    // Check per-user usage limit
+    const userUsageCount = coupon.usedBy.filter(u => u.user.toString() === userId.toString()).length;
+    if (userUsageCount >= coupon.maxUsesPerUser) {
+      return {
+        valid: false,
+        message: `You have already used this coupon ${coupon.maxUsesPerUser} time(s)`
+      };
+    }
+
+    // Calculate discount
+    let discountAmount = 0;
+    if (coupon.discountType === 'percentage') {
+      discountAmount = Math.round((basePrice * coupon.discountValue) / 100);
+    } else if (coupon.discountType === 'fixed') {
+      discountAmount = Math.min(coupon.discountValue, basePrice); // Can't discount more than the price
+    }
+
+    // Ensure final price doesn't go negative
+    const finalPrice = Math.max(0, basePrice - discountAmount);
+
+    return {
+      valid: true,
+      coupon: {
+        code: coupon.code,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        discountApplied: discountAmount,
+        finalPrice: finalPrice,
+        usesRemaining: coupon.maxUses ? coupon.maxUses - coupon.currentUses : null,
+        expiryDate: coupon.expiryDate
+      }
+    };
+  } catch (error) {
+    console.error('Coupon validation error:', error);
+    return {
+      valid: false,
+      message: 'Error validating coupon code'
+    };
+  }
+};
+
+/**
+ * Apply a coupon to a user's registration
+ * @param {String} couponCode - The coupon code to apply
+ * @param {String} userId - The user ID
+ * @param {Number} discountApplied - The discount amount applied
+ */
+eventSchema.methods.applyCoupon = async function(couponCode, userId, discountApplied) {
+  try {
+    const coupon = this.coupons.codes.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+    
+    if (!coupon) {
+      throw new Error('Coupon not found');
+    }
+
+    // Increment usage count
+    coupon.currentUses += 1;
+
+    // Add to usedBy array
+    coupon.usedBy.push({
+      user: userId,
+      usedAt: new Date(),
+      discountApplied: discountApplied
+    });
+
+    // Deactivate if max uses reached
+    if (coupon.maxUses !== null && coupon.currentUses >= coupon.maxUses) {
+      coupon.isActive = false;
+    }
+
+    await this.save();
+
+    return {
+      success: true,
+      message: 'Coupon applied successfully'
+    };
+  } catch (error) {
+    console.error('Apply coupon error:', error);
+    throw error;
+  }
 };
 
 module.exports = mongoose.model('Event', eventSchema);

@@ -30,6 +30,9 @@ import {
   Zap,
   TrendingDown,
   X,
+  Tag,
+  Ticket,
+  CheckCircle2,
 } from "lucide-react";
 
 const EventAnalytics = () => {
@@ -52,6 +55,7 @@ const EventAnalytics = () => {
   const [questionnaireSubmissions, setQuestionnaireSubmissions] = useState(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
 
   useEffect(() => {
     fetchAnalytics();
@@ -145,6 +149,8 @@ const EventAnalytics = () => {
       "Ticket Number",
       "Quantity",
       "Ticket Type",
+      "Coupon Code",
+      "Discount Applied",
       "Status",
       "Purchase Date",
       "Check-in Time",
@@ -156,6 +162,8 @@ const EventAnalytics = () => {
       a.ticketNumber,
       a.quantity || 1,
       a.ticketType,
+      a.couponUsed?.code || "",
+      a.couponUsed?.discountApplied ? `₹${a.couponUsed.discountApplied}` : "",
       a.status,
       formatDate(a.purchaseDate),
       a.checkInTime ? formatDateTime(a.checkInTime) : "",
@@ -493,6 +501,210 @@ const EventAnalytics = () => {
           </div>
         </div>
 
+        {/* Coupon Usage Statistics */}
+        {analytics.attendees && analytics.attendees.some(a => a.couponUsed) && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <Ticket className="h-5 w-5 mr-2 text-purple-500" />
+                Coupon Usage Statistics
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {(() => {
+                const couponsUsed = analytics.attendees.filter(a => a.couponUsed && a.couponUsed.code);
+                const totalDiscount = couponsUsed.reduce((sum, a) => sum + (a.couponUsed.discountApplied || 0), 0);
+                const uniqueCoupons = [...new Set(couponsUsed.map(a => a.couponUsed.code))];
+                
+                return (
+                  <>
+                    <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 backdrop-blur-sm rounded-xl p-6 border border-purple-700/30">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Ticket className="h-5 w-5 text-purple-500" />
+                        <span className="text-sm text-gray-400">Coupons Used</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-1">
+                        {couponsUsed.length}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {((couponsUsed.length / analytics.attendees.length) * 100).toFixed(1)}% of bookings
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-red-900/20 to-orange-900/20 backdrop-blur-sm rounded-xl p-6 border border-red-700/30">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <DollarSign className="h-5 w-5 text-red-500" />
+                        <span className="text-sm text-gray-400">Total Discount</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-1">
+                        ₹{totalDiscount.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Revenue discount given
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Tag className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm text-gray-400">Unique Coupons</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-1">
+                        {uniqueCoupons.length}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {uniqueCoupons.join(', ')}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Coupon Details - All Coupons Created by Host */}
+        {analytics.coupons && analytics.coupons.enabled && analytics.coupons.codes && analytics.coupons.codes.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <Tag className="h-5 w-5 mr-2 text-green-500" />
+                Promo Codes Created
+              </h2>
+              <span className="text-sm text-gray-400">
+                {analytics.coupons.codes.length} {analytics.coupons.codes.length === 1 ? 'code' : 'codes'}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {analytics.coupons.codes.map((coupon, index) => {
+                const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                const isLimitReached = coupon.maxUses && coupon.currentUses >= coupon.maxUses;
+                const usagePercentage = coupon.maxUses ? (coupon.currentUses / coupon.maxUses) * 100 : 0;
+                
+                return (
+                  <div 
+                    key={index}
+                    className={`bg-gradient-to-br ${
+                      !coupon.isActive || isExpired || isLimitReached
+                        ? 'from-gray-800/40 to-gray-900/40 border-gray-700/30'
+                        : 'from-green-900/20 to-emerald-900/20 border-green-700/30'
+                    } backdrop-blur-sm rounded-xl p-6 border transition-all hover:border-green-600/50`}
+                  >
+                    {/* Coupon Code Badge */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`px-3 py-1.5 rounded-lg font-mono font-bold text-lg ${
+                        !coupon.isActive || isExpired || isLimitReached
+                          ? 'bg-gray-700/50 text-gray-400'
+                          : 'bg-green-600/20 text-green-400'
+                      }`}>
+                        {coupon.code}
+                      </div>
+                      {coupon.isActive && !isExpired && !isLimitReached ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <X className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
+
+                    {/* Discount Details */}
+                    <div className="mb-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <DollarSign className="h-4 w-4 text-purple-400" />
+                        <span className="text-sm text-gray-400">Discount</span>
+                      </div>
+                      <div className="text-2xl font-bold text-white">
+                        {coupon.discountType === 'percentage' 
+                          ? `${coupon.discountValue}% OFF`
+                          : `₹${coupon.discountValue} OFF`
+                        }
+                      </div>
+                    </div>
+
+                    {/* Usage Statistics */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-400">Usage</span>
+                        <span className="text-sm font-semibold text-white">
+                          {coupon.currentUses} / {coupon.maxUses || '∞'}
+                        </span>
+                      </div>
+                      {coupon.maxUses && (
+                        <div className="w-full bg-gray-700/50 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all ${
+                              usagePercentage >= 100 ? 'bg-red-500' : 
+                              usagePercentage >= 80 ? 'bg-yellow-500' : 
+                              'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Additional Details */}
+                    <div className="space-y-2 text-xs">
+                      {coupon.maxUsesPerUser && (
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span>Per User Limit</span>
+                          <span className="font-semibold">{coupon.maxUsesPerUser}x</span>
+                        </div>
+                      )}
+                      {coupon.expiryDate && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Expires</span>
+                          <span className={`font-semibold ${isExpired ? 'text-red-400' : 'text-gray-300'}`}>
+                            {formatDate(coupon.expiryDate)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Status</span>
+                        <span className={`font-semibold ${
+                          !coupon.isActive ? 'text-gray-400' :
+                          isExpired ? 'text-red-400' :
+                          isLimitReached ? 'text-orange-400' :
+                          'text-green-400'
+                        }`}>
+                          {!coupon.isActive ? 'Inactive' :
+                           isExpired ? 'Expired' :
+                           isLimitReached ? 'Limit Reached' :
+                           'Active'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Users Who Used This Coupon */}
+                    {coupon.usedBy && coupon.usedBy.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-700/50">
+                        <div className="text-xs text-gray-400 mb-2">
+                          Used by {coupon.usedBy.length} {coupon.usedBy.length === 1 ? 'user' : 'users'}
+                        </div>
+                        <div className="flex -space-x-2">
+                          {coupon.usedBy.slice(0, 5).map((usage, idx) => (
+                            <div 
+                              key={idx}
+                              className="w-8 h-8 rounded-full bg-purple-600/20 border-2 border-gray-800 flex items-center justify-center text-xs font-bold text-purple-400"
+                              title={`₹${usage.discountApplied} saved`}
+                            >
+                              {idx + 1}
+                            </div>
+                          ))}
+                          {coupon.usedBy.length > 5 && (
+                            <div className="w-8 h-8 rounded-full bg-gray-600/40 border-2 border-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">
+                              +{coupon.usedBy.length - 5}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Demand Timing & Sales Velocity */}
         {analytics.demandTiming && (
         <div className="mb-8">
@@ -814,6 +1026,9 @@ const EventAnalytics = () => {
                       Ticket Type
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Coupon Used
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -918,6 +1133,23 @@ const EventAnalytics = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        {attendee.couponUsed && attendee.couponUsed.code ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-300 rounded-full inline-block">
+                              {attendee.couponUsed.code}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              -₹{attendee.couponUsed.discountApplied || 0} 
+                              {attendee.couponUsed.discountType === 'percentage' 
+                                ? ` (${attendee.couponUsed.discountValue}%)` 
+                                : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-600 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(attendee.status)}`}
                         >
@@ -999,25 +1231,71 @@ const EventAnalytics = () => {
         <div className="fixed inset-0 bg-zinc-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-zinc-900 rounded-xl max-w-5xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden border border-gray-700 flex flex-col">
             {/* Modal Header */}
-            <div className="bg-zinc-900 border-b border-gray-700 p-4 sm:p-6 flex justify-between items-start gap-3">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
-                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" style={{ color: '#7878E9' }} />
-                  <span className="truncate">Questionnaire Submissions</span>
-                </h3>
-                {questionnaireSubmissions && (
-                  <div className="flex flex-wrap gap-2 sm:gap-3 mt-2">
-                    <span className="text-xs sm:text-sm text-gray-400">
-                      Total: <span className="font-semibold text-white">{questionnaireSubmissions.total}</span>
-                    </span>
-                    <span className="text-xs sm:text-sm text-gray-400">
-                      Paid: <span className="font-semibold text-green-400">{questionnaireSubmissions.paid}</span>
-                    </span>
-                    <span className="text-xs sm:text-sm text-gray-400">
-                      Unpaid: <span className="font-semibold text-orange-400">{questionnaireSubmissions.unpaid}</span>
-                    </span>
-                  </div>
-                )}
+            <div className="bg-zinc-900 border-b border-gray-700 p-4 sm:p-6">
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" style={{ color: '#7878E9' }} />
+                    <span className="truncate">Questionnaire Submissions</span>
+                  </h3>
+                  {questionnaireSubmissions && (
+                    <div className="flex flex-wrap gap-2 sm:gap-3 mt-2">
+                      <span className="text-xs sm:text-sm text-gray-400">
+                        Total: <span className="font-semibold text-white">{questionnaireSubmissions.total}</span>
+                      </span>
+                      <span className="text-xs sm:text-sm text-gray-400">
+                        Paid: <span className="font-semibold text-green-400">{questionnaireSubmissions.paid}</span>
+                      </span>
+                      <span className="text-xs sm:text-sm text-gray-400">
+                        Unpaid: <span className="font-semibold text-orange-400">{questionnaireSubmissions.unpaid}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowQuestionnaireModal(false);
+                    setSelectedSubmission(null);
+                    setPaymentFilter('all');
+                  }}
+                  className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+                >
+                  <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                </button>
+              </div>
+              
+              {/* Filter Buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setPaymentFilter('all')}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    paymentFilter === 'all'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  All ({questionnaireSubmissions?.total || 0})
+                </button>
+                <button
+                  onClick={() => setPaymentFilter('paid')}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    paymentFilter === 'paid'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  Paid ({questionnaireSubmissions?.paid || 0})
+                </button>
+                <button
+                  onClick={() => setPaymentFilter('unpaid')}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    paymentFilter === 'unpaid'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  Unpaid ({questionnaireSubmissions?.unpaid || 0})
+                </button>
               </div>
               <button
                 onClick={() => {
@@ -1043,7 +1321,14 @@ const EventAnalytics = () => {
                 </div>
               ) : (
                 <div className="space-y-2 sm:space-y-3">
-                  {questionnaireSubmissions?.submissions?.map((submission) => (
+                  {questionnaireSubmissions?.submissions
+                    ?.filter(submission => {
+                      if (paymentFilter === 'all') return true;
+                      if (paymentFilter === 'paid') return submission.isPaid;
+                      if (paymentFilter === 'unpaid') return !submission.isPaid;
+                      return true;
+                    })
+                    ?.map((submission) => (
                     <div 
                       key={submission.id} 
                       className="bg-gray-800 rounded-lg border border-gray-700 p-3 sm:p-4 hover:border-gray-600 transition-all"

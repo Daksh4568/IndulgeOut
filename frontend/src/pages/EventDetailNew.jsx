@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Navigation,
-  XCircle
+  XCircle,
+  Edit2
 } from 'lucide-react';
 import { api } from '../config/api.js';
 import NavigationBar from '../components/NavigationBar';
@@ -405,17 +406,33 @@ const EventDetail = () => {
         
         {/* Save and Share Buttons - Glass Effect */}
         <div className="absolute top-4 right-4 flex items-center gap-2 z-20 pointer-events-auto">
-          <button 
-            onClick={handleSaveEvent}
-            disabled={isSaving}
-            className={`p-2 rounded-full backdrop-blur-md transition-all flex items-center justify-center ${
-              isSaved 
-                ? 'bg-white/10 text-red-500 border border-white/20' 
-                : 'bg-black/10 text-white border border-white/20 hover:bg-white/20'
-            } disabled:opacity-50`}
-          >
-            <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
-          </button>
+          {user && event?.host?._id === user._id ? (
+            // Show Edit button for host
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/edit-event/${event._id}`);
+              }}
+              className="p-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all flex items-center justify-center"
+              title="Edit Event"
+            >
+              <Edit2 className="h-4 w-4" />
+            </button>
+          ) : (
+            // Show Save button for regular users
+            <button 
+              onClick={handleSaveEvent}
+              disabled={isSaving}
+              className={`p-2 rounded-full backdrop-blur-md transition-all flex items-center justify-center ${
+                isSaved 
+                  ? 'bg-white/10 text-red-500 border border-white/20' 
+                  : 'bg-black/10 text-white border border-white/20 hover:bg-white/20'
+              } disabled:opacity-50`}
+            >
+              <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
+          )}
           <button 
             onClick={handleShare}
             className="p-2 rounded-full bg-black/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all flex items-center justify-center"
@@ -711,17 +728,33 @@ const EventDetail = () => {
               
               {/* Save and Share Buttons - Glass Effect */}
               <div className="absolute top-6 right-6 flex items-center gap-3 z-20 pointer-events-auto">
-                <button 
-                  onClick={handleSaveEvent}
-                  disabled={isSaving}
-                  className={`p-2.5 rounded-full backdrop-blur-md transition-all ${
-                    isSaved 
-                      ? 'bg-white/20 text-red-500 border border-white/30' 
-                      : 'bg-black/20 text-white border border-white/20 hover:bg-white/30'
-                  } disabled:opacity-50`}
-                >
-                  <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
-                </button>
+                {user && event?.host?._id === user._id ? (
+                  // Show Edit button for host
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/edit-event/${event._id}`);
+                    }}
+                    className="p-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 transition-all"
+                    title="Edit Event"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                ) : (
+                  // Show Save button for regular users
+                  <button 
+                    onClick={handleSaveEvent}
+                    disabled={isSaving}
+                    className={`p-2.5 rounded-full backdrop-blur-md transition-all ${
+                      isSaved 
+                        ? 'bg-white/20 text-red-500 border border-white/30' 
+                        : 'bg-black/20 text-white border border-white/20 hover:bg-white/30'
+                    } disabled:opacity-50`}
+                  >
+                    <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                  </button>
+                )}
                 <button 
                   onClick={handleShare}
                   className="p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all"

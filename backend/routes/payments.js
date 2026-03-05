@@ -43,7 +43,8 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       platformFees,           // ✅ Receive platform fees
       questionnaireResponses = [], 
       groupingOffer, 
-      additionalPersons = [] 
+      additionalPersons = [],
+      couponCode              // ✅ Receive coupon code
     } = req.body;
     const userId = req.user.userId || req.user.id;
 
@@ -154,13 +155,17 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     console.log('Cashfree response:', JSON.stringify(cashfreeResponse.data, null, 2));
     console.log('Payment session ID:', cashfreeResponse.data.payment_session_id);
 
-    // Store fee breakdown in session for verify-payment to retrieve
-    // This ensures fees are persisted even if webhook fires first
+    // Store fee breakdown and coupon in session for verify-payment to retrieve
+    // This ensures fees and coupon are persisted even if webhook fires first
     if (!global.pendingPaymentFees) global.pendingPaymentFees = {};
     global.pendingPaymentFees[orderId] = {
       basePrice: basePrice || 0,
       gstAndOtherCharges: gstAndOtherCharges || 0,
       platformFees: platformFees || 0,
+      couponCode: couponCode || null,
+      groupingOffer: groupingOffer || null,
+      additionalPersons: additionalPersons || [],
+      questionnaireResponses: questionnaireResponses || [],
       createdAt: Date.now()
     };
 
@@ -213,18 +218,19 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       groupingOffer,
       additionalPersons = [],
       questionnaireResponses = []
-      // Note: basePrice, gst, platformFees will be retrieved from global store or req.body
+      // Note: basePrice, gst, platformFees, couponCode will be retrieved from global store or req.body
     } = req.body;
     const userId = req.user.userId || req.user.id;
 
     console.log('Verifying payment:', { orderId, eventId, userId });
 
-    // Retrieve fee breakdown from global store (set by create-order)
+    // Retrieve fee breakdown and coupon from global store (set by create-order)
     const storedFees = global.pendingPaymentFees?.[orderId] || {};
     const basePrice = req.body.basePrice || storedFees.basePrice || 0;
     const gstAndOtherCharges = req.body.gstAndOtherCharges || storedFees.gstAndOtherCharges || 0;
     const platformFees = req.body.platformFees || storedFees.platformFees || 0;
     const totalAmount = req.body.totalAmount || (basePrice + gstAndOtherCharges + platformFees);
+    const couponCode = req.body.couponCode || storedFees.couponCode || null;
     
     // Clean up stored fees
     if (global.pendingPaymentFees?.[orderId]) {
@@ -304,6 +310,25 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       });
     }
 
+    // ==================== COUPON VALIDATION & APPLICATION ====================
+    let couponData = null;
+    if (couponCode && couponCode.trim()) {
+      console.log(`🎟️ [VERIFY-PAYMENT] Validating coupon: ${couponCode} for user ${userId}`);
+      const couponValidation = await existingEvent.validateCoupon(couponCode, userId, basePrice);
+      
+      if (couponValidation.valid) {
+        couponData = couponValidation.coupon;
+        console.log(`✅ [VERIFY-PAYMENT] Coupon validated: ${couponCode}, discount: ₹${couponData.discountApplied}`);
+        
+        // Apply the coupon (increment usage count)
+        await existingEvent.applyCoupon(couponCode, userId, couponData.discountApplied);
+      } else {
+        console.log(`⚠️ [VERIFY-PAYMENT] Coupon validation failed: ${couponValidation.message}`);
+        // Don't fail the registration, just log the error
+      }
+    }
+    // ==================== END COUPON VALIDATION ====================
+
     // Prepare participant data
     const participantData = {
       user: userId,
@@ -324,6 +349,17 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         tierPeople: groupingOffer.tierPeople,
         tierPrice: groupingOffer.tierPrice
       };
+    }
+
+    // Add coupon details if applicable
+    if (couponData) {
+      participantData.couponUsed = {
+        code: couponData.code,
+        discountType: couponData.discountType,
+        discountValue: couponData.discountValue,
+        discountApplied: couponData.discountApplied
+      };
+      console.log(`✅ [VERIFY-PAYMENT] Coupon data added to participant:`, participantData.couponUsed);
     }
 
     // Register user for event (atomic operation)
@@ -663,23 +699,44 @@ router.post('/webhook', async (req, res) => {
         console.warn(`⚠️ [WEBHOOK] Payment amount mismatch! Expected ${expectedTotal.toFixed(2)} (basePrice + 5.6% fees) but got ${paymentAmount}`);
       }
 
-      // Retrieve questionnaire responses from stored order metadata
-      // TEMPORARILY DISABLED - Responses will come from PaymentCallback instead
+      // Retrieve questionnaire responses and coupon from stored order metadata
       let questionnaireResponses = [];
       let groupingOffer = null;
+      let couponCode = null;
       
-      console.log('⚠️ [WEBHOOK] Metadata retrieval disabled - responses will be empty');
+      // Try to retrieve from global pending fees store
+      const storedData = global.pendingPaymentFees?.[orderId];
+      if (storedData) {
+        questionnaireResponses = storedData.questionnaireResponses || [];
+        groupingOffer = storedData.groupingOffer || null;
+        couponCode = storedData.couponCode || null;
+        console.log('📦 [WEBHOOK] Retrieved stored data:', { 
+          hasQuestions: questionnaireResponses.length > 0, 
+          hasGrouping: !!groupingOffer,
+          hasCoupon: !!couponCode 
+        });
+      } else {
+        console.log('⚠️ [WEBHOOK] No stored data found for order:', orderId);
+      }
       
-      // TODO: Re-enable when Cashfree sandbox is stable
-      // const eventWithMetadata = await Event.findById(eventId);
-      // if (eventWithMetadata?.pendingOrders?.[orderId]) {
-      //   const orderMetadata = eventWithMetadata.pendingOrders[orderId];
-      //   questionnaireResponses = orderMetadata.questionnaireResponses || [];
-      //   groupingOffer =orderMetadata.groupingOffer || null;
-      //   await Event.findByIdAndUpdate(eventId, {
-      //     $unset: { [`pendingOrders.${orderId}`]: '' }
-      //   });
-      // }
+      // ==================== COUPON VALIDATION & APPLICATION ====================
+      let couponData = null;
+      if (couponCode && couponCode.trim()) {
+        console.log(`🎟️ [WEBHOOK] Validating coupon: ${couponCode} for user ${userId}`);
+        const couponValidation = await event.validateCoupon(couponCode, userId, basePrice);
+        
+        if (couponValidation.valid) {
+          couponData = couponValidation.coupon;
+          console.log(`✅ [WEBHOOK] Coupon validated: ${couponCode}, discount: ₹${couponData.discountApplied}`);
+          
+          // Apply the coupon (increment usage count)
+          await event.applyCoupon(couponCode, userId, couponData.discountApplied);
+        } else {
+          console.log(`⚠️ [WEBHOOK] Coupon validation failed: ${couponValidation.message}`);
+          // Don't fail the registration, just log the error
+        }
+      }
+      // ==================== END COUPON VALIDATION ====================
       
       // Prepare participant data
       const participantData = {
@@ -697,6 +754,17 @@ router.post('/webhook', async (req, res) => {
       // Add grouping offer if exists
       if (groupingOffer) {
         participantData.groupingOffer = groupingOffer;
+      }
+      
+      // Add coupon details if applicable
+      if (couponData) {
+        participantData.couponUsed = {
+          code: couponData.code,
+          discountType: couponData.discountType,
+          discountValue: couponData.discountValue,
+          discountApplied: couponData.discountApplied
+        };
+        console.log(`✅ [WEBHOOK] Coupon data added to participant:`, participantData.couponUsed);
       }
 
       // Register user for event (atomic operation)
@@ -836,6 +904,12 @@ router.post('/webhook', async (req, res) => {
       }
 
       console.log('✅ [WEBHOOK] Payment processed successfully - Registration and ticket created');
+
+      // Clean up stored fees and coupon data
+      if (global.pendingPaymentFees?.[orderId]) {
+        delete global.pendingPaymentFees[orderId];
+        console.log('🗑️ [WEBHOOK] Cleaned up stored payment data for order:', orderId);
+      }
 
       // Create success webhook log
       webhookLog = await WebhookLog.create({

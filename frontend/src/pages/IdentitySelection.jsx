@@ -137,7 +137,7 @@ const IdentitySelection = () => {
 
               {/* Description */}
               <p className="text-gray-300 text-center mb-4 text-sm">
-                Create and Collaborate in meaningful high-quality offline experiences
+                Create and Collaborate in offline experiences
               </p>
 
               {/* Features */}

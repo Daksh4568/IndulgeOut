@@ -84,6 +84,10 @@ const EventCreation = () => {
         { question: "" },
       ],
     },
+    coupons: {
+      enabled: false,
+      codes: [],
+    },
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -269,6 +273,23 @@ const EventCreation = () => {
             questions: [
               { question: "" },
             ],
+          },
+          coupons: event.coupons ? {
+            enabled: event.coupons.enabled || false,
+            codes: event.coupons.codes?.length > 0 
+              ? event.coupons.codes.map(coupon => ({
+                  code: coupon.code || "",
+                  discountType: coupon.discountType || "percentage",
+                  discountValue: coupon.discountValue || 0,
+                  maxUses: coupon.maxUses || null,
+                  maxUsesPerUser: coupon.maxUsesPerUser || 1,
+                  expiryDate: coupon.expiryDate || null,
+                  isActive: coupon.isActive !== undefined ? coupon.isActive : true,
+                }))
+              : []
+          } : {
+            enabled: false,
+            codes: [],
           },
         });
 
@@ -461,6 +482,66 @@ const EventCreation = () => {
       questionnaire: {
         ...prev.questionnaire,
         questions: prev.questionnaire.questions.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  // Coupon handlers
+  const handleCouponToggle = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      coupons: {
+        ...prev.coupons,
+        enabled: checked,
+        codes: checked ? prev.coupons.codes : [],
+      },
+    }));
+  };
+
+  const addCoupon = () => {
+    setFormData((prev) => ({
+      ...prev,
+      coupons: {
+        ...prev.coupons,
+        codes: [
+          ...prev.coupons.codes,
+          {
+            code: "",
+            discountType: "percentage",
+            discountValue: 0,
+            maxUses: null,
+            maxUsesPerUser: 1,
+            expiryDate: null,
+            isActive: true,
+          },
+        ],
+      },
+    }));
+  };
+
+  const updateCoupon = (index, field, value) => {
+    setFormData((prev) => {
+      const newCodes = [...prev.coupons.codes];
+      newCodes[index] = {
+        ...newCodes[index],
+        [field]: value,
+      };
+      return {
+        ...prev,
+        coupons: {
+          ...prev.coupons,
+          codes: newCodes,
+        },
+      };
+    });
+  };
+
+  const removeCoupon = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      coupons: {
+        ...prev.coupons,
+        codes: prev.coupons.codes.filter((_, i) => i !== index),
       },
     }));
   };
@@ -1542,7 +1623,7 @@ const EventCreation = () => {
                     )}
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Set number of people and price for each tier (e.g., 2 people - ₹80)
+                      💡 Set number of people and price for each tier (e.g., 1 people - ₹100, 2 people - ₹180 , 3 people - ₹250)
                     </p>
                   </div>
                 )}
@@ -1608,6 +1689,169 @@ const EventCreation = () => {
                     
                     <p className="text-xs text-gray-400 italic mt-2">
                       💡 Ask participants questions before booking (max 3 questions)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Coupon Codes */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="coupons"
+                    checked={formData.coupons?.enabled || false}
+                    onChange={(e) => handleCouponToggle(e.target.checked)}
+                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
+                    style={{ accentColor: '#7878E9' }}
+                  />
+                  <label htmlFor="coupons" className="text-white text-sm font-medium cursor-pointer">
+                    Create Coupon Codes
+                  </label>
+                </div>
+
+                {formData.coupons?.enabled && (
+                  <div className="space-y-4 pl-6 border-l-2 border-white/10">
+                    {formData.coupons.codes?.map((coupon, index) => (
+                      <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white text-sm font-medium">
+                            Coupon {index + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeCoupon(index)}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Coupon Code */}
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Coupon Code
+                          </label>
+                          <input
+                            type="text"
+                            value={coupon.code}
+                            onChange={(e) => updateCoupon(index, 'code', e.target.value.toUpperCase())}
+                            placeholder="e.g., INDULGE100"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent uppercase"
+                          />
+                        </div>
+
+                        {/* Discount Type */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Discount Type
+                            </label>
+                            <select
+                              value={coupon.discountType}
+                              onChange={(e) => updateCoupon(index, 'discountType', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            >
+                              <option value="percentage">Percentage</option>
+                              <option value="fixed">Fixed Amount</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Discount Value
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                                {coupon.discountType === 'percentage' ? '%' : '₹'}
+                              </span>
+                              <input
+                                type="number"
+                                value={coupon.discountValue}
+                                onChange={(e) => updateCoupon(index, 'discountValue', Math.max(0, parseFloat(e.target.value) || 0))}
+                                placeholder="0"
+                                min="0"
+                                max={coupon.discountType === 'percentage' ? 100 : undefined}
+                                className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Usage Limits */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Max Total Uses
+                            </label>
+                            <input
+                              type="number"
+                              value={coupon.maxUses === null ? '' : coupon.maxUses}
+                              onChange={(e) => updateCoupon(index, 'maxUses', e.target.value === '' ? null : Math.max(1, parseInt(e.target.value) || 1))}
+                              placeholder="Unlimited"
+                              min="1"
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Leave empty for unlimited</p>
+                          </div>
+
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Max Uses Per User
+                            </label>
+                            <input
+                              type="number"
+                              value={coupon.maxUsesPerUser}
+                              onChange={(e) => updateCoupon(index, 'maxUsesPerUser', Math.max(1, parseInt(e.target.value) || 1))}
+                              placeholder="1"
+                              min="1"
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Expiry Date */}
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Expiry Date (Optional)
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={coupon.expiryDate ? new Date(coupon.expiryDate).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => updateCoupon(index, 'expiryDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Active Status */}
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`coupon-active-${index}`}
+                            checked={coupon.isActive}
+                            onChange={(e) => updateCoupon(index, 'isActive', e.target.checked)}
+                            className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
+                            style={{ accentColor: '#7878E9' }}
+                          />
+                          <label htmlFor={`coupon-active-${index}`} className="text-white text-xs cursor-pointer">
+                            Coupon is active
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Add Coupon Button */}
+                    <button
+                      type="button"
+                      onClick={addCoupon}
+                      className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
+                    >
+                      <span className="text-lg">+</span>
+                      <span>Add Coupon Code</span>
+                    </button>
+                    
+                    <p className="text-xs text-gray-400 italic mt-2">
+                      💡 Create discount codes for early birds or special groups (e.g., INDULGE100 for first 10 users)
                     </p>
                   </div>
                 )}

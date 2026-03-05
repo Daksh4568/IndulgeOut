@@ -22,11 +22,11 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
 
     // Initialize scanner optimized for both printed and screen QR codes
     const scannerConfig = {
-      fps: 25, // Optimized FPS for better detection (higher = faster but more CPU)
+      fps: isIOS ? 30 : 25, // Higher FPS for iOS for faster detection
       qrbox: function(viewfinderWidth, viewfinderHeight) {
         // Dynamic QR box sizing - optimized for various distances
-        // Use 65% for better balance between detection area and precision
-        const minEdgePercentage = 0.65;
+        // iOS needs larger detection area for better results
+        const minEdgePercentage = isIOS ? 0.75 : 0.65;
         const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
         const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
         return {
@@ -44,21 +44,24 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
       formatsToSupport: undefined,
       // Enhanced settings for screen scanning
       experimentalFeatures: {
-        useBarCodeDetectorIfSupported: true // Use native detector when available (faster)
+        useBarCodeDetectorIfSupported: !isIOS // Disable for iOS, use standard detector
       },
       verbose: false // Disable verbose logging in production
     };
 
     // Platform-specific video constraints
     if (isIOS) {
-      // iOS Safari constraints - simpler but optimized
+      // iOS Safari constraints - optimized for faster processing
       scannerConfig.videoConstraints = {
-        facingMode: "environment", // Back camera
-        // Request high resolution for better QR detection
-        width: { min: 640, ideal: 1920, max: 2560 },
-        height: { min: 480, ideal: 1080, max: 1440 },
-        // iOS 15+ supports these
-        frameRate: { ideal: 30, max: 60 }
+        facingMode: { exact: "environment" }, // Force back camera
+        // Lower resolution for faster processing on iOS
+        width: { min: 640, ideal: 1280, max: 1920 },
+        height: { min: 480, ideal: 720, max: 1080 },
+        // Higher frame rate for smoother scanning
+        frameRate: { ideal: 60, max: 60 },
+        // iOS-specific optimizations
+        focusMode: "continuous",
+        exposureMode: "continuous"
       };
     } else if (isAndroid) {
       // Android-optimized constraints with advanced features

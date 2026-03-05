@@ -777,14 +777,20 @@ function Homepage() {
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="auto"
           poster="/images/placeholder.png"
           className="absolute top-0 left-0 w-full h-full object-cover"
+          style={{
+            WebkitTransform: 'translateZ(0)',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden'
+          }}
         >
-          {/* Cloudinary optimized video - auto quality and format */}
+          {/* Safari-optimized video sources - lower resolution for better performance */}
+          <source src="https://res.cloudinary.com/dtxgkrfdn/video/upload/q_auto:good,f_auto,w_1280/v1768809157/Website_Video_tdrkqe.mp4" type="video/mp4" />
+          {/* Fallback high quality for Chrome/Edge */}
           <source src="https://res.cloudinary.com/dtxgkrfdn/video/upload/q_auto:best,f_auto/v1768809157/Website_Video_tdrkqe.mp4" type="video/mp4" />
-          {/* Direct Cloudinary MP4 fallback */}
-          <source src="https://res.cloudinary.com/dtxgkrfdn/video/upload/v1768809157/Website_Video_tdrkqe.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
         
@@ -793,8 +799,8 @@ function Homepage() {
         
         {/* CTA Overlay - Updated Text Only */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 z-10">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 drop-shadow-2xl tracking-tight" style={{ fontFamily: 'Oswald, sans-serif' }}>
-            YOUR GO-TO FOR<br /><span style={{ color: '#5656D3' }}>OFFLINE EXPERIENCES</span>
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight" style={{ fontFamily: 'Oswald, sans-serif', textShadow: '0 4px 8px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.5)' }}>
+            YOUR GO-TO FOR<br /><span style={{ color: '#5656D3', textShadow: '0 4px 8px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6)' }}>OFFLINE EXPERIENCES</span>
           </h1>
         </div>
       </section>

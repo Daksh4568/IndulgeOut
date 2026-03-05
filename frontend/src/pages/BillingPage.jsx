@@ -38,6 +38,12 @@ const BillingPage = () => {
   // Check if user is registered
   const [isRegistered, setIsRegistered] = useState(false);
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [isCouponValidating, setIsCouponValidating] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
   useEffect(() => {
     // Allow non-logged-in users to view billing page and select tickets
     fetchEventDetails();
@@ -110,6 +116,50 @@ const BillingPage = () => {
     setAdditionalPerson(prev => ({ ...prev, [field]: value }));
   };
 
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    if (!user) {
+      setCouponError('Please login to apply coupon');
+      return;
+    }
+
+    setIsCouponValidating(true);
+    setCouponError('');
+
+    try {
+      const pricing = calculatePricing();
+      const response = await api.post(`/events/${eventId}/validate-coupon`, {
+        couponCode: couponCode.trim(),
+        basePrice: pricing.basePrice
+      });
+
+      if (response.data.valid) {
+        setAppliedCoupon(response.data.coupon);
+        toast.success(`Coupon applied! You saved ₹${response.data.coupon.discountApplied}`);
+      } else {
+        setCouponError(response.data.message || 'Invalid coupon code');
+        setAppliedCoupon(null);
+      }
+    } catch (error) {
+      console.error('Coupon validation error:', error);
+      setCouponError(error.response?.data?.message || 'Failed to validate coupon');
+      setAppliedCoupon(null);
+    } finally {
+      setIsCouponValidating(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+    toast.info('Coupon removed');
+  };
+
   const calculatePricing = () => {
     let basePrice = 0;
     let numberOfPeople = 1;
@@ -122,13 +172,22 @@ const BillingPage = () => {
       numberOfPeople = quantity;
     }
 
-    const gstAndOtherCharges = basePrice * 0.026; // 2.6%
-    const platformFees = basePrice * 0.03; // 3.0%
-    const grandTotal = basePrice + gstAndOtherCharges + platformFees;
+    // Apply coupon discount if available
+    let discount = 0;
+    if (appliedCoupon) {
+      discount = appliedCoupon.discountApplied || 0;
+    }
+
+    const discountedBasePrice = Math.max(0, basePrice - discount);
+    const gstAndOtherCharges = discountedBasePrice * 0.026; // 2.6%
+    const platformFees = discountedBasePrice * 0.03; // 3.0%
+    const grandTotal = discountedBasePrice + gstAndOtherCharges + platformFees;
 
     // Round all values to 2 decimal places to avoid floating point precision issues
     return {
       basePrice: parseFloat(basePrice.toFixed(2)),
+      discount: parseFloat(discount.toFixed(2)),
+      discountedBasePrice: parseFloat(discountedBasePrice.toFixed(2)),
       numberOfPeople,
       gstAndOtherCharges: parseFloat(gstAndOtherCharges.toFixed(2)),
       platformFees: parseFloat(platformFees.toFixed(2)),
@@ -230,6 +289,7 @@ const BillingPage = () => {
         platformFees: pricing.platformFees,
         additionalPersons: addAnotherPerson ? [additionalPerson] : [],
         questionnaireResponses: validResponses, // Always include if responses exist
+        couponCode: appliedCoupon ? appliedCoupon.code : null, // Include coupon if applied
       };
 
       // Add grouping offer details if applicable
@@ -252,7 +312,8 @@ const BillingPage = () => {
           platformFees: 0,
           totalAmount: 0,
           additionalPersons: billingData.additionalPersons,
-          questionnaireResponses: billingData.questionnaireResponses || []
+          questionnaireResponses: billingData.questionnaireResponses || [],
+          couponCode: billingData.couponCode || null
         };
 
         if (billingData.groupingOffer) {
@@ -278,7 +339,8 @@ const BillingPage = () => {
         platformFees: pricing.platformFees,        // ✅ Add platform fees
         questionnaireResponses: billingData.questionnaireResponses || [],
         groupingOffer: billingData.groupingOffer || null,
-        additionalPersons: billingData.additionalPersons || []
+        additionalPersons: billingData.additionalPersons || [],
+        couponCode: billingData.couponCode || null // ✅ Add coupon code
       });
 
       if (paymentResponse.data.success) {
@@ -616,6 +678,15 @@ const BillingPage = () => {
                     <span className="text-gray-400">Order amount</span>
                     <span className="text-white">₹{pricing.basePrice.toFixed(2)}</span>
                   </div>
+                  
+                  {/* Show discount if coupon applied */}
+                  {appliedCoupon && pricing.discount > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-green-400">Coupon Discount ({appliedCoupon.code})</span>
+                      <span className="text-green-400">-₹{pricing.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">GST & Other charges</span>
                     <span className="text-white">₹{pricing.gstAndOtherCharges.toFixed(2)}</span>
@@ -626,6 +697,70 @@ const BillingPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Coupon Code Section */}
+              {!appliedCoupon ? (
+                <div className="mb-6">
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Have a coupon code?
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => {
+                        setCouponCode(e.target.value.toUpperCase());
+                        setCouponError('');
+                      }}
+                      placeholder="Enter coupon code"
+                      className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
+                      disabled={isCouponValidating || !user}
+                    />
+                    <button
+                      onClick={validateCoupon}
+                      disabled={isCouponValidating || !couponCode.trim() || !user}
+                      className="px-6 py-2 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                      }}
+                    >
+                      {isCouponValidating ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                      ) : (
+                        'Apply'
+                      )}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <p className="text-red-400 text-xs mt-2">{couponError}</p>
+                  )}
+                  {!user && (
+                    <p className="text-yellow-400 text-xs mt-2">⚠️ Please login to apply coupon</p>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      <div>
+                        <p className="text-white font-medium text-sm">{appliedCoupon.code}</p>
+                        <p className="text-green-400 text-xs">
+                          {appliedCoupon.discountType === 'percentage' 
+                            ? `${appliedCoupon.discountValue}% off` 
+                            : `₹${appliedCoupon.discountValue} off`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={removeCoupon}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-gray-700 pt-4 mb-6">
                 <div className="flex items-center justify-between">

@@ -1687,26 +1687,16 @@ const ProfileNew = () => {
               {/* Payout/KYC Section (Venues & Communities Only - Not for Brands) */}
               {isHostPartner && !isBrandSponsor && (
                 <div ref={payoutSectionRef} className="bg-[#171717] rounded-lg p-6 transition-card">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" style={{ color: '#7878E9' }} />
-                      <h3 className="text-white font-semibold">Payouts, KYC & Compliance</h3>
-                    </div>
-                    {editingSection !== 'payout' && (
-                      <button 
-                        onClick={() => handleEditSection('payout')}
-                        className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="h-4 w-4 text-gray-400" />
-                      </button>
-                    )}
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCard className="h-5 w-5" style={{ color: '#7878E9' }} />
+                    <h3 className="text-white font-semibold">Payouts, KYC & Compliance</h3>
                   </div>
 
                   {editingSection === 'payout' ? (
                     <div className="space-y-4">
                       <p className="text-xs text-gray-500 uppercase font-semibold mb-3">Manage your payment and tax information</p>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm text-gray-400 mb-2">Account Holder Name</label>
                           <input 
@@ -1727,7 +1717,7 @@ const ProfileNew = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm text-gray-400 mb-2">IFSC Code</label>
                           <input 
@@ -1748,7 +1738,7 @@ const ProfileNew = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm text-gray-400 mb-2">GSTIN (Optional)</label>
                           <input 
@@ -1792,7 +1782,7 @@ const ProfileNew = () => {
                         <>
                           <p className="text-xs text-gray-500 uppercase font-semibold mb-3">Manage your payment and tax information</p>
                           
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
                               <span className="text-gray-400">Account Holder</span>
                               <span className="text-gray-200 font-medium text-right">{profileData.payoutDetails.accountHolderName}</span>
@@ -1803,7 +1793,7 @@ const ProfileNew = () => {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex justify-between items-start text-sm py-2 border-b border-gray-800">
                               <span className="text-gray-400">IFSC</span>
                               <span className="text-gray-200 font-mono">{profileData.payoutDetails.ifscCode}</span>
@@ -1830,10 +1820,8 @@ const ProfileNew = () => {
                                 </>
                               ) : (
                                 <>
-                                  <div className="h-4 w-4 mr-2 rounded-full border-2 border-yellow-400 flex items-center justify-center">
-                                    <div className="h-2 w-2 bg-yellow-400 rounded-full"></div>
-                                  </div>
-                                  <span className="text-yellow-400 text-sm font-medium">Pending Verification</span>
+                                  <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
+                                  <span className="text-green-400 text-sm font-medium">Verified <span className="text-gray-400 font-normal">(ID proof submitted is under review)</span></span>
                                 </>
                               )}
                             </div>
@@ -2108,6 +2096,20 @@ const ProfileNew = () => {
                         </div>
                       </div>
 
+                      {/* Niche Community Description - Only show if Niche Community is selected */}
+                      {hostingForm.preferredAudienceTypes.includes('Niche Community') && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Niche Community Description</label>
+                          <textarea 
+                            value={hostingForm.nicheCommunityDescription}
+                            onChange={(e) => setHostingForm({ ...hostingForm, nicheCommunityDescription: e.target.value })}
+                            rows="3"
+                            placeholder="Describe your community's niche..."
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </div>
+                      )}
+
                       {isBrandSponsor && (
                         <div>
                           <label className="block text-sm text-gray-400 mb-2">Preferred Collaboration Types</label>
@@ -2153,20 +2155,6 @@ const ProfileNew = () => {
                               </button>
                             ))}
                           </div>
-                        </div>
-                      )}
-
-                      {/* Niche Community Description - Only show if Niche Community is selected */}
-                      {hostingForm.preferredAudienceTypes.includes('Niche Community') && (
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Niche Community Description</label>
-                          <textarea 
-                            value={hostingForm.nicheCommunityDescription}
-                            onChange={(e) => setHostingForm({ ...hostingForm, nicheCommunityDescription: e.target.value })}
-                            rows="3"
-                            placeholder="Describe your community's niche..."
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                          />
                         </div>
                       )}
                     </div>

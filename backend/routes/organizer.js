@@ -471,13 +471,21 @@ router.get('/events', authMiddleware, async (req, res) => {
         ? Math.round((event.currentParticipants / event.maxParticipants) * 100)
         : 0;
       
-      // Calculate revenue from actual tickets (using basePrice from metadata)
+      // Calculate revenue from actual tickets (using basePrice from metadata minus coupon discounts)
       const tickets = await Ticket.find({ event: event._id, status: { $ne: 'cancelled' } });
-      const revenue = tickets.reduce((sum, ticket) => {
+      const revenueBeforeDiscount = tickets.reduce((sum, ticket) => {
         // Use basePrice from metadata (order amount without fees)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
       }, 0);
+      
+      // Calculate total coupon discounts from participants
+      const totalCouponDiscount = event.participants
+        .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+        .reduce((sum, p) => sum + (p.couponUsed.discountApplied || 0), 0);
+      
+      // Final revenue = basePrice - coupon discounts
+      const revenue = revenueBeforeDiscount - totalCouponDiscount;
 
       return {
         _id: event._id,
@@ -573,15 +581,25 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     // Import Ticket model to calculate actual revenue
     const Ticket = require('../models/Ticket');
 
-    // Helper function to calculate revenue for an event using actual tickets
+    // Helper function to calculate revenue for an event using actual tickets (minus coupon discounts)
     const calculateEventRevenue = async (eventId) => {
       const tickets = await Ticket.find({ event: eventId, status: { $ne: 'cancelled' } });
-      const revenue = tickets.reduce((sum, ticket) => {
+      const revenueBeforeDiscount = tickets.reduce((sum, ticket) => {
         // Use basePrice from metadata (organizer's revenue - ticket price only, NO fees deducted)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
         return sum + ticketRevenue;
       }, 0);
-      return revenue;
+      
+      // Get event to access participants for coupon data
+      const event = await Event.findById(eventId).select('participants');
+      if (!event) return revenueBeforeDiscount;
+      
+      // Calculate total coupon discounts
+      const totalCouponDiscount = event.participants
+        .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+        .reduce((sum, p) => sum + (p.couponUsed.discountApplied || 0), 0);
+      
+      return revenueBeforeDiscount - totalCouponDiscount;
     };
 
     // Calculate total lifetime earnings (from ALL events with participants)
@@ -694,11 +712,29 @@ router.get('/revenue-audit', authMiddleware, async (req, res) => {
 
     console.log(`🔍 [Revenue Audit] Found ${tickets.length} tickets across ${events.length} events`);
 
-    // Calculate internal revenue from tickets
-    const internalRevenue = tickets.reduce((sum, ticket) => {
+    // Calculate internal revenue from tickets (basePrice minus coupon discounts)
+    const internalRevenueBeforeDiscount = tickets.reduce((sum, ticket) => {
       const ticketRevenue = ticket.metadata?.basePrice || 0;
       return sum + ticketRevenue;
     }, 0);
+    
+    // Get all events with participants data to calculate coupon discounts
+    const eventsWithParticipants = await Event.find({ 
+      _id: { $in: eventIds } 
+    }).select('participants');
+    
+    // Calculate total coupon discounts across all events
+    const totalCouponDiscount = eventsWithParticipants.reduce((sum, event) => {
+      const eventDiscount = event.participants
+        .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+        .reduce((discountSum, p) => discountSum + (p.couponUsed.discountApplied || 0), 0);
+      return sum + eventDiscount;
+    }, 0);
+    
+    // Final internal revenue = basePrice - coupon discounts
+    const internalRevenue = internalRevenueBeforeDiscount - totalCouponDiscount;
+    
+    console.log(`💰 [Revenue Audit] Revenue before discount: ₹${internalRevenueBeforeDiscount}, Coupon discounts: ₹${totalCouponDiscount}, Final revenue: ₹${internalRevenue}`);
 
     // Track tickets without basePrice (potential issue)
     const ticketsWithoutBasePrice = tickets.filter(t => !t.metadata?.basePrice);
@@ -1077,8 +1113,18 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
     
     console.log(`📊 [Reports] Found ${tickets.length} tickets for event: ${event.title}`);
     
-    // Calculate summary metrics
-    const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    // Calculate summary metrics (basePrice minus coupon discounts)
+    const totalRevenueBeforeDiscount = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    
+    // Calculate total coupon discounts from participants
+    const totalCouponDiscount = event.participants
+      .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+      .reduce((sum, p) => sum + (p.couponUsed.discountApplied || 0), 0);
+    
+    // Final revenue = basePrice - coupon discounts
+    const totalRevenue = totalRevenueBeforeDiscount - totalCouponDiscount;
+    
+    console.log(`💰 [Reports] Revenue: ₹${totalRevenueBeforeDiscount} - ₹${totalCouponDiscount} = ₹${totalRevenue}`);
     
     // Calculate total paid by summing base + fees for each ticket
     const totalPaid = tickets.reduce((sum, t) => {
@@ -1329,8 +1375,27 @@ router.get('/reports/monthly', authMiddleware, async (req, res) => {
     
     console.log(`📊 [Monthly Report] Found ${tickets.length} tickets for ${monthName}`);
     
-    // Calculate metrics
-    const totalRevenue = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    // Calculate metrics (basePrice minus coupon discounts)
+    const totalRevenueBeforeDiscount = tickets.reduce((sum, t) => sum + (t.metadata?.basePrice || 0), 0);
+    
+    // Get all events with participants data to calculate coupon discounts
+    const eventsWithParticipants = await Event.find({ 
+      _id: { $in: eventIds } 
+    }).select('participants');
+    
+    // Calculate total coupon discounts across all events
+    const totalCouponDiscount = eventsWithParticipants.reduce((sum, event) => {
+      const eventDiscount = event.participants
+        .filter(p => p.couponUsed && p.couponUsed.discountApplied)
+        .reduce((discountSum, p) => discountSum + (p.couponUsed.discountApplied || 0), 0);
+      return sum + eventDiscount;
+    }, 0);
+    
+    // Final revenue = basePrice - coupon discounts
+    const totalRevenue = totalRevenueBeforeDiscount - totalCouponDiscount;
+    
+    console.log(`💰 [Monthly Report] Revenue: ₹${totalRevenueBeforeDiscount} - ₹${totalCouponDiscount} = ₹${totalRevenue}`);
+    
     const totalSettled = tickets.filter(t => t.settlementStatus === 'settled').length;
     const totalSettledAmount = tickets
       .filter(t => t.settlementStatus === 'settled')

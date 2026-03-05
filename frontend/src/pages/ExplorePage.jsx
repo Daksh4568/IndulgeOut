@@ -355,25 +355,8 @@ export default function ExplorePage() {
       setFeaturedCommunities(communities);
       setCommunitiesPagination(featuredData.pagination);
 
-      // For "All Communities" section - use communities beyond the first 4 as locked
-      if (!searchQuery && communities.length > 4) {
-        const remainingCommunities = communities.slice(4);
-        setLockedCommunities(remainingCommunities);
-      } else if (!searchQuery && communities.length <= 4 && communities.length > 0) {
-        // If we have 4 or fewer communities, create some placeholder locked ones
-        const placeholderCount = Math.max(0, 6 - communities.length);
-        const locked = Array(placeholderCount).fill(null).map((_, index) => ({
-          _id: `locked-${index}`,
-          name: `Community ${index + 1}`,
-          description: 'Discover more amazing communities in the app',
-          category: 'Social Mixers',
-          memberCount: Math.floor(Math.random() * 500) + 100,
-          location: { city: 'Bengaluru', state: 'Karnataka' }
-        }));
-        setLockedCommunities(locked);
-      } else {
-        setLockedCommunities([]);
-      }
+      // For "All Communities" section - show all communities
+      setLockedCommunities(communities);
     } catch (error) {
       console.error('❌ Error fetching communities:', error);
       setFeaturedCommunities([]);
@@ -504,34 +487,34 @@ export default function ExplorePage() {
             `}</style>
             <button
               onClick={() => handleTabChange('events')}
-              className={`flex-none snap-start px-8 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+              className={`flex-none snap-start py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
                 tab === 'events'
                   ? 'text-white shadow-xl'
                   : 'bg-[#3A3A52] text-gray-300'
               }`}
-              style={tab === 'events' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
+              style={tab === 'events' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif', width: '130px' } : { fontFamily: 'Oswald, sans-serif', width: '130px' }}
             >
               Events
             </button>
             <button
               onClick={() => handleTabChange('communities')}
-              className={`flex-none snap-start px-8 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+              className={`flex-none snap-start py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
                 tab === 'communities'
                   ? 'text-white shadow-xl'
                   : 'bg-[#3A3A52] text-gray-300'
               }`}
-              style={tab === 'communities' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
+              style={tab === 'communities' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif', width: '130px' } : { fontFamily: 'Oswald, sans-serif', width: '130px' }}
             >
               Communities
             </button>
             <button
               onClick={() => handleTabChange('people')}
-              className={`flex-none snap-start px-8 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+              className={`flex-none snap-start py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
                 tab === 'people'
                   ? 'text-white shadow-xl'
                   : 'bg-[#3A3A52] text-gray-300'
               }`}
-              style={tab === 'people' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
+              style={tab === 'people' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif', width: '130px' } : { fontFamily: 'Oswald, sans-serif', width: '130px' }}
             >
               People
             </button>
@@ -1066,7 +1049,7 @@ export default function ExplorePage() {
                   
                   {/* Community Filter Chips */}
                   <div className="flex flex-wrap gap-2 mb-6">
-                    {/* Interest Filter */}
+                    {/* Category Filter */}
                     <button
                       onClick={() => setCommunityFilters({...communityFilters, interest: communityFilters.interest === 'all' ? 'tech' : 'all'})}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
@@ -1077,21 +1060,7 @@ export default function ExplorePage() {
                       style={communityFilters.interest !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      <span>Interest</span>
-                    </button>
-                    
-                    {/* Recommended Filter */}
-                    <button
-                      onClick={() => setCommunityFilters({...communityFilters, sort: communityFilters.sort === 'recommended' ? 'all' : 'recommended'})}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        communityFilters.sort === 'recommended'
-                          ? 'text-white'
-                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
-                      }`}
-                      style={communityFilters.sort === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
-                    >
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      <span>Recommended</span>
+                      <span>Category</span>
                     </button>
                     
                     {/* City Filter */}
@@ -1105,25 +1074,25 @@ export default function ExplorePage() {
                       style={communityFilters.city !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
                     >
                       <MapPin className="h-3.5 w-3.5" />
-                      <span>{communityFilters.city !== 'all' ? communityFilters.city : 'All Cities'}</span>
+                      <span>{communityFilters.city !== 'all' ? communityFilters.city : 'City'}</span>
                     </button>
                     
-                    {/* Rating Filter */}
+                    {/* Trending Filter */}
                     <button
-                      onClick={() => setCommunityFilters({...communityFilters, rating: communityFilters.rating === 'all' ? '4+' : 'all'})}
+                      onClick={() => setCommunityFilters({...communityFilters, sort: communityFilters.sort === 'recommended' ? 'trending' : 'recommended'})}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        communityFilters.rating !== 'all'
+                        communityFilters.sort === 'recommended'
                           ? 'text-white'
                           : 'border border-gray-600 text-gray-300 hover:border-gray-400'
                       }`}
-                      style={communityFilters.rating !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
+                      style={communityFilters.sort === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
                     >
-                      <span>⭐</span>
-                      <span>{communityFilters.rating !== 'all' ? `${communityFilters.rating} Rating` : 'Rating'}</span>
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      <span>Trending</span>
                     </button>
                     
                     {/* Clear all filters */}
-                    {(communityFilters.interest !== 'all' || communityFilters.sort !== 'recommended' || communityFilters.city !== 'all' || communityFilters.rating !== 'all') && (
+                    {(communityFilters.interest !== 'all' || communityFilters.sort !== 'recommended' || communityFilters.city !== 'all') && (
                       <button
                         onClick={() => setCommunityFilters({ interest: 'all', sort: 'recommended', city: 'all', rating: 'all' })}
                         className="px-3 py-1.5 rounded-full border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 text-sm font-medium transition-colors"
