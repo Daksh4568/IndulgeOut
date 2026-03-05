@@ -6,7 +6,7 @@ const TermsConditions = () => {
     {
       number: 1,
       title: 'Information',
-      content: 'Welcome to IndulgeOut. These Terms and Conditions govern your access to and use of the IndulgeOut mobile app and website (collectively, the "Platform"). By accessing or using IndulgeOut, you agree to be bound by these Terms. If you do not agree with any of the terms, you may not use any of the services offered by IndulgeOut.'
+      content: 'Welcome to IndulgeOut. These Terms and Conditions govern your access to and use of the IndulgeOut mobile app and website (collectively, the "Platform"). By accessing or using IndulgeOut, you agree to be bound by these Terms. If you do not agree with any of the terms, you may not use any of the services offered by IndulgeOut. The legal business name is ANANT EXPERIENCES PRIVATE LIMITED.'
     },
     {
       number: 2,
