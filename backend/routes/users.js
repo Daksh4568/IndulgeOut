@@ -5,7 +5,8 @@ const multer = require('multer');
 const User = require('../models/User.js');
 const Community = require('../models/Community.js');
 const Notification = require('../models/Notification.js');
-const { cloudinary } = require('../config/cloudinary.js');
+const { uploadToS3 } = require('../config/s3.js');
+const { uploadProfilePicture } = require('../utils/imageUpload.js');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
 const { notifyProfileIncompleteUser } = require('../services/notificationService.js');
 
@@ -403,27 +404,17 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
     let idProofDocument = user.payoutDetails?.idProofDocument; // Keep existing if no new file
     if (req.file) {
       try {
-        // Upload to Cloudinary
-        const uploadPromise = new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: 'kyc_documents',
-              resource_type: 'auto',
-              allowed_formats: ['jpg', 'jpeg', 'png', 'pdf']
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          uploadStream.end(req.file.buffer);
-        });
-
-        const uploadResult = await uploadPromise;
-        idProofDocument = uploadResult.secure_url;
+        // Upload to S3
+        const uploadResult = await uploadToS3(
+          req.file.buffer,
+          'kyc-documents',
+          req.file.originalname,
+          req.file.mimetype
+        );
+        idProofDocument = uploadResult.url;
         console.log('📄 ID proof uploaded successfully:', idProofDocument);
       } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
+        console.error('S3 upload error:', uploadError);
         return res.status(500).json({
           message: 'Failed to upload ID proof document',
           error: uploadError.message
@@ -514,19 +505,15 @@ router.post('/upload-profile-picture', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'No image data provided' });
     }
 
-    // Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(imageData, {
-      folder: 'indulgeout/profile-pictures',
-      transformation: [
-        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-        { quality: 'auto', fetch_format: 'auto' }
-      ]
-    });
+    // Decode base64 image and upload to S3 with face-aware cropping
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const uploadResult = await uploadProfilePicture(buffer, req.user.userId);
 
     // Update user profile picture
     const user = await User.findByIdAndUpdate(
       req.user.userId,
-      { profilePicture: uploadResult.secure_url },
+      { profilePicture: uploadResult.url },
       { new: true }
     ).select('-password');
 
@@ -537,7 +524,7 @@ router.post('/upload-profile-picture', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Profile picture uploaded successfully',
-      profilePicture: uploadResult.secure_url,
+      profilePicture: uploadResult.url,
       user
     });
   } catch (error) {
@@ -733,17 +720,18 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Maximum 5 photos allowed' });
     }
 
-    // Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(imageData, {
-      folder: folderPath,
-      transformation: [
-        { width: 1200, height: 800, crop: 'fill' },
-        { quality: 'auto', fetch_format: 'auto' }
-      ]
+    // Decode base64 and upload to S3
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const { uploadImageToS3: uploadHostPhoto } = require('../utils/imageUpload.js');
+    const uploadResult = await uploadHostPhoto(buffer, folderPath, 'photo.jpg', {
+      width: 1200,
+      height: 800,
+      fit: 'cover',
     });
 
     // Add photo to array
-    photoArray.push(uploadResult.secure_url);
+    photoArray.push(uploadResult.url);
 
     // Update user
     if (user.hostPartnerType === 'community_organizer') {
@@ -759,7 +747,7 @@ router.post('/profile/photos', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Photo uploaded successfully',
-      photoUrl: uploadResult.secure_url,
+      photoUrl: uploadResult.url,
       user
     });
   } catch (error) {

@@ -6,7 +6,7 @@ const multer = require('multer');
 const User = require('../models/User.js');
 const Community = require('../models/Community.js');
 const { sendWelcomeEmail } = require('../utils/emailService.js');
-const { uploadToCloudinary } = require('../config/cloudinary.js');
+const { uploadImageToS3 } = require('../utils/imageUpload.js');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements.js');
 
 const router = express.Router();
@@ -140,21 +140,18 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
       console.log(`📋 Categories received:`, Array.isArray(category) ? category : [category]);
     }
 
-    // Upload photos to Cloudinary (if any)
+    // Upload photos to S3 (if any)
     const photoUrls = [];
     if (req.files && req.files.length > 0) {
       try {
-        console.log(`📤 Uploading ${req.files.length} photos to Cloudinary...`);
+        console.log(`📤 Uploading ${req.files.length} photos to S3...`);
         for (const file of req.files) {
-          const result = await uploadToCloudinary(file.buffer, {
-            folder: `${hostPartnerType}/${email}`,
-            resource_type: 'image'
-          });
-          photoUrls.push(result.secure_url);
+          const result = await uploadImageToS3(file.buffer, `${hostPartnerType}/${email}`, file.originalname);
+          photoUrls.push(result.url);
         }
-        console.log(`✅ Uploaded ${photoUrls.length} photos to Cloudinary`);
+        console.log(`✅ Uploaded ${photoUrls.length} photos to S3`);
       } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
+        console.error('S3 upload error:', uploadError);
         return res.status(500).json({ message: 'Failed to upload photos. Please try again.' });
       }
     }

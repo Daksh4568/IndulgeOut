@@ -63,26 +63,18 @@ const EventReviewPage = () => {
     }
 
     try {
-      const uploadPromises = files.map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', 'indulgeout');
-        
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'your-cloud-name'}/image/upload`,
-          {
-            method: 'POST',
-            body: formData
-          }
-        );
-        
-        const data = await response.json();
-        return data.secure_url;
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file));
+
+      const response = await api.post('/events/upload-images', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const uploadedUrls = await Promise.all(uploadPromises);
-      setPhotos([...photos, ...uploadedUrls]);
-      setPhotoPreview([...photoPreview, ...uploadedUrls]);
+      if (response.data.success) {
+        const uploadedUrls = response.data.images.map(img => img.url);
+        setPhotos([...photos, ...uploadedUrls]);
+        setPhotoPreview([...photoPreview, ...uploadedUrls]);
+      }
       setError('');
     } catch (error) {
       console.error('Error uploading photos:', error);

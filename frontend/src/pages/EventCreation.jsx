@@ -23,7 +23,8 @@ import { COMMUNITIES } from "../constants/eventConstants";
 import locationService from "../services/locationService";
 import { getOptimizedCloudinaryUrl } from "../utils/cloudinaryHelper";
 
-// 6 Fixed Categories for consistency across the website
+// Hidden file input ref for image upload
+// (used by the "Browse File" button below)
 const EVENT_CATEGORIES = [
   { id: "social-mixers", name: "Social Mixers", emoji: "🎉" },
   {
@@ -1016,76 +1017,45 @@ const EventCreation = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const openCloudinaryWidget = () => {
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const remainingSlots = 5 - uploadedImages.length;
+    if (files.length > remainingSlots) {
+      toast.error(`You can only upload ${remainingSlots} more image(s)`);
+      return;
+    }
+
     setIsUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
 
-    // Create the Cloudinary upload widget
-    const widget = window.cloudinary.createUploadWidget(
-      {
-        cloudName: "dtxgkrfdn", // Your cloud name
-        uploadPreset: "indulgeout_events", // Your upload preset name
-        multiple: true,
-        maxFiles: 5,
-        resourceType: "image",
-        clientAllowedFormats: ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif"],
-        maxFileSize: 5000000, // 5MB
-        folder: "indulgeout/events", // Organize uploads in folders
-        cropping: false, // Disable cropping for now
-        showUploadMoreButton: true,
-        styles: {
-          palette: {
-            window: "#000000",
-            sourceBg: "#000000",
-            windowBorder: "#8E9FBC",
-            tabIcon: "#FFFFFF",
-            inactiveTabIcon: "#8E9FBC",
-            menuIcons: "#CCE8FF",
-            link: "#408FC6",
-            action: "#408FC6",
-            inProgress: "#00BFFF",
-            complete: "#20B832",
-            error: "#EA2727",
-            textDark: "#000000",
-            textLight: "#FFFFFF",
-          },
-        },
-        text: {
-          en: {
-            or: "or",
-            back: "Back",
-            advanced: "Advanced",
-            close: "Close",
-            no_results: "No Results",
-          },
-        },
-      },
-      (error, result) => {
-        setIsUploading(false);
+      const response = await api.post('/events/upload-images', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-        if (error) {
-          console.error("Upload error:", error);
-          toast.error("Error uploading image. Please try again.");
-          return;
-        }
-
-        if (result.event === "success") {
-          setUploadedImages((prev) => [
-            ...prev,
-            {
-              url: result.info.secure_url,
-              public_id: result.info.public_id,
-              id: result.info.public_id,
-            },
-          ]);
-        }
-
-        if (result.event === "close") {
-          widget.destroy();
-        }
-      },
-    );
-
-    widget.open();
+      if (response.data.success) {
+        const newImages = response.data.images.map((img) => ({
+          url: img.url,
+          public_id: img.key,
+          id: img.key,
+        }));
+        setUploadedImages((prev) => [...prev, ...newImages]);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Error uploading image. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Reset input so same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const removeImage = (publicId) => {
@@ -1121,7 +1091,7 @@ const EventCreation = () => {
         date: formData.date,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        images: uploadedImages.map((img) => img.url), // Send Cloudinary URLs
+        images: uploadedImages.map((img) => img.url), // Send image URLs
       };
       
       // Ensure first tier always has people: 1 if grouping offers enabled
@@ -1883,11 +1853,19 @@ const EventCreation = () => {
                     Choose a file or drag & drop it here
                   </h3>
                   <p className="text-gray-400 text-xs mb-4">
-                    JPEG, PNG, JPEG and MP4 formats, up to 50MB
+                    JPEG, PNG, GIF and WebP formats, up to 5MB
                   </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
                   <button
                     type="button"
-                    onClick={openCloudinaryWidget}
+                    onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading || uploadedImages.length >= 5}
                     className="px-6 py-2 rounded-lg text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{

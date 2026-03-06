@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
 const multer = require('multer');
-const { cloudinary } = require('../config/cloudinary');
+const { uploadImageToS3 } = require('../utils/imageUpload');
 const { authMiddleware } = require('../utils/authUtils');
 
 // Configure multer for file uploads
@@ -56,18 +56,15 @@ router.post('/submit', authMiddleware, upload.single('screenshot'), async (req, 
 
     let screenshotUrl = null;
 
-    // Upload screenshot to Cloudinary if provided
+    // Upload screenshot to S3 if provided
     if (req.file) {
       try {
-        const b64 = Buffer.from(req.file.buffer).toString('base64');
-        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
-        
-        const uploadResult = await cloudinary.uploader.upload(dataURI, {
-          folder: 'support_screenshots',
-          resource_type: 'auto'
-        });
-        
-        screenshotUrl = uploadResult.secure_url;
+        const result = await uploadImageToS3(
+          req.file.buffer,
+          'support-screenshots',
+          req.file.originalname
+        );
+        screenshotUrl = result.url;
       } catch (uploadError) {
         console.error('Error uploading screenshot:', uploadError);
         // Continue without screenshot if upload fails

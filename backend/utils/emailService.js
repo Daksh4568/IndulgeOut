@@ -116,10 +116,10 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
       day: 'numeric'
     });
 
-    // Prefer Cloudinary URL over base64 for better email client compatibility
+    // Prefer hosted URL over base64 for better email client compatibility
     const qrCodeSrc = ticket?.qrCodeUrl || ticket?.qrCode;
     
-    console.log(`🎫 [Email QR] Using ${ticket?.qrCodeUrl ? 'Cloudinary URL' : 'base64'} for QR code`);
+    console.log(`🎫 [Email QR] Using ${ticket?.qrCodeUrl ? 'hosted URL' : 'base64'} for QR code`);
 
     // Build ticket section HTML if ticket is provided
     // Use max-width and display:block for better email client compatibility

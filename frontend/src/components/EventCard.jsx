@@ -120,7 +120,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
       className={`group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''} h-full`}
     >
       {/* Image */}
-      <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-700 flex-shrink-0">
+      <div className="relative h-56 sm:h-48 overflow-hidden bg-gray-700 flex-shrink-0">
         {isPastEvent && (
           <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10">
             <span className="bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-semibold">
@@ -157,26 +157,26 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
       </div>
 
       {/* Content */}
-      <div className="p-3 sm:p-4 bg-[#1E1E2E] flex flex-col flex-grow">
+      <div className="p-4 sm:p-4 bg-[#1E1E2E] flex flex-col flex-grow">
         {/* Content Area - Grows to fill space */}
         <div className="flex-grow space-y-2">
           {/* Title */}
-          <h3 className="text-base sm:text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-[#7878E9] transition-colors" style={{ fontFamily: 'Oswald, sans-serif' }}>
+          <h3 className="text-lg sm:text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-[#7878E9] transition-colors" style={{ fontFamily: 'Oswald, sans-serif' }}>
             {event.title}
           </h3>
 
           {/* Date & Time */}
           <div className="flex items-center gap-2 text-gray-300">
-            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
-            <span className="text-xs sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            <Calendar className="h-4 w-4 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
+            <span className="text-sm sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               {formatDate(event.date)} • {event.startTime && event.endTime ? `${formatTime(event.startTime)} - ${formatTime(event.endTime)}` : formatTime(event.time)}
             </span>
           </div>
 
           {/* Location */}
           <div className="flex items-center gap-2 text-gray-300">
-            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
-            <span className="text-xs sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            <MapPin className="h-4 w-4 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
+            <span className="text-sm sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               {event.location?.city}, {event.location?.state}
             </span>
           </div>
@@ -184,8 +184,8 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
           {/* Price */}
           {event.price?.amount !== undefined && (
             <div className="flex items-center gap-2 text-gray-300">
-              <IndianRupee className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
-              <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+              <IndianRupee className="h-4 w-4 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
+              <span className="text-sm sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
                 {event.price.amount === 0 ? 'FREE' : `₹${event.price.amount} onwards`}
               </span>
             </div>
@@ -195,7 +195,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
           {event.categories && event.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-1">
               {event.categories.slice(0, 2).map((category, index) => (
-                <span key={index} className="inline-flex items-center gap-1 bg-[#2A2A3E] text-gray-300 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium">
+                <span key={index} className="inline-flex items-center gap-1 bg-[#2A2A3E] text-gray-300 px-2.5 sm:px-3 py-1 sm:py-1 rounded-full text-xs font-medium">
                   <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
                   {category}
                 </span>
@@ -206,7 +206,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
 
         {/* View Details Button - Fixed at bottom */}
         <button
-          className="w-full text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm font-bold uppercase transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-2"
+          className="w-full text-white px-4 sm:px-4 py-2.5 sm:py-2.5 rounded-md text-sm sm:text-sm font-bold uppercase transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-lg mt-3"
           style={{ 
             background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
             fontFamily: 'Oswald, sans-serif'

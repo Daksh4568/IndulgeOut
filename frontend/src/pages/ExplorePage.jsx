@@ -118,7 +118,7 @@ export default function ExplorePage() {
   // Handle events pagination client-side when page changes
   useEffect(() => {
     if (tab === 'events' && allEvents.length > 0) {
-      const itemsPerPage = 8;
+      const itemsPerPage = 20;
       const totalPages = Math.ceil(allEvents.length / itemsPerPage);
       const startIdx = (eventsPage - 1) * itemsPerPage;
       const endIdx = startIdx + itemsPerPage;
@@ -156,6 +156,33 @@ export default function ExplorePage() {
     } catch (error) {
       console.error('Error fetching saved events:', error);
     }
+  };
+
+  // Helper function to check if event has ended
+  const isEventEnded = (event) => {
+    const eventDate = new Date(event.date);
+    const now = new Date();
+    
+    if (event.endTime) {
+      // Parse end time (e.g., "08:30 PM")
+      const timeMatch = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const period = timeMatch[3].toUpperCase();
+        
+        // Convert to 24-hour format
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        
+        eventDate.setHours(hours, minutes, 0, 0);
+        return eventDate < now;
+      }
+    }
+    
+    // If no end time, consider event lasts until end of day
+    eventDate.setHours(23, 59, 59, 999);
+    return eventDate < now;
   };
 
   // Fetch events data
@@ -200,6 +227,10 @@ export default function ExplorePage() {
       
       // Store all events for client-side pagination and filtering
       let fetchedEvents = eventsData.events || [];
+      
+      // Filter out ended events
+      fetchedEvents = fetchedEvents.filter(event => !isEventEnded(event));
+      console.log('✅ After filtering ended events:', fetchedEvents.length, 'events');
       
       // Apply genre filter
       if (filters.genres && filters.genres.length > 0) {
@@ -282,8 +313,8 @@ export default function ExplorePage() {
       
       setAllEvents(fetchedEvents);
       
-      // Client-side pagination (8 events per page)
-      const itemsPerPage = 8;
+      // Client-side pagination (20 events per page)
+      const itemsPerPage = 20;
       const totalPages = Math.ceil(fetchedEvents.length / itemsPerPage);
       const startIdx = (eventsPage - 1) * itemsPerPage;
       const endIdx = startIdx + itemsPerPage;
@@ -917,19 +948,17 @@ export default function ExplorePage() {
                   
                   {events.length > 0 ? (
                     <>
-                      {/* Mobile: Horizontal Carousel */}
-                      <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        <div className="flex gap-4 px-2">
-                          {events.map(event => (
-                            <div key={event._id} className="flex-none w-[85vw] snap-center">
-                              <EventCard
-                                event={event}
-                                onFavorite={handleFavorite}
-                                isSaved={savedEventIds.includes(event._id)}
-                              />
-                            </div>
-                          ))}
-                        </div>
+                      {/* Mobile: Vertical Stack - Show all events (no pagination) */}
+                      <div className="block sm:hidden space-y-4 pb-4">
+                        {allEvents.map(event => (
+                          <div key={event._id} className="w-full">
+                            <EventCard
+                              event={event}
+                              onFavorite={handleFavorite}
+                              isSaved={savedEventIds.includes(event._id)}
+                            />
+                          </div>
+                        ))}
                       </div>
                       
                       {/* Desktop: Grid Layout */}
@@ -944,9 +973,9 @@ export default function ExplorePage() {
                         ))}
                       </div>
                       
-                      {/* Pagination Controls */}
+                      {/* Pagination Controls - Desktop only */}
                       {eventsPagination && eventsPagination.totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
+                        <div className="hidden sm:flex items-center justify-center gap-2 mt-6 sm:mt-8">
                           <button
                             onClick={() => setEventsPage(Math.max(1, eventsPage - 1))}
                             disabled={eventsPage === 1}

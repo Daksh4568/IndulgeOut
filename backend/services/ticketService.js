@@ -2,7 +2,7 @@ const QRCode = require('qrcode');
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
 const User = require('../models/User');
-const { uploadToCloudinary } = require('../config/cloudinary');
+const { uploadToS3 } = require('../config/s3');
 
 /**
  * Generate a ticket for an event registration
@@ -94,33 +94,25 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
       }
     });
     console.log(`✅ [TicketService] QR code generated, length: ${qrCodeImage.length}`);
-    // Upload QR code to Cloudinary for better email compatibility
+
+    // Upload QR code to S3 for reliable email rendering
     let qrCodeUrl = null;
     try {
-      console.log(`\ud83c\udf10 [TicketService] Uploading QR code to Cloudinary...`);
-      // Convert base64 to buffer
       const base64Data = qrCodeImage.replace(/^data:image\/png;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      const cloudinaryResult = await uploadToCloudinary(buffer, {
-        folder: `tickets/${ticketNumber}`,
-        resource_type: 'image',
-        public_id: `qr_${ticketNumber}`
-      });
-      
-      qrCodeUrl = cloudinaryResult.secure_url;
-      console.log(`\u2705 [TicketService] QR code uploaded to Cloudinary: ${qrCodeUrl}`);
-    } catch (uploadError) {
-      console.error('\u26a0\ufe0f [TicketService] Failed to upload QR to Cloudinary, will use base64:', uploadError.message);
-      // Continue with base64 if Cloudinary upload fails
+      const qrBuffer = Buffer.from(base64Data, 'base64');
+      const s3Result = await uploadToS3(qrBuffer, 'qr-codes', `${ticketNumber}.png`, 'image/png');
+      qrCodeUrl = s3Result.url;
+      console.log(`✅ [TicketService] QR code uploaded to S3: ${qrCodeUrl}`);
+    } catch (s3Error) {
+      console.error(`⚠️ [TicketService] S3 QR upload failed, falling back to base64:`, s3Error.message);
     }
-    // Create ticket in database
+
     const ticket = new Ticket({
       ticketNumber,
       event: eventId,
       user: userId,
       qrCode: qrCodeImage,
-      qrCodeUrl: qrCodeUrl,  // Cloudinary URL for email
+      qrCodeUrl: qrCodeUrl,
       status: 'active',
       quantity: quantity || 1,
       price: {
@@ -152,7 +144,7 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
       _id: ticket._id,
       ticketNumber: ticket.ticketNumber,
       qrCode: ticket.qrCode,  // Base64 for dashboard/download
-      qrCodeUrl: ticket.qrCodeUrl,  // Cloudinary URL for email
+      qrCodeUrl: ticket.qrCodeUrl,  // S3/CloudFront URL for email
       event: ticket.event,
       user: ticket.user,
       status: ticket.status,

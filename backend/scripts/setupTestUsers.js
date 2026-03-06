@@ -24,9 +24,9 @@ const connectDB = async () => {
 // Test Users Configuration
 const testUsers = [
   {
-    name: 'Test Admin',
-    email: 'testadmin@indulgeout.com',
-    phoneNumber: '8888888801',
+    name: 'IndulgeOut Admin',
+    email: 'daksh@indulgeout.com',
+    phoneNumber: '9636475458',
     role: 'admin',
     adminProfile: {
       accessLevel: 'super_admin',
@@ -41,99 +41,6 @@ const testUsers = [
       ],
       department: 'Operations',
       assignedBy: null
-    }
-  },
-  {
-    name: 'Test Community Organizer',
-    email: 'testcommunity@indulgeout.com',
-    phoneNumber: '8888888802',
-    role: 'host_partner',
-    hostPartnerType: 'community_organizer',
-    onboardingCompleted: true,
-    communityProfile: {
-      communityName: 'Test Community Hub',
-      city: 'Mumbai',
-      locality: 'Bandra',
-      primaryCategory: 'music',
-      communityType: 'open',
-      meetupFrequency: 'weekly',
-      averageAttendance: '50-100',
-      communityAge: '1-2 years',
-      targetAudience: 'Music enthusiasts and performers',
-      description: 'A vibrant community for music lovers and artists to connect and collaborate.',
-      socialMedia: {
-        instagram: '@testcommunityhub'
-      }
-    }
-  },
-  {
-    name: 'Test Venue Partner',
-    email: 'testvenue@indulgeout.com',
-    phoneNumber: '8888888803',
-    role: 'host_partner',
-    hostPartnerType: 'venue',
-    onboardingCompleted: true,
-    venueProfile: {
-      venueName: 'Test Music Lounge',
-      locality: 'Andheri West',
-      city: 'Mumbai',
-      venueType: 'bar',
-      capacityRange: '150-300',
-      contactPerson: {
-        name: 'Venue Manager',
-        phone: '8888888803',
-        email: 'testvenue@indulgeout.com'
-      },
-      photos: [
-        'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
-        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800'
-      ],
-      amenities: ['wifi', 'ac', 'parking', 'sound_system', 'stage', 'bar', 'green_room'],
-      rules: {
-        alcoholAllowed: true,
-        smokingAllowed: false,
-        minimumAge: 18,
-        soundRestrictions: 'Music allowed until 11 PM',
-        additionalRules: 'Valid ID required for entry'
-      },
-      pricing: {
-        hourlyRate: 8000,
-        minimumBooking: 3,
-        currency: 'INR'
-      },
-      availability: {
-        daysAvailable: ['thursday', 'friday', 'saturday', 'sunday'],
-        timeSlots: '6 PM - 12 AM'
-      },
-      description: 'Premium music lounge with state-of-the-art sound system and comfortable seating for up to 250 guests.'
-    }
-  },
-  {
-    name: 'Test Brand Sponsor',
-    email: 'testbrand@indulgeout.com',
-    phoneNumber: '8888888804',
-    role: 'host_partner',
-    hostPartnerType: 'brand_sponsor',
-    onboardingCompleted: true,
-    brandProfile: {
-      brandName: 'Test Energy Drink Co.',
-      brandCategory: 'food_beverage',
-      targetCity: ['Mumbai', 'Bengaluru'],
-      sponsorshipType: ['paid_monetary', 'product_sampling'],
-      collaborationIntent: ['brand_activation', 'sampling', 'sponsorship'],
-      contactPerson: {
-        name: 'Brand Manager',
-        phone: '8888888804',
-        email: 'testbrand@indulgeout.com'
-      },
-      logo: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=400',
-      budget: {
-        min: 50000,
-        max: 100000,
-        currency: 'INR'
-      },
-      pastCollaborations: 'Music festivals, sports events, college fests',
-      description: 'Leading energy drink brand looking to partner with music communities and events for brand activation.'
     }
   }
 ];
@@ -208,37 +115,9 @@ function displaySummary(users) {
   console.log('┌───────────────────────────────────────────────────────────────┐');
   console.log('│ Admin User                                                    │');
   console.log('├───────────────────────────────────────────────────────────────┤');
-  console.log('│ Email:  testadmin@indulgeout.com                              │');
-  console.log('│ Phone:  8888888801                                            │');
+  console.log('│ Email:  daksh@indulgeout.com                                  │');
+  console.log('│ Phone:  9636475458                                            │');
   console.log('└───────────────────────────────────────────────────────────────┘');
-  console.log('');
-  console.log('┌───────────────────────────────────────────────────────────────┐');
-  console.log('│ Community Organizer                                           │');
-  console.log('├───────────────────────────────────────────────────────────────┤');
-  console.log('│ Email:  testcommunity@indulgeout.com                          │');
-  console.log('│ Phone:  8888888802                                            │');
-  console.log('└───────────────────────────────────────────────────────────────┘');
-  console.log('');
-  console.log('┌───────────────────────────────────────────────────────────────┐');
-  console.log('│ Venue Partner                                                 │');
-  console.log('├───────────────────────────────────────────────────────────────┤');
-  console.log('│ Email:  testvenue@indulgeout.com                              │');
-  console.log('│ Phone:  8888888803                                            │');
-  console.log('└───────────────────────────────────────────────────────────────┘');
-  console.log('');
-  console.log('┌───────────────────────────────────────────────────────────────┐');
-  console.log('│ Brand Sponsor                                                 │');
-  console.log('├───────────────────────────────────────────────────────────────┤');
-  console.log('│ Email:  testbrand@indulgeout.com                              │');
-  console.log('│ Phone:  8888888804                                            │');
-  console.log('└───────────────────────────────────────────────────────────────┘');
-  console.log('\n');
-  console.log('📌 NEXT STEPS:\n');
-  console.log('  1. Update testCollaborationWorkflow.js with these credentials');
-  console.log('  2. Run: node scripts/testCollaborationWorkflow.js');
-  console.log('\n');
-  console.log('💡 NOTE: All users are pre-verified and ready to use!');
-  console.log('   No OTP verification needed for testing.\n');
 }
 
 // Main execution

@@ -85,7 +85,7 @@ const IdentitySelection = () => {
 
               {/* Description */}
               <p className="text-gray-300 text-center mb-4 text-sm">
-                Discover and attend offline experiences
+                Discover and Attend Offline Experiences
               </p>
 
               {/* Features */}
@@ -137,7 +137,7 @@ const IdentitySelection = () => {
 
               {/* Description */}
               <p className="text-gray-300 text-center mb-4 text-sm">
-                Create and Collaborate in offline experiences
+                Create and Enable Offline Experiences
               </p>
 
               {/* Features */}

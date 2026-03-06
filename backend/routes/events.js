@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const Event = require('../models/Event.js');
 const User = require('../models/User.js');
 const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
@@ -9,8 +10,24 @@ const { authMiddleware } = require('../utils/authUtils.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
 const notificationService = require('../services/notificationService.js');
+const { uploadMultipleImagesToS3 } = require('../utils/imageUpload.js');
 
 const router = express.Router();
+
+// Configure multer for event image uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
+    }
+  }
+});
 
 // Rate limiter for event registration to prevent abuse
 // Allows 5 registration attempts per 15 minutes per IP
@@ -25,6 +42,25 @@ const registrationLimiter = rateLimit({
       message: 'Too many registration attempts. Please try again in 15 minutes.',
       retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
     });
+  }
+});
+
+// Upload event images to S3
+router.post('/upload-images', authMiddleware, upload.array('images', 5), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No images provided' });
+    }
+
+    const results = await uploadMultipleImagesToS3(req.files, 'events');
+
+    res.json({
+      success: true,
+      images: results.map(r => ({ url: r.url, key: r.key }))
+    });
+  } catch (error) {
+    console.error('Event image upload error:', error);
+    res.status(500).json({ message: 'Failed to upload images', error: error.message });
   }
 });
 
