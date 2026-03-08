@@ -139,10 +139,10 @@ export default function ExplorePage() {
   // Handle communities pagination when page changes
   useEffect(() => {
     if (tab === 'communities') {
-      // Communities page change will be handled in the render
+      fetchCommunities();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [communitiesPage, tab]);
+  }, [communitiesPage]);
 
   // Fetch saved events
   const fetchSavedEvents = async () => {
@@ -344,11 +344,11 @@ export default function ExplorePage() {
     console.log('🔄 Fetching communities... Query:', searchQuery, 'Page:', communitiesPage);
     setLoading(true);
     try {
-      let featuredEndpoint = `${API_URL}/api/explore/communities/featured?limit=8&page=${communitiesPage}`;
+      let featuredEndpoint = `${API_URL}/api/explore/communities/featured?limit=20&page=${communitiesPage}`;
       
       // If there's a search query, use search endpoint instead
       if (searchQuery) {
-        featuredEndpoint = `${API_URL}/api/explore/communities/search?q=${encodeURIComponent(searchQuery)}&limit=8&page=${communitiesPage}`;
+        featuredEndpoint = `${API_URL}/api/explore/communities/search?q=${encodeURIComponent(searchQuery)}&limit=20&page=${communitiesPage}`;
       }
       
       console.log('📡 Fetching communities from:', featuredEndpoint);
@@ -1133,13 +1133,10 @@ export default function ExplorePage() {
                   
                   {lockedCommunities.length > 0 ? (
                     <div className="relative">
-                      {/* Calculate pagination for locked communities */}
+                      {/* Communities from API - already paginated server-side */}
                       {(() => {
-                        const itemsPerPage = 8;
-                        const totalPages = Math.ceil(lockedCommunities.length / itemsPerPage);
-                        const startIdx = (communitiesPage - 1) * itemsPerPage;
-                        const endIdx = startIdx + itemsPerPage;
-                        const paginatedCommunities = lockedCommunities.slice(startIdx, endIdx);
+                        const paginatedCommunities = lockedCommunities;
+                        const totalPages = communitiesPagination?.totalPages || 1;
                         
                         return (
                           <>

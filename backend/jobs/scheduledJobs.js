@@ -521,9 +521,9 @@ async function runDailyReconciliation() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Find all tickets purchased yesterday that need reconciliation
+    // Find all tickets that need reconciliation (purchased in last 30 days)
     const tickets = await Ticket.find({
-      purchaseDate: { $gte: yesterday, $lt: today },
+      purchaseDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
       status: { $ne: 'cancelled' },
       reconciliationStatus: 'pending'
     });
@@ -631,11 +631,11 @@ async function runDailyReconciliation() {
       }
     }
     
-    // Check for settlement updates for older tickets
+    // Check for settlement updates for captured tickets (last 45 days)
     const ticketsToCheckSettlement = await Ticket.find({
       settlementStatus: 'captured',
-      purchaseDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
-    }).limit(20); // Reduced to avoid Cashfree rate limits (429 errors)
+      purchaseDate: { $gte: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000) }
+    }).limit(50);
     
     console.log(`🏦 Checking settlement status for ${ticketsToCheckSettlement.length} captured payments...`);
     

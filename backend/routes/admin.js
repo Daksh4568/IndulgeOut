@@ -1808,72 +1808,119 @@ router.get('/organizers', requirePermission('view_analytics'), async (req, res) 
       query['payoutDetails.isVerified'] = verified === 'true';
     }
     
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * parseInt(limit);
     
-    const [organizers, total] = await Promise.all([
-      User.find(query)
-        .select('name email phoneNumber communityProfile payoutDetails createdAt location')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      User.countDocuments(query)
-    ]);
-    
-    // Enrich with event count for each organizer
-    const enrichedOrganizers = await Promise.all(
-      organizers.map(async (organizer) => {
-        const [eventCount, activeEvents, totalRevenue] = await Promise.all([
-          Event.countDocuments({ host: organizer._id }),
-          Event.countDocuments({ 
-            host: organizer._id, 
-            status: 'live',
-            date: { $gte: new Date() }
-          }),
-          // Get total tickets sold
-          Event.aggregate([
-            { $match: { host: organizer._id } },
-            { 
-              $project: { 
-                currentParticipants: 1 
-              } 
-            },
-            { 
-              $group: { 
-                _id: null, 
-                totalTickets: { $sum: '$currentParticipants' } 
-              } 
+    // Get all matching organizer IDs first
+    const allOrganizers = await User.find(query).select('_id').lean();
+    const total = allOrganizers.length;
+    const organizerIds = allOrganizers.map(o => o._id);
+
+    // Aggregate spots booked per organizer from Event.currentParticipants
+    const now = new Date();
+    const spotsAgg = await Event.aggregate([
+      { $match: { host: { $in: organizerIds } } },
+      {
+        $addFields: {
+          // Combine date + endTime into a comparable datetime
+          eventEndDateTime: {
+            $cond: {
+              if: { $and: ['$date', '$endTime'] },
+              then: {
+                $dateFromString: {
+                  dateString: {
+                    $concat: [
+                      { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+                      'T',
+                      '$endTime',
+                      ':00'
+                    ]
+                  },
+                  onError: '$date'
+                }
+              },
+              else: '$date'
             }
-          ])
-        ]);
-        
-        return {
-          _id: organizer._id,
-          name: organizer.name,
-          email: organizer.email,
-          phoneNumber: organizer.phoneNumber,
-          communityName: organizer.communityProfile?.communityName || 'N/A',
-          city: organizer.communityProfile?.city || organizer.location?.city || 'N/A',
-          category: organizer.communityProfile?.primaryCategory || organizer.communityProfile?.category?.[0] || 'N/A',
-          logo: organizer.communityProfile?.logo,
-          memberCount: organizer.communityProfile?.memberCount || 0,
-          kycVerified: organizer.payoutDetails?.isVerified || false,
-          stats: {
-            totalEvents: eventCount,
-            activeEvents: activeEvents,
-            totalTicketsSold: totalRevenue[0]?.totalTickets || 0
-          },
-          joinedDate: organizer.createdAt
-        };
-      })
-    );
+          }
+        }
+      },
+      {
+        $group: {
+          _id: '$host',
+          totalSpotsBooked: { $sum: '$currentParticipants' },
+          totalEvents: { $sum: 1 },
+          activeEvents: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'published'] }, { $gte: ['$eventEndDateTime', now] }] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { totalSpotsBooked: -1 } }
+    ]);
+
+    // Build a map of organizer stats
+    const spotsMap = {};
+    spotsAgg.forEach(s => {
+      spotsMap[s._id.toString()] = {
+        totalSpotsBooked: s.totalSpotsBooked,
+        totalEvents: s.totalEvents,
+        activeEvents: s.activeEvents
+      };
+    });
+
+    // Sort all organizer IDs by spots booked descending, then paginate
+    organizerIds.sort((a, b) => {
+      const aSpots = spotsMap[a.toString()]?.totalSpotsBooked || 0;
+      const bSpots = spotsMap[b.toString()]?.totalSpotsBooked || 0;
+      return bSpots - aSpots;
+    });
+
+    const paginatedIds = organizerIds.slice(skip, skip + parseInt(limit));
+
+    // Fetch full organizer data for this page
+    const organizers = await User.find({ _id: { $in: paginatedIds } })
+      .select('name email phoneNumber communityProfile payoutDetails createdAt location')
+      .lean();
+
+    // Map organizers by ID for ordering
+    const organizerMap = {};
+    organizers.forEach(o => { organizerMap[o._id.toString()] = o; });
+
+    // Build enriched list in sorted order
+    const enrichedOrganizers = paginatedIds.map(id => {
+      const organizer = organizerMap[id.toString()];
+      if (!organizer) return null;
+      const stats = spotsMap[id.toString()] || { totalSpotsBooked: 0, totalEvents: 0, activeEvents: 0 };
+      return {
+        _id: organizer._id,
+        name: organizer.name,
+        email: organizer.email,
+        phoneNumber: organizer.phoneNumber,
+        communityName: organizer.communityProfile?.communityName || 'N/A',
+        city: organizer.communityProfile?.city || organizer.location?.city || 'N/A',
+        category: organizer.communityProfile?.primaryCategory || organizer.communityProfile?.category?.[0] || 'N/A',
+        logo: organizer.communityProfile?.logo,
+        memberCount: organizer.communityProfile?.memberCount || 0,
+        kycVerified: organizer.payoutDetails?.isVerified || false,
+        stats: {
+          totalEvents: stats.totalEvents,
+          activeEvents: stats.activeEvents,
+          totalSpotsBooked: stats.totalSpotsBooked
+        },
+        joinedDate: organizer.createdAt
+      };
+    }).filter(Boolean);
     
     res.json({
       organizers: enrichedOrganizers,
       pagination: {
         total,
         page: parseInt(page),
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / parseInt(limit)),
         limit: parseInt(limit)
       }
     });
@@ -1954,7 +2001,6 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
         $group: {
           _id: null,
           totalRevenue: { $sum: '$price.amount' },
-          totalTickets: { $sum: 1 },
           settledAmount: {
             $sum: {
               $cond: [
@@ -2022,8 +2068,7 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
       },
       payoutDetails: {
         accountHolderName: organizer.payoutDetails?.accountHolderName,
-        accountNumber: organizer.payoutDetails?.accountNumber ? 
-          `****${organizer.payoutDetails.accountNumber.slice(-4)}` : null,
+        accountNumber: organizer.payoutDetails?.accountNumber || null,
         ifscCode: organizer.payoutDetails?.ifscCode,
         billingAddress: organizer.payoutDetails?.billingAddress,
         upiId: organizer.payoutDetails?.upiId,
@@ -2034,15 +2079,15 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
         lastUpdated: organizer.payoutDetails?.lastUpdated
       },
       eventStats: {
-        total: (statusCounts.draft || 0) + (statusCounts.live || 0) + (statusCounts.completed || 0) + (statusCounts.cancelled || 0),
+        total: (statusCounts.draft || 0) + (statusCounts.published || 0) + (statusCounts.completed || 0) + (statusCounts.cancelled || 0),
         draft: statusCounts.draft || 0,
-        live: statusCounts.live || 0,
+        live: statusCounts.published || 0,
         completed: statusCounts.completed || 0,
         cancelled: statusCounts.cancelled || 0
       },
       revenueStats: {
         totalRevenue: ticketRevenue[0]?.totalRevenue || 0,
-        totalTicketsSold: ticketRevenue[0]?.totalTickets || 0,
+        totalSpotsBooked: totalRevenue[0]?.totalTicketsSold || 0,
         settledAmount: ticketRevenue[0]?.settledAmount || 0,
         pendingSettlement: ticketRevenue[0]?.pendingSettlement || 0,
         currency: 'INR'
@@ -2108,6 +2153,7 @@ router.get('/organizers/:organizerId/events', requirePermission('view_analytics'
           .filter(t => t.settlementStatus === 'settled')
           .reduce((sum, ticket) => sum + (ticket.settlementAmount || ticket.price?.amount || 0), 0);
         
+        const totalSpotsBooked = event.currentParticipants || 0;
         const activeTickets = tickets.filter(t => t.status === 'active').length;
         const checkedInTickets = tickets.filter(t => t.status === 'checked_in').length;
         
@@ -2131,6 +2177,7 @@ router.get('/organizers/:organizerId/events', requirePermission('view_analytics'
             settledRevenue,
             pendingRevenue: totalRevenue - settledRevenue,
             ticketsSold: tickets.length,
+            totalSpotsBooked,
             activeTickets,
             checkedInTickets
           }
@@ -2190,6 +2237,10 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
     const settledRevenue = tickets
       .filter(t => t.settlementStatus === 'settled')
       .reduce((sum, ticket) => sum + (ticket.settlementAmount || ticket.price?.amount || 0), 0);
+    
+    const capturedRevenue = tickets
+      .filter(t => t.settlementStatus === 'captured')
+      .reduce((sum, ticket) => sum + (ticket.price?.amount || 0), 0);
     
     const ticketsByStatus = {
       active: tickets.filter(t => t.status === 'active').length,
@@ -2293,9 +2344,11 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       coHosts: event.coHosts || [],
       analytics: {
         totalTickets: tickets.length,
+        totalSpotsBooked: event.currentParticipants || 0,
         ticketsByStatus,
         totalRevenue,
         settledRevenue,
+        capturedRevenue,
         pendingRevenue: totalRevenue - settledRevenue,
         settlementPercentage: totalRevenue > 0 ? 
           ((settledRevenue / totalRevenue) * 100).toFixed(2) : 0,

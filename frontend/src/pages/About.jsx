@@ -36,7 +36,7 @@ const About = () => {
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
       <NavigationBar />
       {/* Hero Section with Polaroids and Envelope */}
-      <section className="py-24 md:py-32 bg-zinc-900 dark:bg-zinc-900 relative overflow-hidden">
+      <section className="py-12 md:py-16 bg-zinc-900 dark:bg-zinc-900 relative overflow-visible">
         <div className="relative w-full max-w-7xl mx-auto">
           {/* Mobile Layout - Top Polaroids */}
           <div className="md:hidden flex gap-4 justify-center mb-8 z-30 relative">
@@ -76,11 +76,11 @@ const About = () => {
 
           {/* Desktop Layout - Polaroids: 2 Left, 2 Right (No Overlap) */}
           <div className="hidden md:block absolute inset-0 z-10">
-            <div className="h-full w-full flex justify-between px-6 lg:px-10 pt-8 pb-10 -mt-16">
+            <div className="h-full w-full flex justify-between items-center px-6 lg:px-10">
               {/* Left Column */}
-              <div className="flex flex-col justify-between items-start">
+              <div className="flex flex-col items-start gap-4">
                 {/* Polaroid 1 - Top Left */}
-                <div className="transform -rotate-12 w-44 lg:w-48 xl:w-52">
+                <div className="transform -rotate-12 w-52 lg:w-60 xl:w-72">
                   <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
@@ -97,7 +97,7 @@ const About = () => {
                 </div>
 
                 {/* Polaroid 2 - Bottom Left */}
-                <div className="transform rotate-6 w-44 lg:w-48 xl:w-52">
+                <div className="transform rotate-6 w-52 lg:w-60 xl:w-72">
                   <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
@@ -115,9 +115,9 @@ const About = () => {
               </div>
 
               {/* Right Column */}
-              <div className="flex flex-col justify-between items-end">
+              <div className="flex flex-col items-end gap-4">
                 {/* Polaroid 3 - Top Right */}
-                <div className="transform rotate-12 w-44 lg:w-48 xl:w-52">
+                <div className="transform rotate-12 w-52 lg:w-60 xl:w-72">
                   <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
@@ -134,7 +134,7 @@ const About = () => {
                 </div>
 
                 {/* Polaroid 4 - Bottom Right */}
-                <div className="transform -rotate-6 w-44 lg:w-48 xl:w-52">
+                <div className="transform -rotate-6 w-52 lg:w-60 xl:w-72">
                   <div className="bg-white p-3 shadow-2xl">
                     <div className="w-full aspect-square overflow-hidden">
                       <img
@@ -154,7 +154,7 @@ const About = () => {
           </div>
 
           {/* Envelope in Center */}
-          <div className="relative z-20 flex flex-col items-center justify-center md:mt-0">
+          <div className="relative z-20 flex flex-col items-center justify-center md:py-16 lg:py-24">
             {/* Tap here bubble with arrow - Figma style */}
             <div className="relative mb-2 md:block hidden">
               <div className="relative">

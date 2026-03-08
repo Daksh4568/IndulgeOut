@@ -1223,7 +1223,7 @@ const CommunityOrganizerDashboard = () => {
             <h3 className="text-lg font-semibold text-white mb-2">
               No {activeCollabTab} collaborations
             </h3>
-            <p className="text-gray-400 mb-4">
+            {/* <p className="text-gray-400 mb-4">
               {activeCollabTab === 'upcoming' 
                 ? 'No upcoming collaborations at the moment'
                 : activeCollabTab === 'live'
@@ -1231,7 +1231,7 @@ const CommunityOrganizerDashboard = () => {
                 : activeCollabTab === 'completed'
                 ? 'No completed collaborations to show'
                 : 'No collaborations yet'}
-            </p>
+            </p> */}
           </div>
         ) : (
           <div className="relative">
@@ -1475,32 +1475,32 @@ const CommunityOrganizerDashboard = () => {
   const EarningsSection = () => {
     return (
       <div>
-        {/* Desktop Grid */}
-        <div className="hidden md:grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-green-900 dark:text-green-100">
+        {/* Desktop Grid - 3 cards */}
+        <div className="hidden md:grid gap-6 md:grid-cols-3">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 rounded-xl p-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-green-900 dark:text-green-100">
                 Total Earnings
               </h3>
-              <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-3xl font-bold text-green-900 dark:text-green-100 mb-1">
+            <p className="text-4xl font-bold text-green-900 dark:text-green-100 mb-2">
               ₹{earnings.totalLifetime?.toLocaleString('en-IN') || 0}
             </p>
-            <p className="text-xs text-green-700 dark:text-green-300">Lifetime via IndulgeOut</p>
+            <p className="text-sm text-green-700 dark:text-green-300">Lifetime via IndulgeOut</p>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 rounded-xl p-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                 This Month
               </h3>
-              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <p className="text-3xl font-bold text-blue-900 dark:text-blue-100 mb-1">
+            <p className="text-4xl font-bold text-blue-900 dark:text-blue-100 mb-2">
               ₹{earnings.thisMonth?.toLocaleString('en-IN') || 0}
             </p>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
               {earnings.monthGrowth ? (
                 <span className="flex items-center">
                   {earnings.monthGrowth > 0 ? (
@@ -1519,53 +1519,30 @@ const CommunityOrganizerDashboard = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                Pending Payout
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 rounded-xl p-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                Avg Revenue / Attendee
               </h3>
-              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
-            <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100 mb-1">
-              ₹{earnings.pendingPayout?.toLocaleString('en-IN') || 0}
+            <p className="text-4xl font-bold text-purple-900 dark:text-purple-100 mb-2">
+              ₹{earnings.avgRevenuePerAttendee?.toLocaleString('en-IN') || 0}
             </p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-300">
-              {earnings.nextPayoutDate 
-                ? `Next payout: ${new Date(earnings.nextPayoutDate).toLocaleDateString('en-IN')}`
-                : 'Processing...'}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                Last Payout
-              </h3>
-              <CheckCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-3xl font-bold text-purple-900 dark:text-purple-100 mb-1">
-              ₹{earnings.lastPayoutAmount?.toLocaleString('en-IN') || 0}
-            </p>
-            <p className="text-xs text-purple-700 dark:text-purple-300">
-              {earnings.lastPayoutDate 
-                ? new Date(earnings.lastPayoutDate).toLocaleDateString('en-IN', { 
-                    day: 'numeric', 
-                    month: 'short', 
-                    year: 'numeric' 
-                  })
-                : 'No payouts yet'}
+            <p className="text-sm text-purple-700 dark:text-purple-300">
+              {earnings.totalAttendees ? `Across ${earnings.totalAttendees.toLocaleString('en-IN')} attendees` : 'No attendees yet'}
             </p>
           </div>
         </div>
 
-        {/* Mobile Carousel */}
+        {/* Mobile Carousel - 3 cards */}
         <div 
           className="md:hidden flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-green-900 dark:text-green-100">
+              <h3 className="text-sm font-semibold text-green-900 dark:text-green-100">
                 Total Earnings
               </h3>
               <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -1576,9 +1553,9 @@ const CommunityOrganizerDashboard = () => {
             <p className="text-xs text-green-700 dark:text-green-300">Lifetime via IndulgeOut</p>
           </div>
 
-          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                 This Month
               </h3>
               <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -1605,41 +1582,18 @@ const CommunityOrganizerDashboard = () => {
             </p>
           </div>
 
-          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                Pending Payout
+              <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                Avg Revenue / Attendee
               </h3>
-              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-            </div>
-            <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100 mb-1">
-              ₹{earnings.pendingPayout?.toLocaleString('en-IN') || 0}
-            </p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-300">
-              {earnings.nextPayoutDate 
-                ? `Next payout: ${new Date(earnings.nextPayoutDate).toLocaleDateString('en-IN')}`
-                : 'Processing...'}
-            </p>
-          </div>
-
-          <div className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                Last Payout
-              </h3>
-              <CheckCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
             <p className="text-3xl font-bold text-purple-900 dark:text-purple-100 mb-1">
-              ₹{earnings.lastPayoutAmount?.toLocaleString('en-IN') || 0}
+              ₹{earnings.avgRevenuePerAttendee?.toLocaleString('en-IN') || 0}
             </p>
             <p className="text-xs text-purple-700 dark:text-purple-300">
-              {earnings.lastPayoutDate 
-                ? new Date(earnings.lastPayoutDate).toLocaleDateString('en-IN', { 
-                    day: 'numeric', 
-                    month: 'short', 
-                    year: 'numeric' 
-                  })
-                : 'No payouts yet'}
+              {earnings.totalAttendees ? `Across ${earnings.totalAttendees.toLocaleString('en-IN')} attendees` : 'No attendees yet'}
             </p>
           </div>
         </div>

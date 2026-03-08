@@ -1268,19 +1268,6 @@ const ProfileNew = () => {
                 </div>
               </div>
 
-              {/* Logout Button */}
-              <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -2331,22 +2318,23 @@ const ProfileNew = () => {
                 </div>
               </div>
 
-              {/* Logout Button */}
-              <div className="bg-[#171717] rounded-lg p-6 transition-card">
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  <LogOut className="h-5 w-5" />
-                  Logout
-                </button>
-              </div>
             </div>
           </div>
         )}
+
+        {/* Logout Button - Full width at bottom */}
+        <div className="flex justify-center mt-8 mb-4">
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="flex items-center justify-center gap-2 px-16 py-3 bg-red-950/40 hover:bg-red-950/60 border border-red-800/60 text-red-400 rounded-lg transition-colors font-medium"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Support Modal */}

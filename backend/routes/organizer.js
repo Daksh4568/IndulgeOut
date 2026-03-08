@@ -647,38 +647,21 @@ router.get('/earnings', authMiddleware, async (req, res) => {
     }
     console.log(`📈 [Earnings] Month Growth: ${monthGrowth}%`);
 
-    // Calculate pending payout (NO platform fee deduction - organizer gets full basePrice)
-    // Only from completed/past events
-    const pastEvents = allEvents.filter(event => new Date(event.date) < now);
-    const pastRevenuePromises = pastEvents.map(event => calculateEventRevenue(event._id));
-    const pastRevenues = await Promise.all(pastRevenuePromises);
-    const totalRevenue = pastRevenues.reduce((sum, rev) => sum + rev, 0);
-    
-    // NO platform fee deduction - organizer earns 100% of basePrice (ticket price)
-    // Payment gateway fees (3%) and GST (2.6%) are added on top by frontend
-    const pendingPayout = totalRevenue;
-    console.log(`💵 [Earnings] Pending Payout: ₹${pendingPayout} (100% of ticket basePrice)`);
-
-    // Calculate next payout date (example: 1st of next month)
-    const nextPayoutDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-    // Fetch user to check if they have payout details
-    const user = await User.findById(userId).select('payoutDetails').lean();
-    const hasPayoutDetails = !!(user?.payoutDetails?.accountNumber && user?.payoutDetails?.ifscCode);
+    // Calculate total attendees across all events (currentParticipants already tracks spots booked)
+    const totalAttendees = allEvents.reduce((sum, event) => sum + (event.currentParticipants || 0), 0);
+    const avgRevenuePerAttendee = totalAttendees > 0 ? Math.round(totalLifetime / totalAttendees) : 0;
+    console.log(`👥 [Earnings] Total Attendees: ${totalAttendees}, Avg Revenue/Attendee: ₹${avgRevenuePerAttendee}`);
 
     res.json({
       totalLifetime,
       thisMonth,
       monthGrowth,
-      pendingPayout,
-      lastPayoutAmount: 0, // TODO: Get from Payout model when implemented
-      lastPayoutDate: null, // TODO: Get from Payout model when implemented
-      nextPayoutDate: hasPayoutDetails ? nextPayoutDate : null,
+      totalAttendees,
+      avgRevenuePerAttendee,
       totalEvents: allEvents.length,
       eventsWithRevenue: eventsWithRevenue.length,
       thisMonthEventCount: thisMonthEvents.length,
-      lastMonthEventCount: lastMonthEvents.length,
-      hasPayoutDetails
+      lastMonthEventCount: lastMonthEvents.length
     });
   } catch (error) {
     console.error('❌ [Earnings] Error fetching earnings:', error);

@@ -26,6 +26,7 @@ const AdminDashboard = () => {
   
   // Organizers state
   const [organizers, setOrganizers] = useState([]);
+  const [organizerPagination, setOrganizerPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [selectedOrganizer, setSelectedOrganizer] = useState(null);
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -181,16 +182,19 @@ const AdminDashboard = () => {
   };
 
   // Organizer Fetch Functions
-  const fetchOrganizers = async () => {
+  const fetchOrganizers = async (page = 1) => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams();
+      queryParams.append('page', page);
+      queryParams.append('limit', 20);
       if (organizerFilters.search) queryParams.append('search', organizerFilters.search);
       if (organizerFilters.city) queryParams.append('city', organizerFilters.city);
       if (organizerFilters.verified) queryParams.append('verified', organizerFilters.verified);
       
       const response = await api.get(`/admin/organizers?${queryParams}`);
       setOrganizers(response.data.organizers || []);
+      setOrganizerPagination(response.data.pagination || { page: 1, pages: 1, total: 0 });
       setError(null);
     } catch (err) {
       console.error('Error fetching organizers:', err);
@@ -591,7 +595,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+      <header className="bg-zinc-900 border-b border-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -651,7 +655,7 @@ const AdminDashboard = () => {
             {/* Platform Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {/* Total Users */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
@@ -673,7 +677,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Total Communities */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Communities</p>
@@ -695,7 +699,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Venues */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Venues</p>
@@ -712,7 +716,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Brands */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Brands</p>
@@ -732,7 +736,7 @@ const AdminDashboard = () => {
             {/* Collaboration Stats */}
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Collaboration Overview</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-2 border-orange-500">
+              <div className="bg-zinc-900/50 rounded-lg shadow p-6 border-2 border-orange-500">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Review</p>
@@ -751,7 +755,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Proposals</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
@@ -760,7 +764,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Approval Rate</p>
                   <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">
@@ -769,7 +773,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Review Time</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
@@ -778,7 +782,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-2 border-red-500">
+              <div className="bg-zinc-900/50 rounded-lg shadow p-6 border-2 border-red-500">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Flagged Items</p>
@@ -797,7 +801,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Confirmed</p>
                   <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
@@ -806,7 +810,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rejected</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
@@ -815,7 +819,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Counters</p>
                   <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">
@@ -826,7 +830,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
@@ -893,7 +897,7 @@ const AdminDashboard = () => {
             </div>
 
             {pendingProposals.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-12 text-center">
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -903,7 +907,7 @@ const AdminDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {pendingProposals.map((proposal) => (
-                  <div key={proposal._id} className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
+                  <div key={proposal._id} className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center space-x-4">
@@ -1042,7 +1046,7 @@ const AdminDashboard = () => {
             </div>
 
             {pendingCounters.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-12 text-center">
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -1051,7 +1055,7 @@ const AdminDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {pendingCounters.map((counter) => (
-                  <div key={counter._id} className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
+                  <div key={counter._id} className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div>
@@ -1162,7 +1166,7 @@ const AdminDashboard = () => {
             </div>
 
             {flaggedProposals.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-12 text-center">
                 <svg className="w-16 h-16 text-green-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -1172,7 +1176,7 @@ const AdminDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {flaggedProposals.map((proposal) => (
-                  <div key={proposal._id} className="bg-white dark:bg-gray-800 rounded-lg shadow border-2 border-red-300 hover:shadow-lg transition-shadow">
+                  <div key={proposal._id} className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow border-2 border-red-300 hover:shadow-lg transition-shadow">
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div>
@@ -1312,7 +1316,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Breakdown by Type */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+            <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Proposals by Type</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {collabAnalytics.byType && Object.entries(collabAnalytics.byType).map(([type, count]) => (
@@ -1331,7 +1335,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Status Breakdown */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+            <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Status Distribution</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
@@ -1354,7 +1358,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
               {collabAnalytics.recentActivity && collabAnalytics.recentActivity.length > 0 ? (
                 <div className="space-y-3">
@@ -1393,7 +1397,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+            <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4 mb-6">
               <div className="flex flex-wrap gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
@@ -1443,13 +1447,13 @@ const AdminDashboard = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
               </div>
             ) : allCollaborations.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+              <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-12 text-center">
                 <p className="text-gray-500 dark:text-gray-400">No collaborations found</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {allCollaborations.map((collab) => (
-                  <div key={collab._id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <div key={collab._id} className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-3">
                         {getStatusBadge(collab.status)}
@@ -1549,10 +1553,10 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4 mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Search</label>
                       <input
                         type="text"
                         placeholder="Name, email, community..."
@@ -1561,13 +1565,13 @@ const AdminDashboard = () => {
                           setOrganizerFilters({ ...organizerFilters, search: e.target.value });
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') fetchOrganizers();
+                          if (e.key === 'Enter') fetchOrganizers(1);
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 bg-zinc-800 text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">City</label>
                       <input
                         type="text"
                         placeholder="Filter by city..."
@@ -1576,20 +1580,20 @@ const AdminDashboard = () => {
                           setOrganizerFilters({ ...organizerFilters, city: e.target.value });
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') fetchOrganizers();
+                          if (e.key === 'Enter') fetchOrganizers(1);
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 bg-zinc-800 text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KYC Status</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">KYC Status</label>
                       <select
                         value={organizerFilters.verified}
                         onChange={(e) => {
                           setOrganizerFilters({ ...organizerFilters, verified: e.target.value });
-                          fetchOrganizers();
+                          fetchOrganizers(1);
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 bg-zinc-800 text-white"
                       >
                         <option value="">All</option>
                         <option value="true">Verified</option>
@@ -1598,8 +1602,9 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   <button
-                    onClick={fetchOrganizers}
-                    className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    onClick={() => fetchOrganizers(1)}
+                    className="mt-4 px-6 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                   >
                     Apply Filters
                   </button>
@@ -1607,9 +1612,10 @@ const AdminDashboard = () => {
 
                 {/* Organizers Grid */}
                 {organizers.length > 0 ? (
+                  <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {organizers.map((organizer) => (
-                      <div key={organizer._id} className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
+                      <div key={organizer._id} className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
                         <div className="p-6">
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center space-x-3">
@@ -1621,8 +1627,8 @@ const AdminDashboard = () => {
                                 </div>
                               )}
                               <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">{organizer.communityName}</h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{organizer.name}</p>
+                                <h3 className="font-bold text-white">{organizer.communityName}</h3>
+                                <p className="text-sm text-gray-400">{organizer.name}</p>
                               </div>
                             </div>
                             {organizer.kycVerified ? (
@@ -1637,40 +1643,41 @@ const AdminDashboard = () => {
                           </div>
 
                           <div className="space-y-2 text-sm mb-4">
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p className="text-gray-400">
                               📍 {organizer.city}
                             </p>
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p className="text-gray-400">
                               📧 {organizer.email}
                             </p>
                             {organizer.phoneNumber && (
-                              <p className="text-gray-600 dark:text-gray-400">
+                              <p className="text-gray-400">
                                 📞 {organizer.phoneNumber}
                               </p>
                             )}
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p className="text-gray-400">
                               🏷️ {organizer.category}
                             </p>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-zinc-800/50 border border-gray-700 rounded-lg">
                             <div className="text-center">
-                              <p className="text-2xl font-bold text-gray-900 dark:text-white">{organizer.stats.totalEvents}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">Events</p>
+                              <p className="text-2xl font-bold text-white">{organizer.stats.totalEvents}</p>
+                              <p className="text-xs text-gray-400">Events</p>
                             </div>
                             <div className="text-center">
                               <p className="text-2xl font-bold text-green-600">{organizer.stats.activeEvents}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">Active</p>
+                              <p className="text-xs text-gray-400">Active</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-2xl font-bold text-purple-600">{organizer.stats.totalTicketsSold}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">Tickets</p>
+                              <p className="text-2xl font-bold text-purple-400">{organizer.stats.totalSpotsBooked}</p>
+                              <p className="text-xs text-gray-400">Spots</p>
                             </div>
                           </div>
 
                           <button
                             onClick={() => fetchOrganizerDetails(organizer._id)}
-                            className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            className="w-full px-4 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+                            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                           >
                             View Details →
                           </button>
@@ -1678,6 +1685,32 @@ const AdminDashboard = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* Pagination */}
+                  {organizerPagination.pages > 1 && (
+                    <div className="flex items-center justify-center space-x-4 mt-8">
+                      <button
+                        onClick={() => fetchOrganizers(organizerPagination.page - 1)}
+                        disabled={organizerPagination.page <= 1}
+                        className="px-4 py-2 rounded-lg text-white font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105"
+                        style={{ background: organizerPagination.page <= 1 ? '#3A3A52' : 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      >
+                        ← Previous
+                      </button>
+                      <span className="text-gray-400 text-sm">
+                        Page {organizerPagination.page} of {organizerPagination.pages} ({organizerPagination.total} organizers)
+                      </span>
+                      <button
+                        onClick={() => fetchOrganizers(organizerPagination.page + 1)}
+                        disabled={organizerPagination.page >= organizerPagination.pages}
+                        className="px-4 py-2 rounded-lg text-white font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105"
+                        style={{ background: organizerPagination.page >= organizerPagination.pages ? '#3A3A52' : 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                  </>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-gray-500 dark:text-gray-400">No organizers found</p>
@@ -1726,33 +1759,34 @@ const AdminDashboard = () => {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Events</p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{selectedOrganizer.eventStats.total}</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Total Events</p>
+                    <p className="text-3xl font-bold text-white">{selectedOrganizer.eventStats.total}</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Total Revenue</p>
                     <p className="text-3xl font-bold text-green-600">₹{(selectedOrganizer.revenueStats.totalRevenue / 1000).toFixed(1)}k</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Tickets Sold</p>
-                    <p className="text-3xl font-bold text-purple-600">{selectedOrganizer.revenueStats.totalTicketsSold}</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Spots Booked</p>
+                    <p className="text-3xl font-bold text-purple-400">{selectedOrganizer.revenueStats.totalSpotsBooked}</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Pending Settlement</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Pending Settlement</p>
                     <p className="text-3xl font-bold text-orange-600">₹{(selectedOrganizer.revenueStats.pendingSettlement / 1000).toFixed(1)}k</p>
                   </div>
                 </div>
 
                 {/* KYC Details Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">KYC & Payout Details</h3>
+                    <h3 className="text-xl font-bold text-white">KYC & Payout Details</h3>
                     {!selectedOrganizer.payoutDetails.isVerified && (
                       <div className="space-x-2">
                         <button
                           onClick={() => handleVerifyKYC(selectedOrganizer.organizer._id, true)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          className="px-4 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                         >
                           ✓ Verify KYC
                         </button>
@@ -1767,37 +1801,38 @@ const AdminDashboard = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Account Holder Name</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.accountHolderName || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">Account Holder Name</p>
+                      <p className="font-semibold text-white">{selectedOrganizer.payoutDetails.accountHolderName || 'Not provided'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Account Number</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.accountNumber || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">Account Number</p>
+                      <p className="font-semibold text-white">{selectedOrganizer.payoutDetails.accountNumber || 'Not provided'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">IFSC Code</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.ifscCode || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">IFSC Code</p>
+                      <p className="font-semibold text-white">{selectedOrganizer.payoutDetails.ifscCode || 'Not provided'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">UPI ID</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.upiId || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">UPI ID</p>
+                      <p className="font-semibold text-white">{selectedOrganizer.payoutDetails.upiId || 'Not provided'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">GST Number</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.gstNumber || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">GST Number</p>
+                      <p className="font-semibold text-white">{selectedOrganizer.payoutDetails.gstNumber || 'Not provided'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Billing Address</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.payoutDetails.billingAddress || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">Billing Address</p>
+                      <p className="font-semibold text-white">{selectedOrganizer.payoutDetails.billingAddress || 'Not provided'}</p>
                     </div>
                     {selectedOrganizer.payoutDetails.idProofDocument && (
                       <div className="col-span-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">ID Proof Document</p>
+                        <p className="text-sm text-gray-400 mb-2">ID Proof Document</p>
                         <a
                           href={selectedOrganizer.payoutDetails.idProofDocument}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-block"
+                          className="px-4 py-2 text-white rounded-lg hover:opacity-90 inline-block font-semibold"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                         >
                           View Document →
                         </a>
@@ -1807,28 +1842,28 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Community Profile */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Community Profile</h3>
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
+                  <h3 className="text-xl font-bold text-white mb-4">Community Profile</h3>
                   <div className="space-y-4">
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Description</p>
-                      <p className="text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.communityDescription || 'No description'}</p>
+                      <p className="text-sm text-gray-400">Description</p>
+                      <p className="text-white">{selectedOrganizer.communityProfile.communityDescription || 'No description'}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">City</p>
-                        <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.city}</p>
+                        <p className="text-sm text-gray-400">City</p>
+                        <p className="font-semibold text-white">{selectedOrganizer.communityProfile.city}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Member Count</p>
-                        <p className="font-semibold text-gray-900 dark:text-white">{selectedOrganizer.communityProfile.memberCount}</p>
+                        <p className="text-sm text-gray-400">Member Count</p>
+                        <p className="font-semibold text-white">{selectedOrganizer.communityProfile.memberCount}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Community Type</p>
-                        <p className="font-semibold text-gray-900 dark:text-white capitalize">{selectedOrganizer.communityProfile.communityType}</p>
+                        <p className="text-sm text-gray-400">Community Type</p>
+                        <p className="font-semibold text-white capitalize">{selectedOrganizer.communityProfile.communityType}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Categories</p>
+                        <p className="text-sm text-gray-400">Categories</p>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {selectedOrganizer.communityProfile.category?.map((cat, idx) => (
                             <span key={idx} className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
@@ -1840,20 +1875,20 @@ const AdminDashboard = () => {
                     </div>
                     {selectedOrganizer.communityProfile.socialLinks && (
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Social Links</p>
+                        <p className="text-sm text-gray-400 mb-2">Social Links</p>
                         <div className="flex space-x-4">
                           {selectedOrganizer.communityProfile.socialLinks.instagram && (
-                            <a href={selectedOrganizer.communityProfile.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800">
+                            <a href={selectedOrganizer.communityProfile.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">
                               Instagram
                             </a>
                           )}
                           {selectedOrganizer.communityProfile.socialLinks.facebook && (
-                            <a href={selectedOrganizer.communityProfile.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800">
+                            <a href={selectedOrganizer.communityProfile.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">
                               Facebook
                             </a>
                           )}
                           {selectedOrganizer.communityProfile.socialLinks.website && (
-                            <a href={selectedOrganizer.communityProfile.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800">
+                            <a href={selectedOrganizer.communityProfile.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">
                               Website
                             </a>
                           )}
@@ -1864,24 +1899,24 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Events Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Hosted Events</h3>
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-xl font-bold text-white mb-4">Hosted Events</h3>
                   {organizerEvents.length > 0 ? (
                     <div className="space-y-4">
                       {organizerEvents.map((event) => (
-                        <div key={event._id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-400 transition-colors">
+                        <div key={event._id} className="p-4 border border-gray-700 rounded-lg hover:border-purple-400 transition-colors">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2">{event.title}</h4>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                              <h4 className="font-bold text-lg text-white mb-2">{event.title}</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm mb-3">
                                 <div>
-                                  <p className="text-gray-600 dark:text-gray-400">Date</p>
-                                  <p className="font-semibold text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString()}</p>
+                                  <p className="text-gray-400">Date</p>
+                                  <p className="font-semibold text-white">{new Date(event.date).toLocaleDateString()}</p>
                                 </div>
                                 <div>
-                                  <p className="text-gray-600 dark:text-gray-400">Status</p>
+                                  <p className="text-gray-400">Status</p>
                                   <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    event.status === 'live' ? 'bg-green-100 text-green-800' :
+                                    event.status === 'published' ? 'bg-green-100 text-green-800' :
                                     event.status === 'completed' ? 'bg-blue-100 text-blue-800' :
                                     event.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                     'bg-gray-100 text-gray-800'
@@ -1890,25 +1925,30 @@ const AdminDashboard = () => {
                                   </span>
                                 </div>
                                 <div>
-                                  <p className="text-gray-600 dark:text-gray-400">Tickets Sold</p>
-                                  <p className="font-semibold text-gray-900 dark:text-white">{event.currentParticipants || 0} / {event.maxParticipants}</p>
+                                  <p className="text-gray-400">Ticket Price</p>
+                                  <p className="font-semibold text-purple-400">{event.price?.amount > 0 ? `₹${event.price.amount}` : 'Free'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-gray-600 dark:text-gray-400">Revenue</p>
+                                  <p className="text-gray-400">Spots Booked</p>
+                                  <p className="font-semibold text-white">{event.revenue?.totalSpotsBooked || event.currentParticipants || 0} / {event.maxParticipants}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-400">Revenue</p>
                                   <p className="font-semibold text-green-600">₹{(event.revenue?.totalRevenue / 1000 || 0).toFixed(1)}k</p>
                                 </div>
                               </div>
-                              <div className="flex space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex space-x-2 text-sm text-gray-400">
                                 <span>📍 {event.location?.city || 'TBA'}</span>
                                 <span>•</span>
-                                <span>🎫 {event.revenue?.ticketsSold || 0} tickets</span>
+                                <span>🎫 {event.revenue?.totalSpotsBooked || 0} spots</span>
                                 <span>•</span>
                                 <span>✅ {event.revenue?.checkedInTickets || 0} checked-in</span>
                               </div>
                             </div>
                             <button
                               onClick={() => fetchEventDetails(event._id)}
-                              className="ml-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                              className="ml-4 px-4 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+                              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                             >
                               View Details →
                             </button>
@@ -1917,7 +1957,7 @@ const AdminDashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">No events found</p>
+                    <p className="text-gray-400 text-center py-4">No events found</p>
                   )}
                 </div>
               </div>
@@ -1939,11 +1979,11 @@ const AdminDashboard = () => {
                       <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{eventDetails.event.title}</h2>
                       <p className="text-gray-600 dark:text-gray-400">{eventDetails.event.description?.substring(0, 150)}...</p>
                       <div className="flex items-center space-x-4 mt-4 text-sm">
-                        <span className="flex items-center space-x-2">
+                        <span className="flex items-center space-x-2 text-white">
                           <span>📅</span>
                           <span>{new Date(eventDetails.event.date).toLocaleDateString()}</span>
                         </span>
-                        <span className="flex items-center space-x-2">
+                        <span className="flex items-center space-x-2 text-white">
                           <span>📍</span>
                           <span>{eventDetails.event.location?.city}</span>
                         </span>
@@ -1958,7 +1998,8 @@ const AdminDashboard = () => {
                     </div>
                     <button
                       onClick={() => downloadAuditReport(eventDetails.event._id, eventDetails.event.title)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="px-4 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+                      style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                     >
                       📄 Download Audit Report
                     </button>
@@ -1966,26 +2007,33 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Analytics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Tickets</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{eventDetails.analytics.totalTickets}</p>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Ticket Price</p>
+                    <p className="text-2xl font-bold text-purple-400">{eventDetails.event.price?.amount > 0 ? `₹${eventDetails.event.price.amount}` : 'Free'}</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Total Spots Booked</p>
+                    <p className="text-2xl font-bold text-white">{eventDetails.analytics.totalSpotsBooked || eventDetails.analytics.totalTickets}</p>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Total Revenue</p>
                     <p className="text-2xl font-bold text-green-600">₹{(eventDetails.analytics.totalRevenue / 1000).toFixed(1)}k</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Settled</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Settled</p>
                     <p className="text-2xl font-bold text-blue-600">₹{(eventDetails.analytics.settledRevenue / 1000).toFixed(1)}k</p>
                     <p className="text-xs text-gray-500">{eventDetails.analytics.settlementPercentage}%</p>
+                    {eventDetails.analytics.capturedRevenue > 0 && eventDetails.analytics.settledRevenue === 0 && (
+                      <p className="text-xs text-yellow-500 mt-1">₹{(eventDetails.analytics.capturedRevenue / 1000).toFixed(1)}k captured</p>
+                    )}
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Check-in Rate</p>
-                    <p className="text-2xl font-bold text-purple-600">{eventDetails.analytics.checkInRate}%</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Check-in Rate</p>
+                    <p className="text-2xl font-bold text-purple-400">{eventDetails.analytics.checkInRate}%</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Issues</p>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Issues</p>
                     <p className={`text-2xl font-bold ${eventDetails.hasIssues ? 'text-red-600' : 'text-green-600'}`}>
                       {eventDetails.hasIssues ? '⚠️ Yes' : '✓ None'}
                     </p>
@@ -1994,45 +2042,45 @@ const AdminDashboard = () => {
 
                 {/* Ticket Status Breakdown */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Ticket Status</h3>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <h3 className="text-lg font-bold text-white mb-4">Ticket Status</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Active</span>
-                        <span className="font-bold text-gray-900 dark:text-white">{eventDetails.analytics.ticketsByStatus.active}</span>
+                        <span className="text-gray-400">Active</span>
+                        <span className="font-bold text-white">{eventDetails.analytics.ticketsByStatus.active}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Checked In</span>
+                        <span className="text-gray-400">Checked In</span>
                         <span className="font-bold text-green-600">{eventDetails.analytics.ticketsByStatus.checked_in}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Cancelled</span>
+                        <span className="text-gray-400">Cancelled</span>
                         <span className="font-bold text-red-600">{eventDetails.analytics.ticketsByStatus.cancelled}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Refunded</span>
+                        <span className="text-gray-400">Refunded</span>
                         <span className="font-bold text-orange-600">{eventDetails.analytics.ticketsByStatus.refunded}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Settlement Status</h3>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <h3 className="text-lg font-bold text-white mb-4">Settlement Status</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Settled</span>
+                        <span className="text-gray-400">Settled</span>
                         <span className="font-bold text-green-600">{eventDetails.analytics.settlementStats.settled}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Captured</span>
+                        <span className="text-gray-400">Captured</span>
                         <span className="font-bold text-blue-600">{eventDetails.analytics.settlementStats.captured}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Pending</span>
+                        <span className="text-gray-400">Pending</span>
                         <span className="font-bold text-yellow-600">{eventDetails.analytics.settlementStats.pending}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Failed</span>
+                        <span className="text-gray-400">Failed</span>
                         <span className="font-bold text-red-600">{eventDetails.analytics.settlementStats.failed}</span>
                       </div>
                     </div>
@@ -2040,33 +2088,33 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Attendees List */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Attendees ({eventDetails.attendees.length})</h3>
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-lg font-bold text-white mb-4">Attendees ({eventDetails.attendees.length})</h3>
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
+                    <table className="min-w-full divide-y divide-gray-700">
+                      <thead className="bg-zinc-800">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Ticket #</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Name</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Purchase Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Price</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Settlement</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Reconciliation</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket #</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Purchase Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Settlement</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reconciliation</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      <tbody className="divide-y divide-gray-700">
                         {eventDetails.attendees.map((attendee) => (
-                          <tr key={attendee.ticketNumber} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-4 py-3 text-sm font-mono text-gray-900 dark:text-white">{attendee.ticketNumber}</td>
+                          <tr key={attendee.ticketNumber} className="hover:bg-zinc-800">
+                            <td className="px-4 py-3 text-sm font-mono text-white">{attendee.ticketNumber}</td>
                             <td className="px-4 py-3 text-sm">
                               <div>
-                                <p className="font-medium text-gray-900 dark:text-white">{attendee.user?.name}</p>
+                                <p className="font-medium text-white">{attendee.user?.name}</p>
                                 <p className="text-xs text-gray-500">{attendee.user?.email}</p>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{new Date(attendee.purchaseDate).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">₹{attendee.price}</td>
+                            <td className="px-4 py-3 text-sm text-white">{new Date(attendee.purchaseDate).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-white">₹{attendee.price}</td>
                             <td className="px-4 py-3 text-sm">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                                 attendee.status === 'checked_in' ? 'bg-green-100 text-green-800' :
@@ -2111,8 +2159,8 @@ const AdminDashboard = () => {
       {/* Proposal Details Modal */}
       {showDetailsModal && selectedProposal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between z-10">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                   Complete Collaboration Details
@@ -2274,7 +2322,7 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Counter Responder Info */}
-                  <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                  <div className="mb-4 p-3 bg-zinc-800 rounded-lg">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Submitted by</p>
                     <div className="flex items-center space-x-3">
                       <img
@@ -2338,7 +2386,7 @@ const AdminDashboard = () => {
 
                   {/* House Rules */}
                   {selectedCounter.counterData?.houseRules && (
-                    <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="mb-4 p-3 bg-zinc-800 rounded-lg">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">House Rules:</h5>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {Object.entries(selectedCounter.counterData.houseRules).map(([rule, value]) => (
@@ -2365,7 +2413,7 @@ const AdminDashboard = () => {
 
                   {/* General Notes */}
                   {selectedCounter.counterData?.generalNotes && (
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="p-3 bg-zinc-800 rounded-lg">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">General Notes:</h5>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{selectedCounter.counterData.generalNotes}</p>
                     </div>
@@ -2475,7 +2523,7 @@ const AdminDashboard = () => {
                   
                   {/* Commercial Terms */}
                   {selectedCounter.counterData.commercialCounter && (
-                    <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="mb-3 p-3 bg-zinc-800 rounded-lg">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">💰 Commercial Terms:</h5>
                       <p className="text-sm"><strong>Model:</strong> {selectedCounter.counterData.commercialCounter.model || 'N/A'}</p>
                       {selectedCounter.counterData.commercialCounter.percentage && (
@@ -2492,7 +2540,7 @@ const AdminDashboard = () => {
 
                   {/* Key Modifications */}
                   {selectedCounter.counterData.fieldResponses && Object.entries(selectedCounter.counterData.fieldResponses).filter(([_, response]) => response.action === 'modify').length > 0 && (
-                    <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="mb-3 p-3 bg-zinc-800 rounded-lg">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📝 Modified Terms:</h5>
                       <div className="space-y-1">
                         {Object.entries(selectedCounter.counterData.fieldResponses)
@@ -2532,7 +2580,7 @@ const AdminDashboard = () => {
 
                   {/* Accepted Terms */}
                   {selectedCounter.counterData.fieldResponses && Object.entries(selectedCounter.counterData.fieldResponses).filter(([_, response]) => response.action === 'accept').length > 0 && (
-                    <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="mb-3 p-3 bg-zinc-800 rounded-lg">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">✓ Accepted Terms (As-Is):</h5>
                       <div className="grid grid-cols-2 gap-2">
                         {Object.entries(selectedCounter.counterData.fieldResponses)
@@ -2548,7 +2596,7 @@ const AdminDashboard = () => {
 
                   {/* General Notes */}
                   {selectedCounter.counterData.generalNotes && (
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="p-3 bg-zinc-800 rounded-lg">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Additional Notes:</h5>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{selectedCounter.counterData.generalNotes}</p>
                     </div>
@@ -2624,8 +2672,8 @@ const AdminDashboard = () => {
       {/* Counter Details Modal */}
       {showCounterModal && selectedCounter && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-zinc-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between z-10">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Counter-Proposal Details</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">ID: {selectedCounter._id}</p>
@@ -2798,7 +2846,7 @@ const AdminDashboard = () => {
       {/* Approve Modal */}
       {showApproveModal && (selectedProposal || selectedCounter) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               {selectedCounter ? 'Approve Counter-Proposal' : 'Approve Proposal'}
             </h3>
@@ -2846,7 +2894,7 @@ const AdminDashboard = () => {
       {/* Reject Modal */}
       {showRejectModal && (selectedProposal || selectedCounter) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               {selectedCounter ? 'Reject Counter-Proposal' : 'Reject Proposal'}
             </h3>
@@ -2911,7 +2959,7 @@ const AdminDashboard = () => {
       {/* Flag Modal */}
       {showFlagModal && selectedProposal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               🚩 Flag Proposal for Review
             </h3>

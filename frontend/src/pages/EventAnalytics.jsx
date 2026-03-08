@@ -1264,8 +1264,8 @@ const EventAnalytics = () => {
                 </button>
               </div>
               
-              {/* Filter Buttons */}
-              <div className="flex flex-wrap gap-2">
+              {/* Filter Buttons + Export */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setPaymentFilter('all')}
                   className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
@@ -1296,16 +1296,40 @@ const EventAnalytics = () => {
                 >
                   Unpaid ({questionnaireSubmissions?.unpaid || 0})
                 </button>
+                <button
+                  onClick={() => {
+                    if (!questionnaireSubmissions?.submissions?.length) return;
+                    const subs = questionnaireSubmissions.submissions.filter(s => {
+                      if (paymentFilter === 'paid') return s.isPaid;
+                      if (paymentFilter === 'unpaid') return !s.isPaid;
+                      return true;
+                    });
+                    // Build CSV header from first submission's questions
+                    const questions = subs[0]?.responses?.map(r => r.question) || [];
+                    const headers = ['Name', 'Email', 'Ticket Number', 'Payment Status', 'Submitted At', ...questions];
+                    const rows = subs.map(s => [
+                      s.user.name,
+                      s.user.email,
+                      s.ticketNumber || '',
+                      s.isPaid ? 'Paid' : 'Unpaid',
+                      new Date(s.submittedAt).toLocaleDateString('en-IN'),
+                      ...(s.responses?.map(r => `"${(r.answer || '').replace(/"/g, '""')}"`) || [])
+                    ]);
+                    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `questionnaire_responses_${eventId}.csv`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="ml-auto flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-all"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export CSV
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setShowQuestionnaireModal(false);
-                  setSelectedSubmission(null);
-                }}
-                className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
-              >
-                <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-              </button>
             </div>
             
             {/* Modal Content */}
