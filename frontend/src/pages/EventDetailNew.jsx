@@ -26,6 +26,7 @@ import { ToastContext } from '../App';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { convert24To12Hour } from '../utils/timeUtils';
+import { trackViewContent } from '../utils/metaPixel';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -90,6 +91,11 @@ const EventDetail = () => {
       setLoading(true);
       const response = await api.get(`/events/${id}`);
       setEvent(response.data.event);
+      
+      // Track Meta Pixel ViewContent event
+      if (response.data.event) {
+        trackViewContent(response.data.event);
+      }
       
       if (user && response.data.event.participants) {
         const isUserRegistered = response.data.event.participants.some(

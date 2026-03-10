@@ -9,6 +9,7 @@ const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
 const notificationService = require('../services/notificationService.js');
+const { sendPurchaseEvent } = require('../utils/metaCapi.js');
 // Webhook verification temporarily disabled
 // const { verifyCashfreeWebhook } = require('../utils/webhookVerification.js');
 
@@ -904,6 +905,29 @@ router.post('/webhook', async (req, res) => {
       }
 
       console.log('✅ [WEBHOOK] Payment processed successfully - Registration and ticket created');
+
+      // Track purchase in Meta Conversions API
+      try {
+        console.log('📊 [META CAPI] Sending Purchase event to Meta');
+        await sendPurchaseEvent(
+          {
+            email: user.email,
+            phone: user.phone,
+            ip: req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress,
+            userAgent: req.headers['user-agent']
+          },
+          {
+            amount: paymentAmount,
+            eventId: eventId,
+            orderId: orderId,
+            quantity: ticketQuantity
+          }
+        );
+        console.log('✅ [META CAPI] Purchase event sent successfully');
+      } catch (metaError) {
+        console.error('❌ [META CAPI] Failed to send Purchase event:', metaError);
+        // Don't fail webhook if Meta tracking fails
+      }
 
       // Clean up stored fees and coupon data
       if (global.pendingPaymentFees?.[orderId]) {

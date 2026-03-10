@@ -1530,7 +1530,7 @@ const CommunityOrganizerDashboard = () => {
               ₹{earnings.avgRevenuePerAttendee?.toLocaleString('en-IN') || 0}
             </p>
             <p className="text-sm text-purple-700 dark:text-purple-300">
-              {earnings.totalAttendees ? `Across ${earnings.totalAttendees.toLocaleString('en-IN')} attendees` : 'No attendees yet'}
+              {earnings.totalAttendees ? `Across ${earnings.totalAttendees.toLocaleString('en-IN')} attendees since inception` : 'No attendees yet'}
             </p>
           </div>
         </div>

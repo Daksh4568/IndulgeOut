@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader } from 'lucide-react';
 import { api } from '../config/api';
+import { trackPurchase } from '../utils/metaPixel';
 
 const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
@@ -47,6 +48,15 @@ const PaymentCallback = () => {
       if (response.data.success) {
         setStatus('success');
         setMessage('Payment successful! Redirecting to your dashboard...');
+        
+        // Track Purchase event in Meta Pixel
+        trackPurchase({
+          eventId,
+          amount: billingData.totalAmount || 0,
+          quantity: billingData.quantity || 1,
+          orderId
+        });
+        
         sessionStorage.removeItem('payment_event_id');
         sessionStorage.removeItem('billing_data');
         

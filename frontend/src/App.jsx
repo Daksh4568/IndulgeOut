@@ -8,6 +8,7 @@ import { ToastContainer } from './components/Toast'
 import { useToast } from './hooks/useToast'
 import ErrorBoundary from './components/ErrorBoundary'
 import Footer from './components/Footer'
+import { initPixel, trackPageView } from './utils/metaPixel'
 import Homepage from './pages/Homepage'
 import OTPLogin from './pages/OTPLogin'
 import IdentitySelection from './pages/IdentitySelection'
@@ -168,6 +169,12 @@ function AppContent() {
 
 function App() {
   const toast = useToast()
+  
+  // Initialize Meta Pixel on app load
+  useEffect(() => {
+    initPixel();
+    trackPageView();
+  }, []);
   
   return (
     <ErrorBoundary>

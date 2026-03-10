@@ -8,6 +8,7 @@ import LoginPromptModal from '../components/LoginPromptModal';
 import { ArrowLeft, Users, Ticket, CreditCard, CheckCircle2, UserPlus, X } from 'lucide-react';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { convert24To12Hour } from '../utils/timeUtils';
+import { trackInitiateCheckout } from '../utils/metaPixel';
 
 const BillingPage = () => {
   const { eventId } = useParams();
@@ -366,6 +367,13 @@ const BillingPage = () => {
         }
         
         const cashfree = window.Cashfree({ mode: cashfreeMode });
+
+        // Track Meta Pixel InitiateCheckout event
+        trackInitiateCheckout({
+          eventId: event._id,
+          amount: pricing.grandTotal,
+          quantity: pricing.numberOfPeople,
+        });
 
         const checkoutOptions = {
           paymentSessionId: paymentResponse.data.payment_session_id,
