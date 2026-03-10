@@ -913,14 +913,17 @@ router.post('/webhook', async (req, res) => {
           {
             email: user.email,
             phone: user.phone,
+            userId: user._id,
             ip: req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress,
             userAgent: req.headers['user-agent']
+            // Note: fbp and fbc would need to be passed from frontend in future
           },
           {
             amount: paymentAmount,
             eventId: eventId,
             orderId: orderId,
-            quantity: ticketQuantity
+            quantity: ticketQuantity,
+            eventName: event.title
           }
         );
         console.log('✅ [META CAPI] Purchase event sent successfully');

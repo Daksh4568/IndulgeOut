@@ -290,7 +290,11 @@ const BillingPage = () => {
         platformFees: pricing.platformFees,
         additionalPersons: addAnotherPerson ? [additionalPerson] : [],
         questionnaireResponses: validResponses, // Always include if responses exist
-        couponCode: appliedCoupon ? appliedCoupon.code : null, // Include coupon if applied
+       couponCode: appliedCoupon ? appliedCoupon.code : null, // Include coupon if applied        // Add user data for Meta tracking
+        userEmail: user?.email,
+        userPhone: user?.phone,
+        userId: user?._id,
+        eventName: event?.title,
       };
 
       // Add grouping offer details if applicable

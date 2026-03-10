@@ -49,12 +49,16 @@ const PaymentCallback = () => {
         setStatus('success');
         setMessage('Payment successful! Redirecting to your dashboard...');
         
-        // Track Purchase event in Meta Pixel
+        // Track Purchase event in Meta Pixel with enhanced parameters
         trackPurchase({
           eventId,
           amount: billingData.totalAmount || 0,
           quantity: billingData.quantity || 1,
-          orderId
+          orderId,
+          email: billingData.userEmail,
+          phone: billingData.userPhone,
+          userId: billingData.userId,
+          eventName: billingData.eventName
         });
         
         sessionStorage.removeItem('payment_event_id');

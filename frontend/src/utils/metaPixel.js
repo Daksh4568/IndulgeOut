@@ -3,6 +3,22 @@ import ReactPixel from 'react-facebook-pixel';
 const PIXEL_ID = '1462994898219509';
 
 /**
+ * Get Facebook Click ID (fbc) from cookie
+ */
+const getFbc = () => {
+  const match = document.cookie.match(/_fbc=([^;]+)/);
+  return match ? match[1] : null;
+};
+
+/**
+ * Get Facebook Browser ID (fbp) from cookie
+ */
+const getFbp = () => {
+  const match = document.cookie.match(/_fbp=([^;]+)/);
+  return match ? match[1] : null;
+};
+
+/**
  * Initialize Meta Pixel
  * Call this once when app loads
  */
@@ -67,20 +83,38 @@ export const trackInitiateCheckout = (data) => {
 
 /**
  * Track purchase (payment success)
- * @param {Object} data - Purchase data
+ * @param {Object} data - Purchase data with eventId, amount, quantity, orderId, userId, phone, email
  */
 export const trackPurchase = (data) => {
   try {
-    ReactPixel.track('Purchase', {
+    const eventData = {
       content_ids: [data.eventId],
       content_type: 'event',
+      content_name: data.eventName || 'Event Ticket',
       value: data.amount,
       currency: 'INR',
       num_items: data.quantity || 1,
-    }, {
-      eventID: data.orderId // For deduplication with server-side event
+    };
+
+    const advancedMatching = {};
+    
+    // Add user data for better matching
+    if (data.email) advancedMatching.em = data.email;
+    if (data.phone) advancedMatching.ph = data.phone;
+    if (data.userId) advancedMatching.external_id = data.userId;
+    
+    // Add Facebook parameters
+    const fbp = getFbp();
+    const fbc = getFbc();
+    if (fbp) advancedMatching.fbp = fbp;
+    if (fbc) advancedMatching.fbc = fbc;
+
+    ReactPixel.track('Purchase', eventData, {
+      eventID: data.orderId, // For deduplication with server-side event
+      ...advancedMatching
     });
-    console.log('📊 Meta Pixel: Purchase -', data.amount);
+    
+    console.log('📊 Meta Pixel: Purchase -', data.amount, 'Match params:', Object.keys(advancedMatching).length);
   } catch (error) {
     console.error('❌ Meta Pixel Purchase error:', error);
   }
