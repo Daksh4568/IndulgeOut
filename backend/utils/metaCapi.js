@@ -1,6 +1,5 @@
 const axios = require('axios');
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
 
 const PIXEL_ID = '1462994898219509';
 const ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
@@ -26,7 +25,7 @@ exports.sendPurchaseEvent = async (user, order) => {
       return;
     }
 
-    const eventId = order.orderId || uuidv4();
+    const eventId = order.orderId || crypto.randomUUID();
 
     await axios.post(
       `https://graph.facebook.com/v18.0/${PIXEL_ID}/events`,
@@ -83,7 +82,7 @@ exports.sendInitiateCheckoutEvent = async (user, order) => {
           {
             event_name: 'InitiateCheckout',
             event_time: Math.floor(Date.now() / 1000),
-            event_id: uuidv4(),
+            event_id: crypto.randomUUID(),
             action_source: 'website',
             event_source_url: process.env.FRONTEND_URL || 'https://indulgeout.com',
 
