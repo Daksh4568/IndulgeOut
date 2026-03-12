@@ -34,9 +34,7 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
       User.countDocuments({ role: 'host_partner', hostPartnerType: 'brand_sponsor' }),
       Event.countDocuments(),
       Event.countDocuments({ status: 'live', date: { $gte: new Date() } }),
-      // Count both old and new status for backward compatibility
-      // Old: 'pending_admin_review', New: 'pending', 'submitted'
-      Collaboration.countDocuments({ status: { $in: ['pending', 'submitted', 'pending_admin_review'] } }),
+      Collaboration.countDocuments({ status: 'submitted' }),
       Payout.aggregate([
         { $match: { status: 'completed' } },
         { $group: { _id: null, total: { $sum: '$breakdown.platformFee' } } }
@@ -48,8 +46,8 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
     // Get collaboration overview statistics
     const [totalProposals, confirmedCollabs, rejectedCollabs, completedCollabs] = await Promise.all([
       Collaboration.countDocuments(),
-      Collaboration.countDocuments({ status: { $in: ['confirmed', 'accepted', 'admin_approved', 'approved_delivered'] } }),
-      Collaboration.countDocuments({ status: { $in: ['rejected', 'admin_rejected', 'vendor_rejected', 'declined'] } }),
+      Collaboration.countDocuments({ status: { $in: ['admin_approved', 'vendor_accepted', 'counter_delivered', 'completed'] } }),
+      Collaboration.countDocuments({ status: { $in: ['admin_rejected', 'vendor_rejected'] } }),
       Collaboration.countDocuments({ status: 'completed' })
     ]);
 
@@ -141,45 +139,17 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
 // @desc    Get all pending collaboration requests (submitted, awaiting admin review)
 // @access  Admin only
 router.get('/collaborations/pending', requirePermission('manage_collaborations'), async (req, res) => {
-  try {
-    // Support old ('pending_admin_review') and new ('pending', 'submitted') status
-    const collaborations = await Collaboration.find({ 
-      status: { $in: ['pending', 'submitted', 'pending_admin_review'] }
+  try {    const collaborations = await Collaboration.find({ 
+      status: 'submitted'
     })
-      .populate('proposerId', 'name email hostPartnerType')  // Old structure
-      .populate('recipientId', 'name email hostPartnerType')  // Old structure
-      .populate('initiator.user', 'name email')  // New structure
-      .populate('recipient.user', 'name email')  // New structure
+      .populate('initiator.user', 'name email')
+      .populate('recipient.user', 'name email')
       .sort({ createdAt: -1 })
       .lean();
 
     console.log('[PENDING PROPOSALS] Found', collaborations.length, 'collaborations');
-    if (collaborations.length > 0) {
-      console.log('[PENDING PROPOSALS] Statuses:', collaborations.map(c => c.status));
-    }
 
-    // Transform old structure to new structure for frontend compatibility
-    const transformedCollaborations = collaborations.map(collab => {
-      // If using old structure, map it to new structure
-      if (collab.proposerId && !collab.initiator?.user) {
-        return {
-          ...collab,
-          initiator: {
-            user: collab.proposerId,
-            name: collab.proposerId?.name,
-            userType: collab.proposerType === 'community' ? 'community_organizer' : collab.proposerType
-          },
-          recipient: {
-            user: collab.recipientId,
-            name: collab.recipientId?.name,
-            userType: collab.recipientType === 'community' ? 'community_organizer' : collab.recipientType
-          }
-        };
-      }
-      return collab;
-    });
-
-    res.json({ data: transformedCollaborations });
+    res.json({ data: collaborations });
   } catch (error) {
     console.error('Error fetching pending collaborations:', error);
     res.status(500).json({ message: 'Server error while fetching collaborations' });
@@ -203,10 +173,8 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
 
     const [collaborations, total] = await Promise.all([
       Collaboration.find(query)
-        .populate('proposerId', 'name email hostPartnerType')  // Old structure
-        .populate('recipientId', 'name email hostPartnerType')  // Old structure
-        .populate('initiator.user', 'name email')  // New structure
-        .populate('recipient.user', 'name email')  // New structure
+        .populate('initiator.user', 'name email')
+        .populate('recipient.user', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
@@ -216,29 +184,8 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
 
     console.log('[ALL COLLABORATIONS] Found', collaborations.length, 'of', total, 'total');
 
-    // Transform old structure to new structure for frontend compatibility
-    const transformedCollaborations = collaborations.map(collab => {
-      // If using old structure, map it to new structure
-      if (collab.proposerId && !collab.initiator?.user) {
-        return {
-          ...collab,
-          initiator: {
-            user: collab.proposerId,
-            name: collab.proposerId?.name,
-            userType: collab.proposerType === 'community' ? 'community_organizer' : collab.proposerType
-          },
-          recipient: {
-            user: collab.recipientId,
-            name: collab.recipientId?.name,
-            userType: collab.recipientType === 'community' ? 'community_organizer' : collab.recipientType
-          }
-        };
-      }
-      return collab;
-    });
-
     res.json({
-      data: transformedCollaborations,
+      data: collaborations,
       pagination: {
         total,
         page: parseInt(page),
@@ -304,7 +251,7 @@ router.put('/collaborations/:id/approve', requirePermission('manage_collaboratio
     }
     
     await notificationService.createNotification({
-      recipient: collaboration.recipient?.user || collaboration.recipientId,
+      recipient: collaboration.recipient.user,
       type: notificationType,
       category: 'action_required',
       priority: 'high',
@@ -313,7 +260,7 @@ router.put('/collaborations/:id/approve', requirePermission('manage_collaboratio
       actionUrl: actionUrl,
       metadata: {
         collaborationId: collaboration._id,
-        initiatorId: collaboration.initiator?.user || collaboration.proposerId,
+        initiatorId: collaboration.initiator.user,
         initiatorName
       }
     });
@@ -370,7 +317,7 @@ router.put('/collaborations/:id/reject', requirePermission('manage_collaboration
     // Send notification to community (initiator)
     const notificationService = require('../services/notificationService');
     await notificationService.createNotification({
-      recipient: collaboration.initiator?.user || collaboration.proposerId,
+      recipient: collaboration.initiator.user,
       type: 'collaboration_rejected',
       category: 'status_update',
       title: 'Collaboration Request Rejected',
@@ -435,8 +382,8 @@ router.put('/collaborations/counters/:id/approve', requirePermission('manage_col
 
     // Send notification to initiator - hide admin review, make it look like direct counter
     const notificationService = require('../services/notificationService');
-    const recipientName = collaboration.recipient?.name || 'Vendor';
-    const recipientType = collaboration.recipient?.userType || collaboration.recipientType;
+    const recipientName = collaboration.recipient.name || 'Vendor';
+    const recipientType = collaboration.recipient.userType;
     
     let notificationType = 'venue_counter_received';
     let notificationTitle = '🏪 Venue Counter Received';
@@ -449,7 +396,7 @@ router.put('/collaborations/counters/:id/approve', requirePermission('manage_col
     }
     
     await notificationService.createNotification({
-      recipient: collaboration.initiator?.user || collaboration.proposerId,
+      recipient: collaboration.initiator.user,
       type: notificationType,
       category: 'action_required',
       priority: 'high',
@@ -458,7 +405,7 @@ router.put('/collaborations/counters/:id/approve', requirePermission('manage_col
       actionUrl: `/community/collaborations/${collaboration._id}/counter`,
       metadata: {
         collaborationId: collaboration._id,
-        recipientId: collaboration.recipient?.user || collaboration.recipientId,
+        recipientId: collaboration.recipient.user,
         recipientName
       }
     });
@@ -520,7 +467,7 @@ router.put('/collaborations/counters/:id/reject', requirePermission('manage_coll
     // Send notification to vendor about rejected counter
     const notificationService = require('../services/notificationService');
     await notificationService.createNotification({
-      recipient: collaboration.recipient?.user || collaboration.recipientId,
+      recipient: collaboration.recipient.user,
       type: 'counter_rejected',
       category: 'status_update',
       title: 'Counter Proposal Rejected',
@@ -600,7 +547,7 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
   try {
     // Support both old ('accepted', 'counter_pending_review') and new ('vendor_accepted') status
     const counters = await Collaboration.find({ 
-      status: { $in: ['accepted', 'vendor_accepted', 'counter_pending_review'] },
+      status: 'vendor_accepted',
       $or: [
         { 'response.counterOffer': { $exists: true, $ne: null } },
         { 'hasCounter': true }  // Old structure flag
@@ -608,16 +555,14 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
     })
       .populate('initiator.user', 'name email communityProfile venueProfile brandProfile')
       .populate('recipient.user', 'name email communityProfile venueProfile brandProfile')
-      .populate('proposerId', 'name email communityProfile venueProfile brandProfile')  // Old structure
-      .populate('recipientId', 'name email communityProfile venueProfile brandProfile')  // Old structure
       .sort({ 'response.respondedAt': -1 })
       .lean();
 
     // Add responderId for each counter (recipient is the one who submitted counter)
     const enhancedCounters = counters.map(counter => ({
       ...counter,
-      responderId: counter.recipient?.user || counter.recipientId,
-      responderType: counter.recipient?.userType || counter.recipientType
+      responderId: counter.recipient.user,
+      responderType: counter.recipient.userType
     }));
 
     res.json({ data: enhancedCounters });
@@ -633,8 +578,6 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
 router.get('/collaborations/counters/:id', requirePermission('manage_collaborations'), async (req, res) => {
   try {
     const collaboration = await Collaboration.findById(req.params.id)
-      .populate('proposerId', 'name email hostPartnerType communityProfile venueProfile brandProfile')
-      .populate('recipientId', 'name email hostPartnerType communityProfile venueProfile brandProfile')
       .populate('initiator.user', 'name email communityProfile venueProfile brandProfile')
       .populate('recipient.user', 'name email communityProfile venueProfile brandProfile')
       .populate('adminReview.reviewedBy', 'name email')
@@ -666,8 +609,8 @@ router.get('/collaborations/counters/:id', requirePermission('manage_collaborati
     collaboration.hasCounter = true;
 
     // Add responderId as the recipient (who submitted the counter)
-    collaboration.responderId = collaboration.recipient?.user || collaboration.recipientId;
-    collaboration.responderType = collaboration.recipient?.userType || collaboration.recipientType;
+    collaboration.responderId = collaboration.recipient.user;
+    collaboration.responderType = collaboration.recipient.userType;
 
     res.json({ data: collaboration });
   } catch (error) {
@@ -716,12 +659,9 @@ router.get('/collaborations/analytics', requirePermission('view_analytics'), asy
       recent30Days
     ] = await Promise.all([
       Collaboration.countDocuments(),
-      // Count old ('pending_admin_review') and new ('pending', 'submitted')
-      Collaboration.countDocuments({ status: { $in: ['pending', 'submitted', 'pending_admin_review'] } }),
-      // Count old ('accepted', 'approved_delivered', 'confirmed') and new ('admin_approved')
-      Collaboration.countDocuments({ status: { $in: ['accepted', 'admin_approved', 'approved_delivered', 'confirmed'] } }),
-      // Count old ('rejected', 'declined') and new ('admin_rejected', 'vendor_rejected')
-      Collaboration.countDocuments({ status: { $in: ['rejected', 'admin_rejected', 'vendor_rejected', 'declined'] } }),
+      Collaboration.countDocuments({ status: 'submitted' }),
+      Collaboration.countDocuments({ status: { $in: ['admin_approved', 'vendor_accepted', 'counter_delivered', 'completed'] } }),
+      Collaboration.countDocuments({ status: { $in: ['admin_rejected', 'vendor_rejected'] } }),
       Collaboration.countDocuments({ status: 'completed' }),
       Collaboration.aggregate([
         {
@@ -749,7 +689,7 @@ router.get('/collaborations/analytics', requirePermission('view_analytics'), asy
 //, 'accepted', 'rejected'
     // Average response time (for approved/rejected)
     const reviewedCollabs = await Collaboration.find({
-      status: { $in: ['admin_approved', 'admin_rejected', 'accepted', 'rejected', 'approved_delivered', 'confirmed', 'declined'] },
+      status: { $in: ['admin_approved', 'vendor_accepted', 'counter_delivered', 'completed'] },
       $or: [
         { 'adminReview.reviewedAt': { $exists: true } },
         { 'updatedAt': { $exists: true } }  // For old data without adminReview
@@ -818,8 +758,6 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
     const collaboration = await Collaboration.findById(req.params.id)
       .populate('initiator.user', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
       .populate('recipient.user', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
-      .populate('proposerId', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
-      .populate('recipientId', 'name email phoneNumber profilePicture hostPartnerType communityProfile venueProfile brandProfile')
       .populate('adminReview.reviewedBy', 'name email')
       .populate('adminReview.counterReviewedBy', 'name email')
       .lean();
@@ -872,21 +810,6 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
       collaboration.formData = flattenedData;
     }
 
-    // Ensure we have proper user data from either old or new structure
-    if (collaboration.proposerId && !collaboration.initiator) {
-      collaboration.initiator = {
-        user: collaboration.proposerId,
-        userType: collaboration.proposerType
-      };
-    }
-    
-    if (collaboration.recipientId && !collaboration.recipient) {
-      collaboration.recipient = {
-        user: collaboration.recipientId,
-        userType: collaboration.recipientType
-      };
-    }
-
     // Check if collaboration has a counter proposal
     let hasCounter = false;
     let counterData = null;
@@ -911,7 +834,7 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
     if (hasCounter) {
       collaboration.counterData = counterData;
       // Add responderId for display
-      collaboration.counterData.responderId = collaboration.recipient?.user || collaboration.recipientId;
+      collaboration.counterData.responderId = collaboration.recipient.user;
       collaboration.counterData.responderType = collaboration.recipient?.userType || collaboration.recipientType;
     }
     
@@ -929,8 +852,8 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
     const timeline = [
       {
         event: 'Proposal Submitted',
-        actor: collaboration.initiator?.user?.name || collaboration.proposerId?.name || 'Unknown',
-        actorType: collaboration.initiator?.userType || collaboration.proposerType,
+        actor: collaboration.initiator.user?.name || 'Unknown',
+        actorType: collaboration.initiator.userType,
         timestamp: collaboration.createdAt,
         status: 'submitted',
         description: 'Initial proposal submitted for review'
@@ -952,8 +875,8 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
     if (hasCounter && collaboration.acceptedAt) {
       timeline.push({
         event: 'Counter Proposal Submitted',
-        actor: collaboration.recipient?.user?.name || collaboration.recipientId?.name || 'Vendor',
-        actorType: collaboration.recipient?.userType || collaboration.recipientType,
+        actor: collaboration.recipient.user?.name || 'Vendor',
+        actorType: collaboration.recipient.userType,
         timestamp: collaboration.acceptedAt,
         status: 'vendor_accepted',
         description: 'Vendor responded with counter-proposal'
@@ -2427,6 +2350,72 @@ router.put('/organizers/:organizerId/verify-kyc', requirePermission('manage_paym
   } catch (error) {
     console.error('Error updating KYC status:', error);
     res.status(500).json({ message: 'Server error while updating KYC status' });
+  }
+});
+
+// ==================== WORKSPACE SPECTATE ====================
+
+/**
+ * @route   GET /api/admin/collaborations/:id/workspace/spectate
+ * @desc    Admin spectate mode - view collaboration workspace (read-only)
+ * @access  Admin only
+ */
+router.get('/collaborations/:id/workspace/spectate', requirePermission('approve_collaborations'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { formatWorkspaceForResponse } = require('../utils/workspaceUtils');
+    
+    const collaboration = await Collaboration.findById(id);
+    
+    if (!collaboration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collaboration not found'
+      });
+    }
+    
+    // Check if workspace is active
+    if (!collaboration.workspace.isActive) {
+      return res.status(400).json({
+        success: false,
+        error: 'Workspace is not active for this collaboration'
+      });
+    }
+    
+    // Format workspace data
+    const workspaceData = formatWorkspaceForResponse(collaboration);
+    
+    // Add read-only flag for admin
+    const spectateData = {
+      ...workspaceData,
+      isSpectateMode: true,
+      canEdit: false,
+      canComment: false
+    };
+    
+    res.json({
+      success: true,
+      collaboration: {
+        _id: collaboration._id,
+        type: collaboration.type,
+        status: collaboration.status,
+        initiator: collaboration.initiator,
+        recipient: collaboration.recipient,
+        formData: collaboration.formData,
+        response: collaboration.response,
+        createdAt: collaboration.createdAt,
+        adminReview: collaboration.adminReview
+      },
+      workspace: spectateData,
+      workspaceActivity: collaboration.workspaceActivity
+    });
+    
+  } catch (error) {
+    console.error('Error fetching workspace for spectate:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch workspace data'
+    });
   }
 });
 

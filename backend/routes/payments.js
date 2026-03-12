@@ -923,7 +923,10 @@ router.post('/webhook', async (req, res) => {
             eventId: eventId,
             orderId: orderId,
             quantity: ticketQuantity,
-            eventName: event.title
+            eventName: event.title,
+            category: event.categories?.[0] || 'Events',
+            city: event.location?.city || 'Unknown',
+            date: event.date
           }
         );
         console.log('✅ [META CAPI] Purchase event sent successfully');

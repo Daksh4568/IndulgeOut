@@ -16,7 +16,7 @@ const hash = (value) => {
  * Send Purchase event to Meta Conversions API
  * Call this after payment success (Cashfree webhook)
  * @param  {Object} user - User object with email, phone, ip, userAgent, userId, fbp, fbc
- * @param {Object} order - Order object with amount, eventId, orderId, quantity, eventName
+ * @param {Object} order - Order object with amount, eventId, orderId, quantity, eventName, category, city, date
  */
 exports.sendPurchaseEvent = async (user, order) => {
   try {
@@ -62,6 +62,9 @@ exports.sendPurchaseEvent = async (user, order) => {
               content_name: order.eventName || 'Event Ticket',
               content_type: 'event',
               num_items: order.quantity || 1,
+              content_category: order.category || 'Events',
+              event_city: order.city || 'Unknown',
+              event_date: order.date,
             },
           },
         ],
@@ -71,7 +74,7 @@ exports.sendPurchaseEvent = async (user, order) => {
       }
     );
 
-    console.log(`✅ Meta CAPI: Purchase event sent - ₹${order.amount} (Order: ${eventId}) [Match params: ${Object.keys(userData).length}]`);
+    console.log(`✅ Meta CAPI: Purchase event sent - ₹${order.amount} [${order.city || 'Unknown'}] (Order: ${eventId}) [Match params: ${Object.keys(userData).length}]`);
   } catch (err) {
     console.error('❌ Meta CAPI error:', err.response?.data || err.message);
   }

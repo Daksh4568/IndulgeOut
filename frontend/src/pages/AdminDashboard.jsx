@@ -493,11 +493,7 @@ const AdminDashboard = () => {
       communityToVenue: 'Community → Venue',
       communityToBrand: 'Community → Brand',
       brandToCommunity: 'Brand → Community',
-      venueToCommunity: 'Venue → Community',
-      // Legacy types
-      venue_request: 'Venue Request',
-      brand_sponsorship: 'Brand Sponsorship',
-      community_partnership: 'Community Partnership'
+      venueToCommunity: 'Venue → Community'
     };
     return labels[type] || type;
   };

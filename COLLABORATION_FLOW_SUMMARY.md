@@ -94,26 +94,32 @@ All proposals and counters are reviewed by admin before delivery to ensure compl
 ### Revenue Share
 - Percentage split (20% / 30% / 40% / Open to discussion)
 - Applied to: ticket revenue, event revenue, activation-linked revenue
+- Used in: Community→Venue, Community→Brand
 
 ### Flat Rental
 - Fixed amount (₹ ___)
 - Total space rental cost
+- Used in: Community→Venue
 
 ### Cover Charge per Attendee
 - Per-person fee (₹ ___)
 - Based on actual attendance
+- Used in: Community→Venue
 
 ### Cash Sponsorship
 - Fixed sponsorship amount (₹ ___)
 - From brand to community
+- Used in: Community→Brand
 
 ### Barter / In-Kind
 - Products, prizes, vouchers, services
-- Quantity and value specified
+- Description and value specified
+- Used in: Community→Brand, Brand→Community
 
-### Stall Cost
-- Booth/sales space fee (₹ ___)
-- For brand presence at events
+### Stall Cost / Booth Fee
+- Booth/sales space rental fee (₹ ___)
+- For brand presence at community events
+- Used in: Community→Brand
 
 ---
 
@@ -145,48 +151,51 @@ All proposals and counters are reviewed by admin before delivery to ensure compl
 ## Workflow States
 
 ### 1. Proposal Sent (User View)
-- User submits proposal
+- User submits proposal → **Status: submitted**
 - "Your request has been sent. You'll hear back here."
-- **Hidden:** Proposal enters admin review queue
+- **Hidden:** Proposal enters admin review queue (status remains: submitted)
 
 ### 2. Admin Review (Backend Only)
-- Admin dashboard receives proposal
+- Admin dashboard receives proposal (status: submitted)
 - Reviews all form content for compliance
 - Checks for inappropriate information sharing
 - Admin actions:
-  - ✅ **Approve** → Delivers to recipient
-  - ❌ **Reject** → Sends back to proposer with reason
-  - 🚩 **Flag** → Marks for further review
+  - ✅ **Approve** → Status changes to **admin_approved**, delivers to recipient
+  - ❌ **Reject** → Status changes to **admin_rejected**, sends back to proposer with reason
+  - 🚩 **Flag** → Adds to adminReview.complianceFlags array
 - User sees: "Under review" (generic status)
 
 ### 3. Delivered to Recipient
-- After admin approval, proposal reaches recipient
+- After admin approval → **Status: admin_approved**
+- Proposal reaches recipient
 - Recipient notification sent
 - Recipient reviews each section
 
 ### 4. Counter Submitted (User View)
-- Recipient submits counter/response
+- Recipient submits counter/response → **Status: vendor_accepted**
 - "Your response has been sent."
-- **Hidden:** Counter enters admin review queue
+- **Hidden:** Counter enters admin review queue (status: vendor_accepted)
 
 ### 5. Admin Review Counter (Backend Only)
-- Admin reviews counter-proposal
+- Admin reviews counter-proposal (status: vendor_accepted)
 - Same compliance checks
-- Admin approves/rejects/flags
+- Admin approves → **Status: counter_delivered** / rejects → keeps as vendor_accepted or changes to vendor_rejected
 - User sees: "Processing response"
 
 ### 6. Counter Delivered
-- After admin approval, counter reaches original proposer
+- After admin approval → **Status: counter_delivered**
+- Counter reaches original proposer
 - Original proposer notification sent
 
 ### 7. Final Confirmation
 - Both parties reach agreement
-- All terms accepted
+- All terms accepted → **Status: completed**
 - Collaboration confirmed
 
-### 8. Declined
-- Either party or admin can decline
-- Optional note explaining reason
+### 8. Other Status Values
+- **vendor_rejected:** Vendor declined the proposal (no counter)
+- **cancelled:** Initiator cancelled the collaboration
+- **expired:** Collaboration expired without response
 
 ---
 
@@ -292,14 +301,19 @@ All proposals and counters are reviewed by admin before delivery to ensure compl
 
 ```
 Step 1: Community proposes to Venue
+   ↓ Status: submitted
    ↓ [Hidden: Admin reviews proposal]
    ↓ [Admin approves]
+   ↓ Status: admin_approved
 Step 2: Venue receives proposal
    ↓ Venue submits counter
+   ↓ Status: vendor_accepted
    ↓ [Hidden: Admin reviews counter]
    ↓ [Admin approves]
+   ↓ Status: counter_delivered
 Step 3: Community receives counter
    ↓ Community accepts terms
+   ↓ Status: completed
 Step 4: Collaboration confirmed
 ```
 
@@ -441,7 +455,7 @@ User submits proposal
 Frontend: POST /api/collaborations/propose
        ↓
 Backend: 
-  - Save to database (status: "pending_admin_review")
+  - Save to database (status: "submitted")
   - Create notification for admin dashboard
   - Return to user: "Your request has been sent"
        ↓
@@ -453,17 +467,17 @@ Admin Dashboard:
   - Admin clicks: Approve / Reject / Flag
        ↓
 If APPROVED:
-  - Update status: "approved_delivered"
+  - Update status: "admin_approved"
   - Create notification for recipient
   - Recipient receives proposal
        ↓
 If REJECTED:
-  - Update status: "rejected"
+  - Update status: "admin_rejected"
   - Create notification for proposer
   - Proposer can revise and resubmit
        ↓
 If FLAGGED:
-  - Update status: "flagged"
+  - Add flag to adminReview.complianceFlags
   - Optionally still deliver
   - Track in compliance system
 ```
@@ -473,10 +487,10 @@ If FLAGGED:
 ```
 Recipient submits counter
        ↓
-Frontend: POST /api/collaborations/counter
+Frontend: POST /api/collaborations/:id/counter
        ↓
 Backend:
-  - Save to database (status: "counter_pending_review")
+  - Save to database (status: "vendor_accepted")
   - Create notification for admin dashboard
   - Return to user: "Your response has been sent"
        ↓
@@ -485,7 +499,7 @@ User sees: "Processing response"
 Admin Dashboard:
   - Counter appears in review queue
   - Admin reviews counter content
-  - Admin clicks: Approve / Reject / Flag
+  - Admin clicks: Approve / Reject
        ↓
 If APPROVED:
   - Update status: "counter_delivered"
@@ -493,32 +507,43 @@ If APPROVED:
   - Proposer receives counter
        ↓
 If REJECTED:
-  - Update status: "counter_rejected"
+  - Update status: "vendor_rejected" OR keep as "vendor_accepted"
   - Create notification for responder
   - Responder can revise and resubmit
 ```
 
 ### Database Schema (Key Fields)
 
-**Collaborations Table:**
-- `id`, `type` (community_to_venue, brand_to_community, etc.)
-- `proposer_id`, `proposer_type`, `recipient_id`, `recipient_type`
-- `status` (pending_admin_review, approved_delivered, rejected, flagged, counter_pending_review, counter_delivered, confirmed, declined)
-- `form_data` (JSON: all sections and fields)
-- `admin_review_notes` (private)
-- `admin_reviewed_by`, `admin_reviewed_at`
-- `rejection_reason` (if rejected)
-- `compliance_flags` (array)
-- `created_at`, `updated_at`
+**Collaborations Collection (MongoDB):**
+- `_id` (ObjectId)
+- `type` (communityToVenue, communityToBrand, brandToCommunity, venueToCommunity)
+- `initiator` (object):
+  - `user` (ObjectId ref to User, required)
+  - `userType` (community_organizer / venue / brand_sponsor, required)
+  - `name` (String, required)
+  - `profileImage` (String)
+- `recipient` (object):
+  - `user` (ObjectId ref to User, required)
+  - `userType` (community_organizer / venue / brand_sponsor, required)
+  - `name` (String, required)
+  - `profileImage` (String)
+- `formData` (Mixed: all proposal sections and fields)
+- `status` (submitted, admin_approved, admin_rejected, vendor_accepted, counter_delivered, vendor_rejected, completed, cancelled, expired)
+- `response` (object):
+  - `message` (String)
+  - `respondedAt` (Date)
+  - `counterOffer` (Mixed: field responses, house rules, commercial counter, etc.)
+- `adminReview` (object):
+  - `reviewedBy` (ObjectId ref to User)
+  - `reviewedAt` (Date)
+  - `decision` (approved / rejected / flagged)
+  - `notes` (String, private)
+  - `complianceFlags` (Array)
+  - `counterReviewedBy` (ObjectId)
+  - `counterReviewedAt` (Date)
+- `createdAt`, `updatedAt` (timestamps)
 
-**Collaboration_Counters Table:**
-- `id`, `collaboration_id` (references original proposal)
-- `responder_id`, `responder_type`
-- `counter_data` (JSON: all field responses)
-- `status` (pending_admin_review, approved, rejected, flagged)
-- `admin_review_notes` (private)
-- `admin_reviewed_by`, `admin_reviewed_at`
-- `created_at`, `updated_at`
+**Note:** Counters are stored within the same Collaboration document in the `response.counterOffer` field, not as a separate collection.
 
 ---
 
@@ -556,9 +581,12 @@ If REJECTED:
 - Never mentions "admin review" explicitly
 
 **Generic Status Labels:**
-- "Processing" (actually: admin reviewing)
-- "Delivered" (actually: admin approved & delivered)
-- "Needs revision" (actually: admin rejected)
+- "Submitted" → submitted (actual status: proposal submitted to admin)
+- "Under Review" → submitted (user-facing message while admin reviews)
+- "Delivered" → admin_approved (actual: admin approved & delivered to recipient)
+- "Counter Received" → counter_delivered (actual: admin approved counter & delivered)
+- "Completed" → completed (both parties agreed to final terms)
+- "Needs revision" → admin_rejected (actual: admin rejected submission)
 
 ---
 

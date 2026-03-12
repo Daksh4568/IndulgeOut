@@ -2,11 +2,26 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Collaboration = require('../models/Collaboration');
 const User = require('../models/User');
+const readline = require('readline');
+
+// Create readline interface for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+function askQuestion(question) {
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      resolve(answer);
+    });
+  });
+}
 
 async function checkCollaborations() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Connected to MongoDB');
+    console.log('✅ Connected to MongoDB');
 
     // Get all collaborations
     const allCollabs = await Collaboration.find().lean();
@@ -38,6 +53,13 @@ async function checkCollaborations() {
       Object.entries(byStatus).forEach(([status, count]) => {
         console.log(`  ${status}: ${count}`);
       });
+
+      // Check for legacy structure usage
+      console.log('\n=== LEGACY STRUCTURE CHECK ===');
+      const legacyCount = allCollabs.filter(c => c.proposerId || c.recipientId).length;
+      const newStructureCount = allCollabs.filter(c => c.initiator?.user || c.recipient?.user).length;
+      console.log(`  Using Legacy Fields (proposerId/recipientId): ${legacyCount}`);
+      console.log(`  Using New Structure (initiator/recipient): ${newStructureCount}`);
     }
 
     // Get all community organizer users
@@ -61,11 +83,40 @@ async function checkCollaborations() {
       console.log(`  Received: ${receivedCount}`);
     }
 
+    // Ask user if they want to delete all collaborations
+    if (allCollabs.length > 0) {
+      console.log('\n' + '='.repeat(60));
+      console.log('⚠️  DELETE COLLABORATIONS');
+      console.log('='.repeat(60));
+      console.log(`\nFound ${allCollabs.length} collaboration(s) in the database.`);
+      const answer = await askQuestion('\n❓ Do you want to DELETE ALL collaborations? (yes/no): ');
+      
+      if (answer.toLowerCase() === 'yes' || answer.toLowerCase() === 'y') {
+        console.log('\n🗑️  Deleting all collaborations...');
+        const result = await Collaboration.deleteMany({});
+        console.log(`✅ Successfully deleted ${result.deletedCount} collaboration(s)`);
+        
+        // Verify deletion
+        const remainingCount = await Collaboration.countDocuments();
+        console.log(`\n📊 Remaining collaborations: ${remainingCount}`);
+        
+        if (remainingCount === 0) {
+          console.log('\n✨ Database is now clean! All collaborations removed.');
+          console.log('📝 Next step: Remove legacy fields from Collaboration model');
+        }
+      } else {
+        console.log('\n❌ Deletion cancelled. No collaborations were removed.');
+      }
+    } else {
+      console.log('\n✨ No collaborations found in database. Database is clean!');
+    }
+
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Error:', error);
   } finally {
+    rl.close();
     await mongoose.disconnect();
-    console.log('\nDisconnected from MongoDB');
+    console.log('\n👋 Disconnected from MongoDB');
   }
 }
 

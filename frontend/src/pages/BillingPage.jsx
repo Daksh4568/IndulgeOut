@@ -295,6 +295,9 @@ const BillingPage = () => {
         userPhone: user?.phone,
         userId: user?._id,
         eventName: event?.title,
+        eventCategory: event?.categories?.[0] || 'Events',
+        eventCity: event?.location?.city || 'Unknown',
+        eventDate: event?.date,
       };
 
       // Add grouping offer details if applicable
@@ -377,6 +380,9 @@ const BillingPage = () => {
           eventId: event._id,
           amount: pricing.grandTotal,
           quantity: pricing.numberOfPeople,
+          category: event.categories?.[0] || 'Events',
+          city: event.location?.city || 'Unknown',
+          date: event.date,
         });
 
         const checkoutOptions = {

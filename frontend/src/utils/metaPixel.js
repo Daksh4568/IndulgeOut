@@ -45,18 +45,22 @@ export const trackPageView = () => {
 
 /**
  * Track when user views an event
- * @param {Object} event - Event object with title, _id, price
+ * @param {Object} event - Event object with title, _id, price, categories, location
  */
 export const trackViewContent = (event) => {
   try {
     ReactPixel.track('ViewContent', {
       content_name: event.title,
       content_ids: [event._id],
+      content_category: event.categories?.[0] || 'Events', // Primary category
       content_type: 'event',
       value: event.price?.amount || 0,
       currency: 'INR',
+      // Add custom parameters for Meta reporting
+      event_city: event.location?.city || 'Unknown',
+      event_date: event.date,
     });
-    console.log('📊 Meta Pixel: ViewContent -', event.title);
+    console.log('📊 Meta Pixel: ViewContent -', event.title, `[${event.location?.city}]`);
   } catch (error) {
     console.error('❌ Meta Pixel ViewContent error:', error);
   }
@@ -64,7 +68,7 @@ export const trackViewContent = (event) => {
 
 /**
  * Track when user initiates checkout
- * @param {Object} data - Checkout data
+ * @param {Object} data - Checkout data with eventId, amount, quantity, category, city, date
  */
 export const trackInitiateCheckout = (data) => {
   try {
@@ -74,8 +78,11 @@ export const trackInitiateCheckout = (data) => {
       value: data.amount,
       currency: 'INR',
       num_items: data.quantity || 1,
+      content_category: data.category || 'Events',
+      event_city: data.city || 'Unknown',
+      event_date: data.date,
     });
-    console.log('📊 Meta Pixel: InitiateCheckout -', data.amount);
+    console.log('📊 Meta Pixel: InitiateCheckout -', data.amount, `[${data.city || 'Unknown'}]`);
   } catch (error) {
     console.error('❌ Meta Pixel InitiateCheckout error:', error);
   }
@@ -83,7 +90,7 @@ export const trackInitiateCheckout = (data) => {
 
 /**
  * Track purchase (payment success)
- * @param {Object} data - Purchase data with eventId, amount, quantity, orderId, userId, phone, email
+ * @param {Object} data - Purchase data with eventId, amount, quantity, orderId, userId, phone, email, category, city, date
  */
 export const trackPurchase = (data) => {
   try {
@@ -94,6 +101,9 @@ export const trackPurchase = (data) => {
       value: data.amount,
       currency: 'INR',
       num_items: data.quantity || 1,
+      content_category: data.category || 'Events',
+      event_city: data.city || 'Unknown',
+      event_date: data.date,
     };
 
     const advancedMatching = {};
@@ -114,7 +124,7 @@ export const trackPurchase = (data) => {
       ...advancedMatching
     });
     
-    console.log('📊 Meta Pixel: Purchase -', data.amount, 'Match params:', Object.keys(advancedMatching).length);
+    console.log('📊 Meta Pixel: Purchase -', data.amount, `[${data.city || 'Unknown'}]`, 'Match params:', Object.keys(advancedMatching).length);
   } catch (error) {
     console.error('❌ Meta Pixel Purchase error:', error);
   }

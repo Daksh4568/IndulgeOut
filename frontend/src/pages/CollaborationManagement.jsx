@@ -199,8 +199,8 @@ const CollaborationManagement = () => {
   };
 
   const getTypeIcon = (type) => {
-    if (type === 'venue_request') return <Building2 className="h-5 w-5" />;
-    if (type === 'brand_sponsorship') return <Sparkles className="h-5 w-5" />;
+    if (type === 'communityToVenue' || type === 'venueToCommunity') return <Building2 className="h-5 w-5" />;
+    if (type === 'communityToBrand' || type === 'brandToCommunity') return <Sparkles className="h-5 w-5" />;
     return <Users className="h-5 w-5" />;
   };
 
@@ -547,32 +547,17 @@ const CollaborationManagement = () => {
                       </div>
                     )}
 
-                    {/* Actions for SENT proposals - Review Counter */}
-                    {!isReceived && collab.status === 'counter_delivered' && (
+                    {/* Admin Spectate Button - Available when workspace is active */}
+                    {(collab.status === 'counter_delivered' || collab.status === 'completed') && (
                       <div className="flex items-center space-x-2 ml-4">
                         <button
-                          onClick={() => navigate(`/collaborations/${collab._id}/counter-review`)}
-                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all flex items-center font-medium"
+                          onClick={() => navigate(`/collaborations/${collab._id}/workspace`)}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all flex items-center font-medium shadow-lg shadow-purple-900/30"
                           style={{ fontFamily: 'Source Serif Pro, serif' }}
-                          title="Review counter-proposal"
+                          title="Spectate collaborative workspace"
                         >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Review Counter
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Actions for CONFIRMED collaborations */}
-                    {collab.status === 'confirmed' && (
-                      <div className="flex items-center space-x-2 ml-4">
-                        <button
-                          onClick={() => navigate(`/collaborations/${collab._id}/final-terms`)}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all flex items-center"
-                          style={{ fontFamily: 'Source Serif Pro, serif' }}
-                          title="View final confirmed terms"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          View Final Terms
+                          <Eye className="h-4 w-4 mr-2" />
+                          Spectate
                         </button>
                       </div>
                     )}

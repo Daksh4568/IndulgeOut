@@ -58,7 +58,10 @@ const PaymentCallback = () => {
           email: billingData.userEmail,
           phone: billingData.userPhone,
           userId: billingData.userId,
-          eventName: billingData.eventName
+          eventName: billingData.eventName,
+          category: billingData.eventCategory || 'Events',
+          city: billingData.eventCity || 'Unknown',
+          date: billingData.eventDate,
         });
         
         sessionStorage.removeItem('payment_event_id');

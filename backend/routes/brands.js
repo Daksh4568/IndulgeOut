@@ -529,7 +529,7 @@ router.post('/:id/propose-collaboration', authMiddleware, async (req, res) => {
 
     // Create collaboration request (goes to admin first)
     const collaboration = new Collaboration({
-      type: 'brand_sponsorship',
+      type: 'communityToBrand',
       initiator: {
         user: initiator._id,
         userType: initiator.hostPartnerType || 'community',

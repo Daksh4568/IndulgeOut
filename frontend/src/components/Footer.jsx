@@ -114,10 +114,10 @@ const Footer = () => {
                 background: 'linear-gradient(180deg, rgba(217,217,217,0.15) 0%, rgba(115,115,115,0.2) 100%)'
               }}
             >
-              <h3 className="text-base font-bold text-white text-center mb-3">Get the App</h3>
+              <h3 className="text-base font-bold text-white text-center mb-3">App coming soon</h3>
               <div className="flex gap-3">
                 <a 
-                  href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+                  // href="https://apps.apple.com/in/app/indulgeout/id6744292040"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 bg-white hover:bg-gray-100 text-black px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg"
@@ -131,7 +131,7 @@ const Footer = () => {
                   </div>
                 </a>
                 <a 
-                  href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                  // href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 bg-white hover:bg-gray-100 text-black px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg"
@@ -170,10 +170,10 @@ const Footer = () => {
               background: 'linear-gradient(180deg, rgba(217,217,217,0.15) 0%, rgba(115,115,115,0.2) 100%)'
             }}
           >
-            <h3 className="text-sm font-bold text-white text-center mb-3">Get the App</h3>
+            <h3 className="text-sm font-bold text-white text-center mb-3">App coming soon</h3>
             <div className="flex gap-2">
               <a 
-                href="https://apps.apple.com/in/app/indulgeout/id6744292040"
+                // href="https://apps.apple.com/in/app/indulgeout/id6744292040"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 bg-white hover:bg-gray-100 text-black px-2.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-lg"
@@ -187,7 +187,7 @@ const Footer = () => {
                 </div>
               </a>
               <a 
-                href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
+                // href="https://play.google.com/store/apps/details?id=com.anantexperiences.indulgeout"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 bg-white hover:bg-gray-100 text-black px-2.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-lg"

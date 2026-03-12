@@ -11,7 +11,8 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
   
   const [hoveredCard, setHoveredCard] = useState(null);
 
-  const pricingModels = [
+  // Venue pricing models (for communityToVenue)
+  const venuePricingModels = [
     {
       id: 'revenueShare',
       title: 'Revenue Share',
@@ -37,6 +38,45 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
       placeholder: 'Enter amount per person',
     },
   ];
+
+  // Brand pricing models (for communityToBrand)
+  const brandPricingModels = [
+    {
+      id: 'cashSponsorship',
+      title: 'Cash Sponsorship',
+      description: 'Fixed monetary sponsorship amount',
+      hasInput: true,
+      inputType: 'amount',
+      placeholder: 'Enter sponsorship amount',
+    },
+    {
+      id: 'barter',
+      title: 'Barter / In-Kind',
+      description: 'Products, prizes, vouchers, or services',
+      hasInput: true,
+      inputType: 'text',
+      placeholder: 'Describe the barter (e.g., "50 product samples + 10 vouchers")',
+    },
+    {
+      id: 'stallCost',
+      title: 'Stall/Booth Fee',
+      description: 'Booth or sales space rental at the event',
+      hasInput: true,
+      inputType: 'amount',
+      placeholder: 'Enter stall cost',
+    },
+    {
+      id: 'revenueShare',
+      title: 'Revenue Share',
+      description: 'Share a percentage of event or activation revenue',
+      hasInput: true,
+      inputType: 'percentage',
+      options: ['20%', '30%', '40%', 'Open to discussion'],
+    },
+  ];
+
+  // Select pricing models based on proposal type
+  const pricingModels = proposalType === 'communityToBrand' ? brandPricingModels : venuePricingModels;
 
   const handleModelToggle = (modelId) => {
     const updatedPricing = { ...formData.pricing };
@@ -97,7 +137,11 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
           </div>
           <div>
             <h2 className="text-white text-xl font-semibold">PRICING & PAYMENT</h2>
-            <p className="text-gray-400 text-sm">How do you want to pay the venue?</p>
+            <p className="text-gray-400 text-sm">
+              {proposalType === 'communityToBrand' 
+                ? 'What commercial model works for both parties?' 
+                : 'How do you want to pay the venue?'}
+            </p>
           </div>
         </div>
       </div>
@@ -150,6 +194,21 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
                             </button>
                           ))}
                         </>
+                      ) : model.inputType === 'text' ? (
+                        // Text input for barter description
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            value={savedValue || ''}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleValueChange(model.id, e.target.value);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder={model.placeholder}
+                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
                       ) : (
                         // Amount input
                         <div className="relative flex-1 max-w-xs">
@@ -188,7 +247,7 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
                   {isSelected && !isHovered && savedValue && (
                     <div className="flex flex-wrap items-center gap-3 mt-3">
                       <span className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm font-medium">
-                        {model.inputType === 'amount' ? `Rs.${savedValue}` : savedValue}
+                        {model.inputType === 'amount' ? `₹${savedValue}` : savedValue}
                       </span>
                       {savedComment && (
                         <button

@@ -44,6 +44,7 @@ import CommunityCounterFormBrand from './pages/CommunityCounterFormBrand'
 import CommunityCounterFormVenue from './pages/CommunityCounterFormVenue'
 import CounterFormRouter from './pages/CounterFormRouter'
 import FinalTermsView from './pages/FinalTermsView'
+import CollabWorkspace from './pages/CollabWorkspace'
 import AdminDashboard from './pages/AdminDashboard'
 import VenueDashboard from './pages/VenueDashboard'
 import BrandDashboard from './pages/BrandDashboard'
@@ -155,6 +156,9 @@ function AppContent() {
         
         {/* Counter Forms - Smart router detects collaboration type */}
         <Route path="/collaborations/:id/counter" element={<ErrorBoundary><CounterFormRouter /></ErrorBoundary>} />
+        
+        {/* Collaboration Workspace - Interactive negotiation */}
+        <Route path="/collaborations/:id/workspace" element={<ErrorBoundary><CollabWorkspace /></ErrorBoundary>} />
         
         {/* View Final Terms after collaboration is confirmed */}
         <Route path="/collaborations/:id/final-terms" element={<ErrorBoundary><FinalTermsView /></ErrorBoundary>} />

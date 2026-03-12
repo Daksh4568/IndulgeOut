@@ -416,7 +416,7 @@ router.post('/:id/request-collaboration', authMiddleware, async (req, res) => {
 
     // Create collaboration request (goes to admin first)
     const collaboration = new Collaboration({
-      type: 'venue_request',
+      type: 'communityToVenue',
       initiator: {
         user: initiator._id,
         userType: initiator.hostPartnerType || 'community',

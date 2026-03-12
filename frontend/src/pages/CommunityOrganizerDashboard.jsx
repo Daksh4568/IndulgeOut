@@ -5,7 +5,7 @@ import {
   Eye, Target, Clock, ChevronRight, Plus, Edit, Share2,
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   ArrowUpRight, ArrowDownRight, Filter, Download, Bell,
-  Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText
+  Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText, Layout
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -1315,19 +1315,16 @@ const CommunityOrganizerDashboard = () => {
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
                         <button
-                          onClick={() => navigate(`/collaborations/${collab._id}`)}
-                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                          onClick={() => navigate(`/collaborations/${collab._id}/workspace`)}
+                          disabled={collab.status !== 'counter_delivered' && collab.status !== 'completed'}
+                          className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full ${
+                            collab.status === 'counter_delivered' || collab.status === 'completed'
+                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-900/30'
+                              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                          }`}
                         >
-                          <Eye className="h-4 w-4" />
-                          <span>View Details</span>
-                        </button>
-
-                        <button
-                          onClick={() => navigate(`/collaborations/${collab._id}/contact`)}
-                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
-                        >
-                          <Users className="h-4 w-4" />
-                          <span>Contact</span>
+                          <Layout className="h-4 w-4" />
+                          <span>Open Workspace</span>
                         </button>
                       </div>
                     </div>
@@ -1424,19 +1421,16 @@ const CommunityOrganizerDashboard = () => {
                             {/* Action Buttons */}
                             <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
                               <button
-                                onClick={() => navigate(`/collaborations/${collab._id}`)}
-                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
+                                onClick={() => navigate(`/collaborations/${collab._id}/workspace`)}
+                                disabled={collab.status !== 'counter_delivered' && collab.status !== 'completed'}
+                                className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full ${
+                                  collab.status === 'counter_delivered' || collab.status === 'completed'
+                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-900/30'
+                                    : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                }`}
                               >
-                                <Eye className="h-4 w-4" />
-                                <span>View Details</span>
-                              </button>
-
-                              <button
-                                onClick={() => navigate(`/collaborations/${collab._id}/contact`)}
-                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
-                              >
-                                <Users className="h-4 w-4" />
-                                <span>Contact</span>
+                                <Layout className="h-4 w-4" />
+                                <span>Open Workspace</span>
                               </button>
                             </div>
                           </div>
