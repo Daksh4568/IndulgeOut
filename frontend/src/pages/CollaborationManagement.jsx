@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../config/api';
 import {
   ArrowLeft, MessageCircle, Check, X, Clock, AlertCircle,
-  User, Calendar, Users, DollarSign, Send, Building2, Sparkles, FileText
+  User, Calendar, Users, DollarSign, Send, Building2, Sparkles, FileText, Eye
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
@@ -135,6 +135,25 @@ const CollaborationManagement = () => {
     // Use userFacingStatus if available, otherwise fall back to status
     const displayStatus = collab.userFacingStatus || collab.status;
     
+    // Don't show admin internal statuses to users
+    if (displayStatus === 'admin_approved' || displayStatus === 'submitted') {
+      // For received requests that are admin_approved, show as "New Proposal"
+      // For sent requests that are submitted/admin_approved, show as "Under Review"
+      if (isReceived) {
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-900/30 text-purple-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            New Proposal
+          </span>
+        );
+      } else {
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            Under Review
+          </span>
+        );
+      }
+    }
+    
     // Map user-facing status to badge styling
     const badges = {
       // User-facing statuses
@@ -161,12 +180,6 @@ const CollaborationManagement = () => {
       flagged: { bg: 'bg-red-900/30', text: 'text-red-300' },
       
       // Legacy support
-      submitted: { bg: 'bg-blue-900/30', text: 'text-blue-300', label: 'Pending' },
-      admin_approved: { 
-        bg: 'bg-purple-900/30', 
-        text: 'text-purple-300', 
-        label: isReceived ? 'Awaiting Your Response' : 'Delivered'
-      },
       admin_rejected: { bg: 'bg-red-900/30', text: 'text-red-300', label: 'Not Approved' },
       vendor_accepted: { bg: 'bg-green-900/30', text: 'text-green-300', label: 'Accepted' },
       vendor_rejected: { bg: 'bg-red-900/30', text: 'text-red-300', label: 'Rejected' },
@@ -256,7 +269,17 @@ const CollaborationManagement = () => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/organizer/dashboard')}
+            onClick={() => {
+              // Navigate to correct dashboard based on user type
+              const userType = user?.hostPartnerType;
+              if (userType === 'brand_sponsor') {
+                navigate('/brand/dashboard');
+              } else if (userType === 'venue') {
+                navigate('/venue/dashboard');
+              } else {
+                navigate('/organizer/dashboard');
+              }
+            }}
             className="flex items-center space-x-2 text-gray-400 hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -420,7 +443,6 @@ const CollaborationManagement = () => {
                             {partner?.name || 'Unknown Partner'}
                           </h3>
                           {getStatusBadge(collab, isReceived)}
-                          {getPriorityBadge(collab.priority)}
                           {/* Counter Indicator */}
                           {collab.hasCounter && collab.latestCounterId && (
                             <span className="px-2 py-1 bg-purple-900/30 text-purple-300 text-xs font-medium rounded flex items-center" style={{ fontFamily: 'Source Serif Pro, serif' }}>
@@ -547,20 +569,6 @@ const CollaborationManagement = () => {
                       </div>
                     )}
 
-                    {/* Admin Spectate Button - Available when workspace is active */}
-                    {(collab.status === 'counter_delivered' || collab.status === 'completed') && (
-                      <div className="flex items-center space-x-2 ml-4">
-                        <button
-                          onClick={() => navigate(`/collaborations/${collab._id}/workspace`)}
-                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all flex items-center font-medium shadow-lg shadow-purple-900/30"
-                          style={{ fontFamily: 'Source Serif Pro, serif' }}
-                          title="Spectate collaborative workspace"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Spectate
-                        </button>
-                      </div>
-                    )}
                     
                     {/* Show info message for pending states - hide admin review mention */}
                     {(collab.status === 'pending_admin_review' || collab.status === 'submitted') && (

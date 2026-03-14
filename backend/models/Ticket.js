@@ -96,7 +96,13 @@ const ticketSchema = new mongoose.Schema({
     tierPeople: Number,
     guestName: String,
     guestEmail: String,
-    primaryUserId: mongoose.Schema.Types.ObjectId
+    primaryUserId: mongoose.Schema.Types.ObjectId,
+    // Coupon/discount tracking
+    couponCode: String,
+    couponDiscount: Number,
+    couponDiscountType: String,
+    couponDiscountValue: Number,
+    originalAmount: Number
   },
   // Settlement tracking fields
   settlementStatus: {
@@ -112,6 +118,12 @@ const ticketSchema = new mongoose.Schema({
   },
   settlementAmount: {
     type: Number // Final amount settled to organizer (after gateway fees)
+  },
+  cashfreeServiceCharge: {
+    type: Number // Cashfree's processing fee (1.2% of order amount)
+  },
+  cashfreeServiceTax: {
+    type: Number // GST on Cashfree's service charge
   },
   gatewayResponse: {
     paymentId: String,

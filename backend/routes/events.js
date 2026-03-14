@@ -511,6 +511,25 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       });
       console.log(`✅ Ticket generated: ${ticket.ticketNumber} (${ticketQuantity} slot${ticketQuantity > 1 ? 's' : ''})`);
       console.log(`🎫 [Ticket Generated] QR Code present: ${!!ticket?.qrCode}, Length: ${ticket?.qrCode?.length || 0}`);
+
+      // For free events (no Cashfree payment), mark ticket as not needing reconciliation
+      const ticketAmount = finalAmount || (event.price?.amount || 0) * ticketQuantity;
+      if (!req.body.paymentId && ticketAmount === 0) {
+        try {
+          const TicketModel = require('../models/Ticket');
+          await TicketModel.findByIdAndUpdate(ticket._id, {
+            $set: {
+              reconciliationStatus: 'verified',
+              reconciliationNotes: 'Free event - no payment required',
+              settlementStatus: 'settled',
+              lastReconciliationDate: new Date()
+            }
+          });
+          console.log(`✅ [Free Event] Ticket ${ticket.ticketNumber} marked as verified (no payment needed)`);
+        } catch (freeUpdateErr) {
+          console.error('⚠️ [Free Event] Failed to update free ticket status:', freeUpdateErr.message);
+        }
+      }
     } catch (ticketError) {
       console.error('❌ [TICKET ERROR] Failed to generate ticket:', ticketError.message);
       console.error('❌ [TICKET ERROR STACK]:', ticketError.stack);

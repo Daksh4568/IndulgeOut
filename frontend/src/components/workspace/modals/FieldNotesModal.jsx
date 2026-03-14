@@ -9,7 +9,9 @@ const FieldNotesModal = ({
   section,
   field,
   myName,
-  onRefresh
+  onRefresh,
+  preloadedNotes,
+  isReadOnly
 }) => {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -20,7 +22,12 @@ const FieldNotesModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchNotes();
+      if (preloadedNotes) {
+        setNotes(preloadedNotes);
+        setLoading(false);
+      } else {
+        fetchNotes();
+      }
     }
   }, [isOpen, section, field]);
 
@@ -116,7 +123,7 @@ const FieldNotesModal = ({
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#7878E9' }} />
             </div>
           ) : notes.length === 0 ? (
             <div className="text-center py-12">
@@ -147,6 +154,7 @@ const FieldNotesModal = ({
         </div>
 
         {/* Input */}
+        {!isReadOnly && (
         <div className="px-6 py-4 border-t border-gray-800">
           <form onSubmit={handleAddNote}>
             {error && (
@@ -163,7 +171,7 @@ const FieldNotesModal = ({
                 rows={3}
                 maxLength={500}
                 disabled={sending}
-                className="flex-1 px-3 py-2 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none disabled:opacity-50"
+                className="flex-1 px-3 py-2 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#7878E9] resize-none disabled:opacity-50"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -174,7 +182,8 @@ const FieldNotesModal = ({
               <button
                 type="submit"
                 disabled={sending || !newNote.trim()}
-                className="p-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2.5 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
               >
                 {sending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -189,6 +198,7 @@ const FieldNotesModal = ({
             </p>
           </form>
         </div>
+        )}
       </div>
     </div>
   );

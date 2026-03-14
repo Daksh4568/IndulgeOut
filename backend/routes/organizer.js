@@ -184,10 +184,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
     };
     if (!community.communityProfile?.communityName) profileCheck.missingFields.push('communityName');
     if (!community.communityProfile?.city) profileCheck.missingFields.push('city');
-    if (!community.communityProfile?.eventExperience) profileCheck.missingFields.push('eventExperience');
-    if (!community.communityProfile?.description) profileCheck.missingFields.push('description');
-    if (!community.communityProfile?.eventCategories || community.communityProfile?.eventCategories.length === 0) {
-      profileCheck.missingFields.push('eventCategories');
+    if (!community.communityProfile?.pastEventExperience) profileCheck.missingFields.push('pastEventExperience');
+    if (!community.communityProfile?.communityDescription) profileCheck.missingFields.push('communityDescription');
+    if (!community.communityProfile?.category || community.communityProfile?.category.length === 0) {
+      profileCheck.missingFields.push('category');
     }
 
     if (profileCheck.missingFields.length > 0) {

@@ -142,14 +142,29 @@ router.get('/collaborations/pending', requirePermission('manage_collaborations')
   try {    const collaborations = await Collaboration.find({ 
       status: 'submitted'
     })
-      .populate('initiator.user', 'name email')
-      .populate('recipient.user', 'name email')
+      .populate('initiator.user', 'name email communityProfile brandProfile venueProfile')
+      .populate('recipient.user', 'name email communityProfile brandProfile venueProfile')
       .sort({ createdAt: -1 })
       .lean();
 
     console.log('[PENDING PROPOSALS] Found', collaborations.length, 'collaborations');
 
-    res.json({ data: collaborations });
+    // Add compatibility fields for frontend
+    const transformedCollaborations = collaborations.map(collab => ({
+      ...collab,
+      proposerId: {
+        _id: collab.initiator.user._id,
+        name: collab.initiator.name || collab.initiator.user?.communityProfile?.communityName || collab.initiator.user?.brandProfile?.brandName || collab.initiator.user?.name || 'Unknown',
+        email: collab.initiator.user?.email
+      },
+      recipientId: {
+        _id: collab.recipient.user._id,
+        name: collab.recipient.name || collab.recipient.user?.brandProfile?.brandName || collab.recipient.user?.venueProfile?.venueName || collab.recipient.user?.communityProfile?.communityName || collab.recipient.user?.name || 'Unknown',
+        email: collab.recipient.user?.email
+      }
+    }));
+
+    res.json({ data: transformedCollaborations });
   } catch (error) {
     console.error('Error fetching pending collaborations:', error);
     res.status(500).json({ message: 'Server error while fetching collaborations' });
@@ -173,8 +188,8 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
 
     const [collaborations, total] = await Promise.all([
       Collaboration.find(query)
-        .populate('initiator.user', 'name email')
-        .populate('recipient.user', 'name email')
+        .populate('initiator.user', 'name email communityProfile brandProfile venueProfile')
+        .populate('recipient.user', 'name email communityProfile brandProfile venueProfile')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
@@ -184,8 +199,23 @@ router.get('/collaborations/all', requirePermission('manage_collaborations'), as
 
     console.log('[ALL COLLABORATIONS] Found', collaborations.length, 'of', total, 'total');
 
+    // Add compatibility fields for frontend
+    const transformedCollaborations = collaborations.map(collab => ({
+      ...collab,
+      proposerId: {
+        _id: collab.initiator.user._id,
+        name: collab.initiator.name || collab.initiator.user?.communityProfile?.communityName || collab.initiator.user?.brandProfile?.brandName || collab.initiator.user?.name || 'Unknown',
+        email: collab.initiator.user?.email
+      },
+      recipientId: {
+        _id: collab.recipient.user._id,
+        name: collab.recipient.name || collab.recipient.user?.brandProfile?.brandName || collab.recipient.user?.venueProfile?.venueName || collab.recipient.user?.communityProfile?.communityName || collab.recipient.user?.name || 'Unknown',
+        email: collab.recipient.user?.email
+      }
+    }));
+
     res.json({
-      data: collaborations,
+      data: transformedCollaborations,
       pagination: {
         total,
         page: parseInt(page),
@@ -561,8 +591,24 @@ router.get('/collaborations/counters/pending', requirePermission('manage_collabo
     // Add responderId for each counter (recipient is the one who submitted counter)
     const enhancedCounters = counters.map(counter => ({
       ...counter,
-      responderId: counter.recipient.user,
-      responderType: counter.recipient.userType
+      responderId: {
+        _id: counter.recipient.user._id,
+        name: counter.recipient.name || counter.recipient.user?.brandProfile?.brandName || counter.recipient.user?.venueProfile?.venueName || counter.recipient.user?.communityProfile?.communityName || counter.recipient.user?.name || 'Unknown',
+        email: counter.recipient.user?.email
+      },
+      responderType: counter.recipient.userType,
+      proposerId: {
+        _id: counter.initiator.user._id,
+        name: counter.initiator.name || counter.initiator.user?.communityProfile?.communityName || counter.initiator.user?.brandProfile?.brandName || counter.initiator.user?.name || 'Unknown',
+        email: counter.initiator.user?.email
+      },
+      collaborationId: {
+        _id: counter._id,
+        proposerId: {
+          _id: counter.initiator.user._id,
+          name: counter.initiator.name || counter.initiator.user?.communityProfile?.communityName || counter.initiator.user?.brandProfile?.brandName || counter.initiator.user?.name || 'Unknown'
+        }
+      }
     }));
 
     res.json({ data: enhancedCounters });
@@ -609,8 +655,20 @@ router.get('/collaborations/counters/:id', requirePermission('manage_collaborati
     collaboration.hasCounter = true;
 
     // Add responderId as the recipient (who submitted the counter)
-    collaboration.responderId = collaboration.recipient.user;
+    collaboration.responderId = {
+      _id: collaboration.recipient.user._id,
+      name: collaboration.recipient.name || collaboration.recipient.user?.brandProfile?.brandName || collaboration.recipient.user?.venueProfile?.venueName || collaboration.recipient.user?.communityProfile?.communityName || collaboration.recipient.user?.name || 'Unknown',
+      email: collaboration.recipient.user?.email
+    };
     collaboration.responderType = collaboration.recipient.userType;
+    
+    // Add proposerId for display
+    collaboration.proposerId = {
+      _id: collaboration.initiator.user._id,
+      name: collaboration.initiator.name || collaboration.initiator.user?.communityProfile?.communityName || collaboration.initiator.user?.brandProfile?.brandName || collaboration.initiator.user?.name || 'Unknown',
+      email: collaboration.initiator.user?.email
+    };
+    collaboration.recipientId = collaboration.responderId;
 
     res.json({ data: collaboration });
   } catch (error) {
@@ -630,10 +688,27 @@ router.get('/collaborations/flagged', requirePermission('manage_collaborations')
         { tags: 'flagged' }
       ]
     })
+      .populate('initiator.user', 'name email communityProfile brandProfile venueProfile')
+      .populate('recipient.user', 'name email communityProfile brandProfile venueProfile')
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json({ data: collaborations });
+    // Add compatibility fields for frontend
+    const transformedCollaborations = collaborations.map(collab => ({
+      ...collab,
+      proposerId: {
+        _id: collab.initiator.user._id,
+        name: collab.initiator.name || collab.initiator.user?.communityProfile?.communityName || collab.initiator.user?.brandProfile?.brandName || collab.initiator.user?.name || 'Unknown',
+        email: collab.initiator.user?.email
+      },
+      recipientId: {
+        _id: collab.recipient.user._id,
+        name: collab.recipient.name || collab.recipient.user?.brandProfile?.brandName || collab.recipient.user?.venueProfile?.venueName || collab.recipient.user?.communityProfile?.communityName || collab.recipient.user?.name || 'Unknown',
+        email: collab.recipient.user?.email
+      }
+    }));
+
+    res.json({ data: transformedCollaborations });
   } catch (error) {
     console.error('Error fetching flagged collaborations:', error);
     res.status(500).json({ message: 'Server error while fetching flagged collaborations' });
@@ -766,6 +841,111 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
       return res.status(404).json({ message: 'Collaboration not found' });
     }
 
+    // Add compatibility fields for frontend
+    collaboration.proposerId = {
+      _id: collaboration.initiator.user._id,
+      name: collaboration.initiator.name || collaboration.initiator.user?.communityProfile?.communityName || collaboration.initiator.user?.brandProfile?.brandName || collaboration.initiator.user?.name || 'Unknown',
+      email: collaboration.initiator.user?.email
+    };
+    collaboration.recipientId = {
+      _id: collaboration.recipient.user._id,
+      name: collaboration.recipient.name || collaboration.recipient.user?.brandProfile?.brandName || collaboration.recipient.user?.venueProfile?.venueName || collaboration.recipient.user?.communityProfile?.communityName || collaboration.recipient.user?.name || 'Unknown',
+      email: collaboration.recipient.user?.email
+    };
+
+    // Helper function to format sub-options
+    const formatSubOptions = (subOptions) => {
+      if (!subOptions || typeof subOptions !== 'object') return 'None';
+      const selected = [];
+      Object.entries(subOptions).forEach(([key, value]) => {
+        if (value && value.selected) {
+          selected.push(key);
+        }
+      });
+      return selected.length > 0 ? selected.join(', ') : 'None';
+    };
+
+    // Transform structured schema data for better display
+    if (collaboration.communityToBrand) {
+      const ctb = collaboration.communityToBrand;
+      
+      // Transform brand deliverables
+      if (ctb.brandDeliverables) {
+        const transformed = {};
+        Object.entries(ctb.brandDeliverables).forEach(([key, value]) => {
+          if (value && value.selected) {
+            transformed[`Brand ${key}`] = {
+              selected: value.selected,
+              subOptions: formatSubOptions(value.subOptions),
+              comment: value.comment || 'None'
+            };
+          }
+        });
+        collaboration.transformedDeliverables = transformed;
+      }
+      
+      // Transform pricing
+      if (ctb.pricing) {
+        const transformed = {};
+        Object.entries(ctb.pricing).forEach(([key, value]) => {
+          if (value && value.selected) {
+            transformed[`Pricing.${key}`] = {
+              selected: value.selected,
+              value: value.value || 'Not specified',
+              comment: value.comment || 'None'
+            };
+          }
+        });
+        collaboration.transformedPricing = transformed;
+      }
+      
+      // Transform audience proof
+      if (ctb.audienceProof) {
+        const transformed = {};
+        Object.entries(ctb.audienceProof).forEach(([key, value]) => {
+          if (value && value.selected) {
+            transformed[`AudienceProof.${key}`] = value.value || 'Provided';
+          }
+        });
+        collaboration.transformedAudienceProof = transformed;
+      }
+    }
+
+    // Transform brandToCommunity data
+    if (collaboration.brandToCommunity) {
+      const btc = collaboration.brandToCommunity;
+      
+      // Transform brand offers
+      if (btc.brandOffers) {
+        const transformed = {};
+        Object.entries(btc.brandOffers).forEach(([key, value]) => {
+          if (value && value.selected) {
+            transformed[`BrandOffers.${key}`] = {
+              selected: value.selected,
+              subOptions: formatSubOptions(value.subOptions),
+              comment: value.comment || 'None'
+            };
+          }
+        });
+        collaboration.transformedBrandOffers = transformed;
+      }
+      
+      // Transform brand expectations
+      if (btc.brandExpectations) {
+        const transformed = {};
+        Object.entries(btc.brandExpectations).forEach(([key, value]) => {
+          if (value && value.selected) {
+            transformed[`BrandExpectations.${key}`] = {
+              selected: value.selected,
+              subOptions: formatSubOptions(value.subOptions),
+              comment: value.comment || 'None'
+            };
+          }
+        });
+        collaboration.transformedBrandExpectations = transformed;
+      }
+    }
+
     // Transform formData to handle nested objects better
     if (collaboration.formData) {
       const flattenedData = {};
@@ -785,20 +965,106 @@ router.get('/collaborations/:id', requirePermission('manage_collaborations'), as
             Object.entries(value).forEach(([subKey, subValue]) => {
               flattenedData[`${key}.${subKey}`] = subValue;
             });
-          } else if (key === 'brandDeliverables') {
-            // Handle brand deliverables object
+          } else if (key === 'brandDeliverables' || key === 'brandOffers' || key === 'brandExpectations' || key === 'venueOfferings' || key === 'requirements') {
+            // Handle structured deliverables/offers with sub-options
             Object.entries(value).forEach(([subKey, subValue]) => {
-              if (subKey !== '__typename') {  // Skip GraphQL typename
-                flattenedData[`Brand ${subKey}`] = Array.isArray(subValue) ? subValue.join(', ') : subValue;
+              if (subKey !== '__typename' && subValue && typeof subValue === 'object') {
+                // If it's a structured object with selected, subOptions, comment
+                if (subValue.selected) {
+                  const displayKey = `${key.replace(/([A-Z])/g, ' $1')}.${subKey}`;
+                  flattenedData[displayKey] = 'Selected ✓';
+                  
+                  // Format sub-options if they exist
+                  if (subValue.subOptions && typeof subValue.subOptions === 'object') {
+                    const selectedSubOptions = [];
+                    Object.entries(subValue.subOptions).forEach(([optKey, optValue]) => {
+                      if (optValue && (optValue.selected || optValue === true)) {
+                        selectedSubOptions.push(optKey);
+                      }
+                    });
+                    if (selectedSubOptions.length > 0) {
+                      flattenedData[`${displayKey} - Options`] = selectedSubOptions.join(', ');
+                    }
+                  }
+                  
+                  // Add comment if exists
+                  if (subValue.comment) {
+                    flattenedData[`${displayKey} - Comment`] = subValue.comment;
+                  }
+                  
+                  // Add value if exists (for pricing)
+                  if (subValue.value) {
+                    flattenedData[`${displayKey} - Value`] = String(subValue.value);
+                  }
+                }
+              } else if (subKey !== '__typename') {
+                flattenedData[`${key} - ${subKey}`] = Array.isArray(subValue) ? subValue.join(', ') : String(subValue);
+              }
+            });
+          } else if (key === 'pricing') {
+            // Handle pricing object
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              if (subValue && typeof subValue === 'object' && subValue.selected) {
+                const displayKey = `Pricing.${subKey}`;
+                flattenedData[displayKey] = 'Selected ✓';
+                if (subValue.value) {
+                  flattenedData[`${displayKey} - Value`] = String(subValue.value);
+                }
+                if (subValue.comment) {
+                  flattenedData[`${displayKey} - Comment`] = subValue.comment;
+                }
+              } else if (subKey !== 'additionalNotes') {
+                flattenedData[`pricing.${subKey}`] = String(subValue);
+              }
+            });
+            if (value.additionalNotes) {
+              flattenedData['Pricing Notes'] = value.additionalNotes;
+            }
+          } else if (key === 'audienceProof') {
+            // Handle audience proof
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              if (subValue && typeof subValue === 'object' && subValue.selected) {
+                flattenedData[`Audience Proof.${subKey}`] = subValue.value || 'Provided';
+              }
+            });
+          } else if (key === 'commercialModels') {
+            // Handle commercial models
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              if (subValue && typeof subValue === 'object' && subValue.selected) {
+                const displayKey = `Commercial.${subKey}`;
+                flattenedData[displayKey] = 'Selected ✓';
+                if (subValue.value) {
+                  flattenedData[`${displayKey} - Value`] = String(subValue.value);
+                }
+                if (subValue.comment) {
+                  flattenedData[`${displayKey} - Comment`] = subValue.comment;
+                }
               }
             });
           } else {
-            // For other nested objects, stringify them nicely
-            Object.entries(value).forEach(([subKey, subValue]) => {
-              if (subValue !== null && subValue !== undefined && subKey !== '__typename') {
-                flattenedData[`${key} - ${subKey}`] = subValue;
-              }
-            });
+            // For other nested objects, check if they have a similar structure
+            const hasStructuredFields = Object.values(value).some(v => 
+              v && typeof v === 'object' && ('selected' in v || 'value' in v)
+            );
+            
+            if (hasStructuredFields) {
+              // Handle other structured objects similarly
+              Object.entries(value).forEach(([subKey, subValue]) => {
+                if (subValue && typeof subValue === 'object' && subValue.selected) {
+                  const displayKey = `${key}.${subKey}`;
+                  flattenedData[displayKey] = 'Selected ✓';
+                  if (subValue.value) flattenedData[`${displayKey} - Value`] = String(subValue.value);
+                  if (subValue.comment) flattenedData[`${displayKey} - Comment`] = subValue.comment;
+                }
+              });
+            } else {
+              // For simple nested objects, flatten them
+              Object.entries(value).forEach(([subKey, subValue]) => {
+                if (subValue !== null && subValue !== undefined && subKey !== '__typename') {
+                  flattenedData[`${key} - ${subKey}`] = subValue;
+                }
+              });
+            }
           }
         } else if (Array.isArray(value)) {
           flattenedData[key] = value.join(', ');
@@ -1352,6 +1618,14 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     const verifiedCount = tickets.filter(t => t.reconciliationStatus === 'verified').length;
     const mismatchCount = tickets.filter(t => t.reconciliationStatus === 'mismatch').length;
     
+    // Build a map of participant coupon data by userId for lookup
+    const participantCouponMap = {};
+    (event.participants || []).forEach(p => {
+      if (p.couponUsed?.code) {
+        participantCouponMap[p.user?.toString()] = p.couponUsed;
+      }
+    });
+    
     const report = {
       generatedAt: new Date().toISOString(),
       generatedBy: 'Admin',
@@ -1377,6 +1651,7 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         totalPaidByUsers: parseFloat(totalPaid.toFixed(2)),
         totalGatewayFees: parseFloat(totalGatewayFees.toFixed(2)),
+        totalCashfreeCharges: parseFloat(tickets.reduce((sum, t) => sum + (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0), 0).toFixed(2)),
         avgTicketPrice: tickets.length > 0 ? parseFloat((totalRevenue / tickets.length).toFixed(2)) : 0,
         settlement: {
           settled: settledCount,
@@ -1413,6 +1688,15 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         // Calculate total paid = base + all fees (this is what customer actually paid)
         const totalPaidByUser = parseFloat((basePrice + gstCharges + platformFees).toFixed(2));
         
+        // Get coupon data: try ticket metadata first, then event participant data
+        const userId = t.user?._id?.toString() || t.user?.toString();
+        const ticketCoupon = t.metadata?.couponCode ? {
+          code: t.metadata.couponCode,
+          discountType: t.metadata.couponDiscountType || t.metadata.discountType || 'N/A',
+          discountValue: t.metadata.couponDiscountValue || t.metadata.discountValue || 0,
+          discountApplied: t.metadata.couponDiscount || 0
+        } : participantCouponMap[userId] || null;
+        
         return {
         ticketNumber: t.ticketNumber,
         userName: t.user?.name || 'N/A',
@@ -1421,6 +1705,10 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         purchaseDate: t.purchaseDate,
         quantity: t.quantity || 1,
         ticketType: t.metadata?.ticketType || 'general',
+        couponCode: ticketCoupon?.code || '',
+        couponDiscountType: ticketCoupon?.discountType || '',
+        couponDiscountApplied: ticketCoupon?.discountApplied || 0,
+        originalPriceBeforeCoupon: ticketCoupon ? basePrice + (ticketCoupon.discountApplied || 0) : basePrice,
         basePrice: basePrice,
         gstAndOtherCharges: gstCharges,
         platformFees: platformFees,
@@ -1434,6 +1722,9 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         settlementDate: t.settlementDate,
         settlementUTR: t.settlementUTR,
         settlementAmount: t.settlementAmount || 0, // Amount transferred to organizer's bank
+        cashfreeServiceCharge: t.cashfreeServiceCharge || 0, // Cashfree processing fee
+        cashfreeServiceTax: t.cashfreeServiceTax || 0, // GST on Cashfree fee
+        cashfreeTotalDeducted: (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0), // Total Cashfree deduction
         reconciliationStatus: t.reconciliationStatus,
         lastReconciliationDate: t.lastReconciliationDate,
         reconciliationNotes: t.reconciliationNotes,
@@ -1445,14 +1736,17 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     if (format === 'csv') {
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'basePrice', 'gstAndOtherCharges', 'platformFees',
+        'quantity', 'ticketType', 'couponCode', 'couponDiscountType', 'couponDiscountApplied',
+        'originalPriceBeforeCoupon', 'basePrice', 'gstAndOtherCharges', 'platformFees',
         'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
         'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
+        'cashfreeServiceCharge', 'cashfreeServiceTax', 'cashfreeTotalDeducted',
         'reconciliationStatus', 'lastReconciliationDate', 'reconciliationNotes',
         'checkInStatus', 'checkInTime'
       ];
       
       const totalSettledAmount = tickets.filter(t => t.settlementStatus === 'settled').reduce((sum, t) => sum + (t.settlementAmount || 0), 0);
+      const totalCashfreeCharges = tickets.reduce((sum, t) => sum + (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0), 0);
       
       const csvRows = [];
       csvRows.push(`# ========================================`);
@@ -1467,9 +1761,16 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`# Base Revenue (Organizer Share): ₹${totalRevenue.toFixed(2)}`);
       csvRows.push(`# Gateway Fees Deducted: ₹${totalGatewayFees.toFixed(2)}`);
       csvRows.push(`#`);
+      csvRows.push(`# COUPON DISCOUNTS:`);
+      csvRows.push(`#   - Total Coupon Discount: ₹${totalCouponDiscount.toFixed(2)}`);
+      csvRows.push(`#   - Tickets with Coupons: ${report.tickets.filter(t => t.couponCode).length}`);
+      csvRows.push(`#   - Revenue Before Coupon: ₹${totalRevenueBeforeDiscount.toFixed(2)}`);
+      csvRows.push(`#   - Revenue After Coupon (Organizer Share): ₹${totalRevenue.toFixed(2)}`);
+      csvRows.push(`#`);
       csvRows.push(`# SETTLEMENT STATUS:`);
       csvRows.push(`#   - Settled: ${settledCount} tickets (${report.summary.settlement.settledPercentage}%)`);
       csvRows.push(`#   - Amount Settled to Organizer Bank: ₹${totalSettledAmount.toFixed(2)}`);
+      csvRows.push(`#   - Cashfree Charges Deducted (1.2% + GST): ₹${totalCashfreeCharges.toFixed(2)}`);
       csvRows.push(`#   - Pending Settlement: ${pendingCount} tickets`);
       csvRows.push(`#   - Settlement = When Cashfree transfers money to organizer's bank account`);
       csvRows.push(`#`);
@@ -1482,8 +1783,14 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`# FIELD EXPLANATIONS:`);
       csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
       csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
-      csvRows.push(`#   - basePrice: Organizer's share before gateway fees`);
+      csvRows.push(`#   - basePrice: Organizer's share before gateway fees (after coupon discount)`);
+      csvRows.push(`#   - couponCode: Discount coupon applied by user (if any)`);
+      csvRows.push(`#   - couponDiscountApplied: Amount discounted by coupon (in ₹)`);
+      csvRows.push(`#   - originalPriceBeforeCoupon: Base price before coupon was applied`);
       csvRows.push(`#   - settlementAmount: Final amount transferred to organizer's bank`);
+      csvRows.push(`#   - cashfreeServiceCharge: Cashfree processing fee (1.2% of order amount)`);
+      csvRows.push(`#   - cashfreeServiceTax: GST charged on Cashfree's processing fee`);
+      csvRows.push(`#   - cashfreeTotalDeducted: Total amount deducted by Cashfree (charge + tax)`);
       csvRows.push(`#   - orderId: Cashfree order ID for verification`);
       csvRows.push(`#   - reconciliationStatus: verified = Payment confirmed with Cashfree API`);
       csvRows.push(`#   - lastReconciliationDate: When we last verified this payment with Cashfree`);
@@ -1923,7 +2230,26 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: '$price.amount' },
+          // Base Revenue = organizer's share (metadata.basePrice preferred, fallback to price.amount)
+          totalRevenue: {
+            $sum: {
+              $cond: [
+                { $gt: ['$metadata.basePrice', 0] },
+                '$metadata.basePrice',
+                '$price.amount'
+              ]
+            }
+          },
+          // Total User Paid = full amount charged to customer (metadata.totalPaid preferred, fallback to price.amount)
+          totalUserPaid: {
+            $sum: {
+              $cond: [
+                { $gt: ['$metadata.totalPaid', 0] },
+                '$metadata.totalPaid',
+                '$price.amount'
+              ]
+            }
+          },
           settledAmount: {
             $sum: {
               $cond: [
@@ -1937,10 +2263,22 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
             $sum: {
               $cond: [
                 { $in: ['$settlementStatus', ['pending', 'captured']] },
-                '$price.amount',
+                {
+                  $cond: [
+                    { $gt: ['$metadata.basePrice', 0] },
+                    '$metadata.basePrice',
+                    '$price.amount'
+                  ]
+                },
                 0
               ]
             }
+          },
+          totalCashfreeServiceCharge: {
+            $sum: { $ifNull: ['$cashfreeServiceCharge', 0] }
+          },
+          totalCashfreeServiceTax: {
+            $sum: { $ifNull: ['$cashfreeServiceTax', 0] }
           }
         }
       }
@@ -2010,9 +2348,13 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
       },
       revenueStats: {
         totalRevenue: ticketRevenue[0]?.totalRevenue || 0,
+        totalUserPaid: ticketRevenue[0]?.totalUserPaid || ticketRevenue[0]?.totalRevenue || 0,
         totalSpotsBooked: totalRevenue[0]?.totalTicketsSold || 0,
         settledAmount: ticketRevenue[0]?.settledAmount || 0,
         pendingSettlement: ticketRevenue[0]?.pendingSettlement || 0,
+        cashfreeServiceCharge: ticketRevenue[0]?.totalCashfreeServiceCharge || 0,
+        cashfreeServiceTax: ticketRevenue[0]?.totalCashfreeServiceTax || 0,
+        totalCashfreeDeducted: (ticketRevenue[0]?.totalCashfreeServiceCharge || 0) + (ticketRevenue[0]?.totalCashfreeServiceTax || 0),
         currency: 'INR'
       },
       recentEvents
@@ -2068,13 +2410,25 @@ router.get('/organizers/:organizerId/events', requirePermission('view_analytics'
       events.map(async (event) => {
         const tickets = await Ticket.find({ event: event._id }).lean();
         
-        const totalRevenue = tickets.reduce((sum, ticket) => 
-          sum + (ticket.price?.amount || 0), 0
-        );
+        // Base Revenue = organizer's share
+        const totalRevenue = tickets.reduce((sum, ticket) => {
+          const base = ticket.metadata?.basePrice > 0 ? ticket.metadata.basePrice : (ticket.price?.amount || 0);
+          return sum + base;
+        }, 0);
+        
+        // Total User Paid (includes GST + platform fees)
+        const totalUserPaid = tickets.reduce((sum, ticket) => {
+          const paid = ticket.metadata?.totalPaid > 0 ? ticket.metadata.totalPaid : (ticket.price?.amount || 0);
+          return sum + paid;
+        }, 0);
         
         const settledRevenue = tickets
           .filter(t => t.settlementStatus === 'settled')
           .reduce((sum, ticket) => sum + (ticket.settlementAmount || ticket.price?.amount || 0), 0);
+        
+        const totalCashfreeDeducted = tickets.reduce((sum, t) => 
+          sum + (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0), 0
+        );
         
         const totalSpotsBooked = event.currentParticipants || 0;
         const activeTickets = tickets.filter(t => t.status === 'active').length;
@@ -2097,7 +2451,9 @@ router.get('/organizers/:organizerId/events', requirePermission('view_analytics'
           createdAt: event.createdAt,
           revenue: {
             totalRevenue,
+            totalUserPaid,
             settledRevenue,
+            cashfreeChargesDeducted: parseFloat(totalCashfreeDeducted.toFixed(2)),
             pendingRevenue: totalRevenue - settledRevenue,
             ticketsSold: tickets.length,
             totalSpotsBooked,
@@ -2153,9 +2509,18 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       .lean();
     
     // Calculate comprehensive analytics
-    const totalRevenue = tickets.reduce((sum, ticket) => 
-      sum + (ticket.price?.amount || 0), 0
-    );
+    // Base Revenue = organizer's share. Use metadata.basePrice if available, else price.amount
+    const totalRevenue = tickets.reduce((sum, ticket) => {
+      const base = ticket.metadata?.basePrice > 0 ? ticket.metadata.basePrice : (ticket.price?.amount || 0);
+      return sum + base;
+    }, 0);
+    
+    // Total amount users actually paid (includes GST + platform fees)
+    // Use metadata.totalPaid if > 0, else price.amount (which IS total paid for older tickets)
+    const totalUserPaid = tickets.reduce((sum, ticket) => {
+      const paid = ticket.metadata?.totalPaid > 0 ? ticket.metadata.totalPaid : (ticket.price?.amount || 0);
+      return sum + paid;
+    }, 0);
     
     const settledRevenue = tickets
       .filter(t => t.settlementStatus === 'settled')
@@ -2163,7 +2528,13 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
     
     const capturedRevenue = tickets
       .filter(t => t.settlementStatus === 'captured')
-      .reduce((sum, ticket) => sum + (ticket.price?.amount || 0), 0);
+      .reduce((sum, ticket) => {
+        const base = ticket.metadata?.basePrice > 0 ? ticket.metadata.basePrice : (ticket.price?.amount || 0);
+        return sum + base;
+      }, 0);
+    
+    const totalCashfreeServiceCharge = tickets.reduce((sum, t) => sum + (t.cashfreeServiceCharge || 0), 0);
+    const totalCashfreeServiceTax = tickets.reduce((sum, t) => sum + (t.cashfreeServiceTax || 0), 0);
     
     const ticketsByStatus = {
       active: tickets.filter(t => t.status === 'active').length,
@@ -2270,6 +2641,7 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
         totalSpotsBooked: event.currentParticipants || 0,
         ticketsByStatus,
         totalRevenue,
+        totalUserPaid,
         settledRevenue,
         capturedRevenue,
         pendingRevenue: totalRevenue - settledRevenue,
@@ -2277,6 +2649,11 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
           ((settledRevenue / totalRevenue) * 100).toFixed(2) : 0,
         checkInRate: tickets.length > 0 ? 
           ((ticketsByStatus.checked_in / tickets.length) * 100).toFixed(2) : 0,
+        cashfreeCharges: {
+          serviceCharge: parseFloat(totalCashfreeServiceCharge.toFixed(2)),
+          serviceTax: parseFloat(totalCashfreeServiceTax.toFixed(2)),
+          totalDeducted: parseFloat((totalCashfreeServiceCharge + totalCashfreeServiceTax).toFixed(2))
+        },
         settlementStats,
         reconciliationStats,
         paymentMethods,
@@ -2390,7 +2767,10 @@ router.get('/collaborations/:id/workspace/spectate', requirePermission('approve_
       ...workspaceData,
       isSpectateMode: true,
       canEdit: false,
-      canComment: false
+      canComment: false,
+      // Include field notes and history for admin viewing
+      allFieldNotes: collaboration.workspace.fieldNotes || {},
+      allFieldHistory: collaboration.workspace.fieldHistory || {}
     };
     
     res.json({

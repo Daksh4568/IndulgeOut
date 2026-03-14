@@ -165,7 +165,7 @@ const MasterForum = ({
                 rows={2}
                 maxLength={500}
                 disabled={sending}
-                className="flex-1 px-3 py-2 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none disabled:opacity-50"
+                className="flex-1 px-3 py-2 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#7878E9] resize-none disabled:opacity-50"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -176,7 +176,8 @@ const MasterForum = ({
               <button
                 type="submit"
                 disabled={sending || !newMessage.trim()}
-                className="p-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2.5 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
               >
                 {sending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

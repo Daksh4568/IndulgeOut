@@ -173,33 +173,34 @@ const VenueCommercialSection = ({ formData, setFormData }) => {
                         </div>
                       )}
                       
-                      {/* Add Comment button when hovering */}
+                      {/* Comment buttons */}
                       <div className="flex items-center gap-3">
-                        {isHovered && (
+                        {isHovered && !hasComment && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openCommentModal(model.title, model.id);
                             }}
+                            onMouseEnter={(e) => e.stopPropagation()}
+                            className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
                             style={{
                               background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                             }}
-                            className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
                           >
                             Add Comment
                           </button>
                         )}
                         
-                        {/* View comment link when not hovering */}
-                        {!isHovered && hasComment && (
+                        {hasComment && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openCommentModal(model.title, model.id);
                             }}
-                            className="px-4 py-2 text-indigo-400 rounded-lg hover:text-indigo-300 transition-colors text-sm font-medium underline"
+                            onMouseEnter={(e) => e.stopPropagation()}
+                            className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
                           >
-                            View comment
+                            View Comment
                           </button>
                         )}
                       </div>
@@ -209,30 +210,32 @@ const VenueCommercialSection = ({ formData, setFormData }) => {
                   {/* Barter model without input */}
                   {!model.hasInput && isSelected && (
                     <div className="mt-3 flex items-center gap-3">
-                      {isHovered && (
+                      {isHovered && !hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(model.title, model.id);
                           }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
                           style={{
                             background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                           }}
-                          className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
                         >
                           Add Comment
                         </button>
                       )}
                       
-                      {!isHovered && hasComment && (
+                      {hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(model.title, model.id);
                           }}
-                          className="px-4 py-2 text-indigo-400 rounded-lg hover:text-indigo-300 transition-colors text-sm font-medium underline"
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
                         >
-                          View comment
+                          View Comment
                         </button>
                       )}
                     </div>

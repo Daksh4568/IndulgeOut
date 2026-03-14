@@ -199,7 +199,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       status: { $in: ['vendor_accepted', 'in_progress', 'completed'] }
     })
     .populate('requestDetails.eventId', 'name date city category status analytics')
-    .populate('requestDetails.communityId', 'name communityProfile')
+    .populate('initiator.user', 'name communityProfile')
     .sort({ 'requestDetails.eventId.date': 1 })
     .limit(10);
     
@@ -208,7 +208,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       return {
         id: collab._id,
         eventName: event?.name || 'N/A',
-        communityName: collab.requestDetails?.communityId?.name || 'N/A',
+        communityName: collab.initiator?.name || 'N/A',
         city: event?.city || 'N/A',
         category: event?.category || 'N/A',
         date: event?.date,

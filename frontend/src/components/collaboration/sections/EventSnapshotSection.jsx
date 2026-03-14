@@ -10,8 +10,42 @@ const EventSnapshotSection = ({ formData, setFormData }) => {
     'Networking',
   ];
 
-  const attendeeRanges = ['50-100', '100-250', '250-500', '500+'];
+  const attendeeRanges = ['20-40', '40-80', '80-150', '150+'];
+  
+  const eventFormats = [
+    'Workshop',
+    'Mixer / Social',
+    'Tournament',
+    'Performance / Show',
+    'Panel / Talk',
+    'Experiential / Activation',
+  ];
+  
+  const targetAudienceOptions = [
+    'Students',
+    'Young professionals',
+    'Founders / Creators',
+    'Families',
+    'Niche community',
+  ];
+  
   const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Pune'];
+  
+  const handleFormatToggle = (format) => {
+    const formats = formData.eventFormat || [];
+    const updatedFormats = formats.includes(format)
+      ? formats.filter(f => f !== format)
+      : [...formats, format];
+    setFormData({ ...formData, eventFormat: updatedFormats });
+  };
+  
+  const handleAudienceToggle = (audience) => {
+    const audiences = formData.targetAudience || [];
+    const updatedAudiences = audiences.includes(audience)
+      ? audiences.filter(a => a !== audience)
+      : [...audiences, audience];
+    setFormData({ ...formData, targetAudience: updatedAudiences });
+  };
 
   return (
     <div className="space-y-8">
@@ -77,23 +111,82 @@ const EventSnapshotSection = ({ formData, setFormData }) => {
         </div>
       </div>
 
+      {/* Event Format */}
+      <div>
+        <label className="block text-white text-base mb-4">
+          3. Event Format <span className="text-red-500">*</span>
+        </label>
+        <p className="text-gray-400 text-sm mb-3">Select all formats that apply</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {eventFormats.map((format) => (
+            <button
+              key={format}
+              onClick={() => handleFormatToggle(format)}
+              className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
+                formData.eventFormat?.includes(format)
+                  ? 'bg-indigo-500 bg-opacity-10 border-indigo-500 text-white'
+                  : 'bg-black border-gray-800 text-gray-300 hover:border-gray-700'
+              }`}
+            >
+              {format}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Target Audience */}
       <div>
         <label className="block text-white text-base mb-4">
-          3. Target Audience Description
+          4. Target Audience <span className="text-red-500">*</span>
         </label>
-        <textarea
-          value={formData.targetAudience || ''}
-          onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-          placeholder="E.g., Young professionals aged 25-35, tech enthusiasts, startups..."
-          className="w-full h-24 px-4 py-3 bg-black border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        <p className="text-gray-400 text-sm mb-3">Select all that apply</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {targetAudienceOptions.map((audience) => (
+            <button
+              key={audience}
+              onClick={() => handleAudienceToggle(audience)}
+              className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
+                formData.targetAudience?.includes(audience)
+                  ? 'bg-indigo-500 bg-opacity-10 border-indigo-500 text-white'
+                  : 'bg-black border-gray-800 text-gray-300 hover:border-gray-700'
+              }`}
+            >
+              {audience}
+            </button>
+          ))}
+        </div>
+        {formData.targetAudience?.includes('Niche community') && (
+          <div className="mt-3">
+            <input
+              type="text"
+              value={formData.nicheAudienceDetails || ''}
+              onChange={(e) => setFormData({ ...formData, nicheAudienceDetails: e.target.value })}
+              placeholder="Describe your niche community..."
+              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Event Date */}
+      <div>
+        <label className="block text-white text-base mb-4">
+          5. Event Date <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={formData.eventDate || ''}
+          onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+          min={new Date().toISOString().split('T')[0]}
+          className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+          style={{ colorScheme: 'dark' }}
         />
       </div>
 
       {/* City */}
       <div>
         <label className="block text-white text-base mb-4">
-          4. City <span className="text-red-500">*</span>
+          6. City <span className="text-red-500">*</span>
         </label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {cities.map((city) => (

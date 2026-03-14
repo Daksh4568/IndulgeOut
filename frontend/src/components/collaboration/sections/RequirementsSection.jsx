@@ -214,32 +214,34 @@ const RequirementsSection = ({ formData, setFormData, proposalType }) => {
                         );
                       })}
                       
-                      {/* Add Comment Button - only visible when hovered */}
-                      {isHovered && (
+                      {/* Add Comment button - only visible on hover when no comment exists */}
+                      {isHovered && !hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(requirement.title, requirement.id);
                           }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
                           style={{
                             background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                           }}
-                          className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
                         >
                           Add Comment
                         </button>
                       )}
                       
-                      {/* View Comment Button - only visible when NOT hovered and comment exists */}
-                      {!isHovered && hasComment && (
+                      {/* View Comment button - always visible if comment exists */}
+                      {hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(requirement.title, requirement.id);
                           }}
-                          className="px-4 py-2 text-indigo-400 rounded-lg hover:text-indigo-300 transition-colors text-sm font-medium underline"
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
                         >
-                          View comment
+                          View Comment
                         </button>
                       )}
                     </div>

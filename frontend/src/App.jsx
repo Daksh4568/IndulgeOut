@@ -45,6 +45,7 @@ import CommunityCounterFormVenue from './pages/CommunityCounterFormVenue'
 import CounterFormRouter from './pages/CounterFormRouter'
 import FinalTermsView from './pages/FinalTermsView'
 import CollabWorkspace from './pages/CollabWorkspace'
+import AdminSpectateWorkspace from './pages/AdminSpectateWorkspace'
 import AdminDashboard from './pages/AdminDashboard'
 import VenueDashboard from './pages/VenueDashboard'
 import BrandDashboard from './pages/BrandDashboard'
@@ -159,6 +160,9 @@ function AppContent() {
         
         {/* Collaboration Workspace - Interactive negotiation */}
         <Route path="/collaborations/:id/workspace" element={<ErrorBoundary><CollabWorkspace /></ErrorBoundary>} />
+        
+        {/* Admin Spectate Workspace - Read-only admin view */}
+        <Route path="/admin/collaborations/:id/workspace/spectate" element={<ErrorBoundary><AdminSpectateWorkspace /></ErrorBoundary>} />
         
         {/* View Final Terms after collaboration is confirmed */}
         <Route path="/collaborations/:id/final-terms" element={<ErrorBoundary><FinalTermsView /></ErrorBoundary>} />

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Calendar, MapPin, Check, X, Save, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Check, X, Save, Loader2, Clock } from 'lucide-react';
 
 const WorkspaceStickyBar = ({
   eventName,
   eventDate,
+  eventTime,
   eventLocation,
   isLocked,
   saving,
@@ -12,19 +13,54 @@ const WorkspaceStickyBar = ({
   onExit,
   onConfirm
 }) => {
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'Date TBD';
+  const formatDate = (dateInput) => {
+    if (!dateInput) return 'Date TBD';
+    
+    // Handle object format: {date: '2026-03-15', startTime: '10:00', endTime: '18:00'}
+    if (typeof dateInput === 'object' && dateInput !== null) {
+      const dateStr = dateInput.date || dateInput.startDate;
+      if (!dateStr) return 'Date TBD';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+      } catch (err) {
+        return dateStr;
+      }
+    }
+    
+    // Handle plain string
     try {
-      const date = new Date(dateStr);
+      const date = new Date(dateInput);
+      if (isNaN(date.getTime())) return dateInput;
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric', 
         year: 'numeric' 
       });
     } catch (err) {
-      return dateStr;
+      return dateInput;
     }
   };
+
+  const formatTime = (dateInput, timeStr) => {
+    // If explicit time string provided
+    if (timeStr) return timeStr;
+    
+    // If date is object with time
+    if (typeof dateInput === 'object' && dateInput !== null) {
+      const parts = [];
+      if (dateInput.startTime) parts.push(dateInput.startTime);
+      if (dateInput.endTime) parts.push(dateInput.endTime);
+      return parts.join(' - ');
+    }
+    return '';
+  };
+
+  const displayTime = formatTime(eventDate, eventTime);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-gray-800 z-50">
@@ -41,6 +77,13 @@ const WorkspaceStickyBar = ({
                 <Calendar className="w-4 h-4" />
                 <span>{formatDate(eventDate)}</span>
               </div>
+
+              {displayTime && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{displayTime}</span>
+                </div>
+              )}
               
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
@@ -83,7 +126,8 @@ const WorkspaceStickyBar = ({
                 <button
                   onClick={onConfirm}
                   disabled={saving || confirming}
-                  className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-2 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
                 >
                   {confirming ? (
                     <>
@@ -101,7 +145,7 @@ const WorkspaceStickyBar = ({
             )}
 
             {isLocked && (
-              <div className="flex items-center gap-2 px-6 py-2 bg-green-500/10 border border-green-500/20 text-green-500 rounded-lg font-semibold">
+              <div className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold border" style={{ background: 'rgba(120,120,233,0.1)', borderColor: 'rgba(120,120,233,0.2)', color: '#7878E9' }}>
                 <Check className="w-5 h-5" />
                 Collaboration Confirmed
               </div>

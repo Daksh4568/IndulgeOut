@@ -1,28 +1,101 @@
 import React, { useState } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { api } from '../../../config/api';
 
 const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
   const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  const audienceProofOptions = [
+    { id: 'pastSponsorBrands', label: 'Past Sponsor Brands', placeholder: 'e.g., Coca-Cola, Nike, Red Bull...' },
+    { id: 'averageAttendance', label: 'Average Attendance', placeholder: 'e.g., 200-300 people per event' },
+    { id: 'communitySize', label: 'Community Size', placeholder: 'e.g., 5000+ active members' },
+    { id: 'repeatEventRate', label: 'Repeat Event Rate', placeholder: 'e.g., 80% attendees return' },
+  ];
+  
+  const handleAudienceProofToggle = (optionId) => {
+    const currentProof = formData.audienceProof || {};
+    const updated = { ...currentProof };
+    
+    if (updated[optionId]) {
+      delete updated[optionId];
+    } else {
+      updated[optionId] = { selected: true, value: '' };
+    }
+    
+    setFormData({ ...formData, audienceProof: updated });
+  };
+  
+  const handleAudienceProofValue = (optionId, value) => {
+    const currentProof = formData.audienceProof || {};
+    setFormData({
+      ...formData,
+      audienceProof: {
+        ...currentProof,
+        [optionId]: { selected: true, value }
+      }
+    });
+  };
 
-  const handleImageUpload = (files) => {
+  const handleImageUpload = async (files) => {
     const fileArray = Array.from(files);
     const currentImages = formData.supportingInfo?.images || [];
     
-    // Limit to 10 images total
-    const remainingSlots = 10 - currentImages.length;
-    const newImages = fileArray.slice(0, remainingSlots).map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name,
-    }));
+    // Limit to 3 images total
+    const remainingSlots = 3 - currentImages.length;
+    if (remainingSlots === 0) {
+      alert('Maximum 3 images allowed');
+      return;
+    }
+
+    const filesToUpload = fileArray.slice(0, remainingSlots);
     
-    setFormData({
-      ...formData,
-      supportingInfo: {
-        ...formData.supportingInfo,
-        images: [...currentImages, ...newImages],
-      },
+    // Validate file types
+    const validFiles = filesToUpload.filter(file => {
+      const isValid = file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/jpg';
+      if (!isValid) {
+        alert(`${file.name} is not a valid image type. Only PNG and JPG are allowed.`);
+      }
+      return isValid;
     });
+
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      // Upload to S3 via backend
+      const formDataToUpload = new FormData();
+      validFiles.forEach(file => {
+        formDataToUpload.append('images', file);
+      });
+
+      const response = await api.post('/collaborations/upload-images', formDataToUpload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        const uploadedImages = response.data.images.map(img => ({
+          url: img.url,
+          key: img.key,
+        }));
+
+        setFormData({
+          ...formData,
+          supportingInfo: {
+            ...formData.supportingInfo,
+            images: [...currentImages, ...uploadedImages],
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to upload images. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDrag = (e) => {
@@ -91,7 +164,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
         
         {/* Image Grid (if images exist) */}
         {currentImages.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
             {currentImages.map((image, index) => (
               <div key={index} className="relative group">
                 <img
@@ -102,6 +175,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
                 <button
                   onClick={() => removeImage(index)}
                   className="absolute top-2 right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  type="button"
                 >
                   <X className="h-4 w-4 text-white" />
                 </button>
@@ -110,8 +184,8 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
           </div>
         )}
 
-        {/* Upload Area (always visible if under 10 images) */}
-        {currentImages.length < 10 && (
+        {/* Upload Area (always visible if under 3 images) */}
+        {currentImages.length < 3 && (
           <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -121,8 +195,8 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
               dragActive
                 ? 'border-indigo-500 bg-indigo-500 bg-opacity-5'
                 : 'border-gray-800 bg-black hover:border-gray-700'
-            }`}
-            onClick={() => document.getElementById('image-upload').click()}
+            } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => !uploading && document.getElementById('image-upload').click()}
           >
             <input
               id="image-upload"
@@ -131,28 +205,81 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
               multiple
               onChange={handleFileInput}
               className="hidden"
+              disabled={uploading}
             />
             
             <div className="flex flex-col items-center gap-3">
               <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center">
-                <Upload className="h-8 w-8 text-indigo-400" />
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400"></div>
+                ) : (
+                  <Upload className="h-8 w-8 text-indigo-400" />
+                )}
               </div>
               <div>
-                <p className="text-indigo-400 font-medium mb-1">Click to upload photos</p>
+                <p className="text-indigo-400 font-medium mb-1">
+                  {uploading ? 'Uploading...' : 'Click to upload photos'}
+                </p>
                 <p className="text-gray-500 text-sm">
-                  Up to {10 - currentImages.length} more {10 - currentImages.length === 1 ? 'image' : 'images'} • PNG, JPG
+                  Up to {3 - currentImages.length} more {3 - currentImages.length === 1 ? 'image' : 'images'} • PNG, JPG
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {currentImages.length === 10 && (
-          <p className="text-green-400 text-sm mt-2">✓ Maximum 10 images uploaded</p>
+        {currentImages.length === 3 && (
+          <p className="text-green-400 text-sm mt-2">✓ Maximum 3 images uploaded</p>
         )}
       </div>
 
-      {/* Note to Venue */}
+      {/* Audience Proof Section (Only for communityToBrand) */}
+      {proposalType === 'communityToBrand' && (
+        <div>
+          <label className="block text-white text-base mb-4">
+            Audience Proof <span className="text-red-500">*</span>
+          </label>
+          <p className="text-gray-400 text-sm mb-4">
+            Help brands assess your community's credibility
+          </p>
+          
+          <div className="space-y-4">
+            {audienceProofOptions.map((option) => {
+              const isSelected = formData.audienceProof?.[option.id]?.selected;
+              const value = formData.audienceProof?.[option.id]?.value || '';
+              
+              return (
+                <div key={option.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <input
+                      type="checkbox"
+                      id={option.id}
+                      checked={isSelected}
+                      onChange={() => handleAudienceProofToggle(option.id)}
+                      className="w-5 h-5 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0"
+                    />
+                    <label htmlFor={option.id} className="text-white font-medium cursor-pointer">
+                      {option.label}
+                    </label>
+                  </div>
+                  
+                  {isSelected && (
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => handleAudienceProofValue(option.id, e.target.value)}
+                      placeholder={option.placeholder}
+                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Note to Venue/Brand */}
       <div>
         <label className="block text-white text-base mb-4">
           Note to {proposalType === 'communityToVenue' ? 'venue' : proposalType === 'communityToBrand' ? 'brand' : 'community'}

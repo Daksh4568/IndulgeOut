@@ -67,23 +67,23 @@ const VenueCounterForm = () => {
   };
 
   const handleFieldAction = (fieldName, action) => {
-    if (action === 'modify') {
-      // Open modify modal
-      setCurrentField(fieldName);
-      setModifyValue(fieldResponses[fieldName]?.modifiedValue || null);
-      setFieldNote(fieldResponses[fieldName]?.note || '');
-      setShowModifyModal(true);
-    } else {
-      // Accept or Decline
-      setFieldResponses(prev => ({
-        ...prev,
-        [fieldName]: {
-          action,
-          originalValue: getOriginalValue(fieldName),
-          note: prev[fieldName]?.note || ''
-        }
-      }));
-    }
+    // Just set the action, don't auto-open modal
+    setFieldResponses(prev => ({
+      ...prev,
+      [fieldName]: {
+        action,
+        originalValue: getOriginalValue(fieldName),
+        note: prev[fieldName]?.note || '',
+        modifiedValue: prev[fieldName]?.modifiedValue || null
+      }
+    }));
+  };
+
+  const openModifyModal = (fieldName) => {
+    setCurrentField(fieldName);
+    setModifyValue(fieldResponses[fieldName]?.modifiedValue || null);
+    setFieldNote(fieldResponses[fieldName]?.note || '');
+    setShowModifyModal(true);
   };
 
   const saveModification = () => {
@@ -175,40 +175,76 @@ const VenueCounterForm = () => {
     const action = response?.action;
 
     return (
-      <div className="flex gap-2 mt-3">
-        <button
-          onClick={() => handleFieldAction(fieldName, 'accept')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-            action === 'accept'
-              ? 'bg-green-600 text-white border-2 border-green-400'
-              : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-green-600'
-          }`}
-        >
-          <Check className="h-4 w-4 inline mr-2" />
-          Accept
-        </button>
-        <button
-          onClick={() => handleFieldAction(fieldName, 'modify')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-            action === 'modify'
-              ? 'bg-yellow-600 text-white border-2 border-yellow-400'
-              : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-yellow-600'
-          }`}
-        >
-          <Edit className="h-4 w-4 inline mr-2" />
-          Modify
-        </button>
-        <button
-          onClick={() => handleFieldAction(fieldName, 'decline')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-            action === 'decline'
-              ? 'bg-red-600 text-white border-2 border-red-400'
-              : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-red-600'
-          }`}
-        >
-          <X className="h-4 w-4 inline mr-2" />
-          Can't provide
-        </button>
+      <div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => handleFieldAction(fieldName, 'accept')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              action === 'accept'
+                ? 'bg-green-600 text-white border-2 border-green-400'
+                : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-green-600'
+            }`}
+          >
+            <Check className="h-4 w-4 inline mr-2" />
+            Accept
+          </button>
+          <button
+            onClick={() => handleFieldAction(fieldName, 'modify')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              action === 'modify'
+                ? 'bg-yellow-600 text-white border-2 border-yellow-400'
+                : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-yellow-600'
+            }`}
+          >
+            <Edit className="h-4 w-4 inline mr-2" />
+            Modify
+          </button>
+          <button
+            onClick={() => handleFieldAction(fieldName, 'decline')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              action === 'decline'
+                ? 'bg-red-600 text-white border-2 border-red-400'
+                : 'bg-gray-800 text-gray-300 border border-gray-700 hover:border-red-600'
+            }`}
+          >
+            <X className="h-4 w-4 inline mr-2" />
+            Can't provide
+          </button>
+        </div>
+        
+        {/* Show "Provide Details" button if Modify is selected */}
+        {action === 'modify' && (
+          <div className="mt-3">
+            <button
+              onClick={() => openModifyModal(fieldName)}
+              className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+            >
+              📝 Provide Modified Details
+            </button>
+            {response?.modifiedValue && (
+              <p className="text-yellow-400 text-sm mt-2">
+                ✓ Modified details saved
+              </p>
+            )}
+          </div>
+        )}
+        
+        {/* Optional note field for any action */}
+        {action && (
+          <div className="mt-3">
+            <label className="block text-sm text-blue-400 mb-2">Add note (optional)</label>
+            <input
+              type="text"
+              value={fieldResponses[fieldName]?.note || ''}
+              onChange={(e) => setFieldResponses(prev => ({
+                ...prev,
+                [fieldName]: { ...prev[fieldName], note: e.target.value }
+              }))}
+              placeholder="Add any additional notes..."
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500"
+            />
+          </div>
+        )}
       </div>
     );
   };

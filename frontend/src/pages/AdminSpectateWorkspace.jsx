@@ -1,157 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../config/api';
-import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Loader2, Lock, AlertTriangle, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Eye, AlertTriangle, Check } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import WorkspaceSection from '../components/workspace/sections/WorkspaceSection';
 import AudienceProofCard from '../components/workspace/AudienceProofCard';
 import MasterForum from '../components/workspace/forum/MasterForum';
 import WorkspaceStickyBar from '../components/workspace/WorkspaceStickyBar';
-import FieldEditorModal from '../components/workspace/modals/FieldEditorModal';
 import FieldNotesModal from '../components/workspace/modals/FieldNotesModal';
 import FieldHistoryModal from '../components/workspace/modals/FieldHistoryModal';
 
-const CollabWorkspace = () => {
+const AdminSpectateWorkspace = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [collaboration, setCollaboration] = useState(null);
   const [workspace, setWorkspace] = useState(null);
   const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [confirming, setConfirming] = useState(false);
 
-  // Modal states
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  // Modal states (read-only: no edit modal)
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
 
   useEffect(() => {
-    fetchWorkspace();
+    fetchSpectateData();
   }, [id]);
 
-  const fetchWorkspace = async () => {
+  const fetchSpectateData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await api.get(`/workspace/${id}`);
+      const response = await api.get(`/admin/collaborations/${id}/workspace/spectate`);
       
       if (response.data.success) {
         setCollaboration(response.data.collaboration);
         setWorkspace(response.data.workspace);
-        
-        // Check if workspace needs initialization
-        if (!response.data.workspace.isActive) {
-          // Initialize workspace
-          await initializeWorkspace();
-        }
       }
     } catch (err) {
-      console.error('Error fetching workspace:', err);
-      
-      // If workspace not active, try to initialize
-      if (err.response?.status === 403) {
-        try {
-          await initializeWorkspace();
-        } catch (initErr) {
-          setError('Failed to initialize workspace. Please try again.');
-        }
-      } else {
-        setError(err.response?.data?.error || 'Failed to load workspace');
-      }
+      console.error('Error fetching spectate data:', err);
+      setError(err.response?.data?.error || 'Failed to load workspace data');
     } finally {
       setLoading(false);
     }
-  };
-
-  const initializeWorkspace = async () => {
-    try {
-      const response = await api.post(`/workspace/${id}/initialize`);
-      if (response.data.success) {
-        setWorkspace(response.data.workspace);
-      }
-    } catch (err) {
-      console.error('Error initializing workspace:', err);
-      throw err;
-    }
-  };
-
-  const refreshWorkspace = async () => {
-    try {
-      const response = await api.get(`/workspace/${id}`);
-      if (response.data.success) {
-        setCollaboration(response.data.collaboration);
-        setWorkspace(response.data.workspace);
-      }
-    } catch (err) {
-      console.error('Error refreshing workspace:', err);
-    }
-  };
-
-  const handleSaveChanges = async () => {
-    try {
-      setSaving(true);
-      const response = await api.post(`/workspace/${id}/save`);
-      
-      if (response.data.success) {
-        // Show success message
-        alert('Changes saved successfully!');
-        // Navigate back to dashboard
-        navigate('/collaborations');
-      }
-    } catch (err) {
-      console.error('Error saving changes:', err);
-      alert(err.response?.data?.error || 'Failed to save changes');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleExitCollaboration = async () => {
-    if (!confirm('Are you sure you want to exit this collaboration? This will cancel the collaboration.')) {
-      return;
-    }
-
-    const reason = prompt('Please provide a reason for exiting (optional):');
-
-    try {
-      const response = await api.post(`/workspace/${id}/exit`, { reason });
-      
-      if (response.data.success) {
-        alert('You have exited the collaboration.');
-        navigate('/collaborations');
-      }
-    } catch (err) {
-      console.error('Error exiting collaboration:', err);
-      alert(err.response?.data?.error || 'Failed to exit collaboration');
-    }
-  };
-
-  const handleConfirmCollaboration = async () => {
-    try {
-      setConfirming(true);
-      const response = await api.post(`/workspace/${id}/confirm`);
-      
-      if (response.data.success) {
-        alert(response.data.message);
-        await refreshWorkspace();
-      }
-    } catch (err) {
-      console.error('Error confirming collaboration:', err);
-      alert(err.response?.data?.error || 'Failed to confirm collaboration');
-    } finally {
-      setConfirming(false);
-    }
-  };
-
-  const openEditModal = (section, field) => {
-    setSelectedField({ section, field });
-    setEditModalOpen(true);
   };
 
   const openNotesModal = (section, field) => {
@@ -171,7 +64,7 @@ const CollabWorkspace = () => {
         <div className="flex items-center justify-center h-[calc(100vh-80px)]">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#7878E9' }} />
-            <p className="text-gray-400">Loading workspace...</p>
+            <p className="text-gray-400">Loading workspace spectate view...</p>
           </div>
         </div>
       </div>
@@ -188,7 +81,7 @@ const CollabWorkspace = () => {
             <h2 className="text-2xl font-bold text-white mb-2">Error</h2>
             <p className="text-gray-400 mb-6">{error}</p>
             <button
-              onClick={() => navigate('/collaborations')}
+              onClick={() => navigate('/admin/dashboard', { state: { activeTab: 'all-collaborations' } })}
               className="px-6 py-2 text-white rounded-lg transition"
               style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
@@ -204,30 +97,14 @@ const CollabWorkspace = () => {
     return null;
   }
 
-  // Get collaborator names
-  const isInitiator = collaboration.initiator.user === user?._id;
-  const myName = isInitiator ? collaboration.initiator.name : collaboration.recipient.name;
-  const otherName = isInitiator ? collaboration.recipient.name : collaboration.initiator.name;
   const collaborationTitle = `${collaboration.initiator.name} × ${collaboration.recipient.name}`;
 
   // Get event details for sticky bar
-  // Event date can be: plain string, object with {date, startTime, endTime}, or from workspace agreed value
   const getEventDate = () => {
-    // First try to get the agreed workspace date if available
     const eventDateField = workspace?.sections
       ?.flatMap(s => s.fields)
       ?.find(f => f.key === 'eventDate');
-    
-    if (eventDateField) {
-      // If both agreed, use the agreed value
-      if (eventDateField.status === 'agreed') {
-        return eventDateField.initiatorValue;
-      }
-      // Otherwise show initiator's proposed value
-      return eventDateField.initiatorValue;
-    }
-    
-    // Fallback to raw formData
+    if (eventDateField) return eventDateField.initiatorValue;
     return collaboration.formData?.eventDate || '';
   };
 
@@ -245,17 +122,28 @@ const CollabWorkspace = () => {
   const eventDate = getEventDate();
   const eventTime = getEventTime();
   const eventLocation = collaboration.formData?.city || collaboration.formData?.location || 'Location TBD';
-  const eventName = collaborationTitle;
 
   return (
     <div className="min-h-screen bg-black pb-32">
       <NavigationBar />
 
+      {/* Admin Spectate Banner */}
+      <div className="bg-yellow-500/10 border-b border-yellow-500/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <Eye className="w-5 h-5 text-yellow-400" />
+            <p className="text-yellow-400 font-medium text-sm">
+              Admin Spectate Mode — Read-only view of the collaboration workspace
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="bg-gradient-to-b from-black via-gray-900 to-black border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <button
-            onClick={() => navigate('/collaborations')}
+            onClick={() => navigate('/admin/dashboard', { state: { activeTab: 'all-collaborations' } })}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -271,21 +159,12 @@ const CollabWorkspace = () => {
                 <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 rounded-full border border-yellow-500/20">
                   {workspace.isLocked ? 'Confirmed' : 'Negotiating'}
                 </span>
-                {workspace.isLocked && (
-                  <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-500">Workspace Locked</span>
-                  </div>
-                )}
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">
+                  <Eye className="w-3 h-3 inline mr-1" />
+                  Spectating
+                </span>
               </div>
             </div>
-
-            {workspace.isLocked && (
-              <div className="px-4 py-2 rounded-lg border" style={{ background: 'rgba(120,120,233,0.1)', borderColor: 'rgba(120,120,233,0.2)' }}>
-                <p className="font-medium" style={{ color: '#7878E9' }}>✓ Collaboration Confirmed</p>
-                <p className="text-sm text-gray-400 mt-1">Read-only mode</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -308,13 +187,9 @@ const CollabWorkspace = () => {
                         : 'bg-gray-700 text-gray-400'
                     }`}
                       style={isAllAgreed ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}>
-                      {isAllAgreed ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <span className="text-xs font-bold">{idx + 1}</span>
-                      )}
+                      {isAllAgreed ? <Check className="w-4 h-4" /> : <span className="text-xs font-bold">{idx + 1}</span>}
                     </div>
-                    <span className={`text-xs font-medium text-center ${isAllAgreed ? 'text-gray-400' : 'text-gray-400'}`}
+                    <span className={`text-xs font-medium text-center ${isAllAgreed ? '' : 'text-gray-400'}`}
                       style={isAllAgreed ? { color: '#7878E9' } : {}}>
                       {section.title}
                     </span>
@@ -334,9 +209,8 @@ const CollabWorkspace = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Panel - Sections & Fields */}
+          {/* Left Panel - Sections & Fields (Read-Only) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Audience Proof (if available) */}
             {workspace.audienceProof && (
               <AudienceProofCard 
                 audienceProof={workspace.audienceProof}
@@ -344,7 +218,6 @@ const CollabWorkspace = () => {
               />
             )}
 
-            {/* Workspace Sections */}
             {workspace.sections?.map((section, index) => (
               <WorkspaceSection
                 key={section.key}
@@ -352,64 +225,47 @@ const CollabWorkspace = () => {
                 sectionIndex={index}
                 collaboration={collaboration}
                 workspace={workspace}
-                isInitiator={isInitiator}
-                isLocked={workspace.isLocked}
-                onEditField={(field) => openEditModal(section.key, field)}
+                isInitiator={false}
+                isLocked={true}
+                onEditField={() => {}}
                 onOpenNotes={(field) => openNotesModal(section.key, field)}
                 onOpenHistory={(field) => openHistoryModal(section.key, field)}
-                onRefresh={refreshWorkspace}
+                onRefresh={() => {}}
               />
             ))}
           </div>
 
-          {/* Right Panel - Master Forum */}
+          {/* Right Panel - Forum (Read-Only) */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <MasterForum
                 collaborationId={id}
                 messages={workspace.forumMessages || []}
-                myName={myName}
-                otherName={otherName}
-                isLocked={workspace.isLocked}
-                onRefresh={refreshWorkspace}
+                myName="Admin"
+                otherName=""
+                isLocked={true}
+                onRefresh={() => {}}
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sticky Bar */}
+      {/* Sticky Bar (Info Only, No Actions) */}
       <WorkspaceStickyBar
-        eventName={eventName}
+        eventName={collaborationTitle}
         eventDate={eventDate}
         eventTime={eventTime}
         eventLocation={eventLocation}
-        isLocked={workspace.isLocked}
-        saving={saving}
-        confirming={confirming}
-        onSave={handleSaveChanges}
-        onExit={handleExitCollaboration}
-        onConfirm={handleConfirmCollaboration}
+        isLocked={true}
+        saving={false}
+        confirming={false}
+        onSave={() => {}}
+        onExit={() => {}}
+        onConfirm={() => {}}
       />
 
-      {/* Modals */}
-      {editModalOpen && selectedField && (
-        <FieldEditorModal
-          isOpen={editModalOpen}
-          onClose={() => {
-            setEditModalOpen(false);
-            setSelectedField(null);
-          }}
-          collaborationId={id}
-          collaboration={collaboration}
-          workspace={workspace}
-          section={selectedField.section}
-          field={selectedField.field}
-          isInitiator={isInitiator}
-          onSave={refreshWorkspace}
-        />
-      )}
-
+      {/* Notes Modal (Read-Only, uses pre-loaded data) */}
       {notesModalOpen && selectedField && (
         <FieldNotesModal
           isOpen={notesModalOpen}
@@ -420,11 +276,14 @@ const CollabWorkspace = () => {
           collaborationId={id}
           section={selectedField.section}
           field={selectedField.field}
-          myName={myName}
-          onRefresh={refreshWorkspace}
+          myName="Admin"
+          onRefresh={() => {}}
+          preloadedNotes={workspace?.allFieldNotes?.[`${selectedField.section}.${selectedField.field}`] || []}
+          isReadOnly={true}
         />
       )}
 
+      {/* History Modal (uses pre-loaded data) */}
       {historyModalOpen && selectedField && (
         <FieldHistoryModal
           isOpen={historyModalOpen}
@@ -435,10 +294,11 @@ const CollabWorkspace = () => {
           collaborationId={id}
           section={selectedField.section}
           field={selectedField.field}
+          preloadedHistory={workspace?.allFieldHistory?.[`${selectedField.section}.${selectedField.field}`] || []}
         />
       )}
     </div>
   );
 };
 
-export default CollabWorkspace;
+export default AdminSpectateWorkspace;

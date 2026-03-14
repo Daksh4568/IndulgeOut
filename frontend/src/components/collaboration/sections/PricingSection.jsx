@@ -227,37 +227,55 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
                         </div>
                       )}
                       
-                      {/* Add Comment Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openCommentModal(model.title, model.id);
-                        }}
-                        style={{
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                        }}
-                        className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
-                      >
-                        Add Comment
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Display saved value and comment (shown when NOT hovering AND value exists) */}
-                  {isSelected && !isHovered && savedValue && (
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
-                      <span className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm font-medium">
-                        {model.inputType === 'amount' ? `₹${savedValue}` : savedValue}
-                      </span>
+                      {/* Comment buttons */}
+                      {isHovered && !savedComment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCommentModal(model.title, model.id);
+                          }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
+                          style={{
+                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          }}
+                        >
+                          Add Comment
+                        </button>
+                      )}
+                      
                       {savedComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(model.title, model.id);
                           }}
-                          className="text-indigo-400 text-sm hover:text-indigo-300 underline"
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
                         >
-                          View comment
+                          View Comment
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Display saved value (shown when NOT hovering AND value exists) */}
+                  {isSelected && !isHovered && savedValue && (
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                      <span className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm font-medium">
+                        {model.inputType === 'amount' ? `₹${savedValue}` : savedValue}
+                      </span>
+                      
+                      {savedComment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCommentModal(model.title, model.id);
+                          }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
+                        >
+                          View Comment
                         </button>
                       )}
                     </div>

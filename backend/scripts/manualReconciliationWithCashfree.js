@@ -125,15 +125,17 @@ async function runManualReconciliation(options) {
     
     console.log('');
     
-    // Build query
+    // Build query - only paid tickets (free events don't go through Cashfree)
     const query = {
       purchaseDate: { $gte: startDate, $lte: endDate },
-      status: { $ne: 'cancelled' }
+      status: { $ne: 'cancelled' },
+      'price.amount': { $gt: 0 }
     };
     
-    // Only process pending tickets unless force flag is used
+    // Process pending and manual_review tickets (re-check previously failed ones)
+    // Use --force to also re-check already verified tickets
     if (!options.force) {
-      query.reconciliationStatus = 'pending';
+      query.reconciliationStatus = { $in: ['pending', 'manual_review'] };
     }
     
     // Find tickets to reconcile
@@ -143,6 +145,27 @@ async function runManualReconciliation(options) {
     
     if (tickets.length === 0) {
       console.log('✅ No tickets need reconciliation');
+      
+      // Show how many tickets exist in total for the date range (diagnostic info)
+      const totalInRange = await Ticket.countDocuments({
+        purchaseDate: { $gte: startDate, $lte: endDate },
+        status: { $ne: 'cancelled' }
+      });
+      
+      if (totalInRange > 0) {
+        const verifiedInRange = await Ticket.countDocuments({
+          purchaseDate: { $gte: startDate, $lte: endDate },
+          status: { $ne: 'cancelled' },
+          reconciliationStatus: 'verified'
+        });
+        console.log('');
+        console.log(`ℹ️  There are ${totalInRange} total tickets in this date range:`);
+        console.log(`   ✅ ${verifiedInRange} already verified`);
+        console.log(`   📋 ${totalInRange - verifiedInRange} with other statuses`);
+        console.log('');
+        console.log('💡 To re-check all tickets (including already verified), use --force');
+      }
+      
       return {
         total: 0,
         verified: 0,
@@ -170,27 +193,30 @@ async function runManualReconciliation(options) {
       processed++;
       
       try {
-        // Ensure price.amount is set for old tickets (backward compatibility)
-        if (typeof ticket.price === 'number') {
-          // Old format: price was stored as number, convert to object
-          const oldPrice = ticket.price;
-          ticket.price = { amount: oldPrice, currency: 'INR' };
-        } else if (!ticket.price || ticket.price.amount === undefined || ticket.price.amount === null) {
-          if (!ticket.price) {
-            ticket.price = { currency: 'INR' };
+        // Fix price format for backward compatibility (use toObject to get raw value)
+        try {
+          const rawPrice = ticket.toObject?.().price ?? ticket.price;
+          if (typeof rawPrice === 'number') {
+            ticket.set('price', { amount: rawPrice, currency: 'INR' });
+          } else if (!rawPrice || rawPrice.amount == null) {
+            ticket.set('price', {
+              amount: ticket.metadata?.basePrice || ticket.metadata?.totalPaid || 0,
+              currency: 'INR'
+            });
           }
-          // Use metadata.basePrice or totalPaid as fallback
-          ticket.price.amount = ticket.metadata?.basePrice || ticket.metadata?.totalPaid || 0;
+        } catch (priceFixError) {
+          console.warn(`⚠️  Could not fix price for ${ticket.ticketNumber}: ${priceFixError.message}`);
         }
         
-        const orderId = ticket.metadata?.orderId;
+        // Try metadata.orderId first, fall back to paymentId (which stores orderId)
+        const orderId = ticket.metadata?.orderId || ticket.paymentId;
         
-        if (!orderId) {
+        if (!orderId || !orderId.startsWith('ORDER_')) {
           console.warn(`⚠️  [${processed}/${tickets.length}] Ticket ${ticket.ticketNumber} - Missing orderId`);
           
           if (!options.dryRun) {
             ticket.reconciliationStatus = 'manual_review';
-            ticket.reconciliationNotes = 'Missing orderId';
+            ticket.reconciliationNotes = 'Missing orderId - no Cashfree order reference found';
             ticket.lastReconciliationDate = new Date();
             await ticket.save({ validateBeforeSave: false });
           }
@@ -201,6 +227,11 @@ async function runManualReconciliation(options) {
             reason: 'Missing orderId'
           });
           continue;
+        }
+        
+        // Backfill orderId in metadata if it was only in paymentId
+        if (!ticket.metadata?.orderId && orderId) {
+          ticket.set('metadata.orderId', orderId);
         }
         
         // Fetch order details from Cashfree
@@ -233,7 +264,10 @@ async function runManualReconciliation(options) {
             
             if (!options.dryRun) {
               ticket.reconciliationStatus = 'verified';
-              ticket.settlementStatus = 'captured';
+              // Only set to 'captured' if not already settled (avoid overwriting settled status on --force)
+              if (!ticket.settlementStatus || ticket.settlementStatus === 'pending') {
+                ticket.settlementStatus = 'captured';
+              }
               ticket.lastReconciliationDate = new Date();
               
               // Store gateway response
@@ -292,13 +326,17 @@ async function runManualReconciliation(options) {
       } catch (error) {
         if (error.response?.status === 404) {
           console.error(`   ❌ Order not found in Cashfree: ${ticket.metadata?.orderId}`);
+          console.error(`      (API: ${CASHFREE_API_URL} | Ticket created: ${ticket.purchaseDate?.toISOString()} | Source: ${ticket.metadata?.registrationSource || 'unknown'})`);
         } else {
           console.error(`   ❌ Error: ${error.message}`);
         }
         
         if (!options.dryRun) {
+          const env = CASHFREE_API_URL.includes('sandbox') ? 'sandbox' : 'production';
           ticket.reconciliationStatus = 'manual_review';
-          ticket.reconciliationNotes = `Reconciliation error: ${error.message}`;
+          ticket.reconciliationNotes = error.response?.status === 404 
+            ? `Order not found in Cashfree ${env} (404). Order may have been created in a different environment.`
+            : `Reconciliation error: ${error.message}`;
           ticket.lastReconciliationDate = new Date();
           await ticket.save({ validateBeforeSave: false });
         }
@@ -314,15 +352,50 @@ async function runManualReconciliation(options) {
     
     console.log('');
     console.log('─────────────────────────────────────────────────────');
+    console.log('Fixing incorrectly settled tickets (no UTR)...');
+    console.log('─────────────────────────────────────────────────────');
+    console.log('');
+    
+    // Fix tickets marked as "settled" but with no UTR (settlement not actually completed)
+    if (!options.dryRun) {
+      const badlySettled = await Ticket.find({
+        settlementStatus: 'settled',
+        $or: [
+          { settlementUTR: { $exists: false } },
+          { settlementUTR: '' },
+          { settlementUTR: null }
+        ],
+        'price.amount': { $gt: 0 }
+      });
+      
+      if (badlySettled.length > 0) {
+        console.log(`⚠️  Found ${badlySettled.length} tickets marked "settled" without bank UTR - reverting to "captured"`);
+        for (const ticket of badlySettled) {
+          ticket.settlementStatus = 'captured';
+          ticket.settlementDate = undefined;
+          ticket.settlementAmount = undefined;
+          ticket.cashfreeServiceCharge = undefined;
+          ticket.cashfreeServiceTax = undefined;
+          await ticket.save({ validateBeforeSave: false });
+        }
+        console.log(`✅ Reverted ${badlySettled.length} tickets back to "captured"`);
+      } else {
+        console.log('✅ No incorrectly settled tickets found');
+      }
+    }
+    
+    console.log('');
+    console.log('─────────────────────────────────────────────────────');
     console.log('Checking settlement status for captured payments...');
     console.log('─────────────────────────────────────────────────────');
     console.log('');
     
-    // Check settlement status for captured payments
+    // Check settlement status for captured payments (only paid tickets)
     const capturedTickets = await Ticket.find({
       settlementStatus: 'captured',
-      purchaseDate: { $gte: startDate, $lte: endDate }
-    }).limit(100); // Limit to avoid long-running script
+      purchaseDate: { $gte: startDate, $lte: endDate },
+      'price.amount': { $gt: 0 }
+    });
     
     console.log(`🏦 Found ${capturedTickets.length} captured payments to check for settlement`);
     console.log('');
@@ -334,68 +407,135 @@ async function runManualReconciliation(options) {
       settlementChecked++;
       
       try {
-        // Ensure price.amount is set for old tickets (backward compatibility)
-        if (typeof ticket.price === 'number') {
-          // Old format: price was stored as number, convert to object
-          const oldPrice = ticket.price;
-          ticket.price = { amount: oldPrice, currency: 'INR' };
-        } else if (!ticket.price || ticket.price.amount === undefined || ticket.price.amount === null) {
-          if (!ticket.price) {
-            ticket.price = { currency: 'INR' };
+        // Fix price format for backward compatibility
+        try {
+          const rawPrice = ticket.toObject?.().price ?? ticket.price;
+          if (typeof rawPrice === 'number') {
+            ticket.set('price', { amount: rawPrice, currency: 'INR' });
+          } else if (!rawPrice || rawPrice.amount == null) {
+            ticket.set('price', {
+              amount: ticket.metadata?.basePrice || ticket.metadata?.totalPaid || 0,
+              currency: 'INR'
+            });
           }
-          ticket.price.amount = ticket.metadata?.basePrice || ticket.metadata?.totalPaid || 0;
+        } catch (priceFixError) {
+          // Non-critical, continue
         }
         
-        const orderId = ticket.metadata?.orderId;
-        if (!orderId) continue;
+        const orderId = ticket.metadata?.orderId || ticket.paymentId;
+        if (!orderId || !orderId.startsWith('ORDER_')) continue;
         
         console.log(`🏦 [${settlementChecked}/${capturedTickets.length}] Checking settlement for ${ticket.ticketNumber}...`);
         
-        // Fetch settlement details
-        const settlementResponse = await axios.get(
-          `${CASHFREE_API_URL}/pg/orders/${orderId}/settlements`,
-          {
-            headers: {
-              'x-client-id': process.env.CASHFREE_APP_ID,
-              'x-client-secret': process.env.CASHFREE_SECRET_KEY,
-              'x-api-version': '2023-08-01'
+        // Fetch settlement details with retry logic for rate limiting
+        let settlementResponse;
+        let retries = 0;
+        while (retries < 3) {
+          try {
+            settlementResponse = await axios.get(
+              `${CASHFREE_API_URL}/pg/orders/${orderId}/settlements`,
+              {
+                headers: {
+                  'x-client-id': process.env.CASHFREE_APP_ID,
+                  'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+                  'x-api-version': '2023-08-01'
+                }
+              }
+            );
+            break;
+          } catch (err) {
+            if (err.response?.status === 429 && retries < 2) {
+              retries++;
+              const waitTime = 3000 * retries;
+              console.log(`   ⏳ Rate limited, waiting ${waitTime}ms (retry ${retries}/2)`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+            } else {
+              throw err;
             }
           }
-        );
+        }
         
-        if (settlementResponse.data && settlementResponse.data.length > 0) {
-          const settlement = settlementResponse.data[0];
+        // Parse settlement response - handle multiple Cashfree response formats
+        // Cashfree may return: array, single object, or { data: [...] } wrapper
+        const rawSettlementData = settlementResponse.data;
+        let settlements = [];
+        if (Array.isArray(rawSettlementData)) {
+          settlements = rawSettlementData;
+        } else if (rawSettlementData && typeof rawSettlementData === 'object') {
+          if (Array.isArray(rawSettlementData.data)) {
+            settlements = rawSettlementData.data;
+          } else if (rawSettlementData.settlement_amount != null || rawSettlementData.cf_settlement_id != null) {
+            settlements = [rawSettlementData];
+          }
+        }
+        
+        // Debug: log actual settlement response structure (first 3 tickets only)
+        if (settlementChecked <= 3) {
+          console.log(`   🔍 Raw response type: ${typeof rawSettlementData}, isArray: ${Array.isArray(rawSettlementData)}`);
+          if (settlements.length > 0) {
+            console.log(`   🔍 Settlement keys: ${Object.keys(settlements[0]).join(', ')}`);
+            console.log(`   🔍 Settlement data: amount=${settlements[0].settlement_amount}, utr=${settlements[0].transfer_utr || 'N/A'}, time=${settlements[0].transfer_time || 'N/A'}`);
+          }
+        }
+        
+        if (settlements.length > 0) {
+          const settlement = settlements[0];
+          const utr = settlement.transfer_utr || settlement.settlement_utr || '';
+          const serviceCharge = settlement.service_charge || 0;
+          const serviceTax = settlement.service_tax || 0;
+          const totalDeducted = serviceCharge + serviceTax;
           
-          if (settlement.settlement_status === 'SUCCESS') {
-            console.log(`   ✅ SETTLED - Amount: ₹${settlement.settlement_amount}, UTR: ${settlement.settlement_utr}`);
+          if (settlement.settlement_amount != null && utr) {
+            // UTR exists = Cashfree has actually transferred the money to bank
+            console.log(`   ✅ SETTLED - Amount: ₹${settlement.settlement_amount}, Cashfree Fee: ₹${serviceCharge} + Tax: ₹${serviceTax} = ₹${totalDeducted.toFixed(2)} deducted, UTR: ${utr}`);
             
             if (!options.dryRun) {
               ticket.settlementStatus = 'settled';
-              ticket.settlementDate = new Date(settlement.settlement_date);
-              ticket.settlementUTR = settlement.settlement_utr;
+              ticket.settlementDate = new Date(settlement.transfer_time || settlement.settlement_date || Date.now());
+              ticket.settlementUTR = utr;
               ticket.settlementAmount = settlement.settlement_amount;
+              ticket.cashfreeServiceCharge = serviceCharge;
+              ticket.cashfreeServiceTax = serviceTax;
               await ticket.save({ validateBeforeSave: false });
             }
             
             settled++;
+          } else if (settlement.settlement_amount != null) {
+            // Amount exists but no UTR = Cashfree has calculated but NOT yet transferred
+            console.log(`   ⏳ Settlement pending (Amount: ₹${settlement.settlement_amount}, Fee: ₹${totalDeducted.toFixed(2)}, UTR not yet assigned)`);
           } else {
-            console.log(`   ⏳ Settlement pending (${settlement.settlement_status})`);
+            console.log(`   ⏳ Settlement pending`);
           }
         } else {
           console.log(`   ⏳ No settlement data available yet`);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Longer delay between settlement checks to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
       } catch (error) {
         // Settlement might not be available yet - skip silently
-        if (!error.response || error.response.status !== 404) {
+        if (error.response?.status === 429) {
+          console.error(`   ⚠️  Rate limited, pausing 5s...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else if (!error.response || error.response.status !== 404) {
           console.error(`   ⚠️  Error: ${error.message}`);
         } else {
           console.log(`   ⏳ Settlement not available yet`);
         }
       }
     }
+    
+    // Calculate Cashfree fee totals from settled tickets
+    const settledTickets = await Ticket.find({
+      settlementStatus: 'settled',
+      purchaseDate: { $gte: startDate, $lte: endDate },
+      'price.amount': { $gt: 0 }
+    }).select('cashfreeServiceCharge cashfreeServiceTax settlementAmount');
+    
+    const totalServiceCharge = settledTickets.reduce((sum, t) => sum + (t.cashfreeServiceCharge || 0), 0);
+    const totalServiceTax = settledTickets.reduce((sum, t) => sum + (t.cashfreeServiceTax || 0), 0);
+    const totalSettledAmount = settledTickets.reduce((sum, t) => sum + (t.settlementAmount || 0), 0);
     
     // Generate final report
     console.log('');
@@ -409,6 +549,16 @@ async function runManualReconciliation(options) {
     console.log(`❌ Failed/Manual Review:      ${failed}`);
     console.log(`🏦 Settlement Confirmed:      ${settled}`);
     console.log('');
+    if (totalServiceCharge > 0 || settled > 0) {
+      console.log('─────────────────────────────────────────────────────');
+      console.log('💳 CASHFREE FEE BREAKDOWN:');
+      console.log(`   Cashfree Service Charge:  ₹${totalServiceCharge.toFixed(2)}`);
+      console.log(`   GST on Service Charge:    ₹${totalServiceTax.toFixed(2)}`);
+      console.log(`   Total Deducted by Cashfree: ₹${(totalServiceCharge + totalServiceTax).toFixed(2)}`);
+      console.log(`   Total Settled to Bank:    ₹${totalSettledAmount.toFixed(2)}`);
+      console.log('─────────────────────────────────────────────────────');
+      console.log('');
+    }
     
     if (options.dryRun) {
       console.log('⚠️  This was a DRY RUN - No changes were saved to database');
@@ -491,7 +641,7 @@ async function sendAdminAlert(data) {
     for (const admin of adminUsers) {
       await notificationService.createNotification({
         recipient: admin._id,
-        type: 'payment_reconciliation_alert',
+        type: 'admin_review_required',
         category: 'action_required',
         priority: 'high',
         title: '🚨 Manual Reconciliation Completed',

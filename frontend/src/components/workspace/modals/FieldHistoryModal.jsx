@@ -7,14 +7,20 @@ const FieldHistoryModal = ({
   onClose,
   collaborationId,
   section,
-  field
+  field,
+  preloadedHistory
 }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
-      fetchHistory();
+      if (preloadedHistory) {
+        setHistory(preloadedHistory);
+        setLoading(false);
+      } else {
+        fetchHistory();
+      }
     }
   }, [isOpen, section, field]);
 
@@ -72,7 +78,7 @@ const FieldHistoryModal = ({
         return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'accepted':
       case 'agreed':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+        return 'bg-[#7878E9]/10 text-[#7878E9] border-[#7878E9]/20';
       case 'modified':
       case 'updated':
         return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
@@ -89,13 +95,36 @@ const FieldHistoryModal = ({
     }
 
     if (typeof value === 'object') {
+      // Date objects
       if (value.date) {
         return `${value.date} ${value.startTime || ''} ${value.endTime ? `- ${value.endTime}` : ''}`.trim();
+      }
+      if (value.startDate) {
+        return `${value.startDate}${value.endDate ? ` to ${value.endDate}` : ''}${value.flexible ? ' (Flexible)' : ''}`;
+      }
+      // Sub-options objects - show selected keys as chips
+      if (!Array.isArray(value)) {
+        const selectedKeys = Object.entries(value)
+          .filter(([k, v]) => v === true || (typeof v === 'object' && v?.selected === true))
+          .map(([k]) => k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+        if (selectedKeys.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1">
+              {selectedKeys.map(k => (
+                <span key={k} className="px-2 py-0.5 bg-gray-800 text-white text-xs rounded border border-gray-700">{k}</span>
+              ))}
+            </div>
+          );
+        }
+      }
+      // Arrays
+      if (Array.isArray(value)) {
+        return value.join(', ');
       }
       return JSON.stringify(value);
     }
 
-    return value;
+    return String(value);
   };
 
   const fieldLabel = field.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase());
@@ -123,7 +152,7 @@ const FieldHistoryModal = ({
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#7878E9' }} />
             </div>
           ) : history.length === 0 ? (
             <div className="text-center py-12">

@@ -1,9 +1,52 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const multer = require('multer');
 const Collaboration = require('../models/Collaboration');
 const User = require('../models/User');
 const { authMiddleware } = require('../utils/authUtils');
+const { uploadMultipleImagesToS3 } = require('../utils/imageUpload');
+
+// Configure multer for collaboration image uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+// @route   POST /api/collaborations/upload-images
+// @desc    Upload collaboration proposal images to S3
+// @access  Private
+router.post('/upload-images', authMiddleware, upload.array('images', 3), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No images provided' });
+    }
+
+    const results = await uploadMultipleImagesToS3(req.files, 'collaborations', {
+      width: 1920,
+      height: 1080,
+      quality: 85
+    });
+
+    res.json({
+      success: true,
+      images: results.map(r => ({ url: r.url, key: r.key }))
+    });
+  } catch (error) {
+    console.error('Collaboration image upload error:', error);
+    res.status(500).json({ message: 'Failed to upload images', error: error.message });
+  }
+});
 
 // @route   GET /api/collaborations/received
 // @desc    Get all collaboration requests received by the user
@@ -405,6 +448,156 @@ router.post('/:id/counter/reject', authMiddleware, async (req, res) => {
 // @route   GET /api/collaborations/:id
 // @desc    Get collaboration details
 // @access  Private
+// @route   POST /api/collaborations/draft
+// @desc    Save collaboration proposal as draft
+// @access  Private
+router.post('/draft', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { type, recipientId, recipientType, formData } = req.body;
+
+    console.log('[DRAFT] Saving draft:', { 
+      type, 
+      recipientId, 
+      recipientType, 
+      userId,
+      formDataKeys: Object.keys(formData || {})
+    });
+
+    // Validate required fields
+    if (!type || !recipientId || !recipientType || !formData) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get proposer and recipient details
+    const proposer = await User.findById(userId);
+    const recipient = await User.findById(recipientId);
+
+    if (!proposer || !recipient) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Parse eventDate if needed
+    let eventDate = null;
+    if (formData.eventDate) {
+      if (typeof formData.eventDate === 'object' && formData.eventDate.date) {
+        eventDate = new Date(formData.eventDate.date);
+      } else if (typeof formData.eventDate === 'string') {
+        eventDate = new Date(formData.eventDate);
+      }
+    }
+
+    // Check if a draft already exists for this user and recipient
+    let draft = await Collaboration.findOne({
+      'initiator.user': userId,
+      'recipient.user': recipientId,
+      type,
+      status: 'draft'
+    });
+
+    const collaborationData = {
+      type,
+      initiator: {
+        user: proposer._id,
+        userType: proposer.hostPartnerType || 'community_organizer',
+        name: proposer.communityProfile?.communityName || proposer.brandProfile?.brandName || proposer.venueProfile?.venueName || proposer.name,
+        profileImage: proposer.communityProfile?.logo || proposer.brandProfile?.logo || proposer.venueProfile?.photos?.[0] || proposer.profilePicture
+      },
+      recipient: {
+        user: recipient._id,
+        userType: recipient.hostPartnerType || recipientType,
+        name: recipient.venueProfile?.venueName || recipient.brandProfile?.brandName || recipient.communityProfile?.communityName || recipient.name,
+        profileImage: recipient.venueProfile?.photos?.[0] || recipient.brandProfile?.logo || recipient.communityProfile?.logo || recipient.profilePicture
+      },
+      formData,
+      status: 'draft',
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days for drafts
+    };
+
+    // Map to structured schema based on type
+    if (type === 'communityToBrand') {
+      collaborationData.communityToBrand = {
+        eventCategory: formData.eventCategory,
+        expectedAttendees: formData.expectedAttendees,
+        eventFormat: formData.eventFormat || [],
+        targetAudience: formData.targetAudience || [],
+        nicheAudienceDetails: formData.nicheAudienceDetails,
+        eventDate: eventDate,
+        city: formData.city,
+        brandDeliverables: formData.brandDeliverables || {},
+        pricing: formData.pricing || {},
+        audienceProof: formData.audienceProof || {},
+        supportingInfo: formData.supportingInfo || {}
+      };
+    } else if (type === 'brandToCommunity') {
+      collaborationData.brandToCommunity = {
+        campaignObjectives: formData.campaignObjectives || {},
+        targetAudience: Array.isArray(formData.targetAudience) 
+          ? formData.targetAudience.join(', ') 
+          : formData.targetAudience || '',
+        preferredFormats: formData.preferredFormats || [],
+        city: formData.city,
+        timeline: formData.timeline || {},
+        brandOffers: formData.brandOffers || {},
+        brandExpectations: formData.brandExpectations || {}
+      };
+    }
+    // Note: communityToVenue and venueToCommunity use generic formData storage for now
+
+    if (draft) {
+      // Update existing draft
+      Object.assign(draft, collaborationData);
+      await draft.save();
+      console.log('[DRAFT] Updated existing draft:', draft._id);
+    } else {
+      // Create new draft
+      draft = new Collaboration(collaborationData);
+      await draft.save();
+      console.log('[DRAFT] Created new draft:', draft._id);
+    }
+
+    res.status(200).json({ 
+      message: 'Draft saved successfully',
+      draft
+    });
+  } catch (error) {
+    console.error('[DRAFT] Error saving draft:', error);
+    res.status(500).json({ error: 'Server error while saving draft' });
+  }
+});
+
+// @route   GET /api/collaborations/draft/:recipientId/:type
+// @desc    Get existing draft for recipient and type
+// @access  Private
+router.get('/draft/:recipientId/:type', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { recipientId, type } = req.params;
+
+    console.log('[DRAFT] Fetching draft:', { userId, recipientId, type });
+
+    // Find existing draft
+    const draft = await Collaboration.findOne({
+      'initiator.user': userId,
+      'recipient.user': recipientId,
+      type,
+      status: 'draft'
+    });
+
+    if (!draft) {
+      return res.status(404).json({ message: 'No draft found' });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      draft
+    });
+  } catch (error) {
+    console.error('[DRAFT] Error fetching draft:', error);
+    res.status(500).json({ error: 'Server error while fetching draft' });
+  }
+});
+
 // @route   POST /api/collaborations/propose
 // @desc    Create a new collaboration proposal
 // @access  Private
@@ -505,13 +698,15 @@ router.post('/propose', authMiddleware, async (req, res) => {
         sponsorshipType: formData.sponsorshipType ? [formData.sponsorshipType] : [],
         collaborationFormat: formData.collaborationFormat ? [formData.collaborationFormat] : [],
         expectedReach: parseAttendees(formData.expectedAttendees),
-        targetAudience: formData.targetAudience,
+        targetAudience: Array.isArray(formData.targetAudience) 
+          ? formData.targetAudience.join(', ') 
+          : formData.targetAudience || '',
         deliverables: formData.deliverables || formData.supportingInfo?.note
       };
     }
 
     // Create collaboration - Status is 'submitted' (awaiting admin review)
-    const collaboration = new Collaboration({
+    const collaborationData = {
       type,
       // New structure
       initiator: {
@@ -526,13 +721,59 @@ router.post('/propose', authMiddleware, async (req, res) => {
         name: recipient.venueProfile?.venueName || recipient.brandProfile?.brandName || recipient.name,
         profileImage: recipient.venueProfile?.photos?.[0] || recipient.brandProfile?.logo || recipient.profilePicture
       },
-      formData,
+      formData,  // Keep for backwards compatibility
       requestDetails,
       status: 'submitted', // Awaiting admin review - recipient won't see this yet
       expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
-    });
+    };
+    
+    // Map to structured schema based on type
+    if (type === 'communityToBrand') {
+      collaborationData.communityToBrand = {
+        eventCategory: formData.eventCategory,
+        expectedAttendees: formData.expectedAttendees,
+        eventFormat: formData.eventFormat || [],
+        targetAudience: formData.targetAudience || [],
+        nicheAudienceDetails: formData.nicheAudienceDetails,
+        eventDate: eventDate,
+        city: formData.city,
+        brandDeliverables: formData.brandDeliverables || {},
+        pricing: formData.pricing || {},
+        audienceProof: formData.audienceProof || {},
+        supportingInfo: formData.supportingInfo || {}
+      };
+    } else if (type === 'brandToCommunity') {
+      collaborationData.brandToCommunity = {
+        campaignObjectives: formData.campaignObjectives || {},
+        targetAudience: Array.isArray(formData.targetAudience) 
+          ? formData.targetAudience.join(', ') 
+          : formData.targetAudience || '',
+        preferredFormats: formData.preferredFormats || [],
+        city: formData.city,
+        timeline: formData.timeline || {},
+        brandOffers: formData.brandOffers || {},
+        brandExpectations: formData.brandExpectations || {}
+      };
+    }
+    // Note: communityToVenue and venueToCommunity use generic formData + requestDetails for now
+    // Structured schemas will be added later during optimization
+    
+    const collaboration = new Collaboration(collaborationData);
 
     await collaboration.save();
+
+    // Delete any existing draft for this proposal
+    try {
+      await Collaboration.findOneAndDelete({
+        'initiator.user': userId,
+        'recipient.user': recipientId,
+        type,
+        status: 'draft'
+      });
+      console.log('[PROPOSE] Deleted existing draft');
+    } catch (draftError) {
+      console.log('[PROPOSE] No draft to delete or error:', draftError.message);
+    }
 
     // DO NOT notify recipient yet - admin must review first
     // Notify admin instead

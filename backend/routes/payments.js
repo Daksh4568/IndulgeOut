@@ -409,7 +409,8 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         orderId: orderId,
         basePrice: basePrice || 0, // Base price from frontend (organizer's revenue - ticket price only)
         gstAndOtherCharges: gstAndOtherCharges || 0,
-        platformFees: platformFees || 0
+        platformFees: platformFees || 0,
+        totalPaid: totalAmount || (basePrice + (gstAndOtherCharges || 0) + (platformFees || 0)) // Total amount customer paid
       };
       
       // Validation: Ensure basePrice is properly set
@@ -430,6 +431,15 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         ticketMetadata.tierPeople = groupingOffer.tierPeople;
       }
       
+      // Add coupon information to ticket metadata
+      if (couponData) {
+        ticketMetadata.couponCode = couponData.code;
+        ticketMetadata.couponDiscount = couponData.discountApplied;
+        ticketMetadata.couponDiscountType = couponData.discountType;
+        ticketMetadata.couponDiscountValue = couponData.discountValue;
+        ticketMetadata.originalAmount = (basePrice || 0) + (couponData.discountApplied || 0);
+      }
+      
       ticket = await ticketService.generateTicket({
         userId,
         eventId: event._id,
@@ -441,6 +451,26 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       });
       console.log(`✅ Ticket generated: ${ticket.ticketNumber} (${ticketQuantity} spots)`);
       console.log(`🎫 [Payment Ticket] QR Code present: ${!!ticket?.qrCode}, Length: ${ticket?.qrCode?.length || 0}`);
+
+      // Update ticket with payment details, gateway response, and reconciliation status
+      try {
+        const Ticket = require('../models/Ticket');
+        const calculatedTotalPaid = totalAmount || (basePrice + (gstAndOtherCharges || 0) + (platformFees || 0));
+        await Ticket.findByIdAndUpdate(ticket._id, {
+          $set: {
+            'metadata.totalPaid': calculatedTotalPaid,
+            'gatewayResponse.paymentId': payment.cf_payment_id?.toString(),
+            'gatewayResponse.paymentStatus': payment.payment_status,
+            'gatewayResponse.paymentMethod': payment.payment_method || 'unknown',
+            settlementStatus: 'captured',
+            reconciliationStatus: 'verified',
+            lastReconciliationDate: new Date()
+          }
+        });
+        console.log(`✅ [Payment Ticket] Updated ticket ${ticket.ticketNumber} with payment & reconciliation details`);
+      } catch (updateErr) {
+        console.error('⚠️ [Payment Ticket] Failed to update payment details:', updateErr.message);
+      }
     } catch (ticketError) {
       console.error('❌ [Payment Ticket] Failed to generate ticket:', ticketError.message);
       console.error('❌ [Payment Ticket Stack]:', ticketError.stack);
@@ -847,10 +877,34 @@ router.post('/webhook', async (req, res) => {
             gstAndOtherCharges: gstAndOtherCharges,   // ✅ GST breakdown
             platformFees: platformFees,               // ✅ Platform fee breakdown
             totalPaid: paymentAmount,                 // ✅ Total customer paid
-            ticketPrice: ticketPrice                  // Per-ticket price
+            ticketPrice: ticketPrice,                 // Per-ticket price
+            // Coupon information
+            couponCode: couponData?.code || null,
+            couponDiscount: couponData?.discountApplied || 0,
+            couponDiscountType: couponData?.discountType || null,
+            couponDiscountValue: couponData?.discountValue || 0,
+            originalAmount: couponData ? (basePrice + (couponData.discountApplied || 0)) : null
           }
         });
         console.log('✅ [WEBHOOK] Ticket generated:', ticket.ticketNumber);
+
+        // Update ticket with gateway response and reconciliation status
+        try {
+          const Ticket = require('../models/Ticket');
+          await Ticket.findByIdAndUpdate(ticket._id, {
+            $set: {
+              'gatewayResponse.paymentId': cfPaymentId?.toString(),
+              'gatewayResponse.paymentStatus': 'SUCCESS',
+              'gatewayResponse.paymentMethod': payload.data?.payment?.payment_method || 'unknown',
+              settlementStatus: 'captured',
+              reconciliationStatus: 'verified',
+              lastReconciliationDate: new Date()
+            }
+          });
+          console.log(`✅ [WEBHOOK] Updated ticket ${ticket.ticketNumber} with payment & reconciliation details`);
+        } catch (updateErr) {
+          console.error('⚠️ [WEBHOOK] Failed to update ticket payment details:', updateErr.message);
+        }
       } catch (ticketError) {
         console.error('❌ [WEBHOOK] Failed to generate ticket:', ticketError);
         // Continue even if ticket generation fails

@@ -39,11 +39,13 @@ const authMiddleware = async (req, res, next) => {
     }
     
     req.user = { 
+      _id: user._id,
       id: user._id.toString(), 
       userId: user._id.toString(), // Add userId for consistency
       email: user.email, 
       name: user.name,
       role: user.role,
+      userType: user.hostPartnerType, // Add userType alias for workspace routes
       hostPartnerType: user.hostPartnerType // For B2B users (community_organizer, venue, brand_sponsor)
     };
     next();

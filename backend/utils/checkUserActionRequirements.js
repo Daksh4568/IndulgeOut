@@ -146,9 +146,9 @@ function checkHostPartnerProfile(user) {
     // Check community profile fields - comprehensive check
     if (!user.communityProfile?.communityName) missingFields.push('communityName');
     if (!user.communityProfile?.city) missingFields.push('city');
-    if (!user.communityProfile?.eventExperience) missingFields.push('eventExperience');
-    if (!user.communityProfile?.description) missingFields.push('description');
-    if (!user.communityProfile?.eventCategories || user.communityProfile?.eventCategories.length === 0) missingFields.push('eventCategories');
+    if (!user.communityProfile?.pastEventExperience) missingFields.push('pastEventExperience');
+    if (!user.communityProfile?.communityDescription) missingFields.push('communityDescription');
+    if (!user.communityProfile?.category || user.communityProfile?.category.length === 0) missingFields.push('category');
   }
 
   return {

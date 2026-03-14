@@ -63,21 +63,77 @@ const CommunityCounterFormBrand = () => {
   };
 
   const handleFieldAction = (fieldName, action) => {
+    const currentAction = fieldResponses[fieldName]?.action;
+    
+    // If clicking the same action, deselect it
+    if (currentAction === action) {
+      setFieldResponses(prev => {
+        const newState = { ...prev };
+        delete newState[fieldName];
+        return newState;
+      });
+      return;
+    }
+    
+    // If clicking Modify, set the action and open modal directly
     if (action === 'modify') {
-      setCurrentField(fieldName);
-      setModifyValue(fieldResponses[fieldName]?.modifiedValue || null);
-      setFieldNote(fieldResponses[fieldName]?.note || '');
-      setShowModifyModal(true);
-    } else {
       setFieldResponses(prev => ({
         ...prev,
         [fieldName]: {
           action,
           originalValue: getOriginalValue(fieldName),
-          note: prev[fieldName]?.note || ''
+          note: prev[fieldName]?.note || '',
+          modifiedValue: prev[fieldName]?.modifiedValue || null
         }
       }));
+      openModifyModal(fieldName);
+      return;
     }
+    
+    // For Accept or Decline
+    setFieldResponses(prev => ({
+      ...prev,
+      [fieldName]: {
+        action,
+        originalValue: getOriginalValue(fieldName),
+        note: prev[fieldName]?.note || '',
+        modifiedValue: prev[fieldName]?.modifiedValue || null
+      }
+    }));
+  };
+
+  const openModifyModal = (fieldName) => {
+    setCurrentField(fieldName);
+    setModifyValue(fieldResponses[fieldName]?.modifiedValue || null);
+    setFieldNote(fieldResponses[fieldName]?.note || '');
+    setShowModifyModal(true);
+  };
+
+  // Helper to format subOptions into readable string
+  const formatSubOptions = (subOptions) => {
+    if (!subOptions || typeof subOptions !== 'object') return null;
+    
+    // Check if subOptions follow the {option: {selected: true}} pattern
+    const selectedOptions = Object.entries(subOptions)
+      .filter(([key, value]) => value && value.selected === true)
+      .map(([key]) => {
+        // Convert snake_case to Title Case
+        return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      });
+    
+    return selectedOptions.length > 0 ? selectedOptions.join(', ') : null;
+  };
+
+  // Helper to render brand's proposal comment
+  const renderProposalComment = (comment) => {
+    if (!comment) return null;
+    
+    return (
+      <div className="mt-2 bg-purple-900/20 border border-purple-700/50 rounded-lg p-3">
+        <p className="text-purple-400 text-xs font-semibold mb-1">💬 BRAND NOTE:</p>
+        <p className="text-white text-sm">{comment}</p>
+      </div>
+    );
   };
 
   const saveModification = () => {
@@ -105,20 +161,26 @@ const CommunityCounterFormBrand = () => {
   };
 
   const getOriginalValue = (fieldName) => {
-    const formData = collaboration?.formData || {};
+    const proposalData = collaboration?.brandToCommunity || collaboration?.formData || {};
     const fieldMap = {
-      campaignObjectives: formData.campaignObjectives,
-      targetAudience: formData.targetAudience,
-      preferredFormats: formData.preferredFormats,
-      cashOffer: formData.brandOffers?.cash,
-      barterOffer: formData.brandOffers?.barter,
-      coMarketingOffer: formData.brandOffers?.coMarketing,
-      contentOffer: formData.brandOffers?.content,
-      brandingExpectation: formData.brandExpectations?.branding,
-      speakingExpectation: formData.brandExpectations?.speaking,
-      leadCaptureExpectation: formData.brandExpectations?.leadCapture,
-      exclusivityExpectation: formData.brandExpectations?.exclusivity,
-      contentRightsExpectation: formData.brandExpectations?.contentRights
+      campaignObjectives: proposalData.campaignObjectives,
+      targetAudience: proposalData.targetAudience,
+      preferredFormats: proposalData.preferredFormats,
+      city: proposalData.city,
+      timeline: proposalData.timeline,
+      cashOffer: proposalData.brandOffers?.cash,
+      barterOffer: proposalData.brandOffers?.barter,
+      coMarketingOffer: proposalData.brandOffers?.coMarketing,
+      contentOffer: proposalData.brandOffers?.content,
+      speakingOffer: proposalData.brandOffers?.speaking,
+      brandingExpectation: proposalData.brandExpectations?.branding,
+      speakingExpectation: proposalData.brandExpectations?.speaking,
+      sponsoredSegmentExpectation: proposalData.brandExpectations?.sponsoredSegment,
+      leadCaptureExpectation: proposalData.brandExpectations?.leadCapture,
+      digitalShoutoutsExpectation: proposalData.brandExpectations?.digitalShoutouts,
+      exclusivityExpectation: proposalData.brandExpectations?.exclusivity,
+      contentRightsExpectation: proposalData.brandExpectations?.contentRights,
+      salesBoothExpectation: proposalData.brandExpectations?.salesBooth
     };
     return fieldMap[fieldName];
   };
@@ -207,6 +269,16 @@ const CommunityCounterFormBrand = () => {
             Decline
           </button>
         </div>
+        
+        {/* Show modified value display if Modify is selected */}
+        {action === 'modify' && response?.modifiedValue && (
+          <div className="mt-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3">
+            <p className="text-yellow-400 text-xs font-semibold mb-1">✓ MODIFIED DETAILS SAVED</p>
+            <p className="text-white text-sm">{typeof response.modifiedValue === 'object' ? JSON.stringify(response.modifiedValue) : response.modifiedValue}</p>
+          </div>
+        )}
+        
+        {/* Optional note field for any action */}
         {action && (
           <div className="mt-3">
             <label className="block text-sm text-blue-400 mb-2">Add note (optional)</label>
@@ -229,7 +301,7 @@ const CommunityCounterFormBrand = () => {
   const renderModifyModal = () => {
     if (!showModifyModal || !currentField) return null;
 
-    const formData = collaboration?.formData || {};
+    const proposalData = collaboration?.brandToCommunity || collaboration?.formData || {};
 
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -252,13 +324,13 @@ const CommunityCounterFormBrand = () => {
           <div className="mb-6">
             <p className="text-sm text-gray-400 mb-2">BRAND PROPOSED</p>
             <p className="text-white">
-              {currentField === 'campaignObjectives' && formData.campaignObjectives?.join(', ')}
-              {currentField === 'targetAudience' && formData.targetAudience}
-              {currentField === 'preferredFormats' && formData.preferredFormats?.join(', ')}
-              {currentField === 'cashOffer' && `₹${formData.brandOffers?.cash?.amount}`}
-              {currentField === 'barterOffer' && formData.brandOffers?.barter?.description}
-              {currentField === 'coMarketingOffer' && formData.brandOffers?.coMarketing?.description}
-              {currentField === 'contentOffer' && formData.brandOffers?.content?.description}
+              {currentField === 'campaignObjectives' && proposalData.campaignObjectives?.join(', ')}
+              {currentField === 'targetAudience' && proposalData.targetAudience}
+              {currentField === 'preferredFormats' && proposalData.preferredFormats?.join(', ')}
+              {currentField === 'cashOffer' && `₹${proposalData.brandOffers?.cash?.value || 'Not specified'}`}
+              {currentField === 'barterOffer' && proposalData.brandOffers?.barter?.value}
+              {currentField === 'coMarketingOffer' && proposalData.brandOffers?.coMarketing?.value}
+              {currentField === 'contentOffer' && proposalData.brandOffers?.content?.value}
               {currentField.includes('Expectation') && 'Brand expectation described'}
             </p>
           </div>
@@ -311,6 +383,17 @@ const CommunityCounterFormBrand = () => {
           {/* Preferred Formats */}
           {currentField === 'preferredFormats' && (
             <div>
+              <p className="text-sm text-gray-400 mb-3">Brand proposed formats:</p>
+              {proposalData.preferredFormats && Array.isArray(proposalData.preferredFormats) && proposalData.preferredFormats.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S PREFERRED FORMATS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {proposalData.preferredFormats.map((format, idx) => (
+                      <p key={idx}>• {format}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="text-sm text-gray-400 mb-3">Select formats you can support:</p>
               <div className="grid grid-cols-2 gap-3">
                 {['Event Sponsorship', 'Workshop', 'Product Launch', 'Contest', 'Social Campaign', 'Content Series'].map(format => {
@@ -339,29 +422,712 @@ const CommunityCounterFormBrand = () => {
             </div>
           )}
 
-          {/* Cash/Barter/CoMarketing/Content Offers */}
-          {['cashOffer', 'barterOffer', 'coMarketingOffer', 'contentOffer'].includes(currentField) && (
+          {/* City */}
+          {currentField === 'city' && (
             <div>
-              <p className="text-sm text-gray-400 mb-3">Propose your counter-offer:</p>
-              <textarea
+              <p className="text-sm text-gray-400 mb-3">Brand proposed city:</p>
+              {proposalData.city && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">PROPOSED CITY:</p>
+                  <p className="text-white text-sm">{proposalData.city}</p>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your preferred city:</p>
+              <input
+                type="text"
                 value={modifyValue || ''}
                 onChange={(e) => setModifyValue(e.target.value)}
+                placeholder="e.g., Mumbai, Bangalore, Delhi..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+              />
+            </div>
+          )}
+
+          {/* Timeline */}
+          {currentField === 'timeline' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">Brand proposed timeline:</p>
+              {proposalData.timeline && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S TIMELINE:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {proposalData.timeline.startDate && (
+                      <p>• Start: {new Date(proposalData.timeline.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    )}
+                    {proposalData.timeline.endDate && (
+                      <p>• End: {new Date(proposalData.timeline.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    )}
+                    {proposalData.timeline.flexible && (
+                      <p className="text-green-400">• Flexible on dates</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your preferred timeline:</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Start Date</label>
+                  <input
+                    type="date"
+                    value={modifyValue?.startDate || ''}
+                    onChange={(e) => setModifyValue({ ...modifyValue, startDate: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">End Date</label>
+                  <input
+                    type="date"
+                    value={modifyValue?.endDate || ''}
+                    onChange={(e) => setModifyValue({ ...modifyValue, endDate: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={modifyValue?.flexible || false}
+                    onChange={(e) => setModifyValue({ ...modifyValue, flexible: e.target.checked })}
+                    className="rounded"
+                  />
+                  Flexible on dates
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Cash/Barter/CoMarketing/Content Offers - Show sub-options */}
+          {currentField === 'cashOffer' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand proposed:</p>
+              {proposalData.brandOffers?.cash && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S OFFER:</p>
+                  <p className="text-white text-sm">• Cash: ₹{proposalData.brandOffers.cash.value}</p>
+                  {proposalData.brandOffers.cash.subOptions && Object.keys(proposalData.brandOffers.cash.subOptions).length > 0 && (
+                    <div className="text-white text-sm space-y-1 mt-2">
+                      {Object.entries(proposalData.brandOffers.cash.subOptions).map(([key, value]) => (
+                        value && value.selected && (
+                          <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {proposalData.brandOffers?.cash?.subOptions && Object.keys(proposalData.brandOffers.cash.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which payment terms you can agree to:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandOffers.cash.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your counter-offer or additional notes:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
                 rows={4}
-                placeholder="Describe what you need instead..."
+                placeholder="e.g., Need ₹100,000 to cover venue costs..."
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
               />
             </div>
           )}
 
-          {/* Brand Expectations */}
-          {currentField.includes('Expectation') && (
+          {currentField === 'barterOffer' && (
             <div>
+              <p className="text-sm text-gray-400 mb-3">What brand proposed:</p>
+              {proposalData.brandOffers?.barter && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S OFFER:</p>
+                  <p className="text-white text-sm">• {proposalData.brandOffers.barter.value}</p>
+                  {proposalData.brandOffers.barter.subOptions && Object.keys(proposalData.brandOffers.barter.subOptions).length > 0 && (
+                    <div className="text-white text-sm space-y-1 mt-2">
+                      {Object.entries(proposalData.brandOffers.barter.subOptions).map(([key, value]) => (
+                        value && value.selected && (
+                          <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {proposalData.brandOffers?.barter?.subOptions && Object.keys(proposalData.brandOffers.barter.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which barter items you can accept:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandOffers.barter.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your counter-offer or additional notes:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={4}
+                placeholder="e.g., Need 500 units instead of 300..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'coMarketingOffer' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand proposed:</p>
+              {proposalData.brandOffers?.coMarketing && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S OFFER:</p>
+                  <p className="text-white text-sm">• {proposalData.brandOffers.coMarketing.value}</p>
+                  {proposalData.brandOffers.coMarketing.subOptions && Object.keys(proposalData.brandOffers.coMarketing.subOptions).length > 0 && (
+                    <div className="text-white text-sm space-y-1 mt-2">
+                      {Object.entries(proposalData.brandOffers.coMarketing.subOptions).map(([key, value]) => (
+                        value && value.selected && (
+                          <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {proposalData.brandOffers?.coMarketing?.subOptions && Object.keys(proposalData.brandOffers.coMarketing.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which co-marketing activities you can support:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandOffers.coMarketing.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your counter-offer or additional notes:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={4}
+                placeholder="e.g., Need social media support only..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'contentOffer' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand proposed:</p>
+              {proposalData.brandOffers?.content && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S OFFER:</p>
+                  <p className="text-white text-sm">• {proposalData.brandOffers.content.value}</p>
+                  {proposalData.brandOffers.content.subOptions && Object.keys(proposalData.brandOffers.content.subOptions).length > 0 && (
+                    <div className="text-white text-sm space-y-1 mt-2">
+                      {Object.entries(proposalData.brandOffers.content.subOptions).map(([key, value]) => (
+                        value && value.selected && (
+                          <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {proposalData.brandOffers?.content?.subOptions && Object.keys(proposalData.brandOffers.content.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which content support you can utilize:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandOffers.content.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your counter-offer or additional notes:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={4}
+                placeholder="e.g., Need professional videographer..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'speakingOffer' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand proposed:</p>
+              {proposalData.brandOffers?.speaking && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S OFFER:</p>
+                  <p className="text-white text-sm">• {proposalData.brandOffers.speaking.value || 'Brand integration requested'}</p>
+                  {proposalData.brandOffers.speaking.subOptions && Object.keys(proposalData.brandOffers.speaking.subOptions).length > 0 && (
+                    <div className="text-white text-sm space-y-1 mt-2">
+                      {Object.entries(proposalData.brandOffers.speaking.subOptions).map(([key, value]) => (
+                        value && value.selected && (
+                          <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {proposalData.brandOffers?.speaking?.subOptions && Object.keys(proposalData.brandOffers.speaking.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which speaking/integration options you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandOffers.speaking.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Your counter-offer or additional notes:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={4}
+                placeholder="e.g., Can provide 5-minute welcome mention only..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {/* Brand Expectations - Show sub-options for each type */}
+          {currentField === 'brandingExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.branding?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.branding.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.branding?.subOptions && Object.keys(proposalData.brandExpectations.branding.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which branding options you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.branding.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Can provide digital only, no print..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'speakingExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.speaking?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.speaking.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.speaking?.subOptions && Object.keys(proposalData.brandExpectations.speaking.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which speaking options you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.speaking.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Can provide 5-minute slot only..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'sponsoredSegmentExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.sponsoredSegment?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.sponsoredSegment.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.sponsoredSegment?.subOptions && Object.keys(proposalData.brandExpectations.sponsoredSegment.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which sponsorship naming you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.sponsoredSegment.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Can provide integrated segment only..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'leadCaptureExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.leadCapture?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.leadCapture.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.leadCapture?.subOptions && Object.keys(proposalData.brandExpectations.leadCapture.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which lead capture methods you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.leadCapture.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Can share email list post-event..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'digitalShoutoutsExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.digitalShoutouts?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.digitalShoutouts.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.digitalShoutouts?.subOptions && Object.keys(proposalData.brandExpectations.digitalShoutouts.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which digital promotion you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.digitalShoutouts.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Instagram stories only, no feed posts..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'exclusivityExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.exclusivity && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <p className="text-white text-sm">• {proposalData.brandExpectations.exclusivity.value}</p>
+                </div>
+              )}
               <p className="text-sm text-gray-400 mb-3">Clarify what you can provide:</p>
               <textarea
                 value={modifyValue || ''}
                 onChange={(e) => setModifyValue(e.target.value)}
                 rows={4}
-                placeholder="Describe the modified expectation..."
+                placeholder="e.g., Category exclusivity only..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'contentRightsExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.contentRights?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.contentRights.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.contentRights?.subOptions && Object.keys(proposalData.brandExpectations.contentRights.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which content rights you can grant:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.contentRights.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Non-exclusive rights only..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
+              />
+            </div>
+          )}
+
+          {currentField === 'salesBoothExpectation' && (
+            <div>
+              <p className="text-sm text-gray-400 mb-3">What brand expects:</p>
+              {proposalData.brandExpectations?.salesBooth?.subOptions && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S EXPECTATIONS:</p>
+                  <div className="text-white text-sm space-y-1">
+                    {Object.entries(proposalData.brandExpectations.salesBooth.subOptions).map(([key, value]) => (
+                      value && value.selected && (
+                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {proposalData.brandExpectations?.salesBooth?.subOptions && Object.keys(proposalData.brandExpectations.salesBooth.subOptions).length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">Select which booth options you can provide:</p>
+                  <div className="space-y-2 mb-4">
+                    {Object.entries(proposalData.brandExpectations.salesBooth.subOptions)
+                      .filter(([_, value]) => value && value.selected)
+                      .map(([key, value]) => {
+                        const currentValue = modifyValue || {};
+                        const isSelected = currentValue[key] !== false;
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
+                              className="w-5 h-5 rounded border-gray-600"
+                            />
+                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Additional notes or limitations:</p>
+              <textarea
+                value={typeof modifyValue === 'string' ? modifyValue : ''}
+                onChange={(e) => setModifyValue(e.target.value)}
+                rows={3}
+                placeholder="e.g., Can provide 10x10 booth space only..."
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
               />
             </div>
@@ -439,7 +1205,7 @@ const CommunityCounterFormBrand = () => {
     );
   }
 
-  const formData = collaboration.formData || {};
+  const formData = collaboration.brandToCommunity || collaboration.formData || {};
   const initiatorName = collaboration.initiator?.name || 'Unknown Brand';
 
   return (
@@ -471,18 +1237,26 @@ const CommunityCounterFormBrand = () => {
               1
             </div>
             <div>
-              <h2 className="text-xl font-bold">CAMPAIGN OBJECTIVES</h2>
+              <h2 className="text-xl font-bold">CAMPAIGN SNAPSHOT</h2>
               <p className="text-sm text-gray-400">Review brand's campaign goals</p>
             </div>
           </div>
 
           <div className="mb-6">
-            <h3 className="font-semibold mb-2">Objectives</h3>
+            <h3 className="font-semibold mb-2">Campaign Objectives</h3>
             <p className="text-sm text-gray-400 mb-2">BRAND WANTS TO ACHIEVE</p>
-            <p className="text-white mb-1">{formData.campaignObjectives?.join(', ')}</p>
+            <p className="text-white mb-1">
+              {Array.isArray(formData.campaignObjectives) 
+                ? formData.campaignObjectives.join(', ') 
+                : typeof formData.campaignObjectives === 'object'
+                  ? Object.keys(formData.campaignObjectives).filter(key => formData.campaignObjectives[key]).join(', ')
+                  : formData.campaignObjectives}
+            </p>
             {fieldResponses.campaignObjectives?.action === 'modify' && (
               <p className="text-yellow-400 text-sm mt-2">
-                You can deliver: {fieldResponses.campaignObjectives?.modifiedValue?.join(', ')}
+                You can deliver: {Array.isArray(fieldResponses.campaignObjectives?.modifiedValue) 
+                  ? fieldResponses.campaignObjectives?.modifiedValue?.join(', ')
+                  : fieldResponses.campaignObjectives?.modifiedValue}
               </p>
             )}
             {renderFieldActionButtons('campaignObjectives')}
@@ -504,13 +1278,64 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Preferred Formats</h3>
               <p className="text-sm text-gray-400 mb-2">BRAND PREFERENCE</p>
-              <p className="text-white mb-1">{formData.preferredFormats?.join(', ')}</p>
+              <p className="text-white mb-1">{Array.isArray(formData.preferredFormats) ? formData.preferredFormats?.join(', ') : formData.preferredFormats}</p>
               {fieldResponses.preferredFormats?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
-                  Formats you support: {fieldResponses.preferredFormats?.modifiedValue?.join(', ')}
+                  Formats you support: {Array.isArray(fieldResponses.preferredFormats?.modifiedValue) 
+                    ? fieldResponses.preferredFormats?.modifiedValue?.join(', ')
+                    : fieldResponses.preferredFormats?.modifiedValue}
                 </p>
               )}
               {renderFieldActionButtons('preferredFormats')}
+            </div>
+          )}
+
+          {/* City */}
+          {formData.city && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">City</h3>
+              <p className="text-sm text-gray-400 mb-2">LOCATION</p>
+              <p className="text-white mb-1">{formData.city}</p>
+              {fieldResponses.city?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  Your preferred city: {fieldResponses.city?.modifiedValue}
+                </p>
+              )}
+              {renderFieldActionButtons('city')}
+            </div>
+          )}
+
+          {/* Timeline */}
+          {formData.timeline && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Preferred Timeline</h3>
+              <p className="text-sm text-gray-400 mb-2">DATE RANGE</p>
+              <div className="text-white space-y-1">
+                {formData.timeline.startDate && (
+                  <p>Start: {new Date(formData.timeline.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                )}
+                {formData.timeline.endDate && (
+                  <p>End: {new Date(formData.timeline.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                )}
+                {formData.timeline.flexible && (
+                  <p className="text-green-400 text-sm">✓ Flexible on dates</p>
+                )}
+              </div>
+              {fieldResponses.timeline?.action === 'modify' && (
+                <div className="text-yellow-400 text-sm mt-2 space-y-1">
+                  <p className="font-semibold">Your preferred timeline:</p>
+                  {fieldResponses.timeline?.modifiedValue?.startDate && (
+                    <p>• Start: {new Date(fieldResponses.timeline.modifiedValue.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  )}
+                  {fieldResponses.timeline?.modifiedValue?.endDate && (
+                    <p>• End: {new Date(fieldResponses.timeline.modifiedValue.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  )}
+                  {fieldResponses.timeline?.modifiedValue?.flexible && (
+                    <p>• Flexible on dates</p>
+                  )}
+                </div>
+              )}
+              {renderFieldActionButtons('timeline')}
             </div>
           )}
         </div>
@@ -531,7 +1356,11 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Cash Sponsorship</h3>
               <p className="text-sm text-gray-400 mb-2">OFFERED AMOUNT</p>
-              <p className="text-white mb-1">₹{formData.brandOffers.cash.amount}</p>
+              <p className="text-white mb-1">₹{formData.brandOffers.cash.value || 'Not specified'}</p>
+              {formatSubOptions(formData.brandOffers.cash.subOptions) && (
+                <p className="text-white text-sm mt-1">Details: {formatSubOptions(formData.brandOffers.cash.subOptions)}</p>
+              )}
+              {renderProposalComment(formData.brandOffers.cash.comment)}
               {fieldResponses.cashOffer?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
                   Your counter: {fieldResponses.cashOffer?.modifiedValue}
@@ -545,7 +1374,11 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Barter / Products</h3>
               <p className="text-sm text-gray-400 mb-2">OFFERED</p>
-              <p className="text-white mb-1">{formData.brandOffers.barter.description}</p>
+              <p className="text-white mb-1">{formData.brandOffers.barter.value || 'Not specified'}</p>
+              {formatSubOptions(formData.brandOffers.barter.subOptions) && (
+                <p className="text-white text-sm mt-1">Details: {formatSubOptions(formData.brandOffers.barter.subOptions)}</p>
+              )}
+              {renderProposalComment(formData.brandOffers.barter.comment)}
               {fieldResponses.barterOffer?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
                   Your preference: {fieldResponses.barterOffer?.modifiedValue}
@@ -559,7 +1392,11 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Co-Marketing</h3>
               <p className="text-sm text-gray-400 mb-2">OFFERED</p>
-              <p className="text-white mb-1">{formData.brandOffers.coMarketing.description}</p>
+              <p className="text-white mb-1">{formData.brandOffers.coMarketing.value || 'Not specified'}</p>
+              {formatSubOptions(formData.brandOffers.coMarketing.subOptions) && (
+                <p className="text-white text-sm mt-1">Details: {formatSubOptions(formData.brandOffers.coMarketing.subOptions)}</p>
+              )}
+              {renderProposalComment(formData.brandOffers.coMarketing.comment)}
               {fieldResponses.coMarketingOffer?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
                   Your counter: {fieldResponses.coMarketingOffer?.modifiedValue}
@@ -573,13 +1410,35 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Content Support</h3>
               <p className="text-sm text-gray-400 mb-2">OFFERED</p>
-              <p className="text-white mb-1">{formData.brandOffers.content.description}</p>
+              <p className="text-white mb-1">{formData.brandOffers.content.value || 'Not specified'}</p>
+              {formatSubOptions(formData.brandOffers.content.subOptions) && (
+                <p className="text-white text-sm mt-1">Details: {formatSubOptions(formData.brandOffers.content.subOptions)}</p>
+              )}
+              {renderProposalComment(formData.brandOffers.content.comment)}
               {fieldResponses.contentOffer?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
                   Your needs: {fieldResponses.contentOffer?.modifiedValue}
                 </p>
               )}
               {renderFieldActionButtons('contentOffer')}
+            </div>
+          )}
+
+          {formData.brandOffers?.speaking?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Speaking / Brand Integration</h3>
+              <p className="text-sm text-gray-400 mb-2">OFFERED</p>
+              <p className="text-white mb-1">{formData.brandOffers.speaking.value || 'Brand integration requested'}</p>
+              {formatSubOptions(formData.brandOffers.speaking.subOptions) && (
+                <p className="text-white text-sm mt-1">Details: {formatSubOptions(formData.brandOffers.speaking.subOptions)}</p>
+              )}
+              {renderProposalComment(formData.brandOffers.speaking.comment)}
+              {fieldResponses.speakingOffer?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  Your arrangement: {fieldResponses.speakingOffer?.modifiedValue}
+                </p>
+              )}
+              {renderFieldActionButtons('speakingOffer')}
             </div>
           )}
         </div>
@@ -600,7 +1459,15 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Branding / Logo Placement</h3>
               <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
-              <p className="text-white mb-1">{formData.brandExpectations.branding.description}</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.branding.subOptions) || 'Logo placement and branding requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.branding.comment)}
+              {fieldResponses.brandingExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.brandingExpectation?.modifiedValue}
+                </p>
+              )}
               {renderFieldActionButtons('brandingExpectation')}
             </div>
           )}
@@ -609,8 +1476,33 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Speaking Slot</h3>
               <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
-              <p className="text-white mb-1">{formData.brandExpectations.speaking.description}</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.speaking.subOptions) || 'Speaking opportunity requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.speaking.comment)}
+              {fieldResponses.speakingExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.speakingExpectation?.modifiedValue}
+                </p>
+              )}
               {renderFieldActionButtons('speakingExpectation')}
+            </div>
+          )}
+
+          {formData.brandExpectations?.sponsoredSegment?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Sponsored Segment</h3>
+              <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.sponsoredSegment.subOptions) || 'Sponsored segment requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.sponsoredSegment.comment)}
+              {fieldResponses.sponsoredSegmentExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.sponsoredSegmentExpectation?.modifiedValue}
+                </p>
+              )}
+              {renderFieldActionButtons('sponsoredSegmentExpectation')}
             </div>
           )}
 
@@ -618,8 +1510,33 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Lead Capture</h3>
               <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
-              <p className="text-white mb-1">{formData.brandExpectations.leadCapture.description}</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.leadCapture.subOptions) || 'Lead capture requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.leadCapture.comment)}
+              {fieldResponses.leadCaptureExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.leadCaptureExpectation?.modifiedValue}
+                </p>
+              )}
               {renderFieldActionButtons('leadCaptureExpectation')}
+            </div>
+          )}
+
+          {formData.brandExpectations?.digitalShoutouts?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Digital Shoutouts</h3>
+              <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.digitalShoutouts.subOptions) || 'Digital promotion requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.digitalShoutouts.comment)}
+              {fieldResponses.digitalShoutoutsExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.digitalShoutoutsExpectation?.modifiedValue}
+                </p>
+              )}
+              {renderFieldActionButtons('digitalShoutoutsExpectation')}
             </div>
           )}
 
@@ -627,7 +1544,13 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Category Exclusivity</h3>
               <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
-              <p className="text-white mb-1">{formData.brandExpectations.exclusivity.description}</p>
+              <p className="text-white text-sm mb-2">Category exclusivity requested</p>
+              {renderProposalComment(formData.brandExpectations.exclusivity.comment)}
+              {fieldResponses.exclusivityExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  Your terms: {fieldResponses.exclusivityExpectation?.modifiedValue}
+                </p>
+              )}
               {renderFieldActionButtons('exclusivityExpectation')}
             </div>
           )}
@@ -636,8 +1559,33 @@ const CommunityCounterFormBrand = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Content Rights</h3>
               <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
-              <p className="text-white mb-1">{formData.brandExpectations.contentRights.description}</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.contentRights.subOptions) || 'Content usage rights requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.contentRights.comment)}
+              {fieldResponses.contentRightsExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.contentRightsExpectation?.modifiedValue}
+                </p>
+              )}
               {renderFieldActionButtons('contentRightsExpectation')}
+            </div>
+          )}
+
+          {formData.brandExpectations?.salesBooth?.selected && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Sales Booth / Sampling Rights</h3>
+              <p className="text-sm text-gray-400 mb-2">BRAND EXPECTS</p>
+              <p className="text-white text-sm mb-2">
+                {formatSubOptions(formData.brandExpectations.salesBooth.subOptions) || 'Sales booth setup requested'}
+              </p>
+              {renderProposalComment(formData.brandExpectations.salesBooth.comment)}
+              {fieldResponses.salesBoothExpectation?.action === 'modify' && (
+                <p className="text-yellow-400 text-sm mt-2">
+                  You can provide: {fieldResponses.salesBoothExpectation?.modifiedValue}
+                </p>
+              )}
+              {renderFieldActionButtons('salesBoothExpectation')}
             </div>
           )}
         </div>

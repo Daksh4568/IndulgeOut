@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const Collaboration = require('../models/Collaboration');
+const { authMiddleware } = require('../utils/authUtils');
 const validateWorkspaceMessage = require('../middleware/validateWorkspaceMessage');
 const {
   initializeWorkspaceWithCounterData,
@@ -17,10 +18,10 @@ const {
  * GET /api/workspace/:collaborationId
  * Get complete workspace data for a collaboration
  */
-router.get('/:collaborationId', async (req, res) => {
+router.get('/:collaborationId', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     
     // Find collaboration
     const collaboration = await Collaboration.findById(collaborationId);
@@ -32,15 +33,26 @@ router.get('/:collaborationId', async (req, res) => {
       });
     }
     
-    // Check access permission
-    if (!collaboration.canAccessWorkspace(userId)) {
+    // Check if user is a participant (regardless of workspace status)
+    const isInitiator = collaboration.initiator?.user?.toString() === userId.toString();
+    const isRecipient = collaboration.recipient?.user?.toString() === userId.toString();
+    
+    if (!isInitiator && !isRecipient) {
       return res.status(403).json({
         success: false,
-        error: 'Access denied. Workspace not active or you are not a participant.'
+        error: 'Access denied. You are not a participant in this collaboration.'
       });
     }
     
-    // Format workspace data
+    // Check if status allows workspace access
+    if (collaboration.status !== 'counter_delivered' && collaboration.status !== 'completed') {
+      return res.status(403).json({
+        success: false,
+        error: 'Workspace is only accessible after counter is delivered.'
+      });
+    }
+    
+    // Format workspace data (even if not active yet)
     const workspaceData = formatWorkspaceForResponse(collaboration);
     
     res.json({
@@ -71,10 +83,16 @@ router.get('/:collaborationId', async (req, res) => {
  * POST /api/workspace/:collaborationId/initialize
  * Initialize workspace with counter data
  */
-router.post('/:collaborationId/initialize', async (req, res) => {
+router.post('/:collaborationId/initialize', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.userId;
+    
+    console.log('🔐 [Initialize] User from auth:', {
+      userId: userId,
+      userType: req.user.userType,
+      user: req.user
+    });
     
     let collaboration = await Collaboration.findById(collaborationId);
     
@@ -85,10 +103,48 @@ router.post('/:collaborationId/initialize', async (req, res) => {
       });
     }
     
+    console.log('Collaboration data:', {
+      initiator: {
+        user: collaboration.initiator?.user,
+        userType: collaboration.initiator?.userType,
+        name: collaboration.initiator?.name
+      },
+      recipient: {
+        user: collaboration.recipient?.user,
+        userType: collaboration.recipient?.userType,
+        name: collaboration.recipient?.name
+      },
+      status: collaboration.status
+    });
+    
     // Check if user is a participant
+    const initiatorId = collaboration.initiator?.user;
+    const recipientId = collaboration.recipient?.user;
+    
+    if (!initiatorId || !recipientId) {
+      return res.status(500).json({
+        success: false,
+        error: 'Collaboration data is incomplete. Missing initiator or recipient user ID.'
+      });
+    }
+    
+    if (!userId) {
+      return res.status(500).json({
+        success: false,
+        error: 'User authentication failed. Missing user ID.'
+      });
+    }
+    
     const isParticipant = 
-      collaboration.initiator.user.toString() === userId.toString() ||
-      collaboration.recipient.user.toString() === userId.toString();
+      initiatorId.toString() === userId.toString() ||
+      recipientId.toString() === userId.toString();
+    
+    console.log('🔍 [Initialize] Checking participation:', {
+      initiatorId: initiatorId.toString(),
+      recipientId: recipientId.toString(),
+      userId: userId.toString(),
+      isParticipant
+    });
     
     if (!isParticipant) {
       return res.status(403).json({
@@ -101,7 +157,7 @@ router.post('/:collaborationId/initialize', async (req, res) => {
     if (collaboration.status !== 'counter_delivered') {
       return res.status(400).json({
         success: false,
-        error: 'Workspace can only be initialized after counter is delivered'
+        error: `Workspace can only be initialized after counter is delivered. Current status: ${collaboration.status}`
       });
     }
     
@@ -130,11 +186,11 @@ router.post('/:collaborationId/initialize', async (req, res) => {
  * PUT /api/workspace/:collaborationId/field
  * Update a field value
  */
-router.put('/:collaborationId/field', async (req, res) => {
+router.put('/:collaborationId/field', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
     const { section, field, value, agrees } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userType = req.user.userType;
     const userName = req.user.name || req.user.organizationName || 'User';
     
@@ -179,6 +235,10 @@ router.put('/:collaborationId/field', async (req, res) => {
     collaboration.markModified('workspace.sectionStatus');
     await collaboration.save();
     
+    // Add system notification to forum
+    const fieldLabel = field.replace(/([A-Z])/g, ' $1').trim().replace(/^./, s => s.toUpperCase());
+    await collaboration.addSystemNotification(`${userName} updated ${fieldLabel}`);
+    
     // Add activity log
     collaboration.workspaceActivity.push({
       actor: {
@@ -188,7 +248,7 @@ router.put('/:collaborationId/field', async (req, res) => {
       },
       action: 'edited_field',
       target: `${section}.${field}`,
-      description: `${userName} updated ${field}`,
+      description: `${userName} updated ${fieldLabel}`,
       timestamp: new Date()
     });
     await collaboration.save();
@@ -214,11 +274,11 @@ router.put('/:collaborationId/field', async (req, res) => {
  * POST /api/workspace/:collaborationId/field/toggle-agreement
  * Toggle agreement status for a field
  */
-router.post('/:collaborationId/field/toggle-agreement', async (req, res) => {
+router.post('/:collaborationId/field/toggle-agreement', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
     const { section, field, agrees } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userName = req.user.name || req.user.organizationName || 'User';
     const userType = req.user.userType;
     
@@ -255,10 +315,20 @@ router.post('/:collaborationId/field/toggle-agreement', async (req, res) => {
     collaboration.markModified('workspace.sectionStatus');
     await collaboration.save();
     
+    // Add system notification for agreement change
+    const fieldLabel = field.replace(/([A-Z])/g, ' $1').trim().replace(/^./, s => s.toUpperCase());
+    if (agrees) {
+      await collaboration.addSystemNotification(`${userName} agreed on ${fieldLabel}`);
+    } else {
+      await collaboration.addSystemNotification(`${userName} disagreed with ${fieldLabel}`);
+    }
+    
     // Check if section is now fully agreed
-    const sectionStatus = collaboration.workspace.sectionStatus.get(section);
+    const sectionConfig = require('../utils/workspaceUtils').WORKSPACE_FIELD_CONFIGS[collaboration.type];
+    const sectionTitle = sectionConfig?.[section]?.title || section;
+    const sectionStatus = collaboration.workspace.sectionStatus?.[section];
     if (sectionStatus === 'agreed') {
-      await collaboration.addSystemNotification(`${section} section marked as Agreed`);
+      await collaboration.addSystemNotification(`${sectionTitle} section marked as Agreed`);
     }
     
     // Add activity log
@@ -270,7 +340,7 @@ router.post('/:collaborationId/field/toggle-agreement', async (req, res) => {
       },
       action: agrees ? 'agreed_field' : 'disagreed_field',
       target: `${section}.${field}`,
-      description: `${userName} ${agrees ? 'agreed on' : 'disagreed with'} ${field}`,
+      description: `${userName} ${agrees ? 'agreed on' : 'disagreed with'} ${fieldLabel}`,
       timestamp: new Date()
     });
     await collaboration.save();
@@ -296,11 +366,11 @@ router.post('/:collaborationId/field/toggle-agreement', async (req, res) => {
  * POST /api/workspace/:collaborationId/notes
  * Add a comment to a specific field
  */
-router.post('/:collaborationId/notes', validateWorkspaceMessage, async (req, res) => {
+router.post('/:collaborationId/notes', authMiddleware, validateWorkspaceMessage, async (req, res) => {
   try {
     const { collaborationId } = req.params;
     const { section, field, message } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userType = req.user.userType;
     const userName = req.user.name || req.user.organizationName || 'User';
     const profileImage = req.user.profilePicture || '';
@@ -341,6 +411,10 @@ router.post('/:collaborationId/notes', validateWorkspaceMessage, async (req, res
       message
     );
     
+    // Add system notification to forum
+    const fieldLabel = field.replace(/([A-Z])/g, ' $1').trim().replace(/^./, s => s.toUpperCase());
+    await collaboration.addSystemNotification(`${userName} added a comment on ${fieldLabel}`);
+    
     // Add activity log
     collaboration.workspaceActivity.push({
       actor: {
@@ -350,7 +424,7 @@ router.post('/:collaborationId/notes', validateWorkspaceMessage, async (req, res
       },
       action: 'added_comment',
       target: `${section}.${field}`,
-      description: `${userName} added a comment on ${field}`,
+      description: `${userName} added a comment on ${fieldLabel}`,
       timestamp: new Date()
     });
     await collaboration.save();
@@ -383,10 +457,10 @@ router.post('/:collaborationId/notes', validateWorkspaceMessage, async (req, res
  * GET /api/workspace/:collaborationId/notes/:section/:field
  * Get all notes for a specific field
  */
-router.get('/:collaborationId/notes/:section/:field', async (req, res) => {
+router.get('/:collaborationId/notes/:section/:field', authMiddleware, async (req, res) => {
   try {
     const { collaborationId, section, field } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     
     const collaboration = await Collaboration.findById(collaborationId);
     
@@ -406,7 +480,7 @@ router.get('/:collaborationId/notes/:section/:field', async (req, res) => {
     }
     
     const fieldKey = `${section}.${field}`;
-    const notes = collaboration.workspace.fieldNotes.get(fieldKey) || [];
+    const notes = collaboration.workspace.fieldNotes?.[fieldKey] || [];
     
     res.json({
       success: true,
@@ -426,10 +500,10 @@ router.get('/:collaborationId/notes/:section/:field', async (req, res) => {
  * GET /api/workspace/:collaborationId/history/:section/:field
  * Get change history for a specific field
  */
-router.get('/:collaborationId/history/:section/:field', async (req, res) => {
+router.get('/:collaborationId/history/:section/:field', authMiddleware, async (req, res) => {
   try {
     const { collaborationId, section, field } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     
     const collaboration = await Collaboration.findById(collaborationId);
     
@@ -449,7 +523,7 @@ router.get('/:collaborationId/history/:section/:field', async (req, res) => {
     }
     
     const fieldKey = `${section}.${field}`;
-    const history = collaboration.workspace.fieldHistory.get(fieldKey) || [];
+    const history = collaboration.workspace.fieldHistory?.[fieldKey] || [];
     
     res.json({
       success: true,
@@ -469,11 +543,11 @@ router.get('/:collaborationId/history/:section/:field', async (req, res) => {
  * POST /api/workspace/:collaborationId/forum
  * Post a message to master discussion forum
  */
-router.post('/:collaborationId/forum', validateWorkspaceMessage, async (req, res) => {
+router.post('/:collaborationId/forum', authMiddleware, validateWorkspaceMessage, async (req, res) => {
   try {
     const { collaborationId } = req.params;
     const { message } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userType = req.user.userType;
     const userName = req.user.name || req.user.organizationName || 'User';
     const profileImage = req.user.profilePicture || '';
@@ -533,10 +607,10 @@ router.post('/:collaborationId/forum', validateWorkspaceMessage, async (req, res
  * POST /api/workspace/:collaborationId/save
  * Save all pending changes and return to dashboard
  */
-router.post('/:collaborationId/save', async (req, res) => {
+router.post('/:collaborationId/save', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userName = req.user.name || req.user.organizationName || 'User';
     const userType = req.user.userType;
     
@@ -598,11 +672,11 @@ router.post('/:collaborationId/save', async (req, res) => {
  * POST /api/workspace/:collaborationId/exit
  * Exit collaboration (stakeholder no longer wants to continue)
  */
-router.post('/:collaborationId/exit', async (req, res) => {
+router.post('/:collaborationId/exit', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
     const { reason } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userName = req.user.name || req.user.organizationName || 'User';
     const userType = req.user.userType;
     
@@ -672,10 +746,10 @@ router.post('/:collaborationId/exit', async (req, res) => {
  * POST /api/workspace/:collaborationId/confirm
  * Confirm collaboration (lock workspace after all sections agreed)
  */
-router.post('/:collaborationId/confirm', async (req, res) => {
+router.post('/:collaborationId/confirm', authMiddleware, async (req, res) => {
   try {
     const { collaborationId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const userType = req.user.userType;
     const userName = req.user.name || req.user.organizationName || 'User';
     

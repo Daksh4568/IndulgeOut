@@ -62,14 +62,212 @@ const collaborationSchema = new mongoose.Schema({
   // Form data from proposal
   formData: mongoose.Schema.Types.Mixed,
   
+  // ===== STRUCTURED PROPOSAL DATA =====
+  // Community → Brand Proposal
+  communityToBrand: {
+    // Section 1: Event Snapshot
+    eventCategory: String,
+    expectedAttendees: String,  // Range: '20-40', '40-80', '80-150', '150+'
+    eventFormat: [String],  // Array: Workshop, Mixer/Social, Tournament, etc.
+    targetAudience: [String],  // Array: Students, Young professionals, etc.
+    nicheAudienceDetails: String,  // If 'Niche community' selected
+    eventDate: Date,
+    city: String,
+    
+    // Section 2: Brand Deliverables
+    brandDeliverables: {
+      logoPlacement: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      onGroundBranding: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      sampling: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      sponsoredSegments: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      speaking: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      digitalShoutouts: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      leadCapture: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      }
+    },
+    
+    // Section 3: Pricing/Commercials
+    pricing: {
+      cashSponsorship: {
+        selected: Boolean,
+        value: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      barter: {
+        selected: Boolean,
+        value: String,
+        comment: String
+      },
+      stallCost: {
+        selected: Boolean,
+        value: Number,
+        comment: String
+      },
+      revenueShare: {
+        selected: Boolean,
+        value: String,
+        comment: String
+      },
+      additionalNotes: String
+    },
+    
+    // Section 4: Audience Proof
+    audienceProof: {
+      pastSponsorBrands: {
+        selected: Boolean,
+        value: String
+      },
+      averageAttendance: {
+        selected: Boolean,
+        value: String
+      },
+      communitySize: {
+        selected: Boolean,
+        value: String
+      },
+      repeatEventRate: {
+        selected: Boolean,
+        value: String
+      }
+    },
+    
+    // Supporting Info
+    supportingInfo: {
+      images: [String],  // Array of image URLs
+      note: String
+    }
+  },
+  
+  // Brand → Community Proposal
+  brandToCommunity: {
+    // Section 1: Campaign Snapshot
+    campaignObjectives: mongoose.Schema.Types.Mixed,  // Object with objective_id: true
+    targetAudience: String,
+    preferredFormats: [String],
+    city: String,
+    timeline: {
+      startDate: Date,
+      endDate: Date,
+      flexible: Boolean
+    },
+    
+    // Section 2: Brand Offers
+    brandOffers: {
+      cash: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      barter: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      coMarketing: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      content: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      speaking: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      }
+    },
+    
+    // Section 3: Brand Expectations
+    brandExpectations: {
+      branding: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      speaking: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      sponsoredSegment: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      leadCapture: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      digitalShoutouts: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      exclusivity: {
+        selected: Boolean,
+        comment: String
+      },
+      contentRights: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      },
+      salesBooth: {
+        selected: Boolean,
+        subOptions: mongoose.Schema.Types.Mixed,
+        comment: String
+      }
+    }
+  },
+  
+//   1. Stakeholder submits proposal → status: submitted
+//  2. Admin reviews & approves → status: admin_approved
+//  3. Recipient submits counter → status: vendor_accepted
+//  4. Admin reviews & approves counter → status: counter_delivered ⭐
+//     └─ "Open Workspace" button becomes ACTIVE on dashboards
+//  5. Both parties negotiate in workspace (field-by-field)
+//  6. Both parties click "Confirm Collaboration" → status: completed
+//     └─ Workspace locks (read-only)
   // Status Workflow
   status: {
     type: String,
     enum: [
-      'submitted',          // Initial submission
-      'admin_approved',     // Approved by admin, forwarded to vendor
+      'draft',              // Saved as draft (not submitted yet)
+      'submitted',          // Stakeholder submits proposal → status: submitted
+      'admin_approved',     //  Admin reviews & approves → status: admin_approved
       'admin_rejected',     // Rejected by admin
-      'vendor_accepted',    // Vendor accepted/submitted counter
+      'vendor_accepted',    // Vendor accepted/submitted counter , Recipient submits counter → status: vendor_accepted
       'counter_delivered',  // Admin approved counter, delivered to initiator
       'vendor_rejected',    // Vendor rejected the request
       'completed',          // Collaboration completed successfully
@@ -120,7 +318,10 @@ const collaborationSchema = new mongoose.Schema({
     // Collaboration specifics
     message: {
       type: String,
-      required: true,
+      required: function() {
+        // Only required if status is not 'draft'
+        return this.status !== 'draft';
+      },
       maxlength: 1000
     },
     
@@ -206,20 +407,21 @@ const collaborationSchema = new mongoose.Schema({
     // Field-level agreement tracking
     // Key format: "sectionKey.fieldKey" (e.g., "eventDetails.eventType")
     fieldAgreements: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
-      default: new Map()
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
       // Structure of each field:
       // {
-      //   initiatorValue: Mixed,        // Current value from initiator
-      //   recipientValue: Mixed,        // Current value from recipient
-      //   initiatorAgrees: Boolean,     // Does initiator agree?
-      //   recipientAgrees: Boolean,     // Does recipient agree?
-      //   status: 'agreed|pending|disputed',
-      //   lastModifiedBy: {
-      //     user: ObjectId,
-      //     userType: String,
-      //     at: Date
+      //   "section.field": {
+      //     initiatorValue: Mixed,        // Current value from initiator
+      //     recipientValue: Mixed,        // Current value from recipient
+      //     initiatorAgrees: Boolean,     // Does initiator agree?
+      //     recipientAgrees: Boolean,     // Does recipient agree?
+      //     status: 'agreed|pending|disputed',
+      //     lastModifiedBy: {
+      //       user: ObjectId,
+      //       userType: String,
+      //       at: Date
+      //     }
       //   }
       // }
     },
@@ -227,41 +429,43 @@ const collaborationSchema = new mongoose.Schema({
     // Field-specific comments/notes
     // Key format: "sectionKey.fieldKey"
     fieldNotes: {
-      type: Map,
-      of: [mongoose.Schema.Types.Mixed],
-      default: new Map()
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
       // Structure of each note:
-      // [{
-      //   author: {
-      //     user: ObjectId,
-      //     userType: String,
-      //     name: String,
-      //     profileImage: String
-      //   },
-      //   message: String,
-      //   createdAt: Date,
-      //   isSystemMessage: Boolean
-      // }]
+      // {
+      //   "section.field": [{
+      //     author: {
+      //       user: ObjectId,
+      //       userType: String,
+      //       name: String,
+      //       profileImage: String
+      //     },
+      //     message: String,
+      //     createdAt: Date,
+      //     isSystemMessage: Boolean
+      //   }]
+      // }
     },
     
     // Field change history
     // Key format: "sectionKey.fieldKey"
     fieldHistory: {
-      type: Map,
-      of: [mongoose.Schema.Types.Mixed],
-      default: new Map()
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
       // Structure of each history entry:
-      // [{
-      //   changedBy: {
-      //     user: ObjectId,
-      //     userType: String,
-      //     name: String
-      //   },
-      //   previousValue: Mixed,
-      //   newValue: Mixed,
-      //   action: 'proposed|accepted|modified|declined|agreed|updated',
-      //   timestamp: Date
-      // }]
+      // {
+      //   "section.field": [{
+      //     changedBy: {
+      //       user: ObjectId,
+      //       userType: String,
+      //       name: String
+      //     },
+      //     previousValue: Mixed,
+      //     newValue: Mixed,
+      //     action: 'proposed|accepted|modified|declined|agreed|updated',
+      //     timestamp: Date
+      //   }]
+      // }
     },
     
     // Master discussion forum
@@ -290,9 +494,9 @@ const collaborationSchema = new mongoose.Schema({
     // Section-level status tracking
     // Key: section name (e.g., "eventDetails")
     sectionStatus: {
-      type: Map,
-      of: String,  // 'agreed' | 'pending' | 'partial'
-      default: new Map()
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+      // Structure: { "sectionKey": "agreed|pending|partial" }
     },
     
     // Last activity timestamp
@@ -300,9 +504,8 @@ const collaborationSchema = new mongoose.Schema({
     
     // Pending changes (not yet saved)
     pendingChanges: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
-      default: new Map()
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
     }
   },
   
@@ -489,12 +692,12 @@ collaborationSchema.methods.updateWorkspaceField = async function(userId, userTy
   const isInitiator = this.initiator.user.toString() === userId.toString();
   
   // Get or create field agreement
-  let fieldAgreement = this.workspace.fieldAgreements.get(fieldKey) || {
+  let fieldAgreement = this.workspace.fieldAgreements?.[fieldKey] || {
     initiatorValue: null,
     recipientValue: null,
     initiatorAgrees: false,
     recipientAgrees: false,
-    status: 'pending'
+    status: 'disputed'
   };
   
   // Store previous value for history
@@ -503,22 +706,17 @@ collaborationSchema.methods.updateWorkspaceField = async function(userId, userTy
   // Update value
   if (isInitiator) {
     fieldAgreement.initiatorValue = value;
-    fieldAgreement.initiatorAgrees = agrees;
   } else {
     fieldAgreement.recipientValue = value;
-    fieldAgreement.recipientAgrees = agrees;
   }
   
-  // Update status
-  if (fieldAgreement.initiatorAgrees && fieldAgreement.recipientAgrees && 
-      JSON.stringify(fieldAgreement.initiatorValue) === JSON.stringify(fieldAgreement.recipientValue)) {
-    fieldAgreement.status = 'agreed';
-  } else if (fieldAgreement.initiatorValue && fieldAgreement.recipientValue && 
-             JSON.stringify(fieldAgreement.initiatorValue) !== JSON.stringify(fieldAgreement.recipientValue)) {
-    fieldAgreement.status = 'disputed';
-  } else {
-    fieldAgreement.status = 'pending';
-  }
+  // Agreement is purely driven by value matching
+  const valuesMatch = JSON.stringify(fieldAgreement.initiatorValue) === JSON.stringify(fieldAgreement.recipientValue);
+  fieldAgreement.initiatorAgrees = valuesMatch;
+  fieldAgreement.recipientAgrees = valuesMatch;
+  
+  // Status: agreed if values match, disputed if they don't
+  fieldAgreement.status = valuesMatch ? 'agreed' : 'disputed';
   
   fieldAgreement.lastModifiedBy = {
     user: userId,
@@ -526,10 +724,12 @@ collaborationSchema.methods.updateWorkspaceField = async function(userId, userTy
     at: new Date()
   };
   
-  this.workspace.fieldAgreements.set(fieldKey, fieldAgreement);
+  if (!this.workspace.fieldAgreements) this.workspace.fieldAgreements = {};
+  this.workspace.fieldAgreements[fieldKey] = fieldAgreement;
   
   // Add to history
-  let history = this.workspace.fieldHistory.get(fieldKey) || [];
+  if (!this.workspace.fieldHistory) this.workspace.fieldHistory = {};
+  let history = this.workspace.fieldHistory[fieldKey] || [];
   history.push({
     changedBy: { user: userId, userType, name: userName },
     previousValue,
@@ -537,7 +737,7 @@ collaborationSchema.methods.updateWorkspaceField = async function(userId, userTy
     action: previousValue === null ? 'proposed' : 'updated',
     timestamp: new Date()
   });
-  this.workspace.fieldHistory.set(fieldKey, history);
+  this.workspace.fieldHistory[fieldKey] = history;
   
   this.workspace.lastActivityAt = new Date();
   this.markModified('workspace.fieldAgreements');
@@ -558,7 +758,8 @@ collaborationSchema.methods.toggleFieldAgreement = async function(userId, sectio
   const fieldKey = `${section}.${field}`;
   const isInitiator = this.initiator.user.toString() === userId.toString();
   
-  let fieldAgreement = this.workspace.fieldAgreements.get(fieldKey);
+  if (!this.workspace.fieldAgreements) this.workspace.fieldAgreements = {};
+  let fieldAgreement = this.workspace.fieldAgreements[fieldKey];
   if (!fieldAgreement) {
     throw new Error('Field not found in workspace');
   }
@@ -570,15 +771,15 @@ collaborationSchema.methods.toggleFieldAgreement = async function(userId, sectio
     fieldAgreement.recipientAgrees = agrees;
   }
   
-  // Update status
+  // Update status: only 'agreed' or 'disputed'
   if (fieldAgreement.initiatorAgrees && fieldAgreement.recipientAgrees && 
       JSON.stringify(fieldAgreement.initiatorValue) === JSON.stringify(fieldAgreement.recipientValue)) {
     fieldAgreement.status = 'agreed';
   } else {
-    fieldAgreement.status = 'pending';
+    fieldAgreement.status = 'disputed';
   }
   
-  this.workspace.fieldAgreements.set(fieldKey, fieldAgreement);
+  this.workspace.fieldAgreements[fieldKey] = fieldAgreement;
   this.workspace.lastActivityAt = new Date();
   this.markModified('workspace.fieldAgreements');
   
@@ -595,7 +796,8 @@ collaborationSchema.methods.addFieldNote = async function(userId, userType, user
   }
   
   const fieldKey = `${section}.${field}`;
-  let notes = this.workspace.fieldNotes.get(fieldKey) || [];
+  if (!this.workspace.fieldNotes) this.workspace.fieldNotes = {};
+  let notes = this.workspace.fieldNotes[fieldKey] || [];
   
   notes.push({
     author: {
@@ -609,7 +811,7 @@ collaborationSchema.methods.addFieldNote = async function(userId, userType, user
     isSystemMessage: false
   });
   
-  this.workspace.fieldNotes.set(fieldKey, notes);
+  this.workspace.fieldNotes[fieldKey] = notes;
   this.workspace.lastActivityAt = new Date();
   this.markModified('workspace.fieldNotes');
   
@@ -667,27 +869,32 @@ collaborationSchema.methods.addSystemNotification = async function(message) {
 collaborationSchema.methods.updateSectionStatus = function(section) {
   const sectionFields = [];
   
+  if (!this.workspace.fieldAgreements) this.workspace.fieldAgreements = {};
+  if (!this.workspace.sectionStatus) this.workspace.sectionStatus = {};
+  
   // Get all fields for this section
-  for (const [key, value] of this.workspace.fieldAgreements.entries()) {
+  for (const [key, value] of Object.entries(this.workspace.fieldAgreements)) {
     if (key.startsWith(section + '.')) {
+      // Agreement is purely driven by value matching
+      const valuesMatch = JSON.stringify(value.initiatorValue) === JSON.stringify(value.recipientValue);
+      value.initiatorAgrees = valuesMatch;
+      value.recipientAgrees = valuesMatch;
+      value.status = valuesMatch ? 'agreed' : 'disputed';
       sectionFields.push(value);
     }
   }
   
   if (sectionFields.length === 0) {
-    this.workspace.sectionStatus.set(section, 'pending');
+    this.workspace.sectionStatus[section] = 'partial';
     return;
   }
   
   const allAgreed = sectionFields.every(f => f.status === 'agreed');
-  const anyDisputed = sectionFields.some(f => f.status === 'disputed');
   
   if (allAgreed) {
-    this.workspace.sectionStatus.set(section, 'agreed');
-  } else if (anyDisputed) {
-    this.workspace.sectionStatus.set(section, 'partial');
+    this.workspace.sectionStatus[section] = 'agreed';
   } else {
-    this.workspace.sectionStatus.set(section, 'pending');
+    this.workspace.sectionStatus[section] = 'partial';
   }
 };
 
@@ -700,7 +907,8 @@ collaborationSchema.methods.confirmCollaboration = async function(userId, userTy
   }
   
   // Check if all sections are agreed
-  const allSectionsAgreed = Array.from(this.workspace.sectionStatus.values()).every(
+  if (!this.workspace.sectionStatus) this.workspace.sectionStatus = {};
+  const allSectionsAgreed = Object.values(this.workspace.sectionStatus).every(
     status => status === 'agreed'
   );
   
@@ -741,10 +949,12 @@ collaborationSchema.methods.confirmCollaboration = async function(userId, userTy
  * Check if user can access workspace
  */
 collaborationSchema.methods.canAccessWorkspace = function(userId) {
+  if (!this.workspace.isActive) return false;
+  if (!this.initiator?.user || !this.recipient?.user) return false;
+  
   return (
-    this.workspace.isActive &&
-    (this.initiator.user.toString() === userId.toString() ||
-     this.recipient.user.toString() === userId.toString())
+    this.initiator.user.toString() === userId.toString() ||
+    this.recipient.user.toString() === userId.toString()
   );
 };
 

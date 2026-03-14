@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
-import Footer from '../components/Footer';
 import { api } from '../config/api';
 
 // Community → Venue sections
@@ -46,13 +45,17 @@ const ProposalForm = () => {
     
     // Community → Brand
     eventCategory: '',
-    targetAudience: '',
+    eventFormat: [],
+    targetAudience: [],
+    nicheAudienceDetails: '',
     city: '',
     brandDeliverables: {},
+    audienceProof: {},
     
     // Brand → Community
     campaignObjectives: {},
     preferredFormats: [],
+    timeline: { startDate: '', endDate: '', flexible: false },
     brandOffers: {},
     brandExpectations: {},
     
@@ -84,6 +87,35 @@ const ProposalForm = () => {
       setRecipientType(location.state.recipientType);
     }
   }, [location]);
+
+  // Fetch existing draft on component mount
+  useEffect(() => {
+    const fetchDraft = async () => {
+      if (!recipientId || !proposalType) return;
+
+      try {
+        console.log('[DRAFT] Fetching existing draft...');
+        const response = await api.get(`/collaborations/draft/${recipientId}/${proposalType}`);
+        
+        if (response.data.success && response.data.draft) {
+          console.log('[DRAFT] Found existing draft, loading...', response.data.draft);
+          
+          // Load the draft formData
+          if (response.data.draft.formData) {
+            setFormData(response.data.draft.formData);
+            alert('📝 Draft loaded! Continue from where you left off.');
+          }
+        }
+      } catch (error) {
+        // 404 means no draft exists - this is fine
+        if (error.response?.status !== 404) {
+          console.error('[DRAFT] Error fetching draft:', error);
+        }
+      }
+    };
+
+    fetchDraft();
+  }, [recipientId, proposalType]);
 
   const getProposalTitle = () => {
     const titles = {
@@ -146,6 +178,67 @@ const ProposalForm = () => {
     return steps[proposalType] || steps.communityToVenue;
   };
 
+  const getStepCompletion = (stepIndex) => {
+    // Check if each step is completed based on formData
+    if (proposalType === 'communityToVenue') {
+      switch (stepIndex) {
+        case 0: // Event Info
+          return !!(formData.eventType && formData.expectedAttendees && formData.seatingCapacity && 
+                    formData.eventDate?.date && formData.eventDate?.startTime && formData.eventDate?.endTime);
+        case 1: // Requirements
+          return Object.keys(formData.requirements || {}).length > 0;
+        case 2: // Pricing
+          return Object.keys(formData.pricing || {}).filter(k => k !== 'additionalNotes').length > 0;
+        case 3: // Extras
+          return true; // Optional section
+        default:
+          return false;
+      }
+    } else if (proposalType === 'communityToBrand') {
+      switch (stepIndex) {
+        case 0: // Event Snapshot
+          return !!(formData.eventCategory && formData.expectedAttendees && 
+                    formData.eventFormat?.length > 0 && formData.targetAudience?.length > 0 &&
+                    formData.eventDate && formData.city);
+        case 1: // Deliverables
+          return Object.keys(formData.brandDeliverables || {}).length > 0;
+        case 2: // Pricing
+          return Object.keys(formData.pricing || {}).filter(k => k !== 'additionalNotes').length > 0;
+        case 3: // Extras
+          return Object.keys(formData.audienceProof || {}).length > 0;
+        default:
+          return false;
+      }
+    } else if (proposalType === 'brandToCommunity') {
+      switch (stepIndex) {
+        case 0: // Objectives
+          return !!(Object.keys(formData.campaignObjectives || {}).length > 0 && 
+                    formData.targetAudience && formData.city && formData.timeline?.startDate);
+        case 1: // Offer & Expect
+          return Object.keys(formData.brandOffers || {}).length > 0 && 
+                 Object.keys(formData.brandExpectations || {}).length > 0;
+        case 2: // Extras
+          return true; // Optional
+        default:
+          return false;
+      }
+    } else if (proposalType === 'venueToCommunity') {
+      switch (stepIndex) {
+        case 0: // Venue Info
+          return !!(formData.venueType && formData.capacityRange);
+        case 1: // Services
+          return Object.keys(formData.venueOfferings || {}).length > 0;
+        case 2: // Commercial
+          return Object.keys(formData.commercialModels || {}).length > 0;
+        case 3: // Extras
+          return true; // Optional
+        default:
+          return false;
+      }
+    }
+    return false;
+  };
+
   const validateForm = () => {
     if (proposalType === 'communityToVenue') {
       if (!formData.eventType) {
@@ -169,23 +262,75 @@ const ProposalForm = () => {
         return false;
       }
     } else if (proposalType === 'communityToBrand') {
-      if (!formData.eventCategory || !formData.expectedAttendees || !formData.city) {
-        alert('Please complete all event snapshot fields');
+      // Section 1: Event Snapshot
+      if (!formData.eventCategory) {
+        alert('Please select an event category');
         return false;
       }
+      if (!formData.expectedAttendees) {
+        alert('Please select expected attendees range');
+        return false;
+      }
+      if (!formData.eventFormat || formData.eventFormat.length === 0) {
+        alert('Please select at least one event format');
+        return false;
+      }
+      if (!formData.targetAudience || formData.targetAudience.length === 0) {
+        alert('Please select at least one target audience');
+        return false;
+      }
+      if (!formData.eventDate) {
+        alert('Please select an event date');
+        return false;
+      }
+      if (!formData.city) {
+        alert('Please select a city');
+        return false;
+      }
+      
+      // Section 2: Brand Deliverables
       if (Object.keys(formData.brandDeliverables).length === 0) {
         alert('Please select at least one deliverable for the brand');
         return false;
       }
+      
+      // Section 3: Pricing
+      if (Object.keys(formData.pricing).filter((key) => key !== 'additionalNotes').length === 0) {
+        alert('Please select at least one pricing model');
+        return false;
+      }
+      
+      // Section 4: Audience Proof
+      if (!formData.audienceProof || Object.keys(formData.audienceProof).length === 0) {
+        alert('Please provide at least one audience proof item');
+        return false;
+      }
     } else if (proposalType === 'brandToCommunity') {
+      // Section 1: Campaign Snapshot
       if (Object.keys(formData.campaignObjectives).length === 0) {
         alert('Please select at least one campaign objective');
         return false;
       }
+      if (!formData.targetAudience) {
+        alert('Please describe your target audience');
+        return false;
+      }
+      if (!formData.city) {
+        alert('Please select a city');
+        return false;
+      }
+      if (!formData.timeline?.startDate) {
+        alert('Please select a timeline start date');
+        return false;
+      }
+      
+      // Section 2: Brand Offers
       if (Object.keys(formData.brandOffers).length === 0) {
         alert('Please select what you can offer');
         return false;
       }
+      
+      // Section 3: Brand Expectations
       if (Object.keys(formData.brandExpectations).length === 0) {
         alert('Please select what you expect from the community');
         return false;
@@ -250,10 +395,14 @@ const ProposalForm = () => {
         return {
           eventCategory: formData.eventCategory,
           expectedAttendees: formData.expectedAttendees,
+          eventFormat: formData.eventFormat,
           targetAudience: formData.targetAudience,
+          nicheAudienceDetails: formData.nicheAudienceDetails,
+          eventDate: formData.eventDate,
           city: formData.city,
           brandDeliverables: formData.brandDeliverables,
           pricing: formData.pricing,
+          audienceProof: formData.audienceProof,
           supportingInfo: formData.supportingInfo
         };
       
@@ -262,6 +411,8 @@ const ProposalForm = () => {
           campaignObjectives: formData.campaignObjectives,
           targetAudience: formData.targetAudience,
           preferredFormats: formData.preferredFormats,
+          city: formData.city,
+          timeline: formData.timeline,
           brandOffers: formData.brandOffers,
           brandExpectations: formData.brandExpectations,
           additionalTerms: formData.additionalTerms,
@@ -349,32 +500,35 @@ const ProposalForm = () => {
 
         {/* Progress Indicator */}
         <div className="flex items-center gap-4 mb-12 overflow-x-auto pb-2">
-          {getProgressSteps().map((step, index) => (
-            <React.Fragment key={index}>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                    index === 0
-                      ? 'text-white'
-                      : 'bg-gray-800 text-gray-400'
-                  }`}
-                  style={
-                    index === 0
-                      ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }
-                      : {}
-                  }
-                >
-                  {index + 1}
+          {getProgressSteps().map((step, index) => {
+            const isCompleted = getStepCompletion(index);
+            return (
+              <React.Fragment key={index}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                      isCompleted
+                        ? 'text-white'
+                        : 'bg-gray-800 text-gray-400'
+                    }`}
+                    style={
+                      isCompleted
+                        ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }
+                        : {}
+                    }
+                  >
+                    {isCompleted ? '✓' : index + 1}
+                  </div>
+                  <span className={`text-sm whitespace-nowrap ${isCompleted ? 'text-white' : 'text-gray-400'}`}>
+                    {step}
+                  </span>
                 </div>
-                <span className={`text-sm whitespace-nowrap ${index === 0 ? 'text-white' : 'text-gray-400'}`}>
-                  {step}
-                </span>
-              </div>
-              {index < getProgressSteps().length - 1 && (
-                <div className="h-px w-12 bg-gray-800"></div>
-              )}
-            </React.Fragment>
-          ))}
+                {index < getProgressSteps().length - 1 && (
+                  <div className={`h-px w-12 transition-all ${isCompleted ? 'bg-indigo-500' : 'bg-gray-800'}`}></div>
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* Form Sections */}
@@ -506,7 +660,7 @@ const ProposalForm = () => {
         </div>
       </div>
 
-      <Footer />
+      
     </div>
   );
 };

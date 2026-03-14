@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, loading: authLoading } = useAuth();
   
   // State management
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, proposals, counters, flagged, analytics, all-collaborations, organizers
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'dashboard'); // dashboard, proposals, counters, flagged, analytics, all-collaborations, organizers
   const [stats, setStats] = useState(null);
   const [collabAnalytics, setCollabAnalytics] = useState(null);
   
@@ -1524,6 +1525,19 @@ const AdminDashboard = () => {
 
                     {/* Actions */}
                     <div className="flex items-center justify-end space-x-3">
+                      {(collab.status === 'counter_delivered' || collab.status === 'confirmed' || collab.status === 'completed') && (
+                        <button
+                          onClick={() => navigate(`/admin/collaborations/${collab._id}/workspace/spectate`)}
+                          className="px-4 py-2 text-white rounded-lg transition-colors flex items-center font-medium"
+                          style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Spectate
+                        </button>
+                      )}
                       <button
                         onClick={() => fetchProposalDetails(collab._id)}
                         className="px-4 py-2 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 border border-primary-300 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
@@ -1754,13 +1768,18 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                     <p className="text-sm text-gray-400">Total Events</p>
                     <p className="text-3xl font-bold text-white">{selectedOrganizer.eventStats.total}</p>
                   </div>
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
-                    <p className="text-sm text-gray-400">Total Revenue</p>
+                    <p className="text-sm text-gray-400">Total Collected (User Paid)</p>
+                    <p className="text-3xl font-bold text-cyan-400">₹{((selectedOrganizer.revenueStats.totalUserPaid || selectedOrganizer.revenueStats.totalRevenue) / 1000).toFixed(1)}k</p>
+                    <p className="text-xs text-gray-500 mt-1">Includes GST + Platform Fees</p>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Base Revenue (Organizer Share)</p>
                     <p className="text-3xl font-bold text-green-600">₹{(selectedOrganizer.revenueStats.totalRevenue / 1000).toFixed(1)}k</p>
                   </div>
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
@@ -1770,6 +1789,26 @@ const AdminDashboard = () => {
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                     <p className="text-sm text-gray-400">Pending Settlement</p>
                     <p className="text-3xl font-bold text-orange-600">₹{(selectedOrganizer.revenueStats.pendingSettlement / 1000).toFixed(1)}k</p>
+                  </div>
+                </div>
+
+                {/* Settlement & Cashfree Charges */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Total Settled to Bank</p>
+                    <p className="text-3xl font-bold text-green-400">₹{((selectedOrganizer.revenueStats.settledAmount || 0) / 1000).toFixed(1)}k</p>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Cashfree Charges Deducted</p>
+                    <p className="text-3xl font-bold text-red-400">₹{((selectedOrganizer.revenueStats.totalCashfreeDeducted || 0)).toFixed(2)}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Fee: ₹{((selectedOrganizer.revenueStats.cashfreeServiceCharge || 0)).toFixed(2)} + Tax: ₹{((selectedOrganizer.revenueStats.cashfreeServiceTax || 0)).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <p className="text-sm text-gray-400">Net Settled (After Charges)</p>
+                    <p className="text-3xl font-bold text-emerald-400">₹{(((selectedOrganizer.revenueStats.settledAmount || 0)) / 1000).toFixed(1)}k</p>
+                    <p className="text-xs text-gray-500 mt-1">Amount received in organizer's bank</p>
                   </div>
                 </div>
 
@@ -1929,14 +1968,22 @@ const AdminDashboard = () => {
                                   <p className="font-semibold text-white">{event.revenue?.totalSpotsBooked || event.currentParticipants || 0} / {event.maxParticipants}</p>
                                 </div>
                                 <div>
-                                  <p className="text-gray-400">Revenue</p>
+                                  <p className="text-gray-400">Base Revenue</p>
                                   <p className="font-semibold text-green-600">₹{(event.revenue?.totalRevenue / 1000 || 0).toFixed(1)}k</p>
                                 </div>
                               </div>
-                              <div className="flex space-x-2 text-sm text-gray-400">
+                              <div className="flex flex-wrap gap-3 text-sm text-gray-400">
                                 <span>📍 {event.location?.city || 'TBA'}</span>
                                 <span>•</span>
-                                <span>🎫 {event.revenue?.totalSpotsBooked || 0} spots</span>
+                                <span>💰 User Paid: ₹{(event.revenue?.totalUserPaid / 1000 || 0).toFixed(1)}k</span>
+                                <span>•</span>
+                                <span>🏦 Settled: ₹{(event.revenue?.settledRevenue / 1000 || 0).toFixed(1)}k</span>
+                                {event.revenue?.cashfreeChargesDeducted > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>💳 Cashfree: ₹{event.revenue.cashfreeChargesDeducted.toFixed(0)}</span>
+                                  </>
+                                )}
                                 <span>•</span>
                                 <span>✅ {event.revenue?.checkedInTickets || 0} checked-in</span>
                               </div>
@@ -2003,7 +2050,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Analytics Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
                     <p className="text-sm text-gray-400">Ticket Price</p>
                     <p className="text-2xl font-bold text-purple-400">{eventDetails.event.price?.amount > 0 ? `₹${eventDetails.event.price.amount}` : 'Free'}</p>
@@ -2013,16 +2060,30 @@ const AdminDashboard = () => {
                     <p className="text-2xl font-bold text-white">{eventDetails.analytics.totalSpotsBooked || eventDetails.analytics.totalTickets}</p>
                   </div>
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-400">Total Revenue</p>
-                    <p className="text-2xl font-bold text-green-600">₹{(eventDetails.analytics.totalRevenue / 1000).toFixed(1)}k</p>
+                    <p className="text-sm text-gray-400">Total Collected (User Paid)</p>
+                    <p className="text-2xl font-bold text-cyan-400">₹{((eventDetails.analytics.totalUserPaid || eventDetails.analytics.totalRevenue) / 1000).toFixed(1)}k</p>
+                    <p className="text-xs text-gray-500">Includes GST + Fees</p>
                   </div>
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
-                    <p className="text-sm text-gray-400">Settled</p>
+                    <p className="text-sm text-gray-400">Base Revenue (Organizer Share)</p>
+                    <p className="text-2xl font-bold text-green-600">₹{(eventDetails.analytics.totalRevenue / 1000).toFixed(1)}k</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Settled to Bank</p>
                     <p className="text-2xl font-bold text-blue-600">₹{(eventDetails.analytics.settledRevenue / 1000).toFixed(1)}k</p>
                     <p className="text-xs text-gray-500">{eventDetails.analytics.settlementPercentage}%</p>
                     {eventDetails.analytics.capturedRevenue > 0 && eventDetails.analytics.settledRevenue === 0 && (
                       <p className="text-xs text-yellow-500 mt-1">₹{(eventDetails.analytics.capturedRevenue / 1000).toFixed(1)}k captured</p>
                     )}
+                  </div>
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                    <p className="text-sm text-gray-400">Cashfree Charges</p>
+                    <p className="text-2xl font-bold text-red-400">₹{(eventDetails.analytics.cashfreeCharges?.totalDeducted || 0).toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">
+                      Fee: ₹{(eventDetails.analytics.cashfreeCharges?.serviceCharge || 0).toFixed(2)} + Tax: ₹{(eventDetails.analytics.cashfreeCharges?.serviceTax || 0).toFixed(2)}
+                    </p>
                   </div>
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
                     <p className="text-sm text-gray-400">Check-in Rate</p>

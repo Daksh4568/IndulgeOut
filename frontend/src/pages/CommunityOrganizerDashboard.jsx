@@ -1104,13 +1104,20 @@ const CommunityOrganizerDashboard = () => {
     };
 
     const getStatusBadge = (status) => {
+      // Hide admin internal statuses from users
+      if (status === 'admin_approved') {
+        return { text: 'Approved', bg: 'bg-purple-600' };
+      }
+      if (status === 'submitted') {
+        return { text: 'Under Review', bg: 'bg-blue-600' };
+      }
+      
       const badges = {
-        submitted: { text: 'Submitted', bg: 'bg-yellow-600' },
-        admin_approved: { text: 'Approved', bg: 'bg-blue-600' },
         vendor_accepted: { text: 'Accepted', bg: 'bg-green-600' },
         accepted: { text: 'Accepted', bg: 'bg-green-600' },
         confirmed: { text: 'Live', bg: 'bg-green-600' },
         approved_delivered: { text: 'Live', bg: 'bg-green-600' },
+        counter_delivered: { text: 'Response Received', bg: 'bg-purple-600' },
         completed: { text: 'Completed', bg: 'bg-gray-600' },
         rejected: { text: 'Rejected', bg: 'bg-red-600' },
         vendor_rejected: { text: 'Rejected', bg: 'bg-red-600' },

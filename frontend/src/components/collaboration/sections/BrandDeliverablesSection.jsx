@@ -57,6 +57,17 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
       ],
     },
     {
+      id: 'speaking',
+      title: 'Speaking / Stage Integration',
+      description: 'Brand representative speaking opportunity',
+      hasSubOptions: true,
+      subOptions: [
+        { id: 'welcome_address', label: 'Welcome Address' },
+        { id: 'panel_discussion', label: 'Panel Discussion' },
+        { id: 'workshop_hosting', label: 'Workshop Hosting' },
+      ],
+    },
+    {
       id: 'digitalShoutouts',
       title: 'Digital Shoutouts',
       description: 'Online promotion and mentions',
@@ -156,6 +167,9 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
               formData.brandDeliverables[deliverable.id]?.subOptions?.[subOption.id]?.selected
             ) || [];
             
+            // Show all options when hovered, otherwise show selected ones
+            const displaySubOptions = (isHovered && isSelected) ? deliverable.subOptions : selectedSubOptions;
+            
             return (
               <div
                 key={deliverable.id}
@@ -170,7 +184,7 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
                 >
                   {deliverable.hasSubOptions && isSelected && (
                     <div className="flex flex-wrap gap-3 mt-3">
-                      {(isHovered ? deliverable.subOptions : selectedSubOptions).map((subOption) => {
+                      {displaySubOptions.map((subOption) => {
                         const isSubSelected =
                           formData.brandDeliverables[deliverable.id]?.subOptions?.[subOption.id]?.selected;
                         
@@ -192,30 +206,34 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
                         );
                       })}
                       
-                      {isHovered && (
+                      {/* Add Comment button - only visible on hover when no comment exists */}
+                      {isHovered && !hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(deliverable.title, deliverable.id);
                           }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
                           style={{
                             background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                           }}
-                          className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
                         >
                           Add Comment
                         </button>
                       )}
                       
-                      {!isHovered && hasComment && (
+                      {/* View Comment button - always visible if comment exists */}
+                      {hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openCommentModal(deliverable.title, deliverable.id);
                           }}
-                          className="px-4 py-2 text-indigo-400 rounded-lg hover:text-indigo-300 transition-colors text-sm font-medium underline"
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
                         >
-                          View comment
+                          View Comment
                         </button>
                       )}
                     </div>

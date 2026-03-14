@@ -17,6 +17,17 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
     'Food & Cultural',
     'Sports & Fitness',
   ];
+  
+  const cities = [
+    'Mumbai',
+    'Delhi',
+    'Bengaluru',
+    'Hyderabad',
+    'Chennai',
+    'Pune',
+    'Kolkata',
+    'Any City',
+  ];
 
   const handleObjectiveToggle = (objectiveId) => {
     const updatedObjectives = { ...(formData.campaignObjectives || {}) };
@@ -111,6 +122,77 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
               {format}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* City */}
+      <div>
+        <label className="block text-white text-base mb-4">
+          4. City <span className="text-red-500">*</span>
+        </label>
+        <p className="text-gray-400 text-sm mb-3">Where do you want to collaborate?</p>
+        <select
+          value={formData.city || ''}
+          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+          className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="">Select a city</option>
+          {cities.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Preferred Timeline */}
+      <div>
+        <label className="block text-white text-base mb-4">
+          5. Preferred Timeline <span className="text-red-500">*</span>
+        </label>
+        <p className="text-gray-400 text-sm mb-3">When do you want to run this campaign?</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Start Date</label>
+            <input
+              type="date"
+              value={formData.timeline?.startDate || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                timeline: { ...formData.timeline, startDate: e.target.value }
+              })}
+              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">End Date</label>
+            <input
+              type="date"
+              value={formData.timeline?.endDate || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                timeline: { ...formData.timeline, endDate: e.target.value }
+              })}
+              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="flexible-dates"
+            checked={formData.timeline?.flexible || false}
+            onChange={(e) => setFormData({
+              ...formData,
+              timeline: { ...formData.timeline, flexible: e.target.checked }
+            })}
+            className="w-5 h-5 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0"
+          />
+          <label htmlFor="flexible-dates" className="text-gray-300 cursor-pointer">
+            Flexible on dates
+          </label>
         </div>
       </div>
     </div>
