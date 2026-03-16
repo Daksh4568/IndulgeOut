@@ -380,6 +380,19 @@ const EventDetail = () => {
       <div className="min-h-screen bg-black">
       <NavigationBar />
 
+      {/* Back to Explore Navigation */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
+        <button
+          onClick={() => navigate('/explore')}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
+        >
+          <ChevronLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+            Back to Explore
+          </span>
+        </button>
+      </div>
+
       {/* Banner Section - Mobile (portrait with blur) - Keep for mobile */}
       <div className="block md:hidden relative w-full h-[65vh] overflow-hidden bg-black">
         {event.images && event.images.length > 0 ? (
@@ -682,14 +695,56 @@ const EventDetail = () => {
               </button>
               {openFAQ === 'terms' && (
                 <div 
-                  className="px-5 pb-4 text-gray-400 leading-relaxed space-y-2 text-sm"
+                  className="px-5 pb-4 text-gray-300 leading-relaxed space-y-3 text-sm"
                   style={{ fontFamily: 'Source Serif Pro, serif' }}
                 >
-                  <p>1. All registrations are subject to availability and confirmation.</p>
-                  <p>2. Tickets once booked cannot be cancelled or refunded.</p>
-                  <p>3. Entry is subject to valid ticket and photo ID verification.</p>
-                  <p>4. Organizers reserve the right to deny entry without refund.</p>
-                  <p>5. Participants are expected to maintain decorum and respect fellow attendees.</p>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Ticket Purchase & Refunds:</p>
+                    <p>• All sales are final. No refunds/exchanges.</p>
+                    <p>• Tickets valid only for the specified date/time.</p>
+                    <p>• Carry valid ID proof for entry.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Walk-In Policy:</p>
+                    <p>(Subject to Availability)</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Event Access & Re-entry:</p>
+                    <p>• No re-entry once you exit. Keep belongings with you.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Event Modifications:</p>
+                    <p>• Event timing, menu, or activities may change. Major updates will be communicated.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Health & Safety:</p>
+                    <p>• Follow all safety & COVID-19 protocols.</p>
+                    <p>• No hazardous items (weapons, knives, fireworks, drugs, etc.) allowed. Confiscated if found.</p>
+                    <p>• Organizers not liable for injuries, accidents, or item loss.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Photography & Media:</p>
+                    <p>• Entry implies consent to photos/videos for promo.</p>
+                    <p>• Don't wish to appear? Inform staff onsite.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Food Policy:</p>
+                    <p>• No outside food/beverage allowed.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Venue Liability:</p>
+                    <p>• Organizers not liable for personal loss/damage.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">Contact:</p>
+                    <p>WhatsApp: +91 8955578847</p>
+                    <p>Email: cs@indulgeout.com</p>
+                    <p>Instagram: <a href="https://www.instagram.com/indulgeout/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300">https://www.instagram.com/indulgeout/</a></p>
+                  </div>
+                  <div className="pt-2 border-t border-gray-700">
+                    <p className="font-semibold text-white mb-1">Agreement:</p>
+                    <p>By purchasing a ticket, you agree to all the above terms.</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1090,14 +1145,56 @@ const EventDetail = () => {
                 
                 {openFAQ === 'terms' && (
                   <div 
-                    className="px-6 pb-5 text-gray-600 dark:text-gray-400 leading-relaxed space-y-3"
+                    className="px-6 pb-5 text-gray-600 dark:text-gray-300 leading-relaxed space-y-4"
                     style={{ fontFamily: 'Source Serif Pro, serif' }}
                   >
-                    <p>1. All registrations are subject to availability and confirmation.</p>
-                    <p>2. Tickets once booked cannot be cancelled or refunded.</p>
-                    <p>3. Entry is subject to valid ticket and photo ID verification.</p>
-                    <p>4. Organizers reserve the right to deny entry without refund.</p>
-                    <p>5. Participants are expected to maintain decorum and respect fellow attendees.</p>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Ticket Purchase & Refunds:</p>
+                      <p>• All sales are final. No refunds/exchanges.</p>
+                      <p>• Tickets valid only for the specified date/time.</p>
+                      <p>• Carry valid ID proof for entry.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Walk-In Policy:</p>
+                      <p>(Subject to Availability)</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Event Access & Re-entry:</p>
+                      <p>• No re-entry once you exit. Keep belongings with you.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Event Modifications:</p>
+                      <p>• Event timing, menu, or activities may change. Major updates will be communicated.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Health & Safety:</p>
+                      <p>• Follow all safety & COVID-19 protocols.</p>
+                      <p>• No hazardous items (weapons, knives, fireworks, drugs, etc.) allowed. Confiscated if found.</p>
+                      <p>• Organizers not liable for injuries, accidents, or item loss.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Photography & Media:</p>
+                      <p>• Entry implies consent to photos/videos for promo.</p>
+                      <p>• Don't wish to appear? Inform staff onsite.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Food Policy:</p>
+                      <p>• No outside food/beverage allowed.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Venue Liability:</p>
+                      <p>• Organizers not liable for personal loss/damage.</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Contact:</p>
+                      <p>WhatsApp: +91 8955578847</p>
+                      <p>Email: cs@indulgeout.com</p>
+                      <p>Instagram: <a href="https://www.instagram.com/indulgeout/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300">https://www.instagram.com/indulgeout/</a></p>
+                    </div>
+                    <div className="pt-2 border-t border-gray-300 dark:border-gray-700">
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">Agreement:</p>
+                      <p>By purchasing a ticket, you agree to all the above terms.</p>
+                    </div>
                   </div>
                 )}
               </div>

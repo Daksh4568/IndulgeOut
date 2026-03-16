@@ -237,16 +237,9 @@ const VenueDashboard = () => {
           <div className="text-center py-12 bg-gray-900 rounded-lg border border-gray-800">
             <Building2 className="h-12 w-12 text-gray-600 mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-white mb-2">
-              No {activeCollabTab} collaborations
+              No Collaborations Yet
             </h3>
             <p className="text-gray-400 mb-4">
-              {activeCollabTab === 'upcoming' 
-                ? 'No upcoming collaborations at the moment'
-                : activeCollabTab === 'live'
-                ? 'No active collaborations'
-                : activeCollabTab === 'completed'
-                ? 'No completed collaborations to show'
-                : 'No collaborations yet'}
             </p>
           </div>
         ) : (
@@ -557,7 +550,7 @@ const VenueDashboard = () => {
 
         {/* Main Content */}
         <div className="flex-1 min-w-0 overflow-x-hidden">
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:pr-6 sm:pl-4 lg:pr-8 lg:pl-4 py-8">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
               <div>

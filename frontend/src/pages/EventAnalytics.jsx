@@ -328,21 +328,23 @@ const EventAnalytics = () => {
                 <span className="sm:hidden">Scan</span>
               </button>
 
-              <button
-                onClick={fetchQuestionnaireSubmissions}
-                disabled={loadingSubmissions}
-                className="flex-1 sm:flex-none flex items-center justify-center px-4 sm:px-5 py-2 sm:py-2.5 text-sm sm:text-base text-white rounded-xl transition-all shadow-lg"
-                style={{
-                  background: loadingSubmissions 
-                    ? 'linear-gradient(180deg, rgba(120, 120, 233, 0.5) 11%, rgba(61, 61, 212, 0.5) 146%)'
-                    : 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
-                  opacity: loadingSubmissions ? 0.7 : 1
-                }}
-              >
-                <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                <span className="hidden sm:inline">Questionnaire</span>
-                <span className="sm:hidden">Q&A</span>
-              </button>
+              {analytics.questionnaireSubmissionsCount > 0 && (
+                <button
+                  onClick={fetchQuestionnaireSubmissions}
+                  disabled={loadingSubmissions}
+                  className="flex-1 sm:flex-none flex items-center justify-center px-4 sm:px-5 py-2 sm:py-2.5 text-sm sm:text-base text-white rounded-xl transition-all shadow-lg"
+                  style={{
+                    background: loadingSubmissions 
+                      ? 'linear-gradient(180deg, rgba(120, 120, 233, 0.5) 11%, rgba(61, 61, 212, 0.5) 146%)'
+                      : 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                    opacity: loadingSubmissions ? 0.7 : 1
+                  }}
+                >
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  <span className="hidden sm:inline">Questionnaire</span>
+                  <span className="sm:hidden">Q&A</span>
+                </button>
+              )}
 
               <button
                 onClick={() => fetchAnalytics(true)}
@@ -1029,6 +1031,12 @@ const EventAnalytics = () => {
                       Coupon Used
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Base Price
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Total Paid
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -1148,6 +1156,22 @@ const EventAnalytics = () => {
                         ) : (
                           <span className="text-gray-600 text-xs">—</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-white">
+                          ₹{attendee.metadata?.basePrice || attendee.price?.amount || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Ticket Price
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-green-400">
+                          ₹{attendee.metadata?.totalPaid || attendee.price?.amount || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Inc. Fees & GST
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

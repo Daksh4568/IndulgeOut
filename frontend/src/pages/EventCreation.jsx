@@ -336,14 +336,28 @@ const EventCreation = () => {
           },
         };
         
-        // Sync price.amount with Single tier price
+        // Sync price.amount with first tier price (1 people tier)
         if (name === "price.amount" && prev.groupingOffers.enabled) {
           const newTiers = [...prev.groupingOffers.tiers];
-          newTiers[0] = { ...newTiers[0], people: 1, price: Number(value) };
+          if (newTiers.length > 0) {
+            newTiers[0] = { ...newTiers[0], people: 1, price: Number(value) };
+          }
           newFormData.groupingOffers = {
             ...prev.groupingOffers,
             tiers: newTiers,
           };
+        }
+        
+        // Also sync when grouping offers is not enabled yet but price changes
+        if (name === "price.amount" && !prev.groupingOffers.enabled) {
+          const newTiers = [...prev.groupingOffers.tiers];
+          if (newTiers.length > 0) {
+            newTiers[0] = { ...newTiers[0], people: 1, price: Number(value) };
+            newFormData.groupingOffers = {
+              ...prev.groupingOffers,
+              tiers: newTiers,
+            };
+          }
         }
         
         return newFormData;
@@ -359,9 +373,9 @@ const EventCreation = () => {
   const handleGroupingOfferToggle = (checked) => {
     setFormData((prev) => {
       const tiers = [...prev.groupingOffers.tiers];
-      // Ensure first tier always has people: 1
+      // Ensure first tier always has people: 1 and price synced with main price
       if (tiers.length > 0) {
-        tiers[0] = { ...tiers[0], people: 1 };
+        tiers[0] = { ...tiers[0], people: 1, price: Number(prev.price.amount) };
       }
       
       return {
@@ -397,23 +411,13 @@ const EventCreation = () => {
         newTiers[0] = { ...newTiers[0], people: 1 };
       }
       
-      const newFormData = {
+      return {
         ...prev,
         groupingOffers: {
           ...prev.groupingOffers,
           tiers: newTiers,
         },
       };
-      
-      // Sync Single tier price with main price.amount
-      if (index === 0 && field === 'price') {
-        newFormData.price = {
-          ...prev.price,
-          amount: Number(value) || 0,
-        };
-      }
-      
-      return newFormData;
     });
   };
 
@@ -1502,7 +1506,7 @@ const EventCreation = () => {
                     placeholder="₹0"
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     required
                   />
                 </div>
@@ -1566,15 +1570,28 @@ const EventCreation = () => {
                             <label className="block text-gray-400 text-xs mb-1">
                               Price (₹)
                             </label>
-                            <input
-                              type="number"
-                              value={tier.price}
-                              onChange={(e) => handleGroupingTierChange(index, 'price', e.target.value)}
-                              placeholder="₹0"
-                              min="0"
-                              step="0.01"
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                            />
+                            {index === 0 ? (
+                              <div>
+                                <input
+                                  type="number"
+                                  value={tier.price}
+                                  disabled
+                                  placeholder="₹0"
+                                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm opacity-50 cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <p className="text-[10px] text-gray-500 mt-1 italic">Auto-synced with main price</p>
+                              </div>
+                            ) : (
+                              <input
+                                type="number"
+                                value={tier.price}
+                                onChange={(e) => handleGroupingTierChange(index, 'price', e.target.value)}
+                                placeholder="₹0"
+                                min="0"
+                                step="0.01"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1787,8 +1804,25 @@ const EventCreation = () => {
                           </label>
                           <input
                             type="datetime-local"
-                            value={coupon.expiryDate ? new Date(coupon.expiryDate).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => updateCoupon(index, 'expiryDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                            value={coupon.expiryDate ? (() => {
+                              // Convert ISO string to local datetime-local format
+                              const date = new Date(coupon.expiryDate);
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const hours = String(date.getHours()).padStart(2, '0');
+                              const minutes = String(date.getMinutes()).padStart(2, '0');
+                              return `${year}-${month}-${day}T${hours}:${minutes}`;
+                            })() : ''}
+                            onChange={(e) => {
+                              // Convert local datetime to ISO string preserving the local time as UTC
+                              if (e.target.value) {
+                                const localDate = new Date(e.target.value);
+                                updateCoupon(index, 'expiryDate', localDate.toISOString());
+                              } else {
+                                updateCoupon(index, 'expiryDate', null);
+                              }
+                            }}
                             className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                           />
                         </div>

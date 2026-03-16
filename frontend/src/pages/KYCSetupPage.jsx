@@ -86,9 +86,9 @@ const KYCSetupPage = () => {
 
       setSuccess(true);
 
-      // Redirect after 2 seconds
+      // Redirect and refresh after 2 seconds
       setTimeout(() => {
-        navigate('/profile');
+        window.location.href = '/dashboard';
       }, 2000);
 
     } catch (err) {

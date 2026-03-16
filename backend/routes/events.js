@@ -923,7 +923,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           checkInTime: ticket.checkInTime,
           checkInBy: ticket.checkInBy?.name || null,
           questionnaireResponses: questionnaireResponses,
-          couponUsed: couponUsed // Include coupon data if user applied one
+          couponUsed: couponUsed, // Include coupon data if user applied one
+          price: ticket.price, // Include price object
+          metadata: ticket.metadata // Include full metadata (basePrice, totalPaid, etc.)
         };
       });
     
@@ -1120,6 +1122,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       }))
     };
     
+    // Count questionnaire submissions
+    const questionnaireSubmissionsCount = event.questionnaireSubmissions ? event.questionnaireSubmissions.length : 0;
+    
     console.log(`✅ Analytics fetched for event: ${event.title} - ${checkedIn}/${totalRegistered} attendees checked in, ${totalSlots} total slots`);
     
     res.json({
@@ -1129,6 +1134,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       eventDate: event.date,
       eventTime: event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : 'TBD',
       eventLocation: event.location,
+      questionnaireSubmissionsCount,
       coreMetrics: {
         eventViews: views,
         uniqueViews: event.analytics?.uniqueViews || 0,

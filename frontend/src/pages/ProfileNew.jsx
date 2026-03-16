@@ -464,11 +464,13 @@ const ProfileNew = () => {
       const response = await api.put('/users/profile/payout', payoutForm)
       setProfileData(response.data.user)
       setEditingSection(null)
-      setMessage({ type: 'success', text: 'Payout information updated!' })
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      setMessage({ type: 'success', text: 'Payout information updated! Refreshing...' })
+      // Refresh the page after 1.5 seconds to update auth context
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update payout information' })
-    } finally {
       setSaving(false)
     }
   }
