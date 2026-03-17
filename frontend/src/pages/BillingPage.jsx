@@ -91,6 +91,13 @@ const BillingPage = () => {
         if (ticketData.quantity) setQuantity(ticketData.quantity);
         if (ticketData.addAnotherPerson) setAddAnotherPerson(ticketData.addAnotherPerson);
         if (ticketData.additionalPerson) setAdditionalPerson(ticketData.additionalPerson);
+        if (ticketData.couponCode) setCouponCode(ticketData.couponCode);
+        if (ticketData.appliedCoupon) setAppliedCoupon(ticketData.appliedCoupon);
+        if (ticketData.questionnaireResponses && ticketData.questionnaireResponses.length > 0) {
+          setQuestionnaireResponses(ticketData.questionnaireResponses);
+          const allAnswered = ticketData.questionnaireResponses.every(r => r.answer && r.answer.trim() !== '');
+          if (allAnswered) setQuestionnaireAnswered(true);
+        }
         
         // Clear the saved data
         sessionStorage.removeItem('ticketSelection');
@@ -120,11 +127,6 @@ const BillingPage = () => {
   const validateCoupon = async () => {
     if (!couponCode.trim()) {
       setCouponError('Please enter a coupon code');
-      return;
-    }
-
-    if (!user) {
-      setCouponError('Please login to apply coupon');
       return;
     }
 
@@ -230,7 +232,10 @@ const BillingPage = () => {
         selectedTierPeople: selectedTier?.people, // Store people count as identifier
         quantity,
         addAnotherPerson,
-        additionalPerson
+        additionalPerson,
+        couponCode: couponCode || '',
+        appliedCoupon: appliedCoupon || null,
+        questionnaireResponses: questionnaireResponses.length > 0 ? questionnaireResponses : []
       };
       console.log('💾 Saving ticket selection:', ticketData);
       sessionStorage.setItem('ticketSelection', JSON.stringify(ticketData));
@@ -732,11 +737,11 @@ const BillingPage = () => {
                       }}
                       placeholder="Enter coupon code"
                       className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
-                      disabled={isCouponValidating || !user}
+                      disabled={isCouponValidating}
                     />
                     <button
                       onClick={validateCoupon}
-                      disabled={isCouponValidating || !couponCode.trim() || !user}
+                      disabled={isCouponValidating || !couponCode.trim()}
                       className="px-6 py-2 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
@@ -751,9 +756,6 @@ const BillingPage = () => {
                   </div>
                   {couponError && (
                     <p className="text-red-400 text-xs mt-2">{couponError}</p>
-                  )}
-                  {!user && (
-                    <p className="text-yellow-400 text-xs mt-2">⚠️ Please login to apply coupon</p>
                   )}
                 </div>
               ) : (

@@ -154,12 +154,20 @@ const EventDetail = () => {
 
   const shareToSocial = (platform) => {
     const eventUrl = window.location.href;
-    const eventTitle = encodeURIComponent(event?.title || 'Check out this event');
+    const eventTitle = event?.title || 'Check out this event';
+    const eventDate = event?.date ? formatDate(event.date) : '';
+    const eventVenue = event?.venue || '';
+    const eventPrice = event?.price?.amount > 0 ? `₹${event.price.amount}` : 'FREE';
+    
+    // Build a rich share message
+    const shareText = `🎉 ${eventTitle}\n📅 ${eventDate}\n📍 ${eventVenue}\n💰 ${eventPrice}\n\nBook now 👇\n${eventUrl}`;
+    const encodedShareText = encodeURIComponent(shareText);
+    const encodedTitle = encodeURIComponent(eventTitle);
     
     let shareUrl;
     switch (platform) {
       case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${eventTitle}%20${eventUrl}`;
+        shareUrl = `https://wa.me/?text=${encodedShareText}`;
         break;
       case 'instagram':
         toast?.info('Please share manually on Instagram');
@@ -167,16 +175,16 @@ const EventDetail = () => {
         setShowShareModal(false);
         return;
       case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${eventUrl}`;
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
         break;
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${eventUrl}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
         break;
       case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?url=${eventUrl}&text=${eventTitle}`;
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(eventUrl)}&text=${encodedTitle}`;
         break;
       case 'telegram':
-        shareUrl = `https://t.me/share/url?url=${eventUrl}&text=${eventTitle}`;
+        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(eventUrl)}&text=${encodedShareText}`;
         break;
       default:
         return;
@@ -380,7 +388,8 @@ const EventDetail = () => {
       <div className="min-h-screen bg-black">
       <NavigationBar />
 
-      {/* Back to Explore Navigation */}
+      {/* Back to Explore Navigation - hide for hosts/organizers */}
+      {!(user && event?.host?._id === user._id) && (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
         <button
           onClick={() => navigate('/explore')}
@@ -392,6 +401,7 @@ const EventDetail = () => {
           </span>
         </button>
       </div>
+      )}
 
       {/* Banner Section - Mobile (portrait with blur) - Keep for mobile */}
       <div className="block md:hidden relative w-full h-[65vh] overflow-hidden bg-black">

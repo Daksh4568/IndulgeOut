@@ -367,8 +367,8 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         finalAmount = totalAmount - couponData.discountApplied;
         console.log(`✅ Coupon validated: ${couponCode}, discount: ₹${couponData.discountApplied}, new total: ₹${finalAmount}`);
         
-        // Apply the coupon (increment usage count)
-        await existingEvent.applyCoupon(couponCode, userId, couponData.discountApplied);
+        // Note: applyCoupon() is called AFTER successful registration to prevent
+        // coupon usage being "burned" if registration fails (event full, race condition, etc.)
       } else {
         console.log(`❌ Invalid coupon: ${couponCode}, reason: ${couponValidation.message}`);
         return res.status(400).json({ 
@@ -452,6 +452,14 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
 
     // currentParticipants already incremented atomically in the update query above
     // No need to call updateParticipantCount()
+
+    // Apply the coupon AFTER successful registration to prevent usage being "burned"
+    // if registration fails (event full, already registered, race condition)
+    if (couponData && couponCode) {
+      const freshEvent = await Event.findById(req.params.id);
+      await freshEvent.applyCoupon(couponCode, userId, couponData.discountApplied);
+      console.log(`🎟️ Coupon ${couponCode} usage incremented after successful registration`);
+    }
 
     const user = await User.findById(req.user.userId);
     user.registeredEvents.push(event._id);
@@ -1315,14 +1323,26 @@ router.get('/:id/attendees', authMiddleware, async (req, res) => {
 
 // @route   POST /api/events/:id/validate-coupon
 // @desc    Validate a coupon code for an event
-// @access  Private
-router.post('/:id/validate-coupon', authMiddleware, async (req, res) => {
+// @access  Public (works without auth for preview, per-user checks skipped if not logged in)
+router.post('/:id/validate-coupon', async (req, res) => {
   try {
     const { couponCode, basePrice } = req.body;
-    const userId = req.user.userId || req.user.id;
+    
+    // Try to extract user ID from token if available (optional auth)
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.userId || decoded.id;
+      } catch (e) {
+        // Token invalid or expired - continue without user
+      }
+    }
 
     // Validate input
-    if (!couponCode || !basePrice) {
+    if (!couponCode || basePrice === undefined) {
       return res.status(400).json({ 
         valid: false,
         message: 'Coupon code and base price are required' 
@@ -1339,8 +1359,8 @@ router.post('/:id/validate-coupon', authMiddleware, async (req, res) => {
       });
     }
 
-    // Validate the coupon
-    const validationResult = await event.validateCoupon(couponCode, userId, basePrice);
+    // Validate the coupon (pass null userId if not logged in - per-user checks will be skipped)
+    const validationResult = await event.validateCoupon(couponCode, userId || 'anonymous', basePrice);
 
     res.json(validationResult);
   } catch (error) {

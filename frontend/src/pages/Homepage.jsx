@@ -1133,32 +1133,84 @@ function Homepage() {
               ))}
             </div>
 
-            {/* Right Side - Single Auto-Rotating Card */}
+            {/* Right Side - Stacked Auto-Rotating Cards */}
             <div className="relative flex items-center justify-center mt-8 lg:mt-0">
-              <div className="w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-gray-800 transition-all duration-700 h-[640px] flex flex-col p-6">
-                {/* Fixed height image container */}
-                <div className="w-full h-[280px] flex-shrink-0 mb-4">
-                  <img 
-                    src={partnerCards[currentPartnerCard].image} 
-                    alt={partnerCards[currentPartnerCard].title}
-                    className="w-full h-full object-cover rounded-2xl transition-opacity duration-700"
-                  />
+              <div className="relative w-full max-w-md mx-auto" style={{ perspective: '1200px' }}>
+                {/* Card stack container */}
+                <div className="relative h-[660px]">
+                  {partnerCards.map((card, index) => {
+                    const offset = ((index - currentPartnerCard + partnerCards.length) % partnerCards.length);
+                    const isActive = offset === 0;
+                    const isNext = offset === 1;
+                    const isLast = offset === 2;
+                    
+                    return (
+                      <div
+                        key={index}
+                        className="absolute inset-0 w-full max-w-md transition-all duration-700 ease-in-out"
+                        style={{
+                          transform: isActive 
+                            ? 'translateY(0) translateX(0) scale(1) rotateX(0deg)' 
+                            : isNext 
+                              ? 'translateY(14px) translateX(14px) scale(0.96) rotateX(1deg)' 
+                              : 'translateY(28px) translateX(28px) scale(0.92) rotateX(2deg)',
+                          zIndex: isActive ? 30 : isNext ? 20 : 10,
+                          opacity: isActive ? 1 : isNext ? 0.85 : 0.65,
+                        }}
+                      >
+                        <div className={`w-full h-[640px] flex flex-col p-6 rounded-xl border transition-all duration-700 ${
+                          isActive 
+                            ? 'bg-gradient-to-br from-gray-900 to-black border-gray-700 shadow-2xl shadow-purple-900/20' 
+                            : isNext
+                              ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600'
+                              : 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-500'
+                        }`}>
+                          <div className="w-full h-[280px] flex-shrink-0 mb-4 overflow-hidden rounded-2xl">
+                            <img 
+                              src={card.image} 
+                              alt={card.title}
+                              className="w-full h-full object-cover transition-transform duration-700"
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col px-2">
+                            <h3 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                              {card.title}
+                            </h3>
+                            <p className="text-gray-300 text-base mb-8 leading-relaxed flex-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {card.description}
+                            </p>
+                            <button
+                              onClick={card.buttonAction}
+                              className="w-full text-white px-6 py-3.5 rounded-md text-base font-bold transition-all duration-300 transform hover:scale-105 hover:opacity-90 shadow-lg uppercase"
+                              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                            >
+                              {card.buttonText}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                {/* Content area with flex-1 to fill remaining space */}
-                <div className="flex-1 flex flex-col px-2">
-                  <h3 className="text-2xl font-bold text-white mb-4 transition-opacity duration-700" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                    {partnerCards[currentPartnerCard].title}
-                  </h3>
-                  <p className="text-gray-300 text-base mb-8 leading-relaxed transition-opacity duration-700 flex-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                    {partnerCards[currentPartnerCard].description}
-                  </p>
-                  <button
-                    onClick={partnerCards[currentPartnerCard].buttonAction}
-                    className="w-full text-white px-6 py-3.5 rounded-md text-base font-bold transition-all duration-300 transform hover:scale-105 hover:opacity-90 shadow-lg uppercase"
-                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
-                  >
-                    {partnerCards[currentPartnerCard].buttonText}
-                  </button>
+                {/* Card indicators */}
+                <div className="flex justify-center items-center gap-2 mt-6">
+                  {partnerCards.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPartnerCard(index)}
+                      className="p-0 border-0 rounded-full transition-all duration-500"
+                      style={{
+                        height: '6px',
+                        minHeight: '6px',
+                        width: index === currentPartnerCard ? '32px' : '12px',
+                        minWidth: index === currentPartnerCard ? '32px' : '12px',
+                        background: index === currentPartnerCard 
+                          ? 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' 
+                          : '#4B5563',
+                        padding: 0
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
             </div>

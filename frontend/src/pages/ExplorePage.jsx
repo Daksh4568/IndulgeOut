@@ -510,47 +510,40 @@ export default function ExplorePage() {
           </div>
 
           {/* Tab Buttons */}
-          <div className="flex sm:hidden gap-3 overflow-x-auto pb-2 px-4 -mx-4 snap-x snap-proximity" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <style>{`
-              .flex.sm\\:hidden.overflow-x-auto::-webkit-scrollbar {
-                display: none;
-              }
-            `}</style>
+          <div className="flex sm:hidden gap-3 justify-center">
             <button
               onClick={() => handleTabChange('events')}
-              className={`flex-none snap-start py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+              className={`flex-1 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
                 tab === 'events'
                   ? 'text-white shadow-xl'
                   : 'bg-[#3A3A52] text-gray-300'
               }`}
-              style={tab === 'events' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif', width: '130px' } : { fontFamily: 'Oswald, sans-serif', width: '130px' }}
+              style={tab === 'events' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
             >
               Events
             </button>
             <button
               onClick={() => handleTabChange('communities')}
-              className={`flex-none snap-start py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+              className={`flex-1 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
                 tab === 'communities'
                   ? 'text-white shadow-xl'
                   : 'bg-[#3A3A52] text-gray-300'
               }`}
-              style={tab === 'communities' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif', width: '130px' } : { fontFamily: 'Oswald, sans-serif', width: '130px' }}
+              style={tab === 'communities' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
             >
               Communities
             </button>
             <button
               onClick={() => handleTabChange('people')}
-              className={`flex-none snap-start py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
+              className={`flex-1 py-2.5 rounded-md text-base font-semibold transform active:scale-95 transition-all duration-300 whitespace-nowrap ${
                 tab === 'people'
                   ? 'text-white shadow-xl'
                   : 'bg-[#3A3A52] text-gray-300'
               }`}
-              style={tab === 'people' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif', width: '130px' } : { fontFamily: 'Oswald, sans-serif', width: '130px' }}
+              style={tab === 'people' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' } : { fontFamily: 'Oswald, sans-serif' }}
             >
               People
             </button>
-            {/* Padding element to ensure last button is fully visible */}
-            <div className="flex-none w-4"></div>
           </div>
           
           {/* Desktop Tab Buttons */}

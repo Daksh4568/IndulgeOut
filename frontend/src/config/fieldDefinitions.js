@@ -289,36 +289,33 @@ export const FIELD_DEFINITIONS = {
   // ═══════════════════════════════════════
   cash: {
     type: 'selectable-card',
-    label: 'Cash Offer',
-    description: 'Monetary sponsorship',
+    label: 'Cash Sponsorship',
+    description: 'Direct monetary support',
     subOptions: [
-      { id: 'upfront_payment', label: 'Upfront Payment' },
-      { id: 'milestone_based', label: 'Milestone Based' },
-      { id: 'post_event_payment', label: 'Post Event Payment' }
+      { id: 'fixed_amount', label: 'Fixed Amount' },
+      { id: 'revenue_share', label: 'Revenue Share' }
     ]
   },
 
   coMarketing: {
     type: 'selectable-card',
     label: 'Co-Marketing',
-    description: 'Joint marketing efforts',
+    description: 'Joint promotional activities',
     subOptions: [
-      { id: 'social_media_promotion', label: 'Social Media Promotion' },
+      { id: 'social_promotion', label: 'Social Media Promotion' },
       { id: 'email_blast', label: 'Email Blast' },
-      { id: 'blog_feature', label: 'Blog Feature' },
-      { id: 'press_release', label: 'Press Release' }
+      { id: 'cross_promotion', label: 'Cross Promotion' }
     ]
   },
 
   content: {
     type: 'selectable-card',
     label: 'Content Support',
-    description: 'Content creation and assets',
+    description: 'Content creation and distribution',
     subOptions: [
       { id: 'photography', label: 'Photography' },
       { id: 'videography', label: 'Videography' },
-      { id: 'graphic_design', label: 'Graphic Design' },
-      { id: 'social_media_content', label: 'Social Media Content' }
+      { id: 'social_content', label: 'Social Content' }
     ]
   },
 
@@ -327,10 +324,9 @@ export const FIELD_DEFINITIONS = {
     label: 'Branding',
     description: 'Brand visibility at event',
     subOptions: [
-      { id: 'logo_placement', label: 'Logo Placement' },
-      { id: 'banner_display', label: 'Banner Display' },
-      { id: 'stage_branding', label: 'Stage Branding' },
-      { id: 'merchandise', label: 'Merchandise' }
+      { id: 'logo_posters', label: 'Logo on Posters' },
+      { id: 'logo_digital', label: 'Logo on Digital' },
+      { id: 'stage_branding', label: 'Stage Branding' }
     ]
   },
 
@@ -357,10 +353,9 @@ export const FIELD_DEFINITIONS = {
     label: 'Content Rights',
     description: 'Rights to event content',
     subOptions: [
-      { id: 'photo_rights', label: 'Photo Rights' },
-      { id: 'video_rights', label: 'Video Rights' },
-      { id: 'testimonial_rights', label: 'Testimonial Rights' },
-      { id: 'brand_story_rights', label: 'Brand Story Rights' }
+      { id: 'photos', label: 'Photos' },
+      { id: 'videos', label: 'Videos' },
+      { id: 'testimonials', label: 'Testimonials' }
     ]
   },
 
@@ -382,9 +377,9 @@ export const FIELD_DEFINITIONS = {
     type: 'selectable-card',
     label: 'Campaign Objectives',
     subOptions: [
-      { id: 'awareness', label: 'Brand Awareness' },
-      { id: 'trials', label: 'Product Trials' },
-      { id: 'leads', label: 'Lead Generation' },
+      { id: 'brand_awareness', label: 'Brand Awareness' },
+      { id: 'product_trials', label: 'Product Trials' },
+      { id: 'lead_generation', label: 'Lead Generation' },
       { id: 'sales', label: 'Direct Sales' },
       { id: 'engagement', label: 'Community Engagement' }
     ]
@@ -393,7 +388,7 @@ export const FIELD_DEFINITIONS = {
   preferredFormats: {
     type: 'multi-select',
     label: 'Preferred Formats',
-    options: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation']
+    options: ['Music & Concerts', 'Comedy Shows', 'Workshops', 'Networking Events', 'Food & Cultural', 'Sports & Fitness']
   },
 
   timeline: {

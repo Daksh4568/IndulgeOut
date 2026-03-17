@@ -35,9 +35,12 @@ const FIELD_DEFINITIONS = {
     type: 'multi-select',
     label: 'Event Format',
     options: [
-      'In-person',
-      'Hybrid',
-      'Virtual'
+      'Workshop',
+      'Mixer / Social',
+      'Tournament',
+      'Performance / Show',
+      'Panel / Talk',
+      'Experiential / Activation'
     ]
   },
   
@@ -57,13 +60,11 @@ const FIELD_DEFINITIONS = {
     type: 'multi-select',
     label: 'Target Audience',
     options: [
-      'Young Professionals',
       'Students',
+      'Young professionals',
+      'Founders / Creators',
       'Families',
-      'Tech Community',
-      'Creative Professionals',
-      'Entrepreneurs',
-      'Corporate Executives'
+      'Niche community'
     ],
     allowCustom: true
   },
@@ -177,11 +178,10 @@ const FIELD_DEFINITIONS = {
     subOptions: {
       type: 'checkbox',
       options: [
-        'event_poster',
-        'social_media',
-        'website',
-        'email_campaigns',
-        'venue_signage'
+        'posters',
+        'banners',
+        'tickets',
+        'social_media'
       ]
     }
   },
@@ -193,11 +193,9 @@ const FIELD_DEFINITIONS = {
     subOptions: {
       type: 'checkbox',
       options: [
-        'standees',
-        'posters',
         'stage_backdrop',
-        'entry_arch',
-        'branded_merchandise'
+        'standees',
+        'booth'
       ]
     }
   },
@@ -209,9 +207,8 @@ const FIELD_DEFINITIONS = {
     subOptions: {
       type: 'checkbox',
       options: [
-        'product_distribution',
-        'sampling_booth',
-        'demo_station'
+        'product_samples',
+        'demo_booth'
       ]
     }
   },
@@ -223,25 +220,23 @@ const FIELD_DEFINITIONS = {
     subOptions: {
       type: 'checkbox',
       options: [
-        'opening_ceremony',
-        'intermission',
-        'closing_ceremony',
-        'award_ceremony'
+        'speaking_slot',
+        'game_activity',
+        'performance'
       ]
     }
   },
   
   speaking: {
     type: 'boolean-with-details',
-    label: 'Speaking Opportunity',
+    label: 'Speaking / Stage Integration',
     hasSubOptions: true,
     subOptions: {
       type: 'checkbox',
       options: [
-        'keynote_speech',
+        'welcome_address',
         'panel_discussion',
-        'product_demo',
-        'networking_session'
+        'workshop_hosting'
       ]
     }
   },
@@ -256,8 +251,7 @@ const FIELD_DEFINITIONS = {
         'instagram_posts',
         'stories',
         'reels',
-        'twitter_posts',
-        'linkedin_posts'
+        'email_mention'
       ]
     }
   },
@@ -269,10 +263,9 @@ const FIELD_DEFINITIONS = {
     subOptions: {
       type: 'checkbox',
       options: [
-        'email_list',
-        'contact_forms',
-        'qr_code_signup',
-        'business_card_collection'
+        'registration_data',
+        'booth_signup',
+        'survey'
       ]
     }
   },

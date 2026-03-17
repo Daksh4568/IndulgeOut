@@ -128,27 +128,35 @@ function checkHostPartnerProfile(user) {
   const missingFields = [];
 
   if (user.hostPartnerType === 'venue') {
-    // Check venue profile fields - comprehensive check
+    // Profile fields
     if (!user.venueProfile?.venueName) missingFields.push('venueName');
-    if (!user.venueProfile?.venueType) missingFields.push('venueType');
-    if (!user.venueProfile?.capacityRange) missingFields.push('capacityRange');
-    if (!user.venueProfile?.city) missingFields.push('city');
-    if (!user.venueProfile?.locality) missingFields.push('locality');
+    if (!user.venueProfile?.venueDescription) missingFields.push('venueDescription');
     if (!user.venueProfile?.photos || user.venueProfile?.photos.length === 0) missingFields.push('photos');
+    // Hosting Preferences
+    if (!user.venueProfile?.preferredCities || user.venueProfile?.preferredCities.length === 0) missingFields.push('preferredCities');
+    if (!user.venueProfile?.preferredCategories || user.venueProfile?.preferredCategories.length === 0) missingFields.push('preferredCategories');
+    if (!user.venueProfile?.preferredEventFormats || user.venueProfile?.preferredEventFormats.length === 0) missingFields.push('preferredEventFormats');
+    if (!user.venueProfile?.preferredAudienceTypes || user.venueProfile?.preferredAudienceTypes.length === 0) missingFields.push('preferredAudienceTypes');
   } else if (user.hostPartnerType === 'brand_sponsor') {
-    // Check brand profile fields - comprehensive check
+    // Profile fields
     if (!user.brandProfile?.brandName) missingFields.push('brandName');
-    if (!user.brandProfile?.industry) missingFields.push('industry');
-    if (!user.brandProfile?.targetAudience) missingFields.push('targetAudience');
-    if (!user.brandProfile?.city) missingFields.push('city');
     if (!user.brandProfile?.brandDescription) missingFields.push('brandDescription');
+    // Hosting Preferences
+    if (!user.brandProfile?.preferredCities || user.brandProfile?.preferredCities.length === 0) missingFields.push('preferredCities');
+    if (!user.brandProfile?.preferredCategories || user.brandProfile?.preferredCategories.length === 0) missingFields.push('preferredCategories');
+    if (!user.brandProfile?.preferredEventFormats || user.brandProfile?.preferredEventFormats.length === 0) missingFields.push('preferredEventFormats');
+    if (!user.brandProfile?.preferredCollaborationTypes || user.brandProfile?.preferredCollaborationTypes.length === 0) missingFields.push('preferredCollaborationTypes');
+    if (!user.brandProfile?.preferredAudienceTypes || user.brandProfile?.preferredAudienceTypes.length === 0) missingFields.push('preferredAudienceTypes');
   } else if (user.hostPartnerType === 'community_organizer') {
-    // Check community profile fields - comprehensive check
+    // Profile fields
     if (!user.communityProfile?.communityName) missingFields.push('communityName');
-    if (!user.communityProfile?.city) missingFields.push('city');
-    if (!user.communityProfile?.pastEventExperience) missingFields.push('pastEventExperience');
     if (!user.communityProfile?.communityDescription) missingFields.push('communityDescription');
-    if (!user.communityProfile?.category || user.communityProfile?.category.length === 0) missingFields.push('category');
+    if (!user.communityProfile?.pastEventPhotos || user.communityProfile?.pastEventPhotos.length === 0) missingFields.push('pastEventPhotos');
+    // Hosting Preferences
+    if (!user.communityProfile?.preferredCities || user.communityProfile?.preferredCities.length === 0) missingFields.push('preferredCities');
+    if (!user.communityProfile?.preferredCategories || user.communityProfile?.preferredCategories.length === 0) missingFields.push('preferredCategories');
+    if (!user.communityProfile?.preferredEventFormats || user.communityProfile?.preferredEventFormats.length === 0) missingFields.push('preferredEventFormats');
+    if (!user.communityProfile?.preferredAudienceTypes || user.communityProfile?.preferredAudienceTypes.length === 0) missingFields.push('preferredAudienceTypes');
   }
 
   return {
@@ -217,58 +225,40 @@ async function getProfileCompletionPercentage(userId) {
     // Role-specific fields
     if (user.role === 'host_partner') {
       if (user.hostPartnerType === 'venue') {
-        const venueFields = [
-          'venueProfile.venueName',
-          'venueProfile.locality',
-          'venueProfile.venueType',
-          'venueProfile.capacityRange',
-          'venueProfile.contactPerson.name',
-          'location.city'
-        ];
-        totalFields += venueFields.length;
-        
+        totalFields += 7;
         if (user.venueProfile?.venueName) completedFields++;
-        if (user.venueProfile?.locality) completedFields++;
-        if (user.venueProfile?.venueType) completedFields++;
-        if (user.venueProfile?.capacityRange) completedFields++;
-        if (user.venueProfile?.contactPerson?.name) completedFields++;
-        if (user.location?.city) completedFields++;
+        if (user.venueProfile?.venueDescription) completedFields++;
+        if (user.venueProfile?.photos?.length > 0) completedFields++;
+        if (user.venueProfile?.preferredCities?.length > 0) completedFields++;
+        if (user.venueProfile?.preferredCategories?.length > 0) completedFields++;
+        if (user.venueProfile?.preferredEventFormats?.length > 0) completedFields++;
+        if (user.venueProfile?.preferredAudienceTypes?.length > 0) completedFields++;
       } else if (user.hostPartnerType === 'brand_sponsor') {
-        const brandFields = [
-          'brandProfile.brandName',
-          'brandProfile.brandCategory',
-          'brandProfile.contactPerson.name',
-          'brandProfile.targetCity',
-          'brandProfile.sponsorshipType'
-        ];
-        totalFields += brandFields.length;
-        
+        totalFields += 7;
         if (user.brandProfile?.brandName) completedFields++;
-        if (user.brandProfile?.brandCategory) completedFields++;
-        if (user.brandProfile?.contactPerson?.name) completedFields++;
-        if (user.brandProfile?.targetCity?.length > 0) completedFields++;
-        if (user.brandProfile?.sponsorshipType?.length > 0) completedFields++;
+        if (user.brandProfile?.brandDescription) completedFields++;
+        if (user.brandProfile?.preferredCities?.length > 0) completedFields++;
+        if (user.brandProfile?.preferredCategories?.length > 0) completedFields++;
+        if (user.brandProfile?.preferredEventFormats?.length > 0) completedFields++;
+        if (user.brandProfile?.preferredCollaborationTypes?.length > 0) completedFields++;
+        if (user.brandProfile?.preferredAudienceTypes?.length > 0) completedFields++;
       } else if (user.hostPartnerType === 'community_organizer') {
-        const communityFields = [
-          'communityProfile.communityName',
-          'communityProfile.primaryCategory',
-          'communityProfile.contactPerson.name',
-          'communityProfile.typicalAudienceSize',
-          'location.city'
-        ];
-        totalFields += communityFields.length;
-        
+        totalFields += 7;
         if (user.communityProfile?.communityName) completedFields++;
-        if (user.communityProfile?.primaryCategory) completedFields++;
-        if (user.communityProfile?.contactPerson?.name) completedFields++;
-        if (user.communityProfile?.typicalAudienceSize) completedFields++;
-        if (user.location?.city) completedFields++;
+        if (user.communityProfile?.communityDescription) completedFields++;
+        if (user.communityProfile?.pastEventPhotos?.length > 0) completedFields++;
+        if (user.communityProfile?.preferredCities?.length > 0) completedFields++;
+        if (user.communityProfile?.preferredCategories?.length > 0) completedFields++;
+        if (user.communityProfile?.preferredEventFormats?.length > 0) completedFields++;
+        if (user.communityProfile?.preferredAudienceTypes?.length > 0) completedFields++;
       }
 
-      // Payout details
-      totalFields += 2;
-      if (user.payoutDetails?.accountNumber) completedFields++;
-      if (user.payoutDetails?.bankName) completedFields++;
+      // Payout details (only for venues & communities)
+      if (user.hostPartnerType !== 'brand_sponsor') {
+        totalFields += 2;
+        if (user.payoutDetails?.accountNumber) completedFields++;
+        if (user.payoutDetails?.accountHolderName) completedFields++;
+      }
     } else {
       // B2C user additional fields
       totalFields += 3;

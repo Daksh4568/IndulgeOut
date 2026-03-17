@@ -7,6 +7,8 @@ const WorkspaceStickyBar = ({
   eventTime,
   eventLocation,
   isLocked,
+  hasMyConfirmed,
+  isFullyLocked,
   saving,
   confirming,
   onSave,
@@ -63,16 +65,17 @@ const WorkspaceStickyBar = ({
   const displayTime = formatTime(eventDate, eventTime);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-gray-800 z-50">
+    <div className="fixed bottom-0 left-0 right-0 z-50"
+      style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Event Info */}
           <div className="flex flex-col sm:flex-row items-center gap-4 text-sm">
             <div className="flex items-center gap-2 text-white">
               <span className="font-semibold">{eventName}</span>
             </div>
             
-            <div className="flex items-center gap-4 text-gray-400">
+            <div className="flex items-center gap-4 text-white/70">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>{formatDate(eventDate)}</span>
@@ -99,7 +102,7 @@ const WorkspaceStickyBar = ({
                 <button
                   onClick={onSave}
                   disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 >
                   {saving ? (
                     <>
@@ -117,7 +120,7 @@ const WorkspaceStickyBar = ({
                 <button
                   onClick={onExit}
                   disabled={saving || confirming}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 >
                   <X className="w-4 h-4" />
                   Exit Collaboration
@@ -126,8 +129,7 @@ const WorkspaceStickyBar = ({
                 <button
                   onClick={onConfirm}
                   disabled={saving || confirming}
-                  className="flex items-center gap-2 px-6 py-2 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                  className="flex items-center gap-2 px-6 py-2 bg-white text-[#3D3DD4] rounded-full font-semibold transition hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {confirming ? (
                     <>
@@ -144,8 +146,14 @@ const WorkspaceStickyBar = ({
               </>
             )}
 
-            {isLocked && (
-              <div className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold border" style={{ background: 'rgba(120,120,233,0.1)', borderColor: 'rgba(120,120,233,0.2)', color: '#7878E9' }}>
+            {isLocked && hasMyConfirmed && !isFullyLocked && (
+              <div className="flex items-center gap-2 px-6 py-2 bg-white/10 rounded-full font-semibold text-white backdrop-blur-sm">
+                <Check className="w-5 h-5" />
+                You Confirmed · Waiting for Other Party
+              </div>
+            )}
+            {isFullyLocked && (
+              <div className="flex items-center gap-2 px-6 py-2 bg-white text-[#3D3DD4] rounded-full font-semibold">
                 <Check className="w-5 h-5" />
                 Collaboration Confirmed
               </div>

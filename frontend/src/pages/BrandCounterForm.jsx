@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
-import { ArrowLeft, Check, X, Edit, AlertCircle, Send } from 'lucide-react';
+import { ArrowLeft, Check, X, Edit, AlertCircle, Send, Eye } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
+import CounterPreviewPage from '../components/CounterPreviewPage';
 
 const BrandCounterForm = () => {
   const { id } = useParams();
@@ -23,6 +24,7 @@ const BrandCounterForm = () => {
   const [generalNotes, setGeneralNotes] = useState('');
   const [commercialCounter, setCommercialCounter] = useState(null);
   
+  const [showPreview, setShowPreview] = useState(false);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [currentField, setCurrentField] = useState(null);
   const [modifyValue, setModifyValue] = useState(null);
@@ -185,16 +187,59 @@ const BrandCounterForm = () => {
     return fieldMap[fieldName];
   };
 
+  const handlePreviewSubmission = () => {
+    const requiredFields = ['eventCategory', 'expectedAttendees', 'commercialModel'];
+    const missingResponses = requiredFields.filter(field => !fieldResponses[field]);
+    
+    if (missingResponses.length > 0) {
+      alert(`Please respond to all required fields before previewing: ${missingResponses.join(', ')}`);
+      return;
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setShowPreview(true);
+  };
+
+  const getPreviewSections = () => {
+    const proposalData = collaboration?.communityToBrand || collaboration?.formData || {};
+    
+    const eventFields = [
+      { key: 'eventCategory', label: 'Event Category', originalValue: proposalData.eventCategory },
+      { key: 'eventDate', label: 'Event Date', originalValue: proposalData.eventDate ? new Date(proposalData.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : null },
+      { key: 'city', label: 'City', originalValue: proposalData.city },
+      { key: 'eventFormat', label: 'Event Format', originalValue: proposalData.eventFormat },
+      { key: 'expectedAttendees', label: 'Expected Attendees / Reach', originalValue: proposalData.expectedAttendees },
+      { key: 'targetAudience', label: 'Target Audience', originalValue: proposalData.targetAudience },
+      { key: 'nicheAudienceDetails', label: 'Niche Audience Specification', originalValue: proposalData.nicheAudienceDetails }
+    ].filter(f => f.originalValue);
+
+    const deliverableFields = [
+      { key: 'logoPlacement', label: 'Logo Placement', originalValue: proposalData.brandDeliverables?.logoPlacement },
+      { key: 'onGroundBranding', label: 'On-Ground Branding', originalValue: proposalData.brandDeliverables?.onGroundBranding },
+      { key: 'sampling', label: 'Sampling / Product Demo', originalValue: proposalData.brandDeliverables?.sampling },
+      { key: 'sponsoredSegments', label: 'Sponsored Segments', originalValue: proposalData.brandDeliverables?.sponsoredSegments },
+      { key: 'digitalShoutouts', label: 'Digital Shoutouts', originalValue: proposalData.brandDeliverables?.digitalShoutouts },
+      { key: 'leadCapture', label: 'Lead Capture', originalValue: proposalData.brandDeliverables?.leadCapture },
+      { key: 'speaking', label: 'Speaking', originalValue: proposalData.brandDeliverables?.speaking }
+    ].filter(f => f.originalValue?.selected);
+
+    const commercialFields = [
+      { key: 'commercialModel', label: 'Sponsorship Budget', originalValue: proposalData.pricing }
+    ];
+
+    return [
+      { title: 'EVENT SNAPSHOT', fields: eventFields },
+      { title: 'BRAND DELIVERABLES REQUESTED', fields: deliverableFields },
+      { title: 'COMMERCIAL & BUDGET', fields: commercialFields }
+    ];
+  };
+
   const handleSubmitCounter = async () => {
     const requiredFields = ['eventCategory', 'expectedAttendees', 'commercialModel'];
     const missingResponses = requiredFields.filter(field => !fieldResponses[field]);
     
     if (missingResponses.length > 0) {
       alert(`Please respond to all required fields: ${missingResponses.join(', ')}`);
-      return;
-    }
-
-    if (!window.confirm('Submit counter-proposal? This will be reviewed by admin before being sent to the community.')) {
       return;
     }
 
@@ -361,7 +406,7 @@ const BrandCounterForm = () => {
             <div>
               <p className="text-sm text-gray-400 mb-3">Expected reach you can deliver:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['50-100', '100-250', '250-500', '500+'].map(option => (
+                {['20-40', '40-80', '80-150', '150+'].map(option => (
                   <button
                     key={option}
                     onClick={() => setModifyValue(option)}
@@ -394,7 +439,7 @@ const BrandCounterForm = () => {
               )}
               <p className="text-sm text-gray-400 mb-3">Select which audience segments you can deliver:</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                {['Students', 'Young professionals', 'Working professionals', 'Parents', 'Entrepreneurs', 'Creatives'].map(audience => {
+                {['Students', 'Young professionals', 'Founders / Creators', 'Families', 'Niche community'].map(audience => {
                   const currentValue = modifyValue || [];
                   const isSelected = currentValue.includes(audience);
                   return (
@@ -485,7 +530,7 @@ const BrandCounterForm = () => {
               )}
               <p className="text-sm text-gray-400 mb-3">Select formats you can support:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['Workshop', 'Mixer/Social', 'Tournament', 'Contest', 'Exhibition', 'Networking'].map(format => {
+                {['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation'].map(format => {
                   const currentValue = modifyValue || [];
                   const isSelected = currentValue.includes(format);
                   return (
@@ -903,6 +948,28 @@ const BrandCounterForm = () => {
 
   const formData = collaboration.communityToBrand || collaboration.formData || {};
   const initiatorName = collaboration.initiator?.name || 'Unknown Community';
+
+  // Preview mode
+  if (showPreview) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <NavigationBar />
+        <CounterPreviewPage
+          sections={getPreviewSections()}
+          fieldResponses={fieldResponses}
+          onBack={() => {
+            setShowPreview(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onSubmit={handleSubmitCounter}
+          submitting={submitting}
+          submitLabel="Submit Response to Community"
+          proposerName={`${initiatorName}`}
+          subtitle="Please review all your responses before submitting to the community"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -1402,20 +1469,19 @@ const BrandCounterForm = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Preview Submission Button */}
         <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center mb-8">
           <h3 className="font-bold text-lg mb-2">READY TO RESPOND?</h3>
           <p className="text-gray-400 text-sm mb-4">
-            Your response will be delivered to the community for their review
+            Preview your response before submitting
           </p>
           <button
-            onClick={handleSubmitCounter}
-            disabled={submitting}
-            className="w-full py-4 hover:opacity-90 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2"
+            onClick={handlePreviewSubmission}
+            className="w-full py-4 hover:opacity-90 text-white rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
           >
-            <Send className="h-5 w-5" />
-            {submitting ? 'Submitting...' : 'Submit Response to Community'}
+            <Eye className="h-5 w-5" />
+            Preview Submission
           </button>
         </div>
       </div>

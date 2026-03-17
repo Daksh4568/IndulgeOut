@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Loader2, Lock, AlertTriangle, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Lock, AlertTriangle, Check, Users } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import WorkspaceSection from '../components/workspace/sections/WorkspaceSection';
 import AudienceProofCard from '../components/workspace/AudienceProofCard';
@@ -29,6 +29,7 @@ const CollabWorkspace = () => {
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
+  const [audienceProofOpen, setAudienceProofOpen] = useState(false);
 
   useEffect(() => {
     fetchWorkspace();
@@ -210,6 +211,12 @@ const CollabWorkspace = () => {
   const otherName = isInitiator ? collaboration.recipient.name : collaboration.initiator.name;
   const collaborationTitle = `${collaboration.initiator.name} × ${collaboration.recipient.name}`;
 
+  // Check if current user has already confirmed (lock their editing even if other party hasn't)
+  const hasMyConfirmed = workspace.confirmedBy?.some(
+    c => c.user === user?._id
+  ) || false;
+  const effectivelyLocked = workspace.isLocked || hasMyConfirmed;
+
   // Get event details for sticky bar
   // Event date can be: plain string, object with {date, startTime, endTime}, or from workspace agreed value
   const getEventDate = () => {
@@ -267,15 +274,31 @@ const CollabWorkspace = () => {
               <h1 className="text-3xl font-bold text-white mb-2">
                 {collaborationTitle}
               </h1>
-              <div className="flex items-center gap-4 text-sm text-gray-400">
+              <div className="flex items-center gap-3 text-sm text-gray-400">
                 <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 rounded-full border border-yellow-500/20">
-                  {workspace.isLocked ? 'Confirmed' : 'Negotiating'}
+                  {workspace.isLocked ? 'Confirmed' : hasMyConfirmed ? 'Awaiting Other Party' : 'Negotiating'}
                 </span>
+                {hasMyConfirmed && !workspace.isLocked && (
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" style={{ color: '#7878E9' }} />
+                    <span style={{ color: '#7878E9' }}>You confirmed</span>
+                  </div>
+                )}
                 {workspace.isLocked && (
                   <div className="flex items-center gap-2">
                     <Lock className="w-4 h-4 text-gray-500" />
                     <span className="text-gray-500">Workspace Locked</span>
                   </div>
+                )}
+                {workspace.audienceProof && (
+                  <button
+                    onClick={() => setAudienceProofOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full border transition hover:opacity-80"
+                    style={{ background: 'rgba(120,120,233,0.1)', borderColor: 'rgba(120,120,233,0.3)', color: '#7878E9' }}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">Audience Proof</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -336,14 +359,6 @@ const CollabWorkspace = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Panel - Sections & Fields */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Audience Proof (if available) */}
-            {workspace.audienceProof && (
-              <AudienceProofCard 
-                audienceProof={workspace.audienceProof}
-                initiatorName={collaboration.initiator.name}
-              />
-            )}
-
             {/* Workspace Sections */}
             {workspace.sections?.map((section, index) => (
               <WorkspaceSection
@@ -353,7 +368,7 @@ const CollabWorkspace = () => {
                 collaboration={collaboration}
                 workspace={workspace}
                 isInitiator={isInitiator}
-                isLocked={workspace.isLocked}
+                isLocked={effectivelyLocked}
                 onEditField={(field) => openEditModal(section.key, field)}
                 onOpenNotes={(field) => openNotesModal(section.key, field)}
                 onOpenHistory={(field) => openHistoryModal(section.key, field)}
@@ -370,7 +385,7 @@ const CollabWorkspace = () => {
                 messages={workspace.forumMessages || []}
                 myName={myName}
                 otherName={otherName}
-                isLocked={workspace.isLocked}
+                isLocked={effectivelyLocked}
                 onRefresh={refreshWorkspace}
               />
             </div>
@@ -384,7 +399,9 @@ const CollabWorkspace = () => {
         eventDate={eventDate}
         eventTime={eventTime}
         eventLocation={eventLocation}
-        isLocked={workspace.isLocked}
+        isLocked={effectivelyLocked}
+        hasMyConfirmed={hasMyConfirmed}
+        isFullyLocked={workspace.isLocked}
         saving={saving}
         confirming={confirming}
         onSave={handleSaveChanges}
@@ -436,6 +453,24 @@ const CollabWorkspace = () => {
           section={selectedField.section}
           field={selectedField.field}
         />
+      )}
+
+      {/* Audience Proof Modal */}
+      {audienceProofOpen && workspace.audienceProof && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setAudienceProofOpen(false)}>
+          <div className="max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <AudienceProofCard
+              audienceProof={workspace.audienceProof}
+              initiatorName={collaboration.initiator.name}
+            />
+            <button
+              onClick={() => setAudienceProofOpen(false)}
+              className="mt-4 w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition text-sm font-medium"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

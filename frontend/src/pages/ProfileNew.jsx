@@ -58,12 +58,7 @@ const ProfileNew = () => {
   })
   const [venueDetailsForm, setVenueDetailsForm] = useState({
     capacityRange: '', alcoholAllowed: false, smokingAllowed: false,
-    ageLimit: '18+', entryCutoffTime: '', soundRestrictions: '', 
-    soundCutoffTime: '', additionalRules: '',
-    commercialModel: '', rentalFee: '', coverChargePerGuest: '', 
-    revenueSharePercentage: '', operatingDays: [],
-    foodBeverageExclusivity: false, externalVendorsAllowed: true,
-    decorationAllowed: true
+    ageLimit: '18+'
   })
   
   // Constants
@@ -118,10 +113,6 @@ const ProfileNew = () => {
     'Sampling',
     'Pop-ups',
     'Co-hosted events'
-  ]
-
-  const operatingDayOptions = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
   ]
 
   // Fetch profile data
@@ -300,19 +291,7 @@ const ProfileNew = () => {
         capacityRange: profileData.venueProfile?.capacityRange || '',
         alcoholAllowed: profileData.venueProfile?.rules?.alcoholAllowed || false,
         smokingAllowed: profileData.venueProfile?.rules?.smokingAllowed || false,
-        ageLimit: profileData.venueProfile?.rules?.ageLimit || '18+',
-        entryCutoffTime: profileData.venueProfile?.rules?.entryCutoffTime || '',
-        soundRestrictions: profileData.venueProfile?.rules?.soundRestrictions || '',
-        soundCutoffTime: profileData.venueProfile?.rules?.soundCutoffTime || '',
-        additionalRules: profileData.venueProfile?.rules?.additionalRules || '',
-        commercialModel: profileData.venueProfile?.commercialModel || '',
-        rentalFee: profileData.venueProfile?.defaultPricing?.rentalFee || '',
-        coverChargePerGuest: profileData.venueProfile?.defaultPricing?.coverChargePerGuest || '',
-        revenueSharePercentage: profileData.venueProfile?.defaultPricing?.revenueSharePercentage || '',
-        operatingDays: profileData.venueProfile?.operatingDays || [],
-        foodBeverageExclusivity: profileData.venueProfile?.rules?.foodBeverageExclusivity || false,
-        externalVendorsAllowed: profileData.venueProfile?.rules?.externalVendorsAllowed || true,
-        decorationAllowed: profileData.venueProfile?.rules?.decorationAllowed || true
+        ageLimit: profileData.venueProfile?.rules?.ageLimit || '18+'
       })
     }
   }
@@ -483,10 +462,7 @@ const ProfileNew = () => {
         rules: {
           alcoholAllowed: venueDetailsForm.alcoholAllowed,
           smokingAllowed: venueDetailsForm.smokingAllowed,
-          ageLimit: venueDetailsForm.ageLimit,
-          entryCutoffTime: venueDetailsForm.entryCutoffTime,
-          soundRestrictions: venueDetailsForm.soundRestrictions,
-          additionalRules: venueDetailsForm.additionalRules
+          ageLimit: venueDetailsForm.ageLimit
         }
       })
       setProfileData(response.data.user)
@@ -590,7 +566,6 @@ const ProfileNew = () => {
     fields.push({ name: 'Name', value: !!profileData.name })
     fields.push({ name: 'Email', value: !!profileData.email })
     fields.push({ name: 'Phone Number', value: !!profileData.phoneNumber })
-    fields.push({ name: 'City', value: !!profileData.location?.city })
     fields.push({ name: 'Profile Picture', value: !!profileData.profilePicture })
     
     if (isHostPartner) {
@@ -603,25 +578,35 @@ const ProfileNew = () => {
       }
       
       if (isCommunityOrganizer) {
-        // Community Organizer specific fields
+        // Community Organizer - profile fields
         fields.push({ name: 'Community Name', value: !!profileData.communityProfile?.communityName })
-        fields.push({ name: 'Past Event Experience', value: !!profileData.communityProfile?.pastEventExperience })
         fields.push({ name: 'Community Description', value: !!profileData.communityProfile?.communityDescription })
-        fields.push({ name: 'Event Categories (min 1)', value: (profileData.communityProfile?.category?.length > 0) || (profileData.communityProfile?.eventCategories?.length > 0) })
-        fields.push({ name: 'Past Event Photos (min 1)', value: profileData.communityProfile?.pastEventPhotos?.length > 0 })
+        fields.push({ name: 'Community Photos (min 1)', value: profileData.communityProfile?.pastEventPhotos?.length > 0 })
+        // Hosting Preferences
+        fields.push({ name: 'Preferred Cities', value: profileData.communityProfile?.preferredCities?.length > 0 })
+        fields.push({ name: 'Preferred Categories', value: profileData.communityProfile?.preferredCategories?.length > 0 })
+        fields.push({ name: 'Preferred Event Formats', value: profileData.communityProfile?.preferredEventFormats?.length > 0 })
+        fields.push({ name: 'Preferred Audience Types', value: profileData.communityProfile?.preferredAudienceTypes?.length > 0 })
       } else if (isVenue) {
-        // Venue specific fields
+        // Venue - profile fields
         fields.push({ name: 'Venue Name', value: !!profileData.venueProfile?.venueName })
-        fields.push({ name: 'Venue Type', value: !!profileData.venueProfile?.venueType })
-        fields.push({ name: 'Capacity Range', value: !!profileData.venueProfile?.capacityRange })
-        fields.push({ name: 'Locality', value: !!profileData.venueProfile?.locality })
+        fields.push({ name: 'Venue Description', value: !!profileData.venueProfile?.venueDescription })
         fields.push({ name: 'Venue Photos (min 1)', value: profileData.venueProfile?.photos?.length > 0 })
+        // Hosting Preferences
+        fields.push({ name: 'Preferred Cities', value: profileData.venueProfile?.preferredCities?.length > 0 })
+        fields.push({ name: 'Preferred Categories', value: profileData.venueProfile?.preferredCategories?.length > 0 })
+        fields.push({ name: 'Preferred Event Formats', value: profileData.venueProfile?.preferredEventFormats?.length > 0 })
+        fields.push({ name: 'Preferred Audience Types', value: profileData.venueProfile?.preferredAudienceTypes?.length > 0 })
       } else if (isBrandSponsor) {
-        // Brand Sponsor specific fields
+        // Brand Sponsor - profile fields
         fields.push({ name: 'Brand Name', value: !!profileData.brandProfile?.brandName })
-        fields.push({ name: 'Brand Category', value: !!profileData.brandProfile?.brandCategory })
-        fields.push({ name: 'Collaboration Intent (min 1)', value: profileData.brandProfile?.collaborationIntent?.length > 0 })
         fields.push({ name: 'Brand Description', value: !!profileData.brandProfile?.brandDescription })
+        // Hosting Preferences
+        fields.push({ name: 'Preferred Cities', value: profileData.brandProfile?.preferredCities?.length > 0 })
+        fields.push({ name: 'Preferred Categories', value: profileData.brandProfile?.preferredCategories?.length > 0 })
+        fields.push({ name: 'Preferred Event Formats', value: profileData.brandProfile?.preferredEventFormats?.length > 0 })
+        fields.push({ name: 'Preferred Collaboration Types', value: profileData.brandProfile?.preferredCollaborationTypes?.length > 0 })
+        fields.push({ name: 'Preferred Audience Types', value: profileData.brandProfile?.preferredAudienceTypes?.length > 0 })
       }
     }
     

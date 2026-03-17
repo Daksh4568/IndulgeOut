@@ -113,35 +113,44 @@ const MasterForum = ({
             </div>
 
             {/* Messages for this date */}
-            {msgs.map((message, index) => (
-              <div key={index} className="mb-3">
-                {message.messageType === 'system_notification' ? (
-                  /* System Message */
-                  <div className="flex justify-center">
-                    <div className="px-3 py-1.5 bg-gray-800/50 text-gray-400 text-xs rounded-full">
-                      {message.message}
-                    </div>
-                  </div>
-                ) : (
-                  /* User Message */
-                  <div className="space-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-white">
-                        {message.author.name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {formatTime(message.createdAt)}
-                      </span>
-                    </div>
-                    <div className="bg-[#0a0a0a] border border-gray-800 rounded-lg px-3 py-2">
-                      <p className="text-sm text-gray-300 whitespace-pre-wrap">
+            {msgs.map((message, index) => {
+              const isMe = message.author?.name === myName;
+              return (
+                <div key={index} className="mb-3">
+                  {message.messageType === 'system_notification' ? (
+                    /* System Message */
+                    <div className="flex justify-center">
+                      <div className="px-3 py-1.5 bg-gray-800/50 text-gray-400 text-xs rounded-full">
                         {message.message}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    /* User Message */
+                    <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[75%] space-y-1`}>
+                        <div className={`flex items-baseline gap-2 ${isMe ? 'justify-end' : ''}`}>
+                          <span className="text-sm font-semibold text-white">
+                            {isMe ? 'You' : message.author.name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatTime(message.createdAt)}
+                          </span>
+                        </div>
+                        <div className={`rounded-lg px-3 py-2 ${
+                          isMe
+                            ? 'bg-[#7878E9]/20 border border-[#7878E9]/30'
+                            : 'bg-[#0a0a0a] border border-gray-800'
+                        }`}>
+                          <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                            {message.message}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))}
         <div ref={messagesEndRef} />

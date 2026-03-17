@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { valuesDeepEqual } = require('../utils/workspaceUtils');
 
 /**
  * Collaboration Request Model
@@ -711,7 +712,7 @@ collaborationSchema.methods.updateWorkspaceField = async function(userId, userTy
   }
   
   // Agreement is purely driven by value matching
-  const valuesMatch = JSON.stringify(fieldAgreement.initiatorValue) === JSON.stringify(fieldAgreement.recipientValue);
+  const valuesMatch = valuesDeepEqual(fieldAgreement.initiatorValue, fieldAgreement.recipientValue);
   fieldAgreement.initiatorAgrees = valuesMatch;
   fieldAgreement.recipientAgrees = valuesMatch;
   
@@ -773,7 +774,7 @@ collaborationSchema.methods.toggleFieldAgreement = async function(userId, sectio
   
   // Update status: only 'agreed' or 'disputed'
   if (fieldAgreement.initiatorAgrees && fieldAgreement.recipientAgrees && 
-      JSON.stringify(fieldAgreement.initiatorValue) === JSON.stringify(fieldAgreement.recipientValue)) {
+      valuesDeepEqual(fieldAgreement.initiatorValue, fieldAgreement.recipientValue)) {
     fieldAgreement.status = 'agreed';
   } else {
     fieldAgreement.status = 'disputed';
@@ -876,7 +877,7 @@ collaborationSchema.methods.updateSectionStatus = function(section) {
   for (const [key, value] of Object.entries(this.workspace.fieldAgreements)) {
     if (key.startsWith(section + '.')) {
       // Agreement is purely driven by value matching
-      const valuesMatch = JSON.stringify(value.initiatorValue) === JSON.stringify(value.recipientValue);
+      const valuesMatch = valuesDeepEqual(value.initiatorValue, value.recipientValue);
       value.initiatorAgrees = valuesMatch;
       value.recipientAgrees = valuesMatch;
       value.status = valuesMatch ? 'agreed' : 'disputed';

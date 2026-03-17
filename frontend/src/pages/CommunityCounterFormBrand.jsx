@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
-import { ArrowLeft, Check, X, Edit, AlertCircle, Send } from 'lucide-react';
+import { ArrowLeft, Check, X, Edit, AlertCircle, Send, Eye } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
+import CounterPreviewPage from '../components/CounterPreviewPage';
 
 const CommunityCounterFormBrand = () => {
   const { id } = useParams();
@@ -23,6 +24,7 @@ const CommunityCounterFormBrand = () => {
   const [generalNotes, setGeneralNotes] = useState('');
   const [commercialCounter, setCommercialCounter] = useState(null);
   
+  const [showPreview, setShowPreview] = useState(false);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [currentField, setCurrentField] = useState(null);
   const [modifyValue, setModifyValue] = useState(null);
@@ -185,16 +187,62 @@ const CommunityCounterFormBrand = () => {
     return fieldMap[fieldName];
   };
 
+  const handlePreviewSubmission = () => {
+    const requiredFields = ['campaignObjectives', 'targetAudience'];
+    const missingResponses = requiredFields.filter(field => !fieldResponses[field]);
+    
+    if (missingResponses.length > 0) {
+      alert(`Please respond to all required fields before previewing: ${missingResponses.join(', ')}`);
+      return;
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setShowPreview(true);
+  };
+
+  const getPreviewSections = () => {
+    const proposalData = collaboration?.brandToCommunity || collaboration?.formData || {};
+    
+    const campaignFields = [
+      { key: 'campaignObjectives', label: 'Campaign Objectives', originalValue: proposalData.campaignObjectives },
+      { key: 'targetAudience', label: 'Target Audience', originalValue: proposalData.targetAudience },
+      { key: 'preferredFormats', label: 'Preferred Formats', originalValue: proposalData.preferredFormats },
+      { key: 'city', label: 'City', originalValue: proposalData.city },
+      { key: 'timeline', label: 'Timeline', originalValue: proposalData.timeline }
+    ].filter(f => f.originalValue);
+
+    const offerFields = [
+      { key: 'cashOffer', label: 'Cash Sponsorship', originalValue: proposalData.brandOffers?.cash },
+      { key: 'barterOffer', label: 'Barter / Products', originalValue: proposalData.brandOffers?.barter },
+      { key: 'coMarketingOffer', label: 'Co-Marketing', originalValue: proposalData.brandOffers?.coMarketing },
+      { key: 'contentOffer', label: 'Content Support', originalValue: proposalData.brandOffers?.content },
+      { key: 'speakingOffer', label: 'Speaking / Brand Integration', originalValue: proposalData.brandOffers?.speaking }
+    ].filter(f => f.originalValue?.selected);
+
+    const expectationFields = [
+      { key: 'brandingExpectation', label: 'Branding / Logo Placement', originalValue: proposalData.brandExpectations?.branding },
+      { key: 'speakingExpectation', label: 'Speaking Slot', originalValue: proposalData.brandExpectations?.speaking },
+      { key: 'sponsoredSegmentExpectation', label: 'Sponsored Segment', originalValue: proposalData.brandExpectations?.sponsoredSegment },
+      { key: 'leadCaptureExpectation', label: 'Lead Capture', originalValue: proposalData.brandExpectations?.leadCapture },
+      { key: 'digitalShoutoutsExpectation', label: 'Digital Shoutouts', originalValue: proposalData.brandExpectations?.digitalShoutouts },
+      { key: 'exclusivityExpectation', label: 'Category Exclusivity', originalValue: proposalData.brandExpectations?.exclusivity },
+      { key: 'contentRightsExpectation', label: 'Content Rights', originalValue: proposalData.brandExpectations?.contentRights },
+      { key: 'salesBoothExpectation', label: 'Sales Booth / Sampling Rights', originalValue: proposalData.brandExpectations?.salesBooth }
+    ].filter(f => f.originalValue?.selected);
+
+    return [
+      { title: 'CAMPAIGN SNAPSHOT', fields: campaignFields },
+      { title: 'BRAND OFFERS', fields: offerFields },
+      { title: 'BRAND EXPECTATIONS', fields: expectationFields }
+    ];
+  };
+
   const handleSubmitCounter = async () => {
     const requiredFields = ['campaignObjectives', 'targetAudience'];
     const missingResponses = requiredFields.filter(field => !fieldResponses[field]);
     
     if (missingResponses.length > 0) {
       alert(`Please respond to all required fields: ${missingResponses.join(', ')}`);
-      return;
-    }
-
-    if (!window.confirm('Submit counter-proposal? This will be reviewed by admin before being sent to the brand.')) {
       return;
     }
 
@@ -340,16 +388,25 @@ const CommunityCounterFormBrand = () => {
             <div>
               <p className="text-sm text-gray-400 mb-3">Select objectives you can deliver:</p>
               <div className="space-y-2">
-                {['Brand Awareness', 'Product Trials', 'Lead Generation', 'Sales', 'Engagement'].map(objective => {
-                  const currentValue = modifyValue || [];
-                  const isSelected = currentValue.includes(objective);
+                {[
+                  { id: 'brand_awareness', label: 'Brand Awareness' },
+                  { id: 'product_trials', label: 'Product Trials' },
+                  { id: 'lead_generation', label: 'Lead Generation' },
+                  { id: 'sales', label: 'Direct Sales' },
+                  { id: 'engagement', label: 'Community Engagement' }
+                ].map(objective => {
+                  const currentValue = (typeof modifyValue === 'object' && modifyValue !== null && !Array.isArray(modifyValue)) ? modifyValue : {};
+                  const isSelected = currentValue[objective.id] === true;
                   return (
                     <button
-                      key={objective}
+                      key={objective.id}
                       onClick={() => {
-                        const updated = isSelected
-                          ? currentValue.filter(o => o !== objective)
-                          : [...currentValue, objective];
+                        const updated = { ...currentValue };
+                        if (isSelected) {
+                          delete updated[objective.id];
+                        } else {
+                          updated[objective.id] = true;
+                        }
                         setModifyValue(updated);
                       }}
                       className={`w-full py-3 px-4 rounded-lg border text-left transition-all ${
@@ -358,7 +415,7 @@ const CommunityCounterFormBrand = () => {
                           : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                       }`}
                     >
-                      {objective}
+                      {objective.label}
                     </button>
                   );
                 })}
@@ -396,7 +453,7 @@ const CommunityCounterFormBrand = () => {
               )}
               <p className="text-sm text-gray-400 mb-3">Select formats you can support:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['Event Sponsorship', 'Workshop', 'Product Launch', 'Contest', 'Social Campaign', 'Content Series'].map(format => {
+                {['Music & Concerts', 'Comedy Shows', 'Workshops', 'Networking Events', 'Food & Cultural', 'Sports & Fitness'].map(format => {
                   const currentValue = modifyValue || [];
                   const isSelected = currentValue.includes(format);
                   return (
@@ -1208,6 +1265,28 @@ const CommunityCounterFormBrand = () => {
   const formData = collaboration.brandToCommunity || collaboration.formData || {};
   const initiatorName = collaboration.initiator?.name || 'Unknown Brand';
 
+  // Preview mode
+  if (showPreview) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <NavigationBar />
+        <CounterPreviewPage
+          sections={getPreviewSections()}
+          fieldResponses={fieldResponses}
+          onBack={() => {
+            setShowPreview(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onSubmit={handleSubmitCounter}
+          submitting={submitting}
+          submitLabel="Submit Response to Brand"
+          proposerName={`${initiatorName}`}
+          subtitle="Please review all your responses before submitting to the brand"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <NavigationBar />
@@ -1687,20 +1766,19 @@ const CommunityCounterFormBrand = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Preview Submission Button */}
         <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center mb-8">
           <h3 className="font-bold text-lg mb-2">READY TO RESPOND?</h3>
           <p className="text-gray-400 text-sm mb-4">
-            Your response will be delivered to the brand for their review
+            Preview your response before submitting
           </p>
           <button
-            onClick={handleSubmitCounter}
-            disabled={submitting}
-            className="w-full py-4 hover:opacity-90 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2"
+            onClick={handlePreviewSubmission}
+            className="w-full py-4 hover:opacity-90 text-white rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
           >
-            <Send className="h-5 w-5" />
-            {submitting ? 'Submitting...' : 'Submit Response to Brand'}
+            <Eye className="h-5 w-5" />
+            Preview Submission
           </button>
         </div>
       </div>

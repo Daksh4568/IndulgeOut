@@ -183,12 +183,15 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       missingFields: []
     };
     if (!community.communityProfile?.communityName) profileCheck.missingFields.push('communityName');
-    if (!community.communityProfile?.city) profileCheck.missingFields.push('city');
-    if (!community.communityProfile?.pastEventExperience) profileCheck.missingFields.push('pastEventExperience');
     if (!community.communityProfile?.communityDescription) profileCheck.missingFields.push('communityDescription');
-    if (!community.communityProfile?.category || community.communityProfile?.category.length === 0) {
-      profileCheck.missingFields.push('category');
+    if (!community.communityProfile?.pastEventPhotos || community.communityProfile?.pastEventPhotos.length === 0) {
+      profileCheck.missingFields.push('pastEventPhotos');
     }
+    // Hosting Preferences
+    if (!community.communityProfile?.preferredCities || community.communityProfile?.preferredCities.length === 0) profileCheck.missingFields.push('preferredCities');
+    if (!community.communityProfile?.preferredCategories || community.communityProfile?.preferredCategories.length === 0) profileCheck.missingFields.push('preferredCategories');
+    if (!community.communityProfile?.preferredEventFormats || community.communityProfile?.preferredEventFormats.length === 0) profileCheck.missingFields.push('preferredEventFormats');
+    if (!community.communityProfile?.preferredAudienceTypes || community.communityProfile?.preferredAudienceTypes.length === 0) profileCheck.missingFields.push('preferredAudienceTypes');
 
     if (profileCheck.missingFields.length > 0) {
       console.log(`👤 [Dashboard] Profile incomplete, missing: ${profileCheck.missingFields.join(', ')}`);

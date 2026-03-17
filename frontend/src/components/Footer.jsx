@@ -114,7 +114,7 @@ const Footer = () => {
                 background: 'linear-gradient(180deg, rgba(217,217,217,0.15) 0%, rgba(115,115,115,0.2) 100%)'
               }}
             >
-              <h3 className="text-base font-bold text-white text-center mb-3">App coming soon</h3>
+              <h3 className="text-base font-bold text-white text-center mb-3">App Coming Soon</h3>
               <div className="flex gap-3">
                 <a 
                   // href="https://apps.apple.com/in/app/indulgeout/id6744292040"
@@ -170,7 +170,7 @@ const Footer = () => {
               background: 'linear-gradient(180deg, rgba(217,217,217,0.15) 0%, rgba(115,115,115,0.2) 100%)'
             }}
           >
-            <h3 className="text-sm font-bold text-white text-center mb-3">App coming soon</h3>
+            <h3 className="text-sm font-bold text-white text-center mb-3">App Coming Soon</h3>
             <div className="flex gap-2">
               <a 
                 // href="https://apps.apple.com/in/app/indulgeout/id6744292040"

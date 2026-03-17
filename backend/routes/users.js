@@ -647,7 +647,7 @@ router.put('/profile/venue-details', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Venue details only available for venue partners' });
     }
     
-    const { capacityRange, rules, pricing, availability, amenities } = req.body;
+    const { capacityRange, rules, amenities } = req.body;
 
     // Update only specific fields without replacing the entire object
     if (capacityRange !== undefined) user.venueProfile.capacityRange = capacityRange;
@@ -656,17 +656,6 @@ router.put('/profile/venue-details', authenticateToken, async (req, res) => {
       if (rules.alcoholAllowed !== undefined) user.venueProfile.rules.alcoholAllowed = rules.alcoholAllowed;
       if (rules.smokingAllowed !== undefined) user.venueProfile.rules.smokingAllowed = rules.smokingAllowed;
       if (rules.ageLimit !== undefined) user.venueProfile.rules.ageLimit = rules.ageLimit;
-      if (rules.entryCutoffTime !== undefined) user.venueProfile.rules.entryCutoffTime = rules.entryCutoffTime;
-      if (rules.soundRestrictions !== undefined) user.venueProfile.rules.soundRestrictions = rules.soundRestrictions;
-      if (rules.additionalRules !== undefined) user.venueProfile.rules.additionalRules = rules.additionalRules;
-    }
-    if (pricing !== undefined) {
-      if (!user.venueProfile.pricing) user.venueProfile.pricing = {};
-      Object.assign(user.venueProfile.pricing, pricing);
-    }
-    if (availability !== undefined) {
-      if (!user.venueProfile.availability) user.venueProfile.availability = {};
-      Object.assign(user.venueProfile.availability, availability);
     }
     if (amenities !== undefined) user.venueProfile.amenities = amenities;
 

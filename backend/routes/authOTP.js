@@ -234,7 +234,7 @@ router.post('/otp/send', async (req, res) => {
       isPhoneVerified: method === 'sms' ? user.otpVerification?.isPhoneVerified : true
     };
 
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     console.log(`✅ OTP sent to ${identifier} via ${method}`);
 
@@ -339,7 +339,7 @@ router.post('/otp/verify', async (req, res) => {
     }
     user.analytics.lastLogin = new Date();
 
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -476,7 +476,7 @@ router.post('/otp/resend', async (req, res) => {
     user.otpVerification.otpAttempts = (user.otpVerification.otpAttempts || 0) + 1;
     user.otpVerification.lastOTPSent = new Date();
 
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     console.log(`✅ OTP resent to ${identifier} via ${method}`);
 

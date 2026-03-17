@@ -114,10 +114,13 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       missingFields: []
     };
     if (!brand.brandProfile?.brandName) profileCheck.missingFields.push('brandName');
-    if (!brand.brandProfile?.industry) profileCheck.missingFields.push('industry');
-    if (!brand.brandProfile?.targetAudience) profileCheck.missingFields.push('targetAudience');
-    if (!brand.brandProfile?.city) profileCheck.missingFields.push('city');
     if (!brand.brandProfile?.brandDescription) profileCheck.missingFields.push('brandDescription');
+    // Hosting Preferences
+    if (!brand.brandProfile?.preferredCities || brand.brandProfile?.preferredCities.length === 0) profileCheck.missingFields.push('preferredCities');
+    if (!brand.brandProfile?.preferredCategories || brand.brandProfile?.preferredCategories.length === 0) profileCheck.missingFields.push('preferredCategories');
+    if (!brand.brandProfile?.preferredEventFormats || brand.brandProfile?.preferredEventFormats.length === 0) profileCheck.missingFields.push('preferredEventFormats');
+    if (!brand.brandProfile?.preferredCollaborationTypes || brand.brandProfile?.preferredCollaborationTypes.length === 0) profileCheck.missingFields.push('preferredCollaborationTypes');
+    if (!brand.brandProfile?.preferredAudienceTypes || brand.brandProfile?.preferredAudienceTypes.length === 0) profileCheck.missingFields.push('preferredAudienceTypes');
 
     if (profileCheck.missingFields.length > 0) {
       console.log(`👤 [Brand Dashboard] Profile incomplete, missing: ${profileCheck.missingFields.join(', ')}`);

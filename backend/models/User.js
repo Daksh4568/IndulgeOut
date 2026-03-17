@@ -177,10 +177,6 @@ const userSchema = new mongoose.Schema({
       enum: ['Indoor', 'Outdoor', 'Rooftop', 'Mixed']
     },
     seatingCapacity: Number,
-    operatingDays: [{
-      type: String,
-      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    }],
     operatingHours: String,
     parkingAvailability: {
       type: String,
@@ -207,16 +203,6 @@ const userSchema = new mongoose.Schema({
     instagram: String,
     facebook: String,
     website: String,
-    commercialModel: {
-      type: String,
-      enum: ['Rental', 'Cover Charge', 'Revenue Share', 'Mixed']
-    },
-    defaultPricing: {
-      rentalFee: Number,
-      coverChargePerGuest: Number,
-      revenueSharePercentage: Number,
-      currency: { type: String, default: 'INR' }
-    },
     amenities: [{
       type: String,
       enum: ['wifi', 'parking', 'ac', 'sound_system', 'projector', 'kitchen', 'bar', 'outdoor_seating', 'stage', 'dance_floor', 'green_room', 'security']
@@ -230,22 +216,6 @@ const userSchema = new mongoose.Schema({
         enum: ['18+', '21+', 'All Ages'],
         default: '18+'
       },
-      soundRestrictions: String,
-      soundCutoffTime: String,
-      additionalRules: String,
-      entryCutoffTime: String,
-      foodBeverageExclusivity: { type: Boolean, default: false },
-      externalVendorsAllowed: { type: Boolean, default: true },
-      decorationAllowed: { type: Boolean, default: true }
-    },
-    pricing: {
-      hourlyRate: Number,
-      minimumBooking: Number,
-      currency: { type: String, default: 'INR' }
-    },
-    availability: {
-      daysAvailable: [{ type: String, enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] }],
-      timeSlots: String
     },
     // Hosting Preferences
     preferredCities: [String],
@@ -283,8 +253,7 @@ const userSchema = new mongoose.Schema({
     contactPerson: {
       name: String,
       workEmail: String,
-      phone: String,
-      designation: String
+      phone: String
     },
     brandDescription: String,
     website: String,
@@ -301,7 +270,6 @@ const userSchema = new mongoose.Schema({
         message: 'You can upload a maximum of 5 product photos'
       }
     },
-    brandAssets: [String],
     budget: {
       min: Number,
       max: Number,
@@ -372,7 +340,6 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['≤20', '20-50', '50-100', '100+', '0-20', '20-50', '50-100', '100-200', '200-500', '500+']
     },
-    established: Date,
     memberCount: { type: Number, default: 0 },
     // Hosting Preferences
     preferredCities: [String],

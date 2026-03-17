@@ -114,13 +114,15 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
       missingFields: []
     };
     if (!venue.venueProfile?.venueName) profileCheck.missingFields.push('venueName');
-    if (!venue.venueProfile?.venueType) profileCheck.missingFields.push('venueType');
-    if (!venue.venueProfile?.capacityRange) profileCheck.missingFields.push('capacityRange');
-    if (!venue.venueProfile?.city) profileCheck.missingFields.push('city');
-    if (!venue.venueProfile?.locality) profileCheck.missingFields.push('locality');
+    if (!venue.venueProfile?.venueDescription) profileCheck.missingFields.push('venueDescription');
     if (!venue.venueProfile?.photos || venue.venueProfile?.photos.length === 0) {
       profileCheck.missingFields.push('photos');
     }
+    // Hosting Preferences
+    if (!venue.venueProfile?.preferredCities || venue.venueProfile?.preferredCities.length === 0) profileCheck.missingFields.push('preferredCities');
+    if (!venue.venueProfile?.preferredCategories || venue.venueProfile?.preferredCategories.length === 0) profileCheck.missingFields.push('preferredCategories');
+    if (!venue.venueProfile?.preferredEventFormats || venue.venueProfile?.preferredEventFormats.length === 0) profileCheck.missingFields.push('preferredEventFormats');
+    if (!venue.venueProfile?.preferredAudienceTypes || venue.venueProfile?.preferredAudienceTypes.length === 0) profileCheck.missingFields.push('preferredAudienceTypes');
 
     if (profileCheck.missingFields.length > 0) {
       console.log(`👤 [Venue Dashboard] Profile incomplete, missing: ${profileCheck.missingFields.join(', ')}`);

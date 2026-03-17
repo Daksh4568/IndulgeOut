@@ -4,6 +4,34 @@
  */
 
 /**
+ * Order-insensitive deep equality for field values.
+ * Arrays are sorted before comparison so ["A","B"] equals ["B","A"].
+ * Objects with boolean values (sub-options) are compared by their true keys.
+ */
+function valuesDeepEqual(a, b) {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+
+  // Both arrays → sort copies then compare
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return JSON.stringify(sortedA) === JSON.stringify(sortedB);
+  }
+
+  // Both objects (sub-options like {brand_awareness: true}) → compare sorted keys with true values
+  if (typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
+    const keysA = Object.keys(a).filter(k => a[k]).sort();
+    const keysB = Object.keys(b).filter(k => b[k]).sort();
+    return JSON.stringify(keysA) === JSON.stringify(keysB);
+  }
+
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
  * Field configuration by collaboration type
  * Maps proposal form sections and fields
  */
@@ -215,7 +243,7 @@ async function initializeWorkspaceWithCounterData(collaboration) {
       }
       
       // Set field agreement
-      const valuesMatch = JSON.stringify(initiatorValue) === JSON.stringify(recipientValue);
+      const valuesMatch = valuesDeepEqual(initiatorValue, recipientValue);
       fieldAgreements[fullFieldKey] = {
         initiatorValue,
         recipientValue,
@@ -498,11 +526,7 @@ function extractActualValue(fieldData) {
 function determineFieldStatus(initiatorValue, recipientValue, recipientAgrees) {
   // If recipient agreed and values match → agreed
   if (recipientAgrees) {
-    if (typeof initiatorValue === 'object' && typeof recipientValue === 'object') {
-      if (JSON.stringify(initiatorValue) === JSON.stringify(recipientValue)) {
-        return 'agreed';
-      }
-    } else if (initiatorValue === recipientValue) {
+    if (valuesDeepEqual(initiatorValue, recipientValue)) {
       return 'agreed';
     }
   }
@@ -629,7 +653,7 @@ function formatWorkspaceForResponse(collaboration) {
       
       if (fieldAgreement) {
         // Agreement is purely driven by value matching
-        const valuesMatch = JSON.stringify(fieldAgreement.initiatorValue) === JSON.stringify(fieldAgreement.recipientValue);
+        const valuesMatch = valuesDeepEqual(fieldAgreement.initiatorValue, fieldAgreement.recipientValue);
         const effectiveInitiatorAgrees = valuesMatch;
         const effectiveRecipientAgrees = valuesMatch;
         const effectiveStatus = valuesMatch ? 'agreed' : 'disputed';
@@ -741,5 +765,6 @@ module.exports = {
   formatWorkspaceForResponse,
   formatFieldLabel,
   areAllSectionsAgreed,
-  getNestedValue
+  getNestedValue,
+  valuesDeepEqual
 };

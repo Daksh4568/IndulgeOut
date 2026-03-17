@@ -200,7 +200,7 @@ const FieldEditorModal = ({
         );
 
       case 'selectable-card': {
-        // Render like proposal form: card with sub-option chips
+        // Render like select/multi-select: grid cards with sub-option chips
         const subOptions = fieldDefinition.subOptions || [];
         const currentValue = (typeof value === 'object' && value !== null) ? value : {};
         
@@ -215,7 +215,7 @@ const FieldEditorModal = ({
                 <label className="block text-sm font-medium text-white mb-3">
                   Select specific needs:
                 </label>
-                <div className="flex flex-wrap gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {subOptions.map(subOpt => {
                     const isSubSelected = currentValue[subOpt.id] === true || currentValue[subOpt.id]?.selected === true;
                     return (
@@ -230,10 +230,10 @@ const FieldEditorModal = ({
                           }
                           setValue(newValue);
                         }}
-                        className={`px-4 py-2.5 rounded-lg transition-all text-sm font-medium ${
+                        className={`py-3 px-4 rounded-xl border-2 transition-all text-left ${
                           isSubSelected
-                            ? 'bg-gray-800 border border-gray-600 text-white'
-                            : 'bg-gray-900 border border-gray-800 text-gray-400 hover:border-gray-700'
+                            ? 'bg-indigo-500/10 border-indigo-500 text-white'
+                            : 'bg-black border-gray-800 text-gray-300 hover:border-gray-700'
                         }`}
                       >
                         {subOpt.label}
