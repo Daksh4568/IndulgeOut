@@ -26,6 +26,7 @@ const ticketRoutes = require('./routes/tickets.js');
 const reviewRoutes = require('./routes/reviews.js');
 const notificationRoutes = require('./routes/notifications.js');
 const settlementRoutes = require('./routes/settlements.js');
+const cronRoutes = require('./routes/cron.js');
 
 // Import scheduled jobs
 const { initializeScheduledJobs } = require('./jobs/scheduledJobs.js');
@@ -149,6 +150,7 @@ app.use('/api/workspace', workspaceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/cron', cronRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
@@ -164,7 +166,8 @@ console.log('✅ All routes registered:', [
   '/api/venues',
   '/api/brands',
   '/api/collaborations',
-  '/api/admin'
+  '/api/admin',
+  '/api/cron'
 ]);
 
 // Health check route

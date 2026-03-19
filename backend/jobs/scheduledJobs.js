@@ -649,11 +649,12 @@ async function runDailyReconciliation() {
       }
     }
     
-    // Check settlement ONLY for 'captured' tickets (payment verified but money not yet transferred)
+    // Check settlement for verified/captured payments (payment confirmed but money not yet transferred to bank)
     // IMPORTANT: Skip 'settled' tickets (already confirmed bank transfer with UTR)
-    // and skip 'pending' tickets (payment not yet verified by reconciliation)
+    // 'pending' tickets should have been upgraded to 'captured' by the reconciliation step above
     const ticketsToCheckSettlement = await Ticket.find({
-      settlementStatus: 'captured',
+      settlementStatus: { $in: ['pending', 'captured'] },
+      reconciliationStatus: 'verified',
       purchaseDate: { $gte: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000) },
       'price.amount': { $gt: 0 }
     });

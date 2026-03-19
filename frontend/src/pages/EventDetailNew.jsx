@@ -157,10 +157,21 @@ const EventDetail = () => {
     const eventTitle = event?.title || 'Check out this event';
     const eventDate = event?.date ? formatDate(event.date) : '';
     const eventVenue = event?.venue || '';
+    const eventCity = typeof event?.location === 'string'
+      ? event.location.split(',')[0].trim()
+      : (event?.location?.city || '');
+    const eventAddress = typeof event?.location === 'string'
+      ? event.location
+      : (event?.location?.address || event?.location?.city || '');
     const eventPrice = event?.price?.amount > 0 ? `₹${event.price.amount}` : 'FREE';
     
+    // Build venue line: "Venue Name, City" or just city
+    const venueLine = eventVenue
+      ? (eventCity && !eventVenue.includes(eventCity) ? `${eventVenue}, ${eventCity}` : eventVenue)
+      : eventAddress || eventCity;
+    
     // Build a rich share message
-    const shareText = `🎉 ${eventTitle}\n📅 ${eventDate}\n📍 ${eventVenue}\n💰 ${eventPrice}\n\nBook now 👇\n${eventUrl}`;
+    const shareText = `🎉 ${eventTitle}\n📅 ${eventDate}\n📍 ${venueLine}\n💰 ${eventPrice}\n\nBook now 👇\n${eventUrl}`;
     const encodedShareText = encodeURIComponent(shareText);
     const encodedTitle = encodeURIComponent(eventTitle);
     
@@ -170,8 +181,13 @@ const EventDetail = () => {
         shareUrl = `https://wa.me/?text=${encodedShareText}`;
         break;
       case 'instagram':
-        toast?.info('Please share manually on Instagram');
-        window.open('https://www.instagram.com/', '_blank');
+        // Copy link to clipboard and open Instagram DMs
+        navigator.clipboard.writeText(`${eventTitle}\n${eventDate}\n${venueLine}\n${eventPrice}\n\n${eventUrl}`).then(() => {
+          toast?.success('Event details copied! Paste in Instagram chat.');
+        }).catch(() => {
+          toast?.info('Share this event on Instagram');
+        });
+        window.open('https://www.instagram.com/direct/inbox/', '_blank');
         setShowShareModal(false);
         return;
       case 'linkedin':
