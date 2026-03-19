@@ -344,11 +344,11 @@ export default function ExplorePage() {
     console.log('🔄 Fetching communities... Query:', searchQuery, 'Page:', communitiesPage);
     setLoading(true);
     try {
-      let featuredEndpoint = `${API_URL}/api/explore/communities/featured?limit=20&page=${communitiesPage}`;
+      let featuredEndpoint = `${API_URL}/api/explore/communities/featured?limit=100&page=1`;
       
       // If there's a search query, use search endpoint instead
       if (searchQuery) {
-        featuredEndpoint = `${API_URL}/api/explore/communities/search?q=${encodeURIComponent(searchQuery)}&limit=20&page=${communitiesPage}`;
+        featuredEndpoint = `${API_URL}/api/explore/communities/search?q=${encodeURIComponent(searchQuery)}&limit=100&page=1`;
       }
       
       console.log('📡 Fetching communities from:', featuredEndpoint);
@@ -1128,28 +1128,24 @@ export default function ExplorePage() {
                     <div className="relative">
                       {/* Communities from API - already paginated server-side */}
                       {(() => {
-                        const paginatedCommunities = lockedCommunities;
                         const totalPages = communitiesPagination?.totalPages || 1;
                         
                         return (
                           <>
-                            {/* Mobile: Horizontal Carousel */}
-                            <div className="block sm:hidden overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                              <div className="flex gap-4 px-2">
-                                {paginatedCommunities.map(community => (
-                                  <div key={community._id} className="flex-none w-[85vw] snap-center">
-                                    <CommunityCard
-                                      community={community}
-                                      onFavorite={handleFavorite}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
+                            {/* Mobile: Vertical Stack - Show all communities */}
+                            <div className="block sm:hidden space-y-4">
+                              {lockedCommunities.map(community => (
+                                <CommunityCard
+                                  key={community._id}
+                                  community={community}
+                                  onFavorite={handleFavorite}
+                                />
+                              ))}
                             </div>
                             
                             {/* Desktop: Grid Layout */}
                             <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                              {paginatedCommunities.map(community => (
+                              {lockedCommunities.map(community => (
                                 <CommunityCard
                                   key={community._id}
                                   community={community}
@@ -1158,9 +1154,9 @@ export default function ExplorePage() {
                               ))}
                             </div>
                           
-                          {/* Pagination Controls for Communities */}
+                          {/* Pagination Controls for Communities - Desktop only */}
                           {totalPages > 1 && (
-                            <div className="flex items-center justify-center gap-2 mt-8">
+                            <div className="hidden sm:flex items-center justify-center gap-2 mt-8">
                               <button
                                 onClick={() => setCommunitiesPage(Math.max(1, communitiesPage - 1))}
                                 disabled={communitiesPage === 1}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Home, Mail, Phone, ArrowRight, RefreshCw } from 'lucide-react'
+import { Home, Mail, Phone, ArrowRight, RefreshCw, MessageCircle } from 'lucide-react'
 import DarkModeToggle from '../components/DarkModeToggle'
 import { api } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -44,7 +44,16 @@ const OTPLogin = () => {
         setResendTimer(60) // 60 seconds cooldown
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.')
+      if (err.response?.data?.whatsappNotRegistered) {
+        setError('This number is not registered on WhatsApp. Switching to email login.')
+        setTimeout(() => {
+          setLoginMethod('email')
+          setIdentifier('')
+          setError('')
+        }, 2500)
+      } else {
+        setError(err.response?.data?.message || 'Failed to send OTP. Please try again.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -230,8 +239,9 @@ const OTPLogin = () => {
 
               {/* Subtext for phone */}
               {loginMethod === 'phone' && (
-                <p className="text-gray-400 text-center mb-6 text-xs">
-                  (If you already have an account, log in here)
+                <p className="text-gray-400 text-center mb-6 text-xs flex items-center justify-center gap-1">
+                  <MessageCircle className="h-3.5 w-3.5 text-green-500" />
+                  OTP will be sent on your WhatsApp
                 </p>
               )}
 
@@ -283,7 +293,7 @@ const OTPLogin = () => {
                     fontFamily: 'Oswald, sans-serif',
                   }}
                 >
-                  {isLoading ? 'SENDING...' : 'SEND OTP'}
+                  {isLoading ? 'SENDING...' : loginMethod === 'phone' ? 'SEND OTP ON WHATSAPP' : 'SEND OTP'}
                 </button>
 
                 {/* Terms Text */}
@@ -332,7 +342,7 @@ const OTPLogin = () => {
                 Enter Your OTP
               </h2>
               <p className="text-gray-400 text-center mb-8 text-sm">
-                We have sent the OTP to your {loginMethod === 'email' ? 'email' : 'mobile'} number
+                We have sent the OTP to your {loginMethod === 'email' ? 'email' : 'WhatsApp'}
               </p>
 
               <form onSubmit={handleVerifyOTP} className="space-y-6">

@@ -5,6 +5,7 @@ const { authMiddleware } = require('../utils/authUtils');
 const { checkAndGenerateActionRequiredNotifications } = require('../utils/checkUserActionRequirements');
 const { sendWelcomeEmail, sendOTPEmail } = require('../utils/emailService');
 const { notifyProfileIncompleteUser } = require('../services/notificationService');
+const { sendWhatsAppOTP } = require('../services/msg91Service');
 
 // Helper functions
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -209,20 +210,29 @@ router.post('/otp/send', async (req, res) => {
     console.log(`🔐 [OTP] Generated OTP for ${identifier}: ${otp}`);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Send OTP via email (SMS temporarily disabled)
-    let emailSent = false;
+    // Send OTP via email or WhatsApp
     if (method === 'email') {
       try {
         await sendOTPEmail(identifier, otp, user.name);
-        emailSent = true;
       } catch (error) {
         return res.status(500).json({
           message: `Failed to send OTP: ${error.message}`
         });
       }
     } else {
-      // SMS not implemented - for now, just log
-      console.log(`SMS OTP for ${identifier}: ${otp}`);
+      try {
+        await sendWhatsAppOTP(identifier, otp, user.name);
+      } catch (error) {
+        if (error.code === 'WHATSAPP_NOT_REGISTERED') {
+          return res.status(400).json({
+            message: 'This number is not registered on WhatsApp. Please use email login instead.',
+            whatsappNotRegistered: true
+          });
+        }
+        return res.status(500).json({
+          message: `Failed to send WhatsApp OTP: ${error.message}`
+        });
+      }
     }
 
     // Update user with OTP details
@@ -250,7 +260,7 @@ router.post('/otp/send', async (req, res) => {
     );
 
     const response = {
-      message: `OTP sent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
+      message: `OTP sent successfully to your ${method === 'sms' ? 'WhatsApp' : 'email'}`,
       expiresIn: 600 // 10 minutes in seconds
     };
 
@@ -456,7 +466,7 @@ router.post('/otp/resend', async (req, res) => {
     console.log(`🔐 [OTP] Resend - Generated OTP for ${identifier}: ${otp}`);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Send OTP via email (SMS temporarily disabled)
+    // Send OTP via email or WhatsApp
     if (method === 'email') {
       try {
         await sendOTPEmail(identifier, otp, user.name);
@@ -466,8 +476,19 @@ router.post('/otp/resend', async (req, res) => {
         });
       }
     } else {
-      // SMS not implemented - for now, just log
-      console.log(`SMS OTP for ${identifier}: ${otp}`);
+      try {
+        await sendWhatsAppOTP(identifier, otp, user.name);
+      } catch (error) {
+        if (error.code === 'WHATSAPP_NOT_REGISTERED') {
+          return res.status(400).json({
+            message: 'This number is not registered on WhatsApp. Please use email login instead.',
+            whatsappNotRegistered: true
+          });
+        }
+        return res.status(500).json({
+          message: `Failed to send WhatsApp OTP: ${error.message}`
+        });
+      }
     }
 
     // Update user with new OTP details
@@ -481,7 +502,7 @@ router.post('/otp/resend', async (req, res) => {
     console.log(`✅ OTP resent to ${identifier} via ${method}`);
 
     res.json({
-      message: `OTP resent successfully to your ${method === 'sms' ? 'phone' : 'email'}`,
+      message: `OTP resent successfully to your ${method === 'sms' ? 'WhatsApp' : 'email'}`,
       expiresIn: 600
     });
 
