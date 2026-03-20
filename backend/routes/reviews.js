@@ -6,6 +6,19 @@ const User = require('../models/User');
 const notificationService = require('../services/notificationService');
 const { authMiddleware } = require('../utils/authUtils');
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // @route   POST /api/events/:eventId/review
 // @desc    Submit a review for an event
 // @access  Private
@@ -33,7 +46,7 @@ router.post('/:eventId/review', authMiddleware, async (req, res) => {
     }
 
     // Check if event exists
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -58,17 +71,17 @@ router.post('/:eventId/review', authMiddleware, async (req, res) => {
       });
     }
 
-    // Check if user already reviewed this event
-    const existingReview = await Review.findOne({ event: eventId, user: userId });
+    // Check if user already reviewed this event (use event._id for ObjectId)
+    const existingReview = await Review.findOne({ event: event._id, user: userId });
     if (existingReview) {
       return res.status(400).json({ 
         message: 'You have already reviewed this event. You can edit your existing review.' 
       });
     }
 
-    // Create review
+    // Create review (use event._id for ObjectId)
     const review = new Review({
-      event: eventId,
+      event: event._id,
       user: userId,
       rating,
       comment,
@@ -78,8 +91,8 @@ router.post('/:eventId/review', authMiddleware, async (req, res) => {
 
     await review.save();
 
-    // Update event rating statistics
-    await updateEventRatingStats(eventId);
+    // Update event rating statistics (use event._id for ObjectId)
+    await updateEventRatingStats(event._id);
 
     // Populate user info for response
     await review.populate('user', 'name profilePicture');
@@ -120,7 +133,7 @@ router.get('/:eventId/reviews', async (req, res) => {
     const { sort = 'recent', page = 1, limit = 10 } = req.query;
 
     // Check if event exists
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -136,15 +149,15 @@ router.get('/:eventId/reviews', async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Fetch reviews
-    const reviews = await Review.find({ event: eventId })
+    // Fetch reviews (use event._id ObjectId)
+    const reviews = await Review.find({ event: event._id })
       .populate('user', 'name profilePicture')
       .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count
-    const totalReviews = await Review.countDocuments({ event: eventId });
+    // Get total count (use event._id ObjectId)
+    const totalReviews = await Review.countDocuments({ event: event._id });
 
     // Calculate rating distribution
     const ratingDistribution = await Review.aggregate([

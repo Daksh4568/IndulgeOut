@@ -4,6 +4,20 @@ const { authMiddleware } = require('../utils/authUtils');
 const ticketService = require('../services/ticketService');
 const Ticket = require('../models/Ticket');
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  const Event = require('../models/Event');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // @route   GET /api/tickets/my-tickets
 // @desc    Get all tickets for logged-in user
 // @access  Private
@@ -106,7 +120,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
 
     // Fetch event details to check registration and get price
     const Event = require('../models/Event');
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
 
     if (!event) {
       return res.status(404).json({
@@ -131,7 +145,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
     const Ticket = require('../models/Ticket');
     const existingTicket = await Ticket.findOne({
       user: req.user.id,
-      event: eventId
+      event: event._id
     });
 
     if (existingTicket) {
@@ -147,7 +161,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
 
     const ticket = await ticketService.generateTicket({
       userId: req.user.id,
-      eventId,
+      eventId: event._id,
       amount: ticketAmount,
       paymentId,
       ticketType: ticketType || 'general',
@@ -168,7 +182,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
       const Ticket = require('../models/Ticket');
       const existingTicket = await Ticket.findOne({
         user: req.user.id,
-        event: req.body.eventId
+        event: event._id
       }).populate([
         { path: 'event', select: 'title date time location categories maxParticipants host' },
         { path: 'user', select: 'name email phoneNumber' }
@@ -309,7 +323,7 @@ router.get('/event/:eventId', authMiddleware, async (req, res) => {
 
     // Verify user is the event organizer or has permission
     const Event = require('../models/Event');
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     
     if (!event) {
       return res.status(404).json({
@@ -330,7 +344,8 @@ router.get('/event/:eventId', authMiddleware, async (req, res) => {
       });
     }
     
-    const tickets = await ticketService.getEventTickets(eventId, status);
+    // Use event._id (ObjectId) for ticket queries, not the slug
+    const tickets = await ticketService.getEventTickets(event._id, status);
 
     // Calculate statistics
     const stats = {

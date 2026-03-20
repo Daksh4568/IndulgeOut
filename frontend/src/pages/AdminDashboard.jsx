@@ -2144,6 +2144,103 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
+                {/* Price Change Timeline */}
+                {((eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0) || 
+                  (eventDetails.pricingTimeline && eventDetails.pricingTimeline.enabled)) && (
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h3 className="text-lg font-bold text-white mb-4">💰 Price Change Timeline</h3>
+                    
+                    {/* Scheduled Pricing Tiers */}
+                    {eventDetails.pricingTimeline?.enabled && eventDetails.pricingTimeline.tiers?.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-400 mb-3">Scheduled Price Tiers</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {eventDetails.pricingTimeline.tiers.map((tier, index) => {
+                            const now = new Date();
+                            const start = new Date(tier.startDate);
+                            const end = new Date(tier.endDate);
+                            start.setHours(0, 0, 0, 0);
+                            end.setHours(23, 59, 59, 999);
+                            const isActive = now >= start && now <= end;
+                            const isPast = now > end;
+                            return (
+                              <div key={index} className={`p-4 rounded-lg border ${
+                                isActive ? 'border-green-500/40 bg-green-900/10' :
+                                isPast ? 'border-gray-700 bg-gray-800/30 opacity-60' :
+                                'border-blue-500/30 bg-blue-900/10'
+                              }`}>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-white">{tier.label || `Tier ${index + 1}`}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    isActive ? 'bg-green-500/20 text-green-400' :
+                                    isPast ? 'bg-gray-600/20 text-gray-400' :
+                                    'bg-blue-500/20 text-blue-400'
+                                  }`}>
+                                    {isActive ? 'Active' : isPast ? 'Ended' : 'Upcoming'}
+                                  </span>
+                                </div>
+                                <div className="text-xl font-bold text-white mb-1">₹{tier.price}</div>
+                                <div className="text-xs text-gray-400 mb-2">
+                                  {new Date(tier.startDate).toLocaleDateString()} → {new Date(tier.endDate).toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-400">{tier.spotsBought || 0} spots</span>
+                                  <span className="text-green-400 font-medium">₹{(tier.revenue || 0).toLocaleString()}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Price Change History */}
+                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-400 mb-3">Price Change History</h4>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-700">
+                            <thead className="bg-zinc-800">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Date</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Previous</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">New Price</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reason</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Spots at Prev</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700">
+                              {eventDetails.priceChangeHistory.map((change, index) => (
+                                <tr key={index} className="hover:bg-zinc-800">
+                                  <td className="px-4 py-3 text-sm text-white">
+                                    {new Date(change.changedAt).toLocaleString()}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-300">₹{change.previousPrice}</td>
+                                  <td className="px-4 py-3 text-sm font-semibold text-white">
+                                    ₹{change.newPrice}
+                                    {change.newPrice > change.previousPrice ? ' ↑' : change.newPrice < change.previousPrice ? ' ↓' : ''}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                      change.reason === 'initial_creation' ? 'bg-blue-100 text-blue-800' :
+                                      change.reason === 'timeline_automatic' ? 'bg-purple-100 text-purple-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {change.reason === 'initial_creation' ? 'Created' : 
+                                       change.reason === 'timeline_automatic' ? 'Auto (Timeline)' : 'Manual Edit'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-300">{change.spotsBookedAtPrevPrice}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Attendees List */}
                 <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                   <h3 className="text-lg font-bold text-white mb-4">Attendees ({eventDetails.attendees.length})</h3>
@@ -2155,6 +2252,7 @@ const AdminDashboard = () => {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Purchase Date</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Price at Purchase</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Settlement</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reconciliation</th>
@@ -2172,6 +2270,18 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-4 py-3 text-sm text-white">{new Date(attendee.purchaseDate).toLocaleDateString()}</td>
                             <td className="px-4 py-3 text-sm font-semibold text-white">₹{attendee.price}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="text-white">₹{attendee.priceAtPurchase || attendee.price}</div>
+                              {attendee.pricingTimelineTier && (
+                                <div className="text-xs text-purple-400">{attendee.pricingTimelineTier}</div>
+                              )}
+                              {attendee.couponCode && (
+                                <div className="text-xs text-green-400">🎟️ {attendee.couponCode} (-₹{attendee.couponDiscount || 0})</div>
+                              )}
+                              {attendee.groupingOffer && (
+                                <div className="text-xs text-blue-400">👥 {attendee.groupingOffer}</div>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-sm">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                                 attendee.status === 'checked_in' ? 'bg-green-100 text-green-800' :

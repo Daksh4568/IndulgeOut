@@ -89,6 +89,10 @@ const EventCreation = () => {
       enabled: false,
       codes: [],
     },
+    pricingTimeline: {
+      enabled: false,
+      tiers: [],
+    },
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -291,6 +295,20 @@ const EventCreation = () => {
           } : {
             enabled: false,
             codes: [],
+          },
+          pricingTimeline: event.pricingTimeline ? {
+            enabled: event.pricingTimeline.enabled || false,
+            tiers: event.pricingTimeline.tiers?.length > 0
+              ? event.pricingTimeline.tiers.map(tier => ({
+                  startDate: tier.startDate ? new Date(tier.startDate).toISOString().split('T')[0] : '',
+                  endDate: tier.endDate ? new Date(tier.endDate).toISOString().split('T')[0] : '',
+                  price: tier.price || 0,
+                  label: tier.label || '',
+                }))
+              : []
+          } : {
+            enabled: false,
+            tiers: [],
           },
         });
 
@@ -547,6 +565,63 @@ const EventCreation = () => {
       coupons: {
         ...prev.coupons,
         codes: prev.coupons.codes.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  // Pricing Timeline handlers
+  const handlePricingTimelineToggle = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      pricingTimeline: {
+        ...prev.pricingTimeline,
+        enabled: checked,
+        tiers: checked ? prev.pricingTimeline.tiers : [],
+      },
+    }));
+  };
+
+  const addPricingTier = () => {
+    setFormData((prev) => ({
+      ...prev,
+      pricingTimeline: {
+        ...prev.pricingTimeline,
+        tiers: [
+          ...prev.pricingTimeline.tiers,
+          {
+            startDate: "",
+            endDate: "",
+            price: "",
+            label: "",
+          },
+        ],
+      },
+    }));
+  };
+
+  const updatePricingTier = (index, field, value) => {
+    setFormData((prev) => {
+      const newTiers = [...prev.pricingTimeline.tiers];
+      newTiers[index] = {
+        ...newTiers[index],
+        [field]: value,
+      };
+      return {
+        ...prev,
+        pricingTimeline: {
+          ...prev.pricingTimeline,
+          tiers: newTiers,
+        },
+      };
+    });
+  };
+
+  const removePricingTier = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      pricingTimeline: {
+        ...prev.pricingTimeline,
+        tiers: prev.pricingTimeline.tiers.filter((_, i) => i !== index),
       },
     }));
   };
@@ -1106,6 +1181,14 @@ const EventCreation = () => {
         };
       }
 
+      // Convert pricing timeline tier prices to numbers, default empty to 0
+      if (eventData.pricingTimeline?.enabled && eventData.pricingTimeline.tiers?.length > 0) {
+        eventData.pricingTimeline.tiers = eventData.pricingTimeline.tiers.map(tier => ({
+          ...tier,
+          price: tier.price !== '' && tier.price != null ? Number(tier.price) : 0
+        }));
+      }
+
       let response;
       if (isEditMode) {
         // Update existing event
@@ -1524,7 +1607,7 @@ const EventCreation = () => {
                     style={{ accentColor: '#7878E9' }}
                   />
                   <label htmlFor="groupingOffers" className="text-white text-sm font-medium cursor-pointer">
-                    Grouping Offers
+                    Group Offers
                   </label>
                 </div>
 
@@ -1856,6 +1939,123 @@ const EventCreation = () => {
                     
                     <p className="text-xs text-gray-400 italic mt-2">
                       💡 Create discount codes for early birds or special groups (e.g., INDULGE100 for first 10 users)
+                    </p>
+                    <p className="text-xs text-gray-400 italic mt-1">
+                      💡 Eg: You are giving ₹200 off on a ticket of ₹300 per user — user pays ₹100 per ticket
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Pricing Timeline */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="pricingTimeline"
+                    checked={formData.pricingTimeline?.enabled || false}
+                    onChange={(e) => handlePricingTimelineToggle(e.target.checked)}
+                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
+                    style={{ accentColor: '#7878E9' }}
+                  />
+                  <label htmlFor="pricingTimeline" className="text-white text-sm font-medium cursor-pointer">
+                    Time-Based Pricing
+                  </label>
+                </div>
+
+                {formData.pricingTimeline?.enabled && (
+                  <div className="space-y-4 pl-6 border-l-2 border-white/10">
+                    <p className="text-xs text-gray-400">
+                      Set different prices for different date ranges leading up to your event. The ticket price will automatically change based on the current date.
+                    </p>
+                    
+                    {formData.pricingTimeline.tiers?.map((tier, index) => (
+                      <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white text-sm font-medium">
+                            Price Tier {index + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removePricingTier(index)}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Label */}
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Label (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={tier.label}
+                            onChange={(e) => updatePricingTier(index, 'label', e.target.value)}
+                            placeholder="e.g., Early Bird, Regular, Last Minute"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Date Range */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={tier.startDate ? tier.startDate.split('T')[0] : ''}
+                              onChange={(e) => updatePricingTier(index, 'startDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              End Date
+                            </label>
+                            <input
+                              type="date"
+                              value={tier.endDate ? tier.endDate.split('T')[0] : ''}
+                              onChange={(e) => updatePricingTier(index, 'endDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={tier.price}
+                            onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
+                            placeholder="₹0"
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Add Tier Button */}
+                    {(formData.pricingTimeline.tiers?.length || 0) < 5 && (
+                      <button
+                        type="button"
+                        onClick={addPricingTier}
+                        className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
+                      >
+                        <span className="text-lg">+</span>
+                        <span>Add Price Tier</span>
+                      </button>
+                    )}
+                    
+                    <p className="text-xs text-gray-400 italic mt-2">
+                      💡 Example: Early Bird till March 25 at ₹500, Regular till March 31 at ₹700, Last Minute till event day at ₹1000. The base price above will be used for any dates not covered by tiers.
                     </p>
                   </div>
                 )}

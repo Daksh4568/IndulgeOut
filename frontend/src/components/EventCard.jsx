@@ -71,12 +71,12 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
   const isPastEvent = isEventEnded();
 
   const getPriceBadge = () => {
-    if (event.price?.amount === 0) {
+    const effectivePrice = event.currentEffectivePrice ?? event.price?.amount ?? 0;
+    if (effectivePrice === 0) {
       return <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">Free</span>;
-    } else if (event.price?.amount) {
-      return <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">${event.price.amount}</span>;
+    } else {
+      return <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">${effectivePrice}</span>;
     }
-    return null;
   };
 
   const getMoodEmoji = (mood) => {
@@ -116,7 +116,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
 
   return (
     <Link
-      to={`/events/${event._id}`}
+      to={`/events/${event.slug || event._id}`}
       className={`group flex flex-col bg-[#1E1E2E] dark:bg-[#1E1E2E] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isPastEvent ? 'opacity-75' : ''} h-full`}
     >
       {/* Image */}
@@ -186,7 +186,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
             <div className="flex items-center gap-2 text-gray-300">
               <IndianRupee className="h-4 w-4 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
               <span className="text-sm sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                {event.price.amount === 0 ? 'FREE' : `₹${event.price.amount} onwards`}
+                {(event.currentEffectivePrice ?? event.price.amount) === 0 ? 'FREE' : `₹${event.currentEffectivePrice ?? event.price.amount} onwards`}
               </span>
             </div>
           )}

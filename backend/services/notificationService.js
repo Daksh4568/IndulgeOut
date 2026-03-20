@@ -132,7 +132,7 @@ async function notifyBookingFailed(userId, event, reason) {
     priority: 'high',
     title: '❌ Booking Failed',
     message: `Your booking for "${event.title}" could not be completed. Reason: ${reason}`,
-    actionUrl: `/events/${event._id}`,
+    actionUrl: `/events/${event.slug || event._id}`,
     actionText: 'Try Again',
     relatedEvent: event._id,
     metadata: {
@@ -153,7 +153,7 @@ async function notifyEventReminder(userId, event) {
     priority: 'high',
     title: '⏰ Event Tomorrow!',
     message: `"${event.title}" is happening tomorrow at ${new Date(event.date).toLocaleString()}. Don't forget to check in!`,
-    actionUrl: `/events/${event._id}`,
+    actionUrl: `/events/${event.slug || event._id}`,
     actionText: 'View Event',
     relatedEvent: event._id,
     metadata: {
@@ -196,7 +196,7 @@ async function notifyRateExperience(userId, event) {
     priority: 'low',
     title: '⭐ How Was Your Experience?',
     message: `Please rate your experience at "${event.title}". Your feedback helps improve future events!`,
-    actionUrl: `/events/${event._id}/review`,
+    actionUrl: `/events/${event.slug || event._id}/review`,
     actionText: 'Rate Event',
     relatedEvent: event._id,
     metadata: {
@@ -216,7 +216,7 @@ async function notifyHostReplyFeedback(userId, event, hostName) {
     priority: 'medium',
     title: '💬 Host Replied to Your Feedback',
     message: `${hostName} replied to your feedback for "${event.title}".`,
-    actionUrl: `/events/${event._id}#reviews`,
+    actionUrl: `/events/${event.slug || event._id}#reviews`,
     actionText: 'View Reply',
     relatedEvent: event._id,
     metadata: {
@@ -360,7 +360,7 @@ async function notifyEventPublished(userId, event) {
     priority: 'high',
     title: '🎉 Event Published Successfully',
     message: `"${event.title}" is now live and accepting bookings!`,
-    actionUrl: `/events/${event._id}`,
+    actionUrl: `/events/${event.slug || event._id}`,
     actionText: 'View Event',
     relatedEvent: event._id,
     metadata: {

@@ -66,7 +66,7 @@ export default function NotificationDropdown({ onClose }) {
     }
     // Handle related event links if present
     else if (notification.relatedEvent?._id && targetLink && targetLink.includes('/events/')) {
-      targetLink = `/event/${notification.relatedEvent._id}`;
+      targetLink = `/events/${notification.relatedEvent.slug || notification.relatedEvent._id}`;
     }
     
     // Navigate if we have a target link

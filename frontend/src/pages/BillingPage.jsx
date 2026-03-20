@@ -171,7 +171,8 @@ const BillingPage = () => {
       basePrice = selectedTier.price;
       numberOfPeople = selectedTier.people;
     } else {
-      basePrice = (event?.price?.amount || 0) * quantity;
+      const effectivePrice = event?.currentEffectivePrice ?? event?.price?.amount ?? 0;
+      basePrice = effectivePrice * quantity;
       numberOfPeople = quantity;
     }
 
@@ -333,7 +334,7 @@ const BillingPage = () => {
           registrationData.groupingOffer = billingData.groupingOffer;
         }
 
-        const registerResponse = await api.post(`/events/${event._id}/register`, registrationData);
+        const registerResponse = await api.post(`/events/${event.slug || event._id}/register`, registrationData);
         
         if (registerResponse.data.success || registerResponse.status === 200) {
           toast.success('Successfully registered for the event! Check your email for tickets.');
@@ -447,7 +448,7 @@ const BillingPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
-          onClick={() => navigate(`/events/${eventId}`)}
+          onClick={() => navigate(`/events/${event?.slug || eventId}`)}
           className="flex items-center space-x-2 text-gray-400 hover:text-white mb-6 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -554,7 +555,7 @@ const BillingPage = () => {
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h5 className="text-white font-semibold mb-1">Regular Ticket</h5>
-                        <p className="text-gray-400 text-sm">₹{event.price?.amount || 0} per person</p>
+                        <p className="text-gray-400 text-sm">₹{event.currentEffectivePrice ?? event.price?.amount ?? 0} per person</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">

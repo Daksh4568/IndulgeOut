@@ -560,6 +560,100 @@ async function runManualReconciliation(options) {
       console.log('');
     }
     
+    // ==================== PRICE CHANGE AUDIT ====================
+    console.log('─────────────────────────────────────────────────────');
+    console.log('💰 PRICE CHANGE & GROUPING AUDIT:');
+    console.log('─────────────────────────────────────────────────────');
+    console.log('');
+    
+    const Event = require('../models/Event');
+    
+    // Get unique event IDs from the processed tickets
+    const eventIds = [...new Set(tickets.map(t => t.event.toString()))];
+    const events = await Event.find({ _id: { $in: eventIds } })
+      .select('title price priceChangeHistory pricingTimeline groupingOffers coupons currentParticipants');
+    
+    for (const event of events) {
+      const eventTickets = tickets.filter(t => t.event.toString() === event._id.toString());
+      
+      console.log(`  📌 Event: ${event.title}`);
+      console.log(`     Current Price: ₹${event.price?.amount || 0}`);
+      console.log(`     Total Tickets: ${eventTickets.length}`);
+      
+      // Price change history
+      if (event.priceChangeHistory && event.priceChangeHistory.length > 0) {
+        console.log(`     Price Changes: ${event.priceChangeHistory.length}`);
+        event.priceChangeHistory.forEach((change, i) => {
+          console.log(`       ${i + 1}. ₹${change.previousPrice} → ₹${change.newPrice} on ${new Date(change.changedAt).toISOString().split('T')[0]} (${change.reason}) [${change.spotsBookedAtPrevPrice} spots at prev]`);
+        });
+      }
+      
+      // Pricing timeline
+      if (event.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length > 0) {
+        console.log(`     Time-Based Pricing: ENABLED`);
+        event.pricingTimeline.tiers.forEach((tier, i) => {
+          const tierTickets = eventTickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          });
+          const tierRevenue = tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0);
+          console.log(`       Tier ${i + 1}: ${tier.label || 'N/A'} - ₹${tier.price} (${new Date(tier.startDate).toLocaleDateString()} to ${new Date(tier.endDate).toLocaleDateString()}) → ${tierTickets.length} tickets, ₹${tierRevenue}`);
+        });
+      }
+      
+      // Grouping offers breakdown
+      if (event.groupingOffers?.enabled && event.groupingOffers.tiers?.length > 0) {
+        console.log(`     Grouping Offers: ENABLED`);
+        const groupTickets = eventTickets.filter(t => t.metadata?.groupingOffer);
+        const nonGroupTickets = eventTickets.filter(t => !t.metadata?.groupingOffer);
+        console.log(`       Individual Tickets: ${nonGroupTickets.length}`);
+        console.log(`       Group Tickets: ${groupTickets.length}`);
+        event.groupingOffers.tiers.forEach((tier, i) => {
+          const tierLabel = tier.label || `${tier.people} people`;
+          const matches = groupTickets.filter(t => t.metadata?.groupingOffer === tierLabel || t.metadata?.tierPeople === tier.people);
+          const tierRevenue = matches.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0);
+          console.log(`       Tier ${i + 1}: ${tier.people} people @ ₹${tier.price} → ${matches.length} tickets, ₹${tierRevenue}`);
+        });
+      }
+      
+      // Coupon breakdown
+      if (event.coupons?.enabled && event.coupons.codes?.length > 0) {
+        const couponTickets = eventTickets.filter(t => t.metadata?.couponCode);
+        const totalCouponDiscount = couponTickets.reduce((sum, t) => sum + (t.metadata?.couponDiscount || 0), 0);
+        console.log(`     Coupons: ENABLED (${event.coupons.codes.length} codes)`);
+        console.log(`       Tickets with Coupons: ${couponTickets.length}`);
+        console.log(`       Total Discount Given: ₹${totalCouponDiscount}`);
+        event.coupons.codes.forEach(code => {
+          const codeTickets = couponTickets.filter(t => t.metadata?.couponCode === code.code);
+          console.log(`       ${code.code}: ${code.currentUses}/${code.maxUses || '∞'} used, ${codeTickets.length} in range`);
+        });
+      }
+      
+      // Price at purchase verification
+      const ticketsWithPriceAtPurchase = eventTickets.filter(t => t.metadata?.priceAtPurchase);
+      if (ticketsWithPriceAtPurchase.length > 0) {
+        const priceGroups = {};
+        ticketsWithPriceAtPurchase.forEach(t => {
+          const price = t.metadata.priceAtPurchase;
+          if (!priceGroups[price]) priceGroups[price] = { count: 0, revenue: 0 };
+          priceGroups[price].count++;
+          priceGroups[price].revenue += t.metadata?.basePrice || t.price?.amount || 0;
+        });
+        console.log(`     Purchase Price Distribution:`);
+        Object.entries(priceGroups).forEach(([price, data]) => {
+          console.log(`       ₹${price}: ${data.count} tickets, ₹${data.revenue} revenue`);
+        });
+      }
+      
+      console.log('');
+    }
+    console.log('─────────────────────────────────────────────────────');
+    console.log('');
+    
     if (options.dryRun) {
       console.log('⚠️  This was a DRY RUN - No changes were saved to database');
       console.log('');

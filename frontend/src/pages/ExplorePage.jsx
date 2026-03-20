@@ -243,7 +243,7 @@ export default function ExplorePage() {
       // Apply price filter
       if (filters.price && filters.price !== 'all') {
         fetchedEvents = fetchedEvents.filter(event => {
-          const price = event.price?.amount || 0;
+          const price = event.currentEffectivePrice ?? event.price?.amount ?? 0;
           if (filters.price === 'free') return price === 0;
           if (filters.price === 'under500') return price > 0 && price < 500;
           if (filters.price === '500-2000') return price >= 500 && price <= 2000;
@@ -296,9 +296,9 @@ export default function ExplorePage() {
       // Apply sorting
       if (filters.sortBy) {
         if (filters.sortBy === 'price-low-high') {
-          fetchedEvents.sort((a, b) => (a.price?.amount || 0) - (b.price?.amount || 0));
+          fetchedEvents.sort((a, b) => (a.currentEffectivePrice ?? a.price?.amount ?? 0) - (b.currentEffectivePrice ?? b.price?.amount ?? 0));
         } else if (filters.sortBy === 'price-high-low') {
-          fetchedEvents.sort((a, b) => (b.price?.amount || 0) - (a.price?.amount || 0));
+          fetchedEvents.sort((a, b) => (b.currentEffectivePrice ?? b.price?.amount ?? 0) - (a.currentEffectivePrice ?? a.price?.amount ?? 0));
         } else if (filters.sortBy === 'date') {
           fetchedEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
         } else if (filters.sortBy === 'distance' && filters.userLocation) {
@@ -665,14 +665,14 @@ export default function ExplorePage() {
                                     Price
                                     <div className="mb-3">
                                       <span className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                                        ₹{event.price?.amount || 499} onwards
+                                        ₹{event.currentEffectivePrice ?? event.price?.amount ?? 0} onwards
                                       </span>
                                     </div>
                                   </div>
                                   
                                   Button
                                   <button
-                                    onClick={() => window.location.href = `/events/${event._id}`}
+                                    onClick={() => window.location.href = `/events/${event.slug || event._id}`}
                                     className="w-full text-white px-8 py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-xl"
                                     style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                                   >

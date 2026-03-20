@@ -334,7 +334,7 @@ const AnalyticsPage = () => {
                           {Math.round(item.score * 100)}% match
                         </span>
                         <button
-                          onClick={() => window.location.href = `/events/${item.event._id}`}
+                          onClick={() => window.location.href = `/events/${item.event.slug || item.event._id}`}
                           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           View

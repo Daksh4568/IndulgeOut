@@ -65,8 +65,8 @@ const RecommendationsSection = () => {
       // Don't prevent navigation if tracking fails
     }
     
-    // Navigate to event
-    navigate(`/event/${eventId}`);
+    // Navigate to event (use /events/ for consistency with slug support)
+    navigate(`/events/${eventId}`);
   };
 
   const getCategoryIcon = (categories) => {

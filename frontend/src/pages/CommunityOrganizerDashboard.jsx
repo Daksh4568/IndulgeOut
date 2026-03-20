@@ -429,7 +429,7 @@ const CommunityOrganizerDashboard = () => {
                       return (
                         <div
                           key={event._id}
-                          onClick={() => navigate(`/events/${event._id}`)}
+                          onClick={() => navigate(`/events/${event.slug || event._id}`)}
                           className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                         >
                       {/* Event Header */}
@@ -522,7 +522,7 @@ const CommunityOrganizerDashboard = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/organizer/events/${event._id}/analytics`);
+                                navigate(`/organizer/events/${event.slug || event._id}/analytics`);
                               }}
                               className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
@@ -572,7 +572,7 @@ const CommunityOrganizerDashboard = () => {
                         return (
                           <div
                             key={event._id}
-                            onClick={() => navigate(`/events/${event._id}`)}
+                            onClick={() => navigate(`/events/${event.slug || event._id}`)}
                             className="bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                           >
                       {/* Event Header */}
@@ -665,7 +665,7 @@ const CommunityOrganizerDashboard = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/organizer/events/${event._id}/analytics`);
+                                navigate(`/organizer/events/${event.slug || event._id}/analytics`);
                               }}
                               className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
@@ -732,12 +732,12 @@ const CommunityOrganizerDashboard = () => {
                 return (
                   <div
                     key={event._id}
-                    onClick={() => navigate(`/events/${event._id}`)}
+                    onClick={() => navigate(`/events/${event.slug || event._id}`)}
                     className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                   >
                     {/* Event Header */}
                     <div className="p-4 flex flex-col flex-grow">
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center justify-between mb-3">
                         <h3 
                           className="font-bold text-white text-lg flex-1 line-clamp-2"
                           style={{ fontFamily: 'Oswald, sans-serif' }}
@@ -825,7 +825,7 @@ const CommunityOrganizerDashboard = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/organizer/events/${event._id}/analytics`);
+                              navigate(`/organizer/events/${event.slug || event._id}/analytics`);
                             }}
                             className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                           >
@@ -876,7 +876,7 @@ const CommunityOrganizerDashboard = () => {
                       return (
                         <div
                           key={event._id}
-                          onClick={() => navigate(`/events/${event._id}`)}
+                          onClick={() => navigate(`/events/${event.slug || event._id}`)}
                           className="bg-zinc-900 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer animated-border-card"
                         >
                       {/* Event Header */}
@@ -969,7 +969,7 @@ const CommunityOrganizerDashboard = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/organizer/events/${event._id}/analytics`);
+                                navigate(`/organizer/events/${event.slug || event._id}/analytics`);
                               }}
                               className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors flex-1"
                             >
@@ -1042,7 +1042,7 @@ const CommunityOrganizerDashboard = () => {
   const shareToSocial = (platform) => {
     if (!selectedEventForShare) return;
     
-    const eventUrl = `${window.location.origin}/events/${selectedEventForShare._id}`;
+    const eventUrl = `${window.location.origin}/events/${selectedEventForShare.slug || selectedEventForShare._id}`;
     const eventTitle = selectedEventForShare.title;
     const eventDate = new Date(selectedEventForShare.date).toLocaleDateString('en-IN', { 
       day: 'numeric', 
@@ -1079,7 +1079,7 @@ const CommunityOrganizerDashboard = () => {
     if (!selectedEventForShare) return;
     
     try {
-      const eventUrl = `${window.location.origin}/events/${selectedEventForShare._id}`;
+      const eventUrl = `${window.location.origin}/events/${selectedEventForShare.slug || selectedEventForShare._id}`;
       await navigator.clipboard.writeText(eventUrl);
       toast?.show({ message: 'Event link copied to clipboard!', type: 'success' });
       setShowShareModal(false);

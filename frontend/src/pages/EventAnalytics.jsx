@@ -707,6 +707,130 @@ const EventAnalytics = () => {
           </div>
         )}
 
+        {/* Price Change Timeline */}
+        {((analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0) || 
+          (analytics.pricingTimeline && analytics.pricingTimeline.enabled)) && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <DollarSign className="h-5 w-5 mr-2 text-yellow-500" />
+                Price Change Timeline
+              </h2>
+            </div>
+
+            {/* Scheduled Pricing Timeline Tiers */}
+            {analytics.pricingTimeline?.enabled && analytics.pricingTimeline.tiers?.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-400 mb-3">Scheduled Price Tiers</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {analytics.pricingTimeline.tiers.map((tier, index) => {
+                    const now = new Date();
+                    const start = new Date(tier.startDate);
+                    const end = new Date(tier.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    const isActive = now >= start && now <= end;
+                    const isPast = now > end;
+                    
+                    return (
+                      <div 
+                        key={index}
+                        className={`backdrop-blur-sm rounded-xl p-5 border transition-all ${
+                          isActive 
+                            ? 'bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-green-700/30 ring-1 ring-green-500/30'
+                            : isPast 
+                              ? 'bg-gray-800/30 border-gray-700/30 opacity-60'
+                              : 'bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border-blue-700/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium text-white">
+                            {tier.label || `Tier ${index + 1}`}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            isActive 
+                              ? 'bg-green-500/20 text-green-400'
+                              : isPast 
+                                ? 'bg-gray-600/20 text-gray-400'
+                                : 'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {isActive ? 'Active' : isPast ? 'Ended' : 'Upcoming'}
+                          </span>
+                        </div>
+                        <div className="text-2xl font-bold text-white mb-2">₹{tier.price}</div>
+                        <div className="text-xs text-gray-400 mb-3">
+                          {formatDate(tier.startDate)} → {formatDate(tier.endDate)}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-400">{tier.spotsBought || 0} spots booked</span>
+                          <span className="text-green-400 font-medium">₹{(tier.revenue || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Price Change History Log */}
+            {analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-400 mb-3">Price Change History</h3>
+                <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-700/50">
+                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Date</th>
+                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Previous Price</th>
+                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">New Price</th>
+                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Reason</th>
+                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Spots at Prev Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.priceChangeHistory.map((change, index) => (
+                          <tr key={index} className="border-b border-gray-700/30 last:border-b-0 hover:bg-white/5">
+                            <td className="px-4 py-3 text-sm text-white">
+                              {formatDateTime(change.changedAt)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-300">
+                              ₹{change.previousPrice}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-white">
+                              ₹{change.newPrice}
+                              {change.newPrice > change.previousPrice ? (
+                                <TrendingUp className="inline h-3 w-3 ml-1 text-red-400" />
+                              ) : change.newPrice < change.previousPrice ? (
+                                <TrendingDown className="inline h-3 w-3 ml-1 text-green-400" />
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                change.reason === 'initial_creation' 
+                                  ? 'bg-blue-500/20 text-blue-400'
+                                  : change.reason === 'timeline_automatic'
+                                    ? 'bg-purple-500/20 text-purple-400'
+                                    : 'bg-yellow-500/20 text-yellow-400'
+                              }`}>
+                                {change.reason === 'initial_creation' ? 'Created' : 
+                                 change.reason === 'timeline_automatic' ? 'Auto (Timeline)' : 'Manual Edit'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-300">
+                              {change.spotsBookedAtPrevPrice}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Demand Timing & Sales Velocity */}
         {analytics.demandTiming && (
         <div className="mb-8">
@@ -1034,6 +1158,9 @@ const EventAnalytics = () => {
                       Base Price
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Price at Purchase
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Total Paid
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -1164,6 +1291,16 @@ const EventAnalytics = () => {
                         <div className="text-xs text-gray-500">
                           Ticket Price
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-white">
+                          ₹{attendee.metadata?.priceAtPurchase || attendee.price?.amount || 0}
+                        </div>
+                        {attendee.metadata?.pricingTimelineTier && (
+                          <div className="text-xs text-purple-400">
+                            {attendee.metadata.pricingTimelineTier}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-green-400">

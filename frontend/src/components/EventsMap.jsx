@@ -191,7 +191,7 @@ const EventsMap = ({ events = [], onEventClick, className = '' }) => {
           </div>
         </div>
         <button 
-          onclick="window.location.href='/event/${event._id}'" 
+          onclick="window.location.href='/events/${event.slug || event._id}'" 
           style="
             margin-top: 8px; 
             padding: 6px 12px; 
@@ -379,7 +379,7 @@ const EventsMap = ({ events = [], onEventClick, className = '' }) => {
             </div>
           </div>
           <button
-            onClick={() => window.location.href = `/event/${selectedEvent._id}`}
+            onClick={() => window.location.href = `/events/${selectedEvent.slug || selectedEvent._id}`}
             className="w-full mt-3 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
           >
             View Event
@@ -396,7 +396,7 @@ const EventsMap = ({ events = [], onEventClick, className = '' }) => {
               <div 
                 key={event._id} 
                 className="p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50"
-                onClick={() => window.location.href = `/event/${event._id}`}
+                onClick={() => window.location.href = `/events/${event.slug || event._id}`}
               >
                 <div className="font-medium text-sm">{event.title}</div>
                 <div className="text-xs text-gray-500">

@@ -1147,23 +1147,24 @@ function Homepage() {
                     return (
                       <div
                         key={index}
-                        className="absolute inset-0 w-full max-w-md transition-all duration-700 ease-in-out"
+                        className="absolute inset-0 w-full max-w-md"
                         style={{
                           transform: isActive 
                             ? 'translateY(0) translateX(0) scale(1) rotateX(0deg)' 
                             : isNext 
-                              ? 'translateY(14px) translateX(14px) scale(0.96) rotateX(1deg)' 
-                              : 'translateY(28px) translateX(28px) scale(0.92) rotateX(2deg)',
+                              ? 'translateY(18px) translateX(18px) scale(0.95) rotateX(1deg)' 
+                              : 'translateY(38px) translateX(38px) scale(0.90) rotateX(2deg)',
                           zIndex: isActive ? 30 : isNext ? 20 : 10,
-                          opacity: isActive ? 1 : isNext ? 0.85 : 0.65,
+                          opacity: isActive ? 1 : isNext ? 0.8 : 0.55,
+                          transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
                       >
-                        <div className={`w-full h-[640px] flex flex-col p-6 rounded-xl border transition-all duration-700 ${
+                        <div className={`w-full h-[640px] flex flex-col p-6 rounded-xl border ${
                           isActive 
                             ? 'bg-gradient-to-br from-gray-900 to-black border-gray-700 shadow-2xl shadow-purple-900/20' 
                             : isNext
-                              ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600'
-                              : 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-500'
+                              ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600 shadow-xl'
+                              : 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-500 shadow-lg'
                         }`}>
                           <div className="w-full h-[280px] flex-shrink-0 mb-4 overflow-hidden rounded-2xl">
                             <img 

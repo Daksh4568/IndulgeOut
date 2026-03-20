@@ -106,7 +106,7 @@ router.get('/events/search', async (req, res) => {
       // Boost for popular events
       score += (eventData.currentParticipants || 0) * 0.5;
       
-      return { ...eventData, _id: event._id, relevanceScore: score };
+      return { ...eventData, _id: event._id, relevanceScore: score, currentEffectivePrice: event.getCurrentPrice() };
     });
     
     // Sort by relevance and limit
@@ -173,7 +173,14 @@ router.get('/events/popular', async (req, res) => {
       .limit(Math.max(0, parseInt(limit) - upcomingEvents.length));
     
     // Combine: upcoming events first, then past events
-    const events = [...upcomingEvents, ...pastEvents];
+    const allEvents = [...upcomingEvents, ...pastEvents];
+    
+    // Add currentEffectivePrice for time-based pricing
+    const events = allEvents.map(e => {
+      const obj = e.toObject();
+      obj.currentEffectivePrice = e.getCurrentPrice();
+      return obj;
+    });
     
     // Get total counts for pagination
     const totalUpcoming = await Event.countDocuments({
@@ -231,7 +238,12 @@ router.get('/events/recommended', authMiddleware, async (req, res) => {
         .skip(Math.max(0, skip - upcomingEvents.length))
         .limit(Math.max(0, parseInt(limit) - upcomingEvents.length));
       
-      const events = [...upcomingEvents, ...pastEvents];
+      const allEvents = [...upcomingEvents, ...pastEvents];
+      const events = allEvents.map(e => {
+        const obj = e.toObject();
+        obj.currentEffectivePrice = e.getCurrentPrice();
+        return obj;
+      });
       return res.json({ events, pagination: { page: parseInt(page), limit: parseInt(limit) } });
     }
 
@@ -257,7 +269,12 @@ router.get('/events/recommended', authMiddleware, async (req, res) => {
       .skip(Math.max(0, skip - upcomingEvents.length))
       .limit(Math.max(0, parseInt(limit) - upcomingEvents.length));
     
-    const events = [...upcomingEvents, ...pastEvents];
+    const allRecEvents = [...upcomingEvents, ...pastEvents];
+    const events = allRecEvents.map(e => {
+      const obj = e.toObject();
+      obj.currentEffectivePrice = e.getCurrentPrice();
+      return obj;
+    });
     const total = await Event.countDocuments({
       status: 'published',
       categories: { $in: user.interests }
@@ -328,13 +345,15 @@ router.get('/events/nearby', async (req, res) => {
         
         return {
           ...event.toObject(),
-          distance: Math.round(distance * 10) / 10
+          distance: Math.round(distance * 10) / 10,
+          currentEffectivePrice: event.getCurrentPrice()
         };
       }
       
       return {
         ...event.toObject(),
-        distance: null
+        distance: null,
+        currentEffectivePrice: event.getCurrentPrice()
       };
     }).sort((a, b) => {
       if (a.distance === null) return 1;

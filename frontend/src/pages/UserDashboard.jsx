@@ -228,7 +228,7 @@ const UserDashboard = () => {
 
       return (
         <div 
-          onClick={() => navigate(`/events/${event._id}`)}
+          onClick={() => navigate(`/events/${event.slug || event._id}`)}
           className="flex-shrink-0 w-[calc(100vw-3rem)] sm:w-64 md:w-72 bg-zinc-900 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-600 transition-all cursor-pointer group snap-center"
         >
           {/* Event Image */}
@@ -313,7 +313,7 @@ const UserDashboard = () => {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/events/${event._id}/review`);
+                    navigate(`/events/${event.slug || event._id}/review`);
                   }}
                   className="flex-1 bg-white text-black px-3 py-2 rounded hover:bg-gray-100 transition-colors text-sm font-semibold flex items-center justify-center gap-1"
                   style={{ fontFamily: 'Oswald, sans-serif' }}
@@ -326,7 +326,7 @@ const UserDashboard = () => {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/events/${event._id}`);
+                    navigate(`/events/${event.slug || event._id}`);
                   }}
                   className="flex-1 text-white px-3 py-2 rounded transition-colors text-sm font-semibold"
                   style={{ 

@@ -15,6 +15,19 @@ const { sendPurchaseEvent } = require('../utils/metaCapi.js');
 
 const router = express.Router();
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // Initialize Cashfree configuration
 Cashfree.XClientId = process.env.CASHFREE_APP_ID || '';
 Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY || '';
@@ -56,11 +69,14 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     });
 
     // Fetch event details
-    const event = await Event.findById(eventId).populate('host', 'name email');
+    let event = await findEventByIdOrSlug(eventId);
     if (!event) {
       console.log('Event not found:', eventId);
       return res.status(404).json({ message: 'Event not found' });
     }
+    
+    // Populate host after finding
+    event = await Event.findById(event._id).populate('host', 'name email');
 
     console.log('Event found:', {
       title: event.title,
@@ -69,8 +85,9 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       requestedAmount: amount
     });
 
-    // Use provided amount (from billing page with fees) or calculate from event price
-    const ticketPrice = amount || (event.price?.amount || event.ticketPrice || 0) * quantity;
+    // Use provided amount (from billing page with fees) or calculate from current effective price
+    const currentEventPrice = event.getCurrentPrice();
+    const ticketPrice = amount || currentEventPrice * quantity;
     
     // Round to 2 decimal places to avoid floating point precision issues
     const roundedTicketPrice = parseFloat(ticketPrice.toFixed(2));
@@ -101,8 +118,8 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Create unique order ID with quantity
-    const orderId = `ORDER_${Date.now()}_${userId}_${eventId}_${quantity || 1}`;
+    // Create unique order ID with quantity (use event._id to ensure ObjectId is in orderId, not slug)
+    const orderId = `ORDER_${Date.now()}_${userId}_${event._id}_${quantity || 1}`;
     
     // TODO: Temporarily disabled metadata storage due to Cashfree sandbox issues
     // Responses will be handled via PaymentCallback sessionStorage instead
@@ -158,11 +175,13 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     // Store fee breakdown and coupon in session for verify-payment to retrieve
     // This ensures fees and coupon are persisted even if webhook fires first
+    // If frontend didn't send basePrice (e.g. EventDetailNew quick-register), compute it server-side
+    const computedBasePrice = basePrice || (currentEventPrice * quantity);
     if (!global.pendingPaymentFees) global.pendingPaymentFees = {};
     global.pendingPaymentFees[orderId] = {
-      basePrice: basePrice || 0,
-      gstAndOtherCharges: gstAndOtherCharges || 0,
-      platformFees: platformFees || 0,
+      basePrice: computedBasePrice,
+      gstAndOtherCharges: gstAndOtherCharges || parseFloat((computedBasePrice * 0.026).toFixed(2)),
+      platformFees: platformFees || parseFloat((computedBasePrice * 0.03).toFixed(2)),
       couponCode: couponCode || null,
       groupingOffer: groupingOffer || null,
       additionalPersons: additionalPersons || [],
@@ -227,9 +246,14 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
 
     // Retrieve fee breakdown and coupon from global store (set by create-order)
     const storedFees = global.pendingPaymentFees?.[orderId] || {};
-    const basePrice = req.body.basePrice || storedFees.basePrice || 0;
-    const gstAndOtherCharges = req.body.gstAndOtherCharges || storedFees.gstAndOtherCharges || 0;
-    const platformFees = req.body.platformFees || storedFees.platformFees || 0;
+    
+    // Fetch event early so we can compute server-side price if needed
+    let verifyEvent = await findEventByIdOrSlug(eventId);
+    const serverSideBasePrice = verifyEvent ? verifyEvent.getCurrentPrice() * (parseInt(quantity) || 1) : 0;
+    
+    const basePrice = req.body.basePrice || storedFees.basePrice || serverSideBasePrice;
+    const gstAndOtherCharges = req.body.gstAndOtherCharges || storedFees.gstAndOtherCharges || parseFloat((serverSideBasePrice * 0.026).toFixed(2));
+    const platformFees = req.body.platformFees || storedFees.platformFees || parseFloat((serverSideBasePrice * 0.03).toFixed(2));
     const totalAmount = req.body.totalAmount || (basePrice + gstAndOtherCharges + platformFees);
     const couponCode = req.body.couponCode || storedFees.couponCode || null;
     
@@ -280,7 +304,14 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
     console.log(`📊 Payment verified - registering with quantity=${quantity}, ticketQuantity=${ticketQuantity}`);
 
     // Check if already registered (webhook might have already processed this)
-    const existingEvent = await Event.findById(eventId).populate('host', 'name email');
+    // Reuse the event already fetched for price computation, populate host
+    let existingEvent = verifyEvent
+      ? await Event.findById(verifyEvent._id).populate('host', 'name email')
+      : null;
+    if (!existingEvent) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
     const alreadyRegistered = existingEvent.participants.some(
       p => p.user.toString() === userId
     );
@@ -288,10 +319,10 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
     if (alreadyRegistered) {
       console.log('⚠️ [VERIFY-PAYMENT] User already registered (webhook likely processed this)');
       
-      // Find existing ticket
+      // Find existing ticket (use resolved _id, not raw eventId which could be a slug)
       const existingTicket = await require('../models/Ticket').findOne({
         user: userId,
-        event: eventId,
+        event: existingEvent._id,
         orderId: orderId
       });
 
@@ -363,10 +394,10 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       console.log(`✅ [VERIFY-PAYMENT] Coupon data added to participant:`, participantData.couponUsed);
     }
 
-    // Register user for event (atomic operation)
+    // Register user for event (atomic operation) — use resolved ObjectId, not raw eventId
     const event = await Event.findOneAndUpdate(
       {
-        _id: eventId,
+        _id: existingEvent._id,
         'participants.user': { $ne: userId }
       },
       {
@@ -652,7 +683,14 @@ router.post('/webhook', async (req, res) => {
       console.log('🎫 [WEBHOOK] Processing registration:', { userId, eventId });
 
       // Fetch event and user
-      const event = await Event.findById(eventId).populate('host', 'name email');
+      let event = await findEventByIdOrSlug(eventId);
+      if (!event) {
+        console.error('❌ [WEBHOOK] Event not found:', eventId);
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      
+      // Populate host after finding
+      event = await Event.findById(event._id).populate('host', 'name email');
       const user = await User.findById(userId);
 
       if (!event) {
@@ -702,17 +740,26 @@ router.post('/webhook', async (req, res) => {
       // Use quantity from order ID
       const ticketQuantity = orderQuantity;
 
-      // Calculate base price (organizer's revenue - just the ticket price without fees)
-      // Base price = ticket price × quantity (NO platform fee deduction, that's only gateway+GST)
-      const ticketPrice = event.price?.amount || event.ticketPrice || 0;
-      const basePrice = ticketPrice * ticketQuantity; // This is organizer's revenue
+      // Retrieve stored order data (basePrice, questionnaire, coupon, groupingOffer)
+      // This was saved at create-order time with the correct effective price
+      let questionnaireResponses = [];
+      let groupingOffer = null;
+      let couponCode = null;
+      
+      const storedData = global.pendingPaymentFees?.[orderId];
+      
+      // Calculate base price: prefer stored value (from create-order time), fallback to current price
+      const ticketPrice = storedData?.basePrice
+        ? storedData.basePrice / ticketQuantity  // Per-ticket price from stored total
+        : event.getCurrentPrice();
+      const basePrice = storedData?.basePrice || (ticketPrice * ticketQuantity);
       
       // Calculate fees from payment amount
       // Total paid = basePrice + GST (2.6%) + Platform Fee (3%)
       // So fees = totalPaid - basePrice
       const totalFees = paymentAmount - basePrice;
-      const gstAndOtherCharges = parseFloat((totalFees * 0.46).toFixed(2)); // 46% of fees is GST
-      const platformFees = parseFloat((totalFees * 0.54).toFixed(2));       // 54% of fees is platform
+      const gstAndOtherCharges = storedData?.gstAndOtherCharges || parseFloat((totalFees * 0.46).toFixed(2));
+      const platformFees = storedData?.platformFees || parseFloat((totalFees * 0.54).toFixed(2));
       
       console.log('💰 [WEBHOOK] Price calculation:', {
         ticketPrice,
@@ -721,6 +768,7 @@ router.post('/webhook', async (req, res) => {
         totalPaid: paymentAmount,
         gstAndOtherCharges,
         platformFees,
+        source: storedData?.basePrice ? 'stored (create-order time)' : 'getCurrentPrice() fallback',
         note: 'basePrice = organizer revenue (ticket price only), totalPaid includes gateway (3%) + GST (2.6%)'
       });
       
@@ -730,13 +778,7 @@ router.post('/webhook', async (req, res) => {
         console.warn(`⚠️ [WEBHOOK] Payment amount mismatch! Expected ${expectedTotal.toFixed(2)} (basePrice + 5.6% fees) but got ${paymentAmount}`);
       }
 
-      // Retrieve questionnaire responses and coupon from stored order metadata
-      let questionnaireResponses = [];
-      let groupingOffer = null;
-      let couponCode = null;
-      
-      // Try to retrieve from global pending fees store
-      const storedData = global.pendingPaymentFees?.[orderId];
+      // Retrieve questionnaire responses and coupon from stored data
       if (storedData) {
         questionnaireResponses = storedData.questionnaireResponses || [];
         groupingOffer = storedData.groupingOffer || null;
@@ -798,10 +840,10 @@ router.post('/webhook', async (req, res) => {
         console.log(`✅ [WEBHOOK] Coupon data added to participant:`, participantData.couponUsed);
       }
 
-      // Register user for event (atomic operation)
+      // Register user for event (atomic operation) — use resolved event._id, not raw eventId
       const updatedEvent = await Event.findOneAndUpdate(
         {
-          _id: eventId,
+          _id: event._id,
           'participants.user': { $ne: userId }
         },
         {
@@ -844,15 +886,15 @@ router.post('/webhook', async (req, res) => {
         return res.status(200).json({ success: true, message: 'Already processed' });
       }
 
-      // Update user's registered events
-      if (!user.registeredEvents.includes(eventId)) {
-        user.registeredEvents.push(eventId);
+      // Update user's registered events (use event._id for ObjectId)
+      if (!user.registeredEvents.includes(event._id.toString())) {
+        user.registeredEvents.push(event._id);
         await user.save();
       }
 
       // Update analytics
       try {
-        await recommendationEngine.updateEventRegistrationAnalytics(userId, eventId);
+        await recommendationEngine.updateEventRegistrationAnalytics(userId, event._id);
       } catch (analyticsError) {
         console.error('⚠️ [WEBHOOK] Failed to update analytics:', analyticsError);
       }
@@ -863,7 +905,7 @@ router.post('/webhook', async (req, res) => {
       try {
         ticket = await ticketService.generateTicket({
           userId,
-          eventId: eventId,
+          eventId: event._id,
           amount: basePrice, // Use base price (revenue amount)
           paymentId: orderId,
           ticketType: ticketQuantity > 1 ? 'group' : 'general',
@@ -915,7 +957,7 @@ router.post('/webhook', async (req, res) => {
         try {
           const questionnaireUpdate = await Event.findOneAndUpdate(
             {
-              _id: eventId,
+              _id: event._id,
               'questionnaireSubmissions.user': userId
             },
             {
@@ -974,7 +1016,8 @@ router.post('/webhook', async (req, res) => {
           },
           {
             amount: paymentAmount,
-            eventId: eventId,
+            eventId: event._id, // Use ObjectId for consistent tracking
+            eventSlug: event.slug, // Pass slug for SEO-friendly URLs
             orderId: orderId,
             quantity: ticketQuantity,
             eventName: event.title,

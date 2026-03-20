@@ -653,7 +653,7 @@ const CommunityDetail = () => {
                     <div
                       key={event._id}
                       className="bg-zinc-900/50 rounded-lg overflow-hidden border border-gray-800 hover:border-gray-700 transition-all cursor-pointer"
-                      onClick={() => navigate(`/event/${event._id}`)}
+                      onClick={() => navigate(`/events/${event.slug || event._id}`)}
                     >
                       <div className="relative h-48 bg-gray-800">
                         {event.images && event.images.length > 0 ? (

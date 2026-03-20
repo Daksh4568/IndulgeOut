@@ -163,7 +163,7 @@ const EventDetail = () => {
     const eventAddress = typeof event?.location === 'string'
       ? event.location
       : (event?.location?.address || event?.location?.city || '');
-    const eventPrice = event?.price?.amount > 0 ? `₹${event.price.amount}` : 'FREE';
+    const eventPrice = (event?.currentEffectivePrice ?? event?.price?.amount) > 0 ? `₹${event.currentEffectivePrice ?? event.price.amount}` : 'FREE';
     
     // Build venue line: "Venue Name, City" or just city
     const venueLine = eventVenue
@@ -172,42 +172,52 @@ const EventDetail = () => {
     
     // Build a rich share message
     const shareText = `🎉 ${eventTitle}\n📅 ${eventDate}\n📍 ${venueLine}\n💰 ${eventPrice}\n\nBook now 👇\n${eventUrl}`;
-    const encodedShareText = encodeURIComponent(shareText);
-    const encodedTitle = encodeURIComponent(eventTitle);
     
-    let shareUrl;
     switch (platform) {
-      case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${encodedShareText}`;
-        break;
-      case 'instagram':
-        // Copy link to clipboard and open Instagram DMs
-        navigator.clipboard.writeText(`${eventTitle}\n${eventDate}\n${venueLine}\n${eventPrice}\n\n${eventUrl}`).then(() => {
-          toast?.success('Event details copied! Paste in Instagram chat.');
-        }).catch(() => {
-          toast?.info('Share this event on Instagram');
-        });
-        window.open('https://www.instagram.com/direct/inbox/', '_blank');
+      case 'whatsapp': {
+        // Use api.whatsapp.com for better cross-platform support and clickable links
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+        window.open(waUrl, '_blank');
         setShowShareModal(false);
         return;
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
-        break;
-      case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
-        break;
-      case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(eventUrl)}&text=${encodedTitle}`;
-        break;
-      case 'telegram':
-        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(eventUrl)}&text=${encodedShareText}`;
-        break;
+      }
+      case 'instagram': {
+        // Instagram has no direct web share API — copy details and open DM
+        const igText = `${eventTitle}\n${eventDate} | ${venueLine}\n${eventPrice}\n\n${eventUrl}`;
+        navigator.clipboard.writeText(igText).then(() => {
+          toast?.success('Event details & link copied! Paste in your Instagram chat.');
+        }).catch(() => {
+          toast?.info('Copy the event link and share it on Instagram');
+        });
+        // Try Instagram deep link first (works on mobile), fallback to web DMs
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = 'instagram://direct-inbox';
+          // Fallback after short delay if deep link doesn't work
+          setTimeout(() => {
+            window.open('https://www.instagram.com/direct/inbox/', '_blank');
+          }, 1500);
+        } else {
+          window.open('https://www.instagram.com/direct/inbox/', '_blank');
+        }
+        setShowShareModal(false);
+        return;
+      }
+      case 'linkedin': {
+        const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
+        window.open(liUrl, '_blank', 'width=600,height=400');
+        setShowShareModal(false);
+        return;
+      }
+      case 'facebook': {
+        const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
+        window.open(fbUrl, '_blank', 'width=600,height=400');
+        setShowShareModal(false);
+        return;
+      }
       default:
         return;
     }
-    
-    window.open(shareUrl, '_blank', 'width=600,height=400');
-    setShowShareModal(false);
   };
 
   const copyEventLink = () => {
@@ -235,7 +245,7 @@ const EventDetail = () => {
     setIsRegistering(true);
 
     try {
-      const ticketPrice = event.price?.amount || 0;
+      const ticketPrice = event.currentEffectivePrice ?? event.price?.amount ?? 0;
       
       if (ticketPrice === 0) {
         // Free event - direct registration
@@ -246,12 +256,12 @@ const EventDetail = () => {
       } else {
         // Paid event - payment flow
         const paymentResponse = await api.post('/payments/create-order', { 
-          eventId: id,
+          eventId: event._id,
           quantity 
         });
 
         if (paymentResponse.data.success) {
-          sessionStorage.setItem('payment_event_id', id);
+          sessionStorage.setItem('payment_event_id', event._id);
 
           if (!window.Cashfree) {
             throw new Error('Cashfree SDK not loaded. Please refresh the page.');
@@ -1350,7 +1360,7 @@ const EventDetail = () => {
                   >
                     Starting from
                   </p>
-                  {(event.price?.amount === 0 || !event.price) ? (
+                  {((event.currentEffectivePrice ?? event.price?.amount ?? 0) === 0) ? (
                     <p 
                       className="text-2xl font-bold text-green-600"
                       style={{ fontFamily: 'Oswald, sans-serif' }}
@@ -1362,7 +1372,7 @@ const EventDetail = () => {
                       className="text-2xl font-bold text-gray-900 dark:text-white"
                       style={{ fontFamily: 'Oswald, sans-serif' }}
                     >
-                      ₹{event.price?.amount}
+                      ₹{event.currentEffectivePrice ?? event.price?.amount}
                     </p>
                   )}
                 </div>
@@ -1391,7 +1401,7 @@ const EventDetail = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => navigate(`/billing/${event._id}`)}
+                    onClick={() => navigate(`/billing/${event.slug || event._id}`)}
                     disabled={spotsLeft === 0 || eventEnded}
                     className={`w-full py-3 rounded-xl font-semibold text-base transition-all transform shadow-lg ${
                       eventEnded || spotsLeft === 0
@@ -1459,13 +1469,13 @@ const EventDetail = () => {
             <p className="text-xs text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               Starts from
             </p>
-            {(event.price?.amount === 0 || !event.price) ? (
+            {((event.currentEffectivePrice ?? event.price?.amount ?? 0) === 0) ? (
               <p className="text-xl font-bold text-green-500" style={{ fontFamily: 'Oswald, sans-serif' }}>
                 FREE
               </p>
             ) : (
               <p className="text-xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                ₹{event.price?.amount}
+                ₹{event.currentEffectivePrice ?? event.price?.amount}
               </p>
             )}
           </div>
@@ -1492,7 +1502,7 @@ const EventDetail = () => {
             </button>
           ) : (
             <button
-              onClick={() => navigate(`/billing/${event._id}`)}
+              onClick={() => navigate(`/billing/${event.slug || event._id}`)}
               disabled={spotsLeft === 0 || eventEnded}
               className={`flex-1 max-w-[220px] py-3 rounded-lg font-bold text-sm text-center transition-all uppercase tracking-wide ${
                 eventEnded || spotsLeft === 0

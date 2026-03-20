@@ -7,6 +7,19 @@ const Collaboration = require('../models/Collaboration');
 const { authMiddleware } = require('../utils/authUtils');
 const notificationService = require('../services/notificationService');
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // ==================== ACTION REQUIRED ====================
 /**
  * GET /api/organizer/action-required
@@ -535,7 +548,11 @@ router.post('/events/:eventId/duplicate', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Find original event
-    const originalEvent = await Event.findOne({ _id: eventId, host: userId });
+    const originalEvent = await findEventByIdOrSlug(eventId);
+    
+    if (!originalEvent || originalEvent.host.toString() !== userId) {
+      return res.status(404).json({ message: 'Event not found or unauthorized' });
+    }
     if (!originalEvent) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -1080,8 +1097,11 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
     console.log('📊 [Reports] Generating event report:', { eventId, userId, format });
     
     // Verify event ownership
-    const event = await Event.findOne({ _id: eventId, host: userId })
-      .populate('host', 'name email communityProfile');
+    const event = await findEventByIdOrSlug(eventId);
+    
+    if (!event || event.host.toString() !== userId) {
+      return res.status(404).json({ message: 'Event not found or unauthorized' });
+    }
     
     if (!event) {
       return res.status(404).json({ message: 'Event not found or access denied' });
@@ -1090,9 +1110,9 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
     // Import Ticket model
     const Ticket = require('../models/Ticket');
     
-    // Get all tickets for this event
+    // Get all tickets for this event (use event._id ObjectId, not raw eventId which could be a slug)
     const tickets = await Ticket.find({
-      event: eventId,
+      event: event._id,
       status: { $ne: 'cancelled' }
     }).populate('user', 'name email phoneNumber')
       .sort({ purchaseDate: -1 });
@@ -1210,6 +1230,12 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
         purchaseDate: t.purchaseDate,
         quantity: t.quantity || 1,
         ticketType: t.metadata?.ticketType || 'general',
+        priceAtPurchase: t.metadata?.priceAtPurchase || 0,
+        pricingTimelineTier: t.metadata?.pricingTimelineTier || '',
+        groupingOffer: t.metadata?.groupingOffer || '',
+        tierPeople: t.metadata?.tierPeople || '',
+        couponCode: t.metadata?.couponCode || '',
+        couponDiscount: t.metadata?.couponDiscount || 0,
         basePrice: basePrice,
         gstAndOtherCharges: gstCharges,
         platformFees: platformFees,
@@ -1218,11 +1244,11 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
         paymentId: t.paymentId,
         paymentMethod: t.gatewayResponse?.paymentMethod || 'N/A',
         paymentStatus: t.gatewayResponse?.paymentStatus || 'N/A',
-        gatewayPaymentAmount: totalPaidByUser, // Amount received by gateway from customer
+        gatewayPaymentAmount: totalPaidByUser,
         settlementStatus: t.settlementStatus,
         settlementDate: t.settlementDate,
         settlementUTR: t.settlementUTR,
-        settlementAmount: t.settlementAmount || 0, // Amount transferred to your bank
+        settlementAmount: t.settlementAmount || 0,
         reconciliationStatus: t.reconciliationStatus,
         lastReconciliationDate: t.lastReconciliationDate,
         reconciliationNotes: t.reconciliationNotes,
@@ -1231,12 +1257,23 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
       };})
     };
     
+    // Add price change history to report
+    report.priceChangeHistory = (event.priceChangeHistory || []).map(change => ({
+      previousPrice: change.previousPrice,
+      newPrice: change.newPrice,
+      changedAt: change.changedAt,
+      reason: change.reason,
+      spotsBookedAtPrevPrice: change.spotsBookedAtPrevPrice
+    }));
+    
     // Return JSON or CSV based on format
     if (format === 'csv') {
       // Convert to CSV
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'basePrice', 'gstAndOtherCharges', 'platformFees',
+        'quantity', 'ticketType', 'priceAtPurchase', 'pricingTimelineTier',
+        'groupingOffer', 'tierPeople', 'couponCode', 'couponDiscount',
+        'basePrice', 'gstAndOtherCharges', 'platformFees',
         'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
         'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
         'reconciliationStatus', 'lastReconciliationDate', 'reconciliationNotes',
@@ -1256,6 +1293,22 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
       csvRows.push(`# Base Revenue (Your Share): ₹${totalRevenue.toFixed(2)}`);
       csvRows.push(`# Gateway Fees Deducted: ₹${totalGatewayFees.toFixed(2)}`);
       csvRows.push(`#`);
+      csvRows.push(`# PRICE CHANGES:`);
+      csvRows.push(`#   - Total Price Changes: ${(event.priceChangeHistory || []).length}`);
+      if (event.priceChangeHistory && event.priceChangeHistory.length > 0) {
+        event.priceChangeHistory.forEach((change, i) => {
+          csvRows.push(`#   - Change ${i + 1}: ₹${change.previousPrice} → ₹${change.newPrice} on ${new Date(change.changedAt).toISOString()} (${change.reason}) [${change.spotsBookedAtPrevPrice} spots at prev price]`);
+        });
+      }
+      csvRows.push(`#   - Time-Based Pricing: ${event.pricingTimeline?.enabled ? 'Enabled' : 'Disabled'}`);
+      csvRows.push(`#`);
+      csvRows.push(`# GROUPING OFFERS: ${event.groupingOffers?.enabled ? 'Enabled' : 'Disabled'}`);
+      if (event.groupingOffers?.enabled && event.groupingOffers.tiers?.length > 0) {
+        event.groupingOffers.tiers.forEach((tier, i) => {
+          csvRows.push(`#   - Tier ${i + 1}: ${tier.people} people at ₹${tier.price}`);
+        });
+      }
+      csvRows.push(`#`);
       csvRows.push(`# SETTLEMENT STATUS:`);
       csvRows.push(`#   - Settled: ${settledCount} tickets (${report.summary.settlement.settledPercentage}%)`);
       csvRows.push(`#   - Amount Settled to Bank: ₹${totalSettledAmount.toFixed(2)}`);
@@ -1267,15 +1320,6 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
       csvRows.push(`#   - Mismatches Found: ${mismatchCount}`);
       csvRows.push(`#   - Pending Verification: ${tickets.length - verifiedCount - mismatchCount}`);
       csvRows.push(`#   - Reconciliation = Daily verification that payment was actually received by Cashfree`);
-      csvRows.push(`#`);
-      csvRows.push(`# FIELD EXPLANATIONS:`);
-      csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
-      csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
-      csvRows.push(`#   - basePrice: Your share before gateway fees`);
-      csvRows.push(`#   - settlementAmount: Final amount transferred to your bank`);
-      csvRows.push(`#   - orderId: Cashfree order ID for verification`);
-      csvRows.push(`#   - reconciliationStatus: verified = Payment confirmed with Cashfree API`);
-      csvRows.push(`#   - lastReconciliationDate: When we last verified this payment with Cashfree`);
       csvRows.push(`# ========================================`);
       csvRows.push('');
       

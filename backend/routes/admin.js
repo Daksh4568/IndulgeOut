@@ -7,6 +7,19 @@ const Collaboration = require('../models/Collaboration');
 const { Payout } = require('../models/Payout');
 const { adminAuthMiddleware, requirePermission } = require('../utils/adminAuthMiddleware');
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // All admin routes require admin authentication
 router.use(adminAuthMiddleware);
 
@@ -1563,16 +1576,23 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     const Ticket = require('../models/Ticket');
     
     // Get event with organizer
-    const event = await Event.findById(eventId)
+    let event = await findEventByIdOrSlug(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Populate host after finding
+    event = await Event.findById(event._id)
       .populate('host', 'name email communityProfile');
     
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
     
-    // Get all tickets
+    // Get all tickets (use event._id ObjectId, not raw eventId which could be a slug)
     const tickets = await Ticket.find({
-      event: eventId,
+      event: event._id,
       status: { $ne: 'cancelled' }
     }).populate('user', 'name email phoneNumber')
       .sort({ purchaseDate: -1 });
@@ -1705,6 +1725,10 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         purchaseDate: t.purchaseDate,
         quantity: t.quantity || 1,
         ticketType: t.metadata?.ticketType || 'general',
+        priceAtPurchase: t.metadata?.priceAtPurchase || 0,
+        pricingTimelineTier: t.metadata?.pricingTimelineTier || '',
+        groupingOffer: t.metadata?.groupingOffer || '',
+        tierPeople: t.metadata?.tierPeople || '',
         couponCode: ticketCoupon?.code || '',
         couponDiscountType: ticketCoupon?.discountType || '',
         couponDiscountApplied: ticketCoupon?.discountApplied || 0,
@@ -1717,14 +1741,14 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         paymentId: t.paymentId,
         paymentMethod: t.gatewayResponse?.paymentMethod || 'N/A',
         paymentStatus: t.gatewayResponse?.paymentStatus || 'N/A',
-        gatewayPaymentAmount: totalPaidByUser, // Amount received by gateway from customer
+        gatewayPaymentAmount: totalPaidByUser,
         settlementStatus: t.settlementStatus,
         settlementDate: t.settlementDate,
         settlementUTR: t.settlementUTR,
-        settlementAmount: t.settlementAmount || 0, // Amount transferred to organizer's bank
-        cashfreeServiceCharge: t.cashfreeServiceCharge || 0, // Cashfree processing fee
-        cashfreeServiceTax: t.cashfreeServiceTax || 0, // GST on Cashfree fee
-        cashfreeTotalDeducted: (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0), // Total Cashfree deduction
+        settlementAmount: t.settlementAmount || 0,
+        cashfreeServiceCharge: t.cashfreeServiceCharge || 0,
+        cashfreeServiceTax: t.cashfreeServiceTax || 0,
+        cashfreeTotalDeducted: (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0),
         reconciliationStatus: t.reconciliationStatus,
         lastReconciliationDate: t.lastReconciliationDate,
         reconciliationNotes: t.reconciliationNotes,
@@ -1733,10 +1757,40 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       };})
     };
     
+    // Add price change history and grouping offers to report
+    report.priceChangeHistory = (event.priceChangeHistory || []).map(change => ({
+      previousPrice: change.previousPrice,
+      newPrice: change.newPrice,
+      changedAt: change.changedAt,
+      reason: change.reason,
+      spotsBookedAtPrevPrice: change.spotsBookedAtPrevPrice
+    }));
+    
+    report.pricingTimeline = event.pricingTimeline?.enabled ? {
+      enabled: true,
+      tiers: (event.pricingTimeline.tiers || []).map(tier => ({
+        startDate: tier.startDate,
+        endDate: tier.endDate,
+        price: tier.price,
+        label: tier.label
+      }))
+    } : { enabled: false };
+    
+    report.groupingOffers = event.groupingOffers?.enabled ? {
+      enabled: true,
+      tiers: (event.groupingOffers.tiers || []).map(t => ({
+        people: t.people,
+        price: t.price,
+        label: t.label || ''
+      }))
+    } : { enabled: false };
+    
     if (format === 'csv') {
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'couponCode', 'couponDiscountType', 'couponDiscountApplied',
+        'quantity', 'ticketType', 'priceAtPurchase', 'pricingTimelineTier',
+        'groupingOffer', 'tierPeople',
+        'couponCode', 'couponDiscountType', 'couponDiscountApplied',
         'originalPriceBeforeCoupon', 'basePrice', 'gstAndOtherCharges', 'platformFees',
         'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
         'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
@@ -1780,10 +1834,39 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`#   - Pending Verification: ${tickets.length - verifiedCount - mismatchCount}`);
       csvRows.push(`#   - Reconciliation = Daily verification that payment was actually received by Cashfree`);
       csvRows.push(`#`);
+      csvRows.push(`# PRICE CHANGES:`);
+      csvRows.push(`#   - Total Price Changes: ${(event.priceChangeHistory || []).length}`);
+      if (event.priceChangeHistory && event.priceChangeHistory.length > 0) {
+        event.priceChangeHistory.forEach((change, i) => {
+          csvRows.push(`#   - Change ${i + 1}: ₹${change.previousPrice} → ₹${change.newPrice} on ${new Date(change.changedAt).toISOString()} (${change.reason}) [${change.spotsBookedAtPrevPrice} spots at prev price]`);
+        });
+      }
+      csvRows.push(`#   - Time-Based Pricing: ${event.pricingTimeline?.enabled ? 'Enabled' : 'Disabled'}`);
+      if (event.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length > 0) {
+        event.pricingTimeline.tiers.forEach((tier, i) => {
+          csvRows.push(`#   - Tier ${i + 1}: ${tier.label || 'N/A'} - ₹${tier.price} (${new Date(tier.startDate).toLocaleDateString()} to ${new Date(tier.endDate).toLocaleDateString()})`);
+        });
+      }
+      csvRows.push(`#`);
+      csvRows.push(`# GROUPING OFFERS:`);
+      csvRows.push(`#   - Grouping Offers: ${event.groupingOffers?.enabled ? 'Enabled' : 'Disabled'}`);
+      if (event.groupingOffers?.enabled && event.groupingOffers.tiers?.length > 0) {
+        const groupTickets = report.tickets.filter(t => t.groupingOffer);
+        csvRows.push(`#   - Tickets with Group Offers: ${groupTickets.length}`);
+        event.groupingOffers.tiers.forEach((tier, i) => {
+          const tierTickets = groupTickets.filter(t => t.groupingOffer === (tier.label || `${tier.people} people`));
+          csvRows.push(`#   - Tier ${i + 1}: ${tier.people} people at ₹${tier.price} (${tierTickets.length} tickets)`);
+        });
+      }
+      csvRows.push(`#`);
       csvRows.push(`# FIELD EXPLANATIONS:`);
       csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
       csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
       csvRows.push(`#   - basePrice: Organizer's share before gateway fees (after coupon discount)`);
+      csvRows.push(`#   - priceAtPurchase: Event ticket price at the time of purchase`);
+      csvRows.push(`#   - pricingTimelineTier: Which pricing timeline tier was active at purchase`);
+      csvRows.push(`#   - groupingOffer: Group offer tier label (if applicable)`);
+      csvRows.push(`#   - tierPeople: Number of people in the group tier`);
       csvRows.push(`#   - couponCode: Discount coupon applied by user (if any)`);
       csvRows.push(`#   - couponDiscountApplied: Amount discounted by coupon (in ₹)`);
       csvRows.push(`#   - originalPriceBeforeCoupon: Base price before coupon was applied`);
@@ -2492,7 +2575,14 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
   try {
     const { eventId } = req.params;
     
-    const event = await Event.findById(eventId)
+    let event = await findEventByIdOrSlug(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Populate after finding
+    event = await Event.findById(event._id)
       .populate('host', 'name email communityProfile payoutDetails')
       .populate('coHosts', 'name email')
       .lean();
@@ -2501,9 +2591,9 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       return res.status(404).json({ message: 'Event not found' });
     }
     
-    // Get all tickets for this event
+    // Get all tickets for this event (use event._id ObjectId)
     const Ticket = require('../models/Ticket');
-    const tickets = await Ticket.find({ event: eventId })
+    const tickets = await Ticket.find({ event: event._id })
       .populate('user', 'name email phoneNumber')
       .sort({ purchaseDate: -1 })
       .lean();
@@ -2587,6 +2677,15 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       },
       purchaseDate: ticket.purchaseDate,
       price: ticket.price?.amount,
+      quantity: ticket.quantity || 1,
+      ticketType: ticket.metadata?.ticketType || 'general',
+      priceAtPurchase: ticket.metadata?.priceAtPurchase || ticket.price?.amount || 0,
+      pricingTimelineTier: ticket.metadata?.pricingTimelineTier || null,
+      basePrice: ticket.metadata?.basePrice || 0,
+      couponCode: ticket.metadata?.couponCode || null,
+      couponDiscount: ticket.metadata?.couponDiscount || 0,
+      groupingOffer: ticket.metadata?.groupingOffer || null,
+      tierPeople: ticket.metadata?.tierPeople || null,
       orderId: ticket.metadata?.orderId,
       paymentId: ticket.paymentId,
       paymentMethod: ticket.gatewayResponse?.paymentMethod,
@@ -2664,7 +2763,53 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
         })).sort((a, b) => new Date(a.date) - new Date(b.date))
       },
       attendees,
-      hasIssues: reconciliationStats.mismatch > 0 || reconciliationStats.manual_review > 0
+      hasIssues: reconciliationStats.mismatch > 0 || reconciliationStats.manual_review > 0,
+      // Price change history and pricing timeline
+      priceChangeHistory: (event.priceChangeHistory || []).map(change => ({
+        previousPrice: change.previousPrice,
+        newPrice: change.newPrice,
+        changedAt: change.changedAt,
+        reason: change.reason,
+        spotsBookedAtPrevPrice: change.spotsBookedAtPrevPrice,
+        groupingOffersSnapshot: change.groupingOffersSnapshot
+      })),
+      pricingTimeline: event.pricingTimeline?.enabled ? {
+        enabled: true,
+        tiers: (event.pricingTimeline.tiers || []).map(tier => ({
+          startDate: tier.startDate,
+          endDate: tier.endDate,
+          price: tier.price,
+          label: tier.label,
+          ticketsBought: tickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          }).length,
+          spotsBought: tickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          }).reduce((sum, t) => sum + (t.quantity || 1), 0),
+          revenue: tickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          }).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+        }))
+      } : { enabled: false, tiers: [] },
+      // Grouping offers data
+      groupingOffers: event.groupingOffers || { enabled: false, tiers: [] },
+      // Coupon data
+      coupons: event.coupons || { enabled: false, codes: [] }
     };
     
     res.json(response);

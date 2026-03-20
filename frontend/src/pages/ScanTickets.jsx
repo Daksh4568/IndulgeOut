@@ -309,7 +309,7 @@ const ScanTickets = () => {
             {selectedEvent && (
               <button
                 onClick={() =>
-                  navigate(`/organizer/events/${selectedEvent._id}/analytics`)
+                  navigate(`/organizer/events/${selectedEvent.slug || selectedEvent._id}/analytics`)
                 }
                 className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white text-sm sm:text-base rounded-lg hover:bg-indigo-700 transition-colors"
               >

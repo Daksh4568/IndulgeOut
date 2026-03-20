@@ -6,6 +6,13 @@ const eventSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  slug: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    lowercase: true
+  },
   description: {
     type: String,
     required: true
@@ -116,6 +123,65 @@ const eventSchema = new mongoose.Schema({
       default: 'INR'
     }
   },
+  // Time-based pricing: host can set different prices for different date ranges
+  pricingTimeline: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    tiers: [{
+      startDate: {
+        type: Date,
+        required: true
+      },
+      endDate: {
+        type: Date,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      label: {
+        type: String,
+        default: ''
+      }
+    }]
+  },
+  // Track all price changes (both manual edits and timeline-based)
+  priceChangeHistory: [{
+    previousPrice: {
+      type: Number,
+      required: true
+    },
+    newPrice: {
+      type: Number,
+      required: true
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now
+    },
+    reason: {
+      type: String,
+      enum: ['manual_edit', 'timeline_automatic', 'initial_creation'],
+      default: 'manual_edit'
+    },
+    spotsBookedAtPrevPrice: {
+      type: Number,
+      default: 0
+    },
+    // Snapshot of grouping offers at this price point
+    groupingOffersSnapshot: {
+      enabled: { type: Boolean, default: false },
+      tiers: [{
+        people: Number,
+        price: Number,
+        label: String
+      }]
+    }
+  }],
   groupingOffers: {
     enabled: {
       type: Boolean,
@@ -354,6 +420,8 @@ eventSchema.index({ host: 1, createdBy: 1 });
 eventSchema.index({ 'participants.user': 1 });
 // Index for checking event availability
 eventSchema.index({ status: 1, date: 1 });
+// Index for slug-based lookups
+eventSchema.index({ slug: 1 });
 
 // Virtual for checking if event is full
 eventSchema.virtual('isFull').get(function() {
@@ -369,8 +437,36 @@ eventSchema.virtual('ticketPrice').get(function() {
 eventSchema.set('toJSON', { virtuals: true });
 eventSchema.set('toObject', { virtuals: true });
 
+// Function to generate URL-friendly slug from title
+function generateSlug(title) {
+  const slug = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  
+  // Fallback if slug is empty (e.g., title had only special characters)
+  return slug || 'event';
+}
+
 // Categories are now hardcoded enums - no validation needed
 eventSchema.pre('save', async function(next) {
+  // Generate slug from title if not exists or title changed
+  if (!this.slug || this.isModified('title')) {
+    let baseSlug = generateSlug(this.title);
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Ensure slug uniqueness by appending counter if needed
+    while (await this.constructor.findOne({ slug, _id: { $ne: this._id } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    this.slug = slug;
+  }
   next();
 });
 
@@ -388,6 +484,43 @@ eventSchema.methods.updateParticipantCount = function() {
     .filter(p => p.status === 'registered')
     .reduce((sum, p) => sum + (p.quantity || 1), 0);
   return this.save();
+};
+
+// Get current effective price based on pricing timeline
+eventSchema.methods.getCurrentPrice = function() {
+  if (!this.pricingTimeline?.enabled || !this.pricingTimeline?.tiers?.length) {
+    return this.price?.amount || 0;
+  }
+  
+  const now = new Date();
+  // Find the tier that covers the current date
+  const activeTier = this.pricingTimeline.tiers.find(tier => {
+    const start = new Date(tier.startDate);
+    const end = new Date(tier.endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return now >= start && now <= end;
+  });
+  
+  return activeTier ? activeTier.price : (this.price?.amount || 0);
+};
+
+// Get price at a specific date
+eventSchema.methods.getPriceAtDate = function(date) {
+  if (!this.pricingTimeline?.enabled || !this.pricingTimeline?.tiers?.length) {
+    return this.price?.amount || 0;
+  }
+  
+  const targetDate = new Date(date);
+  const activeTier = this.pricingTimeline.tiers.find(tier => {
+    const start = new Date(tier.startDate);
+    const end = new Date(tier.endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return targetDate >= start && targetDate <= end;
+  });
+  
+  return activeTier ? activeTier.price : (this.price?.amount || 0);
 };
 
 // Track event view (using atomic operations to prevent version conflicts)

@@ -102,7 +102,10 @@ const ticketSchema = new mongoose.Schema({
     couponDiscount: Number,
     couponDiscountType: String,
     couponDiscountValue: Number,
-    originalAmount: Number
+    originalAmount: Number,
+    // Price timeline tracking - what price tier was active at purchase time
+    priceAtPurchase: Number,
+    pricingTimelineTier: String // label of the timeline tier active at purchase
   },
   // Settlement tracking fields
   settlementStatus: {

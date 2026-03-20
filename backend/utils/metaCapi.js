@@ -16,7 +16,7 @@ const hash = (value) => {
  * Send Purchase event to Meta Conversions API
  * Call this after payment success (Cashfree webhook)
  * @param  {Object} user - User object with email, phone, ip, userAgent, userId, fbp, fbc
- * @param {Object} order - Order object with amount, eventId, orderId, quantity, eventName, category, city, date
+ * @param {Object} order - Order object with amount, eventId, orderId, quantity, eventName, category, city, date, eventSlug (optional)
  */
 exports.sendPurchaseEvent = async (user, order) => {
   try {
@@ -26,6 +26,9 @@ exports.sendPurchaseEvent = async (user, order) => {
     }
 
     const eventId = order.orderId || crypto.randomUUID();
+    
+    // Use slug for URL (SEO-friendly) or fallback to eventId
+    const eventUrlIdentifier = order.eventSlug || order.eventId;
 
     // Build user_data with all available parameters for better Event Match Quality
     const userData = {
@@ -51,14 +54,14 @@ exports.sendPurchaseEvent = async (user, order) => {
             event_time: Math.floor(Date.now() / 1000),
             event_id: eventId, // For deduplication with browser event
             action_source: 'website',
-            event_source_url: `${process.env.FRONTEND_URL || 'https://indulgeout.com'}/events/${order.eventId}`,
+            event_source_url: `${process.env.FRONTEND_URL || 'https://indulgeout.com'}/events/${eventUrlIdentifier}`,
 
             user_data: userData,
 
             custom_data: {
               currency: 'INR',
               value: order.amount,
-              content_ids: [order.eventId],
+              content_ids: [order.eventId], // Use stable ObjectId for tracking
               content_name: order.eventName || 'Event Ticket',
               content_type: 'event',
               num_items: order.quantity || 1,

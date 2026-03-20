@@ -45,6 +45,19 @@ const registrationLimiter = rateLimit({
   }
 });
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // Upload event images to S3
 router.post('/upload-images', authMiddleware, upload.array('images', 5), async (req, res) => {
   try {
@@ -121,6 +134,13 @@ router.get('/', async (req, res) => {
     // Combine: upcoming events first, then past events
     const events = [...upcomingEvents, ...pastEvents];
     
+    // Add currentEffectivePrice to each event (based on pricing timeline if enabled)
+    const eventsWithPrice = events.map(e => {
+      const obj = e.toObject();
+      obj.currentEffectivePrice = e.getCurrentPrice();
+      return obj;
+    });
+    
     // Get total counts
     const totalUpcoming = await Event.countDocuments({
       ...filter,
@@ -133,7 +153,7 @@ router.get('/', async (req, res) => {
     const total = totalUpcoming + totalPast;
 
     res.json({
-      events,
+      events: eventsWithPrice,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       total
@@ -195,22 +215,27 @@ router.get('/my-hosted', authMiddleware, async (req, res) => {
 // Get single event
 router.get('/:id', async (req, res) => {
   try {
-    // Validate ObjectId format
-    const mongoose = require('mongoose');
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid event ID format' });
-    }
+    const { id } = req.params;
     
-    const event = await Event.findById(req.params.id)
-      .populate('host', 'name email bio profilePicture')
-      .populate('coHosts', 'name email bio profilePicture')
-      .populate('participants.user', 'name email profilePicture');
+    // Use helper to support both ID and slug
+    const event = await findEventByIdOrSlug(id);
 
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    res.json({ event });
+    // Populate relations after finding
+    await event.populate([
+      { path: 'host', select: 'name email bio profilePicture' },
+      { path: 'coHosts', select: 'name email bio profilePicture' },
+      { path: 'participants.user', select: 'name email profilePicture' }
+    ]);
+
+    // Add current effective price (based on pricing timeline if enabled)
+    const eventObj = event.toObject();
+    eventObj.currentEffectivePrice = event.getCurrentPrice();
+
+    res.json({ event: eventObj });
   } catch (error) {
     console.error('Get event error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -258,6 +283,26 @@ router.post('/', authMiddleware, [
       host: userId,
       createdBy: userId
     };
+
+    // Log initial price in price change history
+    const initialPrice = eventData.price?.amount || 0;
+    if (initialPrice > 0) {
+      eventData.priceChangeHistory = [{
+        previousPrice: 0,
+        newPrice: initialPrice,
+        changedAt: new Date(),
+        reason: 'initial_creation',
+        spotsBookedAtPrevPrice: 0,
+        groupingOffersSnapshot: {
+          enabled: eventData.groupingOffers?.enabled || false,
+          tiers: (eventData.groupingOffers?.tiers || []).map(t => ({
+            people: t.people,
+            price: t.price,
+            label: t.label || ''
+          }))
+        }
+      }];
+    }
 
     const event = new Event(eventData);
     await event.save();
@@ -332,11 +377,14 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
     console.log(`📊 Registration request: quantity=${quantity}, ticketQuantity=${ticketQuantity}, groupingOffer=${JSON.stringify(groupingOffer)}, couponCode=${couponCode || 'none'}`);
     
     // First check if user is already registered
-    const existingEvent = await Event.findById(req.params.id);
+    const existingEvent = await findEventByIdOrSlug(req.params.id);
     
     if (!existingEvent) {
       return res.status(404).json({ message: 'Event not found' });
     }
+    
+    // Store the actual ObjectId for later use in queries
+    const eventObjectId = existingEvent._id;
     
     const alreadyRegistered = existingEvent.participants.some(
       p => p.user.toString() === userId
@@ -407,10 +455,10 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
     }
     
     // Use findOneAndUpdate with atomic operations to prevent race conditions
-    console.log(`🔄 Incrementing currentParticipants by ${ticketQuantity} for event ${req.params.id}`);
+    console.log(`🔄 Incrementing currentParticipants by ${ticketQuantity} for event ${eventObjectId}`);
     const event = await Event.findOneAndUpdate(
       {
-        _id: req.params.id,
+        _id: eventObjectId,
         // Ensure user isn't already registered
         'participants.user': { $ne: userId }
       },
@@ -429,7 +477,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
 
     if (!event) {
       // Check which condition failed
-      const existingEvent = await Event.findById(req.params.id);
+      const existingEvent = await findEventByIdOrSlug(eventObjectId);
       
       if (!existingEvent) {
         return res.status(404).json({ message: 'Event not found' });
@@ -456,7 +504,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
     // Apply the coupon AFTER successful registration to prevent usage being "burned"
     // if registration fails (event full, already registered, race condition)
     if (couponData && couponCode) {
-      const freshEvent = await Event.findById(req.params.id);
+      const freshEvent = await findEventByIdOrSlug(eventObjectId);
       await freshEvent.applyCoupon(couponCode, userId, couponData.discountApplied);
       console.log(`🎟️ Coupon ${couponCode} usage incremented after successful registration`);
     }
@@ -467,18 +515,10 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
 
     // Update analytics for recommendation engine
     try {
-      await recommendationEngine.updateEventRegistrationAnalytics(req.user.userId, event._id);
-    } catch (analyticsError) {
-      console.error('Failed to update analytics:', analyticsError);
-      // Continue without failing the registration
-    }
-
-    // Update analytics for recommendation system
-    try {
       await recommendationEngine.updateEventRegistrationAnalytics(userId, event._id);
     } catch (analyticsError) {
       console.error('Failed to update analytics:', analyticsError);
-      // Don't fail the registration if analytics update fails
+      // Continue without failing the registration
     }
 
     // Generate ticket for the primary user
@@ -489,10 +529,27 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         registrationSource: 'web',
         registeredAt: new Date(),
         slotsBooked: ticketQuantity,
-        basePrice: basePrice || (event.price?.amount || 0) * ticketQuantity,
+        basePrice: basePrice || event.getCurrentPrice() * ticketQuantity,
         gstAndOtherCharges: gstAndOtherCharges || 0,
-        platformFees: platformFees || 0
+        platformFees: platformFees || 0,
+        priceAtPurchase: event.getCurrentPrice()
       };
+      
+      // Track which pricing timeline tier was active at purchase time
+      if (event?.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length) {
+        const now = new Date();
+        const activeTier = event.pricingTimeline.tiers.find(tier => {
+          const start = new Date(tier.startDate);
+          const end = new Date(tier.endDate);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999);
+          return now >= start && now <= end;
+        });
+        if (activeTier) {
+          ticketMetadata.pricingTimelineTier = activeTier.label || `₹${activeTier.price}`;
+          ticketMetadata.priceAtPurchase = activeTier.price;
+        }
+      }
       
       if (groupingOffer) {
         ticketMetadata.groupingOffer = groupingOffer.tierLabel;
@@ -511,7 +568,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       ticket = await ticketService.generateTicket({
         userId: userId,
         eventId: event._id,
-        amount: finalAmount || (event.price?.amount || 0) * ticketQuantity, // Use finalAmount after coupon discount
+        amount: finalAmount || event.getCurrentPrice() * ticketQuantity, // Use finalAmount after coupon discount
         paymentId: req.body.paymentId || null,
         ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
         quantity: ticketQuantity,
@@ -521,7 +578,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       console.log(`🎫 [Ticket Generated] QR Code present: ${!!ticket?.qrCode}, Length: ${ticket?.qrCode?.length || 0}`);
 
       // For free events (no Cashfree payment), mark ticket as not needing reconciliation
-      const ticketAmount = finalAmount || (event.price?.amount || 0) * ticketQuantity;
+      const ticketAmount = finalAmount || event.getCurrentPrice() * ticketQuantity;
       if (!req.body.paymentId && ticketAmount === 0) {
         try {
           const TicketModel = require('../models/Ticket');
@@ -656,7 +713,7 @@ router.get('/recommended/for-me', authMiddleware, async (req, res) => {
 // Update event (host only)
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    const event = await findEventByIdOrSlug(req.params.id);
     
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -678,11 +735,55 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    const updatedEvent = await Event.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('host', 'name email');
+    // Track price changes before updating
+    const oldPrice = event.price?.amount || 0;
+    const newPrice = req.body.price?.amount !== undefined ? Number(req.body.price.amount) : oldPrice;
+    
+    let updatedEvent;
+    if (oldPrice !== newPrice) {
+      // Count spots booked at the previous price
+      const spotsBookedAtPrevPrice = event.currentParticipants || 0;
+      
+      const priceChangeEntry = {
+        previousPrice: oldPrice,
+        newPrice: newPrice,
+        changedAt: new Date(),
+        reason: 'manual_edit',
+        spotsBookedAtPrevPrice: spotsBookedAtPrevPrice,
+        groupingOffersSnapshot: {
+          enabled: event.groupingOffers?.enabled || false,
+          tiers: (event.groupingOffers?.tiers || []).map(t => ({
+            people: t.people,
+            price: t.price,
+            label: t.label || ''
+          }))
+        }
+      };
+      
+      console.log(`💰 Price change detected: ₹${oldPrice} → ₹${newPrice} (${spotsBookedAtPrevPrice} spots booked at old price)`);
+
+      // First push the price change history atomically
+      await Event.findByIdAndUpdate(event._id, {
+        $push: { priceChangeHistory: priceChangeEntry }
+      });
+      
+      // Clean up req.body to prevent duplicate push or overwrite
+      delete req.body.$push;
+      delete req.body.priceChangeHistory;
+      
+      // Then update the rest of the fields
+      updatedEvent = await Event.findByIdAndUpdate(
+        event._id,
+        req.body,
+        { new: true, runValidators: true }
+      ).populate('host', 'name email');
+    } else {
+      updatedEvent = await Event.findByIdAndUpdate(
+        event._id,
+        req.body,
+        { new: true, runValidators: true }
+      ).populate('host', 'name email');
+    }
 
     console.log(`✅ Event updated: ${updatedEvent.title}`);
     
@@ -699,7 +800,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // Delete event (host only)
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    const event = await findEventByIdOrSlug(req.params.id);
     
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -710,7 +811,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only event host can delete this event' });
     }
 
-    await Event.findByIdAndDelete(req.params.id);
+    await Event.findByIdAndDelete(event._id);
 
     res.json({ message: 'Event deleted successfully' });
   } catch (error) {
@@ -725,7 +826,7 @@ router.post('/:id/click', authMiddleware, async (req, res) => {
     const eventId = req.params.id;
     const userId = req.user.userId;
     
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -749,7 +850,7 @@ router.post('/:id/view', async (req, res) => {
     const eventId = req.params.id;
     const userId = req.user?.userId || null; // Optional auth
     
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -791,7 +892,7 @@ router.post('/:id/submit-questionnaire', authMiddleware, async (req, res) => {
     }
 
     // Find the event
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -842,7 +943,7 @@ router.post('/:id/submit-questionnaire', authMiddleware, async (req, res) => {
 router.get('/:id/analytics', authMiddleware, async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId).populate('participants.user', 'name email');
+    let event = await findEventByIdOrSlug(eventId);
     
     if (!event) {
       return res.status(404).json({ 
@@ -850,6 +951,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         message: 'Event not found' 
       });
     }
+    
+    // Populate participants after finding the event
+    event = await Event.findById(event._id).populate('participants.user', 'name email');
     
     // Authorization: Only event host or co-hosts can view analytics
     const isAuthorized = 
@@ -886,9 +990,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     console.log(`📊 Analytics: Found ${questionnaireMap.size} participants with questionnaire responses`);
     console.log(`🎟️ Analytics: Found ${couponMap.size} participants who used coupons`);
     
-    // Get all tickets for this event with user details
+    // Get all tickets for this event with user details (use event._id ObjectId)
     const Ticket = require('../models/Ticket');
-    const tickets = await Ticket.find({ event: eventId })
+    const tickets = await Ticket.find({ event: event._id })
       .populate('user', 'name email phoneNumber profilePicture')
       .populate('checkInBy', 'name')
       .sort({ purchaseDate: -1 });
@@ -1100,7 +1204,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     
     // Get Event Feedback & Reviews
     const Review = require('../models/Review');
-    const reviews = await Review.find({ event: eventId })
+    const reviews = await Review.find({ event: event._id })
       .populate('user', 'name profilePicture')
       .sort({ createdAt: -1 })
       .limit(10);
@@ -1183,6 +1287,49 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           createdAt: coupon.createdAt
         }))
       } : { enabled: false, codes: [] },
+      // Price change history and pricing timeline
+      priceChangeHistory: (event.priceChangeHistory || []).map(change => ({
+        previousPrice: change.previousPrice,
+        newPrice: change.newPrice,
+        changedAt: change.changedAt,
+        reason: change.reason,
+        spotsBookedAtPrevPrice: change.spotsBookedAtPrevPrice,
+        groupingOffersSnapshot: change.groupingOffersSnapshot
+      })),
+      pricingTimeline: event.pricingTimeline?.enabled ? {
+        enabled: true,
+        tiers: (event.pricingTimeline.tiers || []).map(tier => ({
+          startDate: tier.startDate,
+          endDate: tier.endDate,
+          price: tier.price,
+          label: tier.label,
+          // Count tickets bought during this tier
+          ticketsBought: tickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          }).length,
+          spotsBought: tickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          }).reduce((sum, t) => sum + (t.quantity || 1), 0),
+          revenue: tickets.filter(t => {
+            const purchaseDate = new Date(t.purchaseDate);
+            const start = new Date(tier.startDate);
+            const end = new Date(tier.endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            return purchaseDate >= start && purchaseDate <= end;
+          }).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+        }))
+      } : { enabled: false, tiers: [] },
       statistics: {
         totalTickets: totalRegistered,
         totalSlots,
@@ -1209,8 +1356,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
 router.get('/:id/questionnaire-submissions', authMiddleware, async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId)
-      .populate('questionnaireSubmissions.user', 'name email profilePicture');
+    let event = await findEventByIdOrSlug(eventId);
     
     if (!event) {
       return res.status(404).json({ 
@@ -1218,6 +1364,10 @@ router.get('/:id/questionnaire-submissions', authMiddleware, async (req, res) =>
         message: 'Event not found' 
       });
     }
+    
+    // Populate questionnaire submissions after finding the event
+    event = await Event.findById(event._id)
+      .populate('questionnaireSubmissions.user', 'name email profilePicture');
     
     // Authorization: Only event host or co-hosts can view submissions
     const isAuthorized = 
@@ -1273,12 +1423,15 @@ router.get('/:id/attendees', authMiddleware, async (req, res) => {
     const eventId = req.params.id;
     
     // Find the event
-    const event = await Event.findById(eventId)
-      .populate('participants.user', 'name email profilePicture bio interests');
+    let event = await findEventByIdOrSlug(eventId);
     
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
+    
+    // Populate participants after finding the event
+    event = await Event.findById(event._id)
+      .populate('participants.user', 'name email profilePicture bio interests');
     
     // Check if the requesting user is registered for this event
     const isRegistered = event.participants.some(
@@ -1350,7 +1503,7 @@ router.post('/:id/validate-coupon', async (req, res) => {
     }
 
     // Find the event
-    const event = await Event.findById(req.params.id);
+    const event = await findEventByIdOrSlug(req.params.id);
     
     if (!event) {
       return res.status(404).json({ 

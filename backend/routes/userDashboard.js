@@ -6,6 +6,19 @@ const Event = require('../models/Event');
 const Community = require('../models/Community');
 const { authMiddleware } = require('../utils/authUtils');
 
+// Helper function to find event by ID or slug
+async function findEventByIdOrSlug(identifier) {
+  const mongoose = require('mongoose');
+  
+  // Check if identifier is a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier) && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+    return await Event.findById(identifier);
+  } else {
+    // Search by slug
+    return await Event.findOne({ slug: identifier });
+  }
+}
+
 // @route   GET /users/my-events
 // @desc    Get user's events (upcoming, past, saved)
 // @access  Private
@@ -299,15 +312,15 @@ router.post('/save-event/:eventId', authMiddleware, async (req, res) => {
     const { eventId } = req.params;
 
     // Check if event exists
-    const event = await Event.findById(eventId);
+    const event = await findEventByIdOrSlug(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Add to saved events
+    // Add to saved events (use event._id for ObjectId)
     const user = await User.findByIdAndUpdate(
       userId,
-      { $addToSet: { savedEvents: eventId } },
+      { $addToSet: { savedEvents: event._id } },
       { new: true }
     );
 
@@ -333,10 +346,16 @@ router.delete('/unsave-event/:eventId', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const { eventId } = req.params;
 
-    // Remove from saved events
+    // Find event to ensure it exists and get ObjectId
+    const event = await findEventByIdOrSlug(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Remove from saved events (use event._id for ObjectId)
     const user = await User.findByIdAndUpdate(
       userId,
-      { $pull: { savedEvents: eventId } },
+      { $pull: { savedEvents: event._id } },
       { new: true }
     );
 

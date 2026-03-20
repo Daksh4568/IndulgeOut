@@ -149,7 +149,7 @@ const Categories = () => {
                           </div>
                           
                           <button
-                            onClick={() => navigate(`/event/${event._id}`)}
+                            onClick={() => navigate(`/events/${event.slug || event._id}`)}
                             className="w-full text-white px-8 py-2.5 rounded-md text-base font-semibold transform hover:scale-105 hover:opacity-90 transition-all duration-300 shadow-xl"
                             style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', fontFamily: 'Oswald, sans-serif' }}
                           >
