@@ -486,20 +486,28 @@ eventSchema.methods.updateParticipantCount = function() {
   return this.save();
 };
 
+// Get today's date string in IST (YYYY-MM-DD) for consistent comparison across timezones
+function getTodayIST() {
+  const now = new Date();
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  return new Date(now.getTime() + IST_OFFSET).toISOString().split('T')[0];
+}
+
+function toDateString(date) {
+  return new Date(date).toISOString().split('T')[0];
+}
+
 // Get current effective price based on pricing timeline
 eventSchema.methods.getCurrentPrice = function() {
   if (!this.pricingTimeline?.enabled || !this.pricingTimeline?.tiers?.length) {
     return this.price?.amount || 0;
   }
   
-  const now = new Date();
-  // Find the tier that covers the current date
+  const todayIST = getTodayIST();
   const activeTier = this.pricingTimeline.tiers.find(tier => {
-    const start = new Date(tier.startDate);
-    const end = new Date(tier.endDate);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-    return now >= start && now <= end;
+    const startStr = toDateString(tier.startDate);
+    const endStr = toDateString(tier.endDate);
+    return todayIST >= startStr && todayIST <= endStr;
   });
   
   return activeTier ? activeTier.price : (this.price?.amount || 0);
@@ -511,13 +519,11 @@ eventSchema.methods.getPriceAtDate = function(date) {
     return this.price?.amount || 0;
   }
   
-  const targetDate = new Date(date);
+  const targetStr = toDateString(date);
   const activeTier = this.pricingTimeline.tiers.find(tier => {
-    const start = new Date(tier.startDate);
-    const end = new Date(tier.endDate);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-    return targetDate >= start && targetDate <= end;
+    const startStr = toDateString(tier.startDate);
+    const endStr = toDateString(tier.endDate);
+    return targetStr >= startStr && targetStr <= endStr;
   });
   
   return activeTier ? activeTier.price : (this.price?.amount || 0);

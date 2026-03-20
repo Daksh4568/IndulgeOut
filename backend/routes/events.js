@@ -537,13 +537,12 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       
       // Track which pricing timeline tier was active at purchase time
       if (event?.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length) {
-        const now = new Date();
+        const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+        const todayIST = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
         const activeTier = event.pricingTimeline.tiers.find(tier => {
-          const start = new Date(tier.startDate);
-          const end = new Date(tier.endDate);
-          start.setHours(0, 0, 0, 0);
-          end.setHours(23, 59, 59, 999);
-          return now >= start && now <= end;
+          const startStr = new Date(tier.startDate).toISOString().split('T')[0];
+          const endStr = new Date(tier.endDate).toISOString().split('T')[0];
+          return todayIST >= startStr && todayIST <= endStr;
         });
         if (activeTier) {
           ticketMetadata.pricingTimelineTier = activeTier.label || `₹${activeTier.price}`;
@@ -724,12 +723,12 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only event host can update this event' });
     }
 
-    // Prevent editing past events
+    // Prevent editing past events (compare in IST)
     const eventDate = new Date(event.date);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // Reset time to start of today
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const todayStartIST = new Date(new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0]);
     
-    if (eventDate < now) {
+    if (eventDate < todayStartIST) {
       return res.status(400).json({ 
         message: '❌ Cannot edit past events. This event has already occurred.' 
       });
@@ -1298,37 +1297,23 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       })),
       pricingTimeline: event.pricingTimeline?.enabled ? {
         enabled: true,
-        tiers: (event.pricingTimeline.tiers || []).map(tier => ({
-          startDate: tier.startDate,
-          endDate: tier.endDate,
-          price: tier.price,
-          label: tier.label,
-          // Count tickets bought during this tier
-          ticketsBought: tickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
-          }).length,
-          spotsBought: tickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
-          }).reduce((sum, t) => sum + (t.quantity || 1), 0),
-          revenue: tickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
-          }).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
-        }))
+        tiers: (event.pricingTimeline.tiers || []).map(tier => {
+          const startStr = new Date(tier.startDate).toISOString().split('T')[0];
+          const endStr = new Date(tier.endDate).toISOString().split('T')[0];
+          const tierFilter = t => {
+            const purchaseStr = new Date(t.purchaseDate).toISOString().split('T')[0];
+            return purchaseStr >= startStr && purchaseStr <= endStr;
+          };
+          return {
+            startDate: tier.startDate,
+            endDate: tier.endDate,
+            price: tier.price,
+            label: tier.label,
+            ticketsBought: tickets.filter(tierFilter).length,
+            spotsBought: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
+            revenue: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+          };
+        })
       } : { enabled: false, tiers: [] },
       statistics: {
         totalTickets: totalRegistered,
