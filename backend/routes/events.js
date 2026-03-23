@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const Event = require('../models/Event.js');
 const User = require('../models/User.js');
-const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
+const { sendEventRegistrationEmail, sendEventNotificationToHost, sendWhatsAppTicketNotification } = require('../utils/emailService.js');
 const { authMiddleware } = require('../utils/authUtils.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
@@ -618,6 +618,12 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       } catch (emailError) {
         console.error('❌ [Email Failed] Registration email error:', emailError.message);
         console.error('❌ [Email Details] User:', user.email, '| Event:', event.title);
+      }
+      // Send WhatsApp ticket notification (non-blocking)
+      try {
+        await sendWhatsAppTicketNotification(user, event, ticket);
+      } catch (waErr) {
+        console.error('❌ [WhatsApp] Failed:', waErr.message);
       }
     });
 

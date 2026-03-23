@@ -119,6 +119,122 @@ async function sendWhatsAppOTP(phoneNumber, otp, userName = 'User') {
   }
 }
 
+/**
+ * Send event ticket confirmation via WhatsApp using MSG91
+ * 
+ * Requires a WhatsApp template named as per MSG91_TICKET_TEMPLATE_NAME env var.
+ * Template should have:
+ *   - Header: DOCUMENT (PDF ticket with QR code + event poster)
+ *   - Body variables: {{1}} firstName, {{2}} eventName, {{3}} eventDate,
+ *                     {{4}} eventTime, {{5}} venueName, {{6}} spotsCount,
+ *                     {{7}} ticketNumber
+ *   - Button 1 (URL): venue map link (dynamic suffix)
+ *   - Button 2 (URL): contact-us page (static)
+ * 
+ * @param {string} phoneNumber - 10-digit Indian mobile number
+ * @param {object} params
+ * @param {string} params.userName - User's first name
+ * @param {string} params.eventName - Event title
+ * @param {string} params.eventDate - Formatted date string
+ * @param {string} params.eventTime - Formatted time string
+ * @param {string} params.venueName - Venue address + city
+ * @param {string} params.venueMapUrl - Full Google Maps URL for the venue
+ * @param {string} params.spotsCount - Number of spots booked
+ * @param {string} params.ticketNumber - Booking/ticket ID
+ * @param {string} params.ticketPdfUrl - URL of PDF ticket document
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+async function sendWhatsAppTicket(phoneNumber, params) {
+  const authKey = process.env.MSG91_AUTH_KEY;
+  const templateName = process.env.MSG91_TICKET_TEMPLATE_NAME;
+  const namespace = process.env.MSG91_NAMESPACE;
+  const integratedNumber = process.env.MSG91_INTEGRATED_NUMBER;
+
+  if (!authKey || !templateName || !namespace || !integratedNumber) {
+    console.warn('⚠️ [MSG91] WhatsApp ticket template not configured. Skipping WhatsApp notification.');
+    return { success: false, message: 'WhatsApp ticket service not configured' };
+  }
+
+  const formattedPhone = phoneNumber.startsWith('91') ? phoneNumber : `91${phoneNumber}`;
+
+  try {
+    console.log(`📱 [MSG91] Sending WhatsApp ticket to ${formattedPhone} for event: ${params.eventName}`);
+
+    const response = await axios.post(
+      MSG91_WHATSAPP_URL,
+      {
+        integrated_number: integratedNumber,
+        content_type: 'template',
+        payload: {
+          messaging_product: 'whatsapp',
+          type: 'template',
+          template: {
+            name: templateName,
+            language: {
+              code: 'en',
+              policy: 'deterministic'
+            },
+            namespace: namespace,
+            to_and_components: [
+              {
+                to: [formattedPhone],
+                components: {
+                  header_1: {
+                    type: 'document',
+                    value: params.ticketPdfUrl,
+                    filename: `IndulgeOut-Ticket-${params.ticketNumber || 'ticket'}.pdf`
+                  },
+                  body_1: { type: 'text', value: params.userName },
+                  body_2: { type: 'text', value: params.eventName },
+                  body_3: { type: 'text', value: params.eventDate },
+                  body_4: { type: 'text', value: params.eventTime },
+                  body_5: { type: 'text', value: params.venueName },
+                  body_6: { type: 'text', value: params.spotsCount },
+                  body_7: { type: 'text', value: params.ticketNumber },
+                  button_1: {
+                    subtype: 'url',
+                    type: 'text',
+                    value: params.venueMapUrl
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'authkey': authKey
+        },
+        timeout: 15000
+      }
+    );
+
+    console.log(`✅ [MSG91] WhatsApp ticket response:`, JSON.stringify(response.data));
+
+    if (response.status === 200) {
+      console.log(`✅ [MSG91] WhatsApp ticket sent successfully to ${formattedPhone}`);
+      return { success: true, message: 'Ticket sent via WhatsApp' };
+    }
+
+    console.error(`❌ [MSG91] Unexpected ticket response:`, response.data);
+    return { success: false, message: response.data?.message || 'Failed to send WhatsApp ticket' };
+
+  } catch (error) {
+    if (error.response) {
+      console.error(`❌ [MSG91] WhatsApp ticket API error:`, error.response.status, error.response.data);
+    } else if (error.code === 'ECONNABORTED') {
+      console.error(`❌ [MSG91] WhatsApp ticket request timed out`);
+    } else {
+      console.error(`❌ [MSG91] WhatsApp ticket error:`, error.message);
+    }
+    // Don't throw — WhatsApp ticket is non-critical, user already has email
+    return { success: false, message: error.message };
+  }
+}
+
 module.exports = {
   sendWhatsAppOTP,
+  sendWhatsAppTicket,
 };

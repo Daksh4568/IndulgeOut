@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const { sendWhatsAppTicket } = require('../services/msg91Service');
+const { generateTicketPdf } = require('../services/ticketPdfService');
 require('dotenv').config();
 
 // Create email transporter
@@ -221,6 +223,84 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
   }
 };
 
+// Send WhatsApp ticket notification (non-blocking, non-critical)
+const sendWhatsAppTicketNotification = async (user, event, ticket) => {
+  try {
+    const phone = user.phoneNumber;
+    if (!phone) {
+      console.log('📱 [WhatsApp Ticket] No phoneNumber for user, skipping WhatsApp notification');
+      return { success: false, message: 'No phone number' };
+    }
+
+    const firstName = (user.name || 'Guest').split(' ')[0];
+
+    const eventDate = new Date(event.date).toLocaleDateString('en-IN', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    const eventTime = event.startTime && event.endTime
+      ? `${event.startTime} - ${event.endTime}`
+      : event.time || 'TBD';
+
+    const venueName = [event.location?.address, event.location?.city]
+      .filter(Boolean)
+      .join(', ') || 'Venue TBD';
+
+    const lat = event.location?.coordinates?.latitude;
+    const lng = event.location?.coordinates?.longitude;
+    // Only send the dynamic suffix (lat,lng) — template has the static prefix
+    const venueMapUrl = lat && lng
+      ? `${lat},${lng}`
+      : '';
+
+    // Generate PDF ticket with QR code + event poster
+    const eventImageUrl = (event.images && event.images.length > 0) ? event.images[0] : '';
+    let ticketPdfUrl = '';
+    try {
+      const pdfResult = await generateTicketPdf({
+        ticketNumber: ticket?.ticketNumber || 'N/A',
+        userName: user.name || firstName,
+        eventName: event.title || 'Event',
+        eventDate,
+        eventTime,
+        venueName,
+        spots: ticket?.quantity || 1,
+        qrCodeUrl: ticket?.qrCodeUrl || '',
+        qrCodeBase64: ticket?.qrCode || '',
+        eventImageUrl,
+      });
+      ticketPdfUrl = pdfResult?.url || '';
+    } catch (pdfErr) {
+      console.error('⚠️ [WhatsApp Ticket] PDF generation failed, skipping:', pdfErr.message);
+    }
+
+    if (!ticketPdfUrl) {
+      console.log('📱 [WhatsApp Ticket] No PDF generated, skipping WhatsApp notification');
+      return { success: false, message: 'PDF generation failed' };
+    }
+
+    const result = await sendWhatsAppTicket(phone, {
+      userName: firstName,
+      eventName: event.title || 'Event',
+      eventDate,
+      eventTime,
+      venueName,
+      venueMapUrl,
+      spotsCount: String(ticket?.quantity || 1),
+      ticketNumber: ticket?.ticketNumber || 'N/A',
+      ticketPdfUrl,
+    });
+
+    return result;
+  } catch (err) {
+    console.error('❌ [WhatsApp Ticket] Failed to send WhatsApp ticket notification:', err.message);
+    return { success: false, message: err.message };
+  }
+};
+
 // Send notification to event host when someone registers
 const sendEventNotificationToHost = async (hostEmail, hostName, user, event) => {
   try {
@@ -406,5 +486,6 @@ module.exports = {
   sendOTPEmail,
   sendEventRegistrationEmail,
   sendEventNotificationToHost,
-  sendNotificationEmail
+  sendNotificationEmail,
+  sendWhatsAppTicketNotification
 };

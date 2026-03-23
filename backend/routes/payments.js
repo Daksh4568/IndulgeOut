@@ -5,7 +5,7 @@ const Event = require('../models/Event.js');
 const User = require('../models/User.js');
 const WebhookLog = require('../models/WebhookLog.js');
 const { authMiddleware } = require('../utils/authUtils.js');
-const { sendEventRegistrationEmail, sendEventNotificationToHost } = require('../utils/emailService.js');
+const { sendEventRegistrationEmail, sendEventNotificationToHost, sendWhatsAppTicketNotification } = require('../utils/emailService.js');
 const recommendationEngine = require('../services/recommendationEngine.js');
 const ticketService = require('../services/ticketService.js');
 const notificationService = require('../services/notificationService.js');
@@ -540,6 +540,13 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       console.error('Failed to send registration email:', emailError);
     }
 
+    // Send WhatsApp ticket notification (non-blocking)
+    try {
+      await sendWhatsAppTicketNotification(user, event, ticket);
+    } catch (waErr) {
+      console.error('❌ [VERIFY-PAYMENT] WhatsApp ticket failed:', waErr.message);
+    }
+
     // Send tickets to additional persons if provided (share the same ticket)
     if (additionalPersons && additionalPersons.length > 0 && ticket) {
       console.log(`📧 [Additional Persons] Sending tickets to ${additionalPersons.length} additional person(s)`);
@@ -982,6 +989,13 @@ router.post('/webhook', async (req, res) => {
         console.log('✅ [WEBHOOK] Registration email sent');
       } catch (emailError) {
         console.error('❌ [WEBHOOK] Failed to send registration email:', emailError);
+      }
+
+      // Send WhatsApp ticket notification (non-blocking)
+      try {
+        await sendWhatsAppTicketNotification(user, event, ticket);
+      } catch (waErr) {
+        console.error('❌ [WEBHOOK] WhatsApp ticket failed:', waErr.message);
       }
 
       // Send notification to host

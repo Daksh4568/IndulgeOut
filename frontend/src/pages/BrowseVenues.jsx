@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import {
@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
 import FilterBar from '../components/FilterBar';
+import RotatingSearchBar from '../components/RotatingSearchBar';
 import API_URL from '../config/api';
 
 // Venue type icon mapping for fallback images
@@ -288,16 +289,15 @@ const BrowseVenues = () => {
 
         {/* White Search Bar - Centered, not full width */}
         <div className="max-w-2xl mx-auto mb-8">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search an event, a festival, an interest, a mood, a city"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm text-sm"
-            />
-          </div>
+          <RotatingSearchBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            placeholders={[
+              'Search for cafes',
+              'Search for bars, studios',
+              'Search for event spaces',
+            ]}
+          />
         </div>
 
         {/* All Venues Title */}
