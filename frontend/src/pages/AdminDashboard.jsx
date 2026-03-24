@@ -2156,13 +2156,14 @@ const AdminDashboard = () => {
                         <h4 className="text-sm font-medium text-gray-400 mb-3">Scheduled Price Tiers</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {eventDetails.pricingTimeline.tiers.map((tier, index) => {
-                            const now = new Date();
-                            const start = new Date(tier.startDate);
-                            const end = new Date(tier.endDate);
-                            start.setHours(0, 0, 0, 0);
-                            end.setHours(23, 59, 59, 999);
-                            const isActive = now >= start && now <= end;
-                            const isPast = now > end;
+                            // IST-aware date comparison for tier status
+                            const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+                            const toISTDate = (d) => new Date(new Date(d).getTime() + IST_OFFSET).toISOString().split('T')[0];
+                            const todayIST = toISTDate(new Date());
+                            const startIST = toISTDate(tier.startDate);
+                            const endIST = toISTDate(tier.endDate);
+                            const isActive = todayIST >= startIST && todayIST <= endIST;
+                            const isPast = todayIST > endIST;
                             return (
                               <div key={index} className={`p-4 rounded-lg border ${
                                 isActive ? 'border-green-500/40 bg-green-900/10' :

@@ -26,9 +26,11 @@ async function reconcilePayments(date = new Date()) {
   try {
     console.log('🔍 [Reconciliation] Starting payment reconciliation for:', date.toDateString());
 
-    // 1. Get all successful webhook payments for the date
-    const startOfDay = new Date(date.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+    // 1. Get all successful webhook payments for the date (IST-aware)
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const dateISTStr = new Date(date.getTime() + IST_OFFSET).toISOString().split('T')[0];
+    const startOfDay = new Date(new Date(dateISTStr + 'T00:00:00.000Z').getTime() - IST_OFFSET);
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
 
     // Fetch successful webhook logs (these are confirmed payments)
     const successfulWebhooks = await WebhookLog.find({

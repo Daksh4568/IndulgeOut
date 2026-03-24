@@ -2655,10 +2655,11 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       paymentMethods[method] = (paymentMethods[method] || 0) + 1;
     });
     
-    // Daily ticket sales
+    // Daily ticket sales (IST-aware)
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
     const dailySales = {};
     tickets.forEach(ticket => {
-      const date = new Date(ticket.purchaseDate).toISOString().split('T')[0];
+      const date = new Date(new Date(ticket.purchaseDate).getTime() + IST_OFFSET).toISOString().split('T')[0];
       if (!dailySales[date]) {
         dailySales[date] = { count: 0, revenue: 0 };
       }
@@ -2775,36 +2776,26 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       })),
       pricingTimeline: event.pricingTimeline?.enabled ? {
         enabled: true,
-        tiers: (event.pricingTimeline.tiers || []).map(tier => ({
-          startDate: tier.startDate,
-          endDate: tier.endDate,
-          price: tier.price,
-          label: tier.label,
-          ticketsBought: tickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
-          }).length,
-          spotsBought: tickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
-          }).reduce((sum, t) => sum + (t.quantity || 1), 0),
-          revenue: tickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
-          }).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
-        }))
+        tiers: (event.pricingTimeline.tiers || []).map(tier => {
+          // Use IST-aware date comparison since events are India-based
+          const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+          const toISTDateStr = (d) => new Date(new Date(d).getTime() + IST_OFFSET).toISOString().split('T')[0];
+          const startStr = toISTDateStr(tier.startDate);
+          const endStr = toISTDateStr(tier.endDate);
+          const tierFilter = t => {
+            const purchaseStr = toISTDateStr(t.purchaseDate);
+            return purchaseStr >= startStr && purchaseStr <= endStr;
+          };
+          return {
+            startDate: tier.startDate,
+            endDate: tier.endDate,
+            price: tier.price,
+            label: tier.label,
+            ticketsBought: tickets.filter(tierFilter).length,
+            spotsBought: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
+            revenue: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+          };
+        })
       } : { enabled: false, tiers: [] },
       // Grouping offers data
       groupingOffers: event.groupingOffers || { enabled: false, tiers: [] },

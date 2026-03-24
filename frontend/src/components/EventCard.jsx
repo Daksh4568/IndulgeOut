@@ -32,6 +32,17 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
     return date.toLocaleDateString('en-US', options);
   };
 
+  const formatDateRange = (startDate, endDate) => {
+    if (!endDate) return formatDate(startDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+    if (sameMonth) {
+      return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.getDate()}`;
+    }
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  };
+
   const formatTime = (timeString) => {
     if (!timeString) return '';
     // Convert to 12-hour format if it's in 24-hour format
@@ -169,7 +180,7 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
           <div className="flex items-center gap-2 text-gray-300">
             <Calendar className="h-4 w-4 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
             <span className="text-sm sm:text-sm line-clamp-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-              {formatDate(event.date)} • {event.startTime && event.endTime ? `${formatTime(event.startTime)} - ${formatTime(event.endTime)}` : formatTime(event.time)}
+              {formatDateRange(event.date, event.endDate)} • {event.startTime && event.endTime ? `${formatTime(event.startTime)} - ${formatTime(event.endTime)}` : formatTime(event.time)}
             </span>
           </div>
 

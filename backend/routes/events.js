@@ -1304,10 +1304,13 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       pricingTimeline: event.pricingTimeline?.enabled ? {
         enabled: true,
         tiers: (event.pricingTimeline.tiers || []).map(tier => {
-          const startStr = new Date(tier.startDate).toISOString().split('T')[0];
-          const endStr = new Date(tier.endDate).toISOString().split('T')[0];
+          // Use IST-aware date comparison since events are India-based
+          const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+          const toISTDateStr = (d) => new Date(new Date(d).getTime() + IST_OFFSET).toISOString().split('T')[0];
+          const startStr = toISTDateStr(tier.startDate);
+          const endStr = toISTDateStr(tier.endDate);
           const tierFilter = t => {
-            const purchaseStr = new Date(t.purchaseDate).toISOString().split('T')[0];
+            const purchaseStr = toISTDateStr(t.purchaseDate);
             return purchaseStr >= startStr && purchaseStr <= endStr;
           };
           return {

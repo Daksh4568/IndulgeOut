@@ -297,6 +297,21 @@ const EventDetail = () => {
     });
   };
 
+  const formatDateRange = (startDate, endDate) => {
+    if (!endDate) return formatDate(startDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const sameMonth = sameYear && start.getMonth() === end.getMonth();
+    if (sameMonth) {
+      return `${start.toLocaleDateString('en-IN', { day: 'numeric' })} - ${end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    }
+    if (sameYear) {
+      return `${start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    }
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  };
+
   const getCategoryIcon = (categoryName) => {
     return CATEGORY_ICONS[categoryName] || '🎉';
   };
@@ -529,7 +544,7 @@ const EventDetail = () => {
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-indigo-400 flex-shrink-0" />
               <p className="text-sm font-medium text-white" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                {formatDate(event.date)}
+                {formatDateRange(event.date, event.endDate)}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -1274,7 +1289,7 @@ const EventDetail = () => {
                         className="font-semibold text-sm text-gray-900 dark:text-white"
                         style={{ fontFamily: 'Source Serif Pro, serif' }}
                       >
-                        {formatDate(event.date)}
+                        {formatDateRange(event.date, event.endDate)}
                       </p>
                     </div>
                   </div>

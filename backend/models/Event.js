@@ -27,6 +27,10 @@ const eventSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  endDate: {
+    type: Date,
+    default: null
+  },
   startTime: {
     type: String,
     required: true
@@ -494,7 +498,8 @@ function getTodayIST() {
 }
 
 function toDateString(date) {
-  return new Date(date).toISOString().split('T')[0];
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  return new Date(new Date(date).getTime() + IST_OFFSET).toISOString().split('T')[0];
 }
 
 // Get current effective price based on pricing timeline
@@ -531,7 +536,8 @@ eventSchema.methods.getPriceAtDate = function(date) {
 
 // Track event view (using atomic operations to prevent version conflicts)
 eventSchema.methods.trackView = async function(userId = null) {
-  const today = new Date().toISOString().split('T')[0];
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  const today = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
   const Event = this.constructor;
   
   // Use atomic operations to prevent version conflicts

@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import NavigationBar from '../components/NavigationBar'
 import SupportModal from '../components/SupportModal'
+import ImageCropper from '../components/ImageCropper'
 import { api } from '../config/api.js'
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 
@@ -28,6 +29,8 @@ const ProfileNew = () => {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [supportModalOpen, setSupportModalOpen] = useState(false)
+  const [cropperFile, setCropperFile] = useState(null)
+  const [cropperMode, setCropperMode] = useState(null) // 'profile' or 'photo'
   
   // Section-based editing
   const [editingSection, setEditingSection] = useState(null)
@@ -486,6 +489,15 @@ const ProfileNew = () => {
       return
     }
 
+    setCropperFile(file)
+    setCropperMode('profile')
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleCroppedProfilePicture = async (blob) => {
+    setCropperFile(null)
+    setCropperMode(null)
     try {
       setIsUploading(true)
       const reader = new FileReader()
@@ -495,7 +507,7 @@ const ProfileNew = () => {
         setMessage({ type: 'success', text: 'Profile picture updated!' })
         setTimeout(() => setMessage({ type: '', text: '' }), 3000)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(blob)
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to upload picture' })
     } finally {
@@ -523,6 +535,15 @@ const ProfileNew = () => {
       return
     }
 
+    setCropperFile(file)
+    setCropperMode('photo')
+    // Reset input so same file can be re-selected
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
+
+  const handleCroppedPhoto = async (blob) => {
+    setCropperFile(null)
+    setCropperMode(null)
     try {
       setIsUploading(true)
       const reader = new FileReader()
@@ -532,7 +553,7 @@ const ProfileNew = () => {
         setMessage({ type: 'success', text: 'Photo uploaded!' })
         setTimeout(() => setMessage({ type: '', text: '' }), 3000)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(blob)
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to upload photo' })
     } finally {
@@ -718,6 +739,50 @@ const ProfileNew = () => {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
+        {/* Profile Completion Progress Tracker */}
+        {(() => {
+          const { percentage, completed, total, missingFields } = getProfileCompletionDetails();
+          return (
+            <div className="mb-6 bg-[#171717] rounded-lg p-4 sm:p-5 border border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${percentage === 100 ? 'bg-green-900/40' : 'bg-indigo-900/40'}`}>
+                    {percentage === 100 ? (
+                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      {percentage === 100 ? 'Profile Complete!' : 'Profile Completion'}
+                    </h3>
+                    <p className="text-xs text-gray-400">{completed}/{total} fields completed</p>
+                  </div>
+                </div>
+                <span className={`text-lg font-bold ${percentage === 100 ? 'text-green-400' : 'text-[#7878E9]'}`}>
+                  {percentage}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-800 rounded-full h-2.5">
+                <div
+                  className={`h-2.5 rounded-full transition-all duration-500 ${percentage === 100 ? 'bg-green-500' : ''}`}
+                  style={{ width: `${percentage}%`, ...(percentage < 100 ? { background: 'linear-gradient(90deg, #7878E9, #3D3DD4)' } : {}) }}
+                />
+              </div>
+              {percentage < 100 && missingFields.length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Missing: {missingFields.slice(0, 3).join(', ')}{missingFields.length > 3 ? ` +${missingFields.length - 3} more` : ''}
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         {/* B2C User Layout */}
         {profileData.role === 'user' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2335,6 +2400,17 @@ const ProfileNew = () => {
           'Regular User'
         }
       />
+
+      {/* Image Cropper Modal */}
+      {cropperFile && (
+        <ImageCropper
+          file={cropperFile}
+          onComplete={cropperMode === 'profile' ? handleCroppedProfilePicture : handleCroppedPhoto}
+          onCancel={() => { setCropperFile(null); setCropperMode(null); }}
+          aspectRatio={cropperMode === 'profile' ? 1 : undefined}
+          circular={cropperMode === 'profile'}
+        />
+      )}
     </div>
   )
 }

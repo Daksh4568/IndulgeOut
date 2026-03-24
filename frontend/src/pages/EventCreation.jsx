@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import NavigationBar from "../components/NavigationBar";
 import TimeInput from "../components/TimeInput";
+// import ImageCropper from "../components/ImageCropper";
 import { api, API_URL } from "../config/api.js";
 import { useAuth } from "../contexts/AuthContext";
 import { ToastContext } from "../App";
@@ -51,6 +52,7 @@ const EventCreation = () => {
     description: "",
     categories: [],
     date: "",
+    endDate: "",
     startTime: "",
     endTime: "",
     location: {
@@ -96,11 +98,13 @@ const EventCreation = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showEndDate, setShowEndDate] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showCommunityDropdown, setShowCommunityDropdown] = useState(false);
   const [showCoHostDropdown, setShowCoHostDropdown] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  // const [cropperFile, setCropperFile] = useState(null);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
@@ -219,12 +223,25 @@ const EventCreation = () => {
           }
         }
 
+        let formattedEndDate = "";
+        if (event.endDate) {
+          try {
+            const endDateObj = new Date(event.endDate);
+            if (!isNaN(endDateObj.getTime())) {
+              formattedEndDate = endDateObj.toISOString().split("T")[0];
+            }
+          } catch (err) {
+            console.error("Error formatting end date:", err);
+          }
+        }
+
         // Populate form with existing event data
         setFormData({
           title: event.title || "",
           description: event.description || "",
           categories: event.categories || [],
           date: formattedDate,
+          endDate: formattedEndDate,
           startTime: event.startTime || "",
           endTime: event.endTime || "",
           location: {
@@ -325,6 +342,11 @@ const EventCreation = () => {
             resource_type: "image",
           }));
           setUploadedImages(imageObjects);
+        }
+
+        // Show end date input if event has an end date
+        if (event.endDate) {
+          setShowEndDate(true);
         }
 
         toast.success("Event loaded for editing");
@@ -1105,6 +1127,19 @@ const EventCreation = () => {
     const remainingSlots = 5 - uploadedImages.length;
     if (files.length > remainingSlots) {
       toast.error(`You can only upload ${remainingSlots} more image(s)`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Check total combined size (5MB limit)
+    const MAX_TOTAL_SIZE = 5 * 1024 * 1024;
+    let totalSize = 0;
+    for (let i = 0; i < files.length; i++) {
+      totalSize += files[i].size;
+    }
+    if (totalSize > MAX_TOTAL_SIZE) {
+      toast.error('All the images combined should not exceed 5MB');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -1168,6 +1203,7 @@ const EventCreation = () => {
         ...formData,
         maxParticipants: parseInt(formData.maxParticipants),
         date: formData.date,
+        endDate: formData.endDate || null,
         startTime: formData.startTime,
         endTime: formData.endTime,
         images: uploadedImages.map((img) => img.url), // Send image URLs
@@ -1413,6 +1449,36 @@ const EventCreation = () => {
                     className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                     required
                   />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="checkbox"
+                      id="hasEndDate"
+                      checked={showEndDate}
+                      onChange={(e) => {
+                        setShowEndDate(e.target.checked);
+                        if (!e.target.checked) {
+                          setFormData(prev => ({ ...prev, endDate: '' }));
+                        }
+                      }}
+                      className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
+                      style={{ accentColor: '#7878E9' }}
+                    />
+                    <label htmlFor="hasEndDate" className="text-white text-sm font-medium cursor-pointer">
+                      Multi-day event (Add End Date)
+                    </label>
+                  </div>
+                  {showEndDate && (
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleInputChange}
+                      min={formData.date || undefined}
+                      className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                    />
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <TimeInput
@@ -1699,66 +1765,115 @@ const EventCreation = () => {
                 )}
               </div>
 
-              {/* Questionnaire */}
+              {/* Pricing Timeline */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="questionnaire"
-                    checked={formData.questionnaire?.enabled || false}
-                    onChange={(e) => handleQuestionnaireToggle(e.target.checked)}
+                    id="pricingTimeline"
+                    checked={formData.pricingTimeline?.enabled || false}
+                    onChange={(e) => handlePricingTimelineToggle(e.target.checked)}
                     className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
                     style={{ accentColor: '#7878E9' }}
                   />
-                  <label htmlFor="questionnaire" className="text-white text-sm font-medium cursor-pointer">
-                    Questionnaire for Participants
+                  <label htmlFor="pricingTimeline" className="text-white text-sm font-medium cursor-pointer">
+                    Early Bird
                   </label>
                 </div>
 
-                {formData.questionnaire?.enabled && (
-                  <div className="space-y-3 pl-6 border-l-2 border-white/10">
-                    {formData.questionnaire.questions?.map((item, index) => (
-                      <div key={index} className="space-y-2">
-                        {formData.questionnaire.questions.length > 1 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-white text-xs font-medium">
-                              Question {index + 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeQuestion(index)}
-                              className="text-red-400 hover:text-red-300 text-xs"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
+                {formData.pricingTimeline?.enabled && (
+                  <div className="space-y-4 pl-6 border-l-2 border-white/10">
+                    <p className="text-xs text-gray-400">
+                      Set different prices for different date ranges leading up to your event. The ticket price will automatically change based on the current date.
+                    </p>
+                    
+                    {formData.pricingTimeline.tiers?.map((tier, index) => (
+                      <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white text-sm font-medium">
+                            Price Tier {index + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removePricingTier(index)}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Label */}
                         <div>
-                          <textarea
-                            value={item.question}
-                            onChange={(e) => handleQuestionChange(index, e.target.value)}
-                            placeholder="Enter your question here..."
-                            rows="2"
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Label (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={tier.label}
+                            onChange={(e) => updatePricingTier(index, 'label', e.target.value)}
+                            placeholder="e.g., Early Bird, Regular, Last Minute"
                             className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Date Range */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={tier.startDate ? tier.startDate.split('T')[0] : ''}
+                              onChange={(e) => updatePricingTier(index, 'startDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-white text-xs font-medium mb-1">
+                              End Date
+                            </label>
+                            <input
+                              type="date"
+                              value={tier.endDate ? tier.endDate.split('T')[0] : ''}
+                              onChange={(e) => updatePricingTier(index, 'endDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div>
+                          <label className="block text-white text-xs font-medium mb-1">
+                            Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={tier.price}
+                            onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
+                            placeholder="₹0"
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
                       </div>
                     ))}
                     
-                    {/* Add More Button - Show if less than 3 questions */}
-                    {(formData.questionnaire.questions?.length || 0) < 3 && (
+                    {/* Add Tier Button */}
+                    {(formData.pricingTimeline.tiers?.length || 0) < 5 && (
                       <button
                         type="button"
-                        onClick={addQuestion}
+                        onClick={addPricingTier}
                         className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
                       >
                         <span className="text-lg">+</span>
-                        <span>Add Question</span>
+                        <span>Add Price Tier</span>
                       </button>
                     )}
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Ask participants questions before booking (max 3 questions)
+                      💡 Example: Early Bird till March 25 at ₹500, Regular till March 31 at ₹700, Last Minute till event day at ₹1000. The base price above will be used for any dates not covered by tiers.
                     </p>
                   </div>
                 )}
@@ -1940,122 +2055,90 @@ const EventCreation = () => {
                     <p className="text-xs text-gray-400 italic mt-2">
                       💡 Create discount codes for early birds or special groups (e.g., INDULGE100 for first 10 users)
                     </p>
-                    <p className="text-xs text-gray-400 italic mt-1">
-                      💡 Eg: You are giving ₹200 off on a ticket of ₹300 per user — user pays ₹100 per ticket
-                    </p>
+                    {(() => {
+                      const ticketPrice = Number(formData.price?.amount) || 0;
+                      const firstCoupon = formData.coupons.codes?.[0];
+                      const discountType = firstCoupon?.discountType || 'percentage';
+                      const discountValue = Number(firstCoupon?.discountValue) || 0;
+                      if (ticketPrice <= 0 || discountValue <= 0) return (
+                        <p className="text-xs text-gray-400 italic mt-1">
+                          💡 Eg: You are giving ₹200 off on a ticket of ₹300 per user — user pays ₹100 per ticket
+                        </p>
+                      );
+                      const discountAmt = discountType === 'percentage'
+                        ? Math.round(ticketPrice * discountValue / 100)
+                        : Math.round(discountValue);
+                      const finalPrice = Math.max(0, ticketPrice - discountAmt);
+                      return (
+                        <p className="text-xs text-gray-400 italic mt-1">
+                          💡 Eg: You are giving ₹{discountAmt} off on a ticket of ₹{ticketPrice} per user — user pays ₹{finalPrice} per ticket
+                        </p>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
 
-              {/* Pricing Timeline */}
+              {/* Questionnaire */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="pricingTimeline"
-                    checked={formData.pricingTimeline?.enabled || false}
-                    onChange={(e) => handlePricingTimelineToggle(e.target.checked)}
+                    id="questionnaire"
+                    checked={formData.questionnaire?.enabled || false}
+                    onChange={(e) => handleQuestionnaireToggle(e.target.checked)}
                     className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
                     style={{ accentColor: '#7878E9' }}
                   />
-                  <label htmlFor="pricingTimeline" className="text-white text-sm font-medium cursor-pointer">
-                    Time-Based Pricing
+                  <label htmlFor="questionnaire" className="text-white text-sm font-medium cursor-pointer">
+                    Questionnaire for Participants
                   </label>
                 </div>
 
-                {formData.pricingTimeline?.enabled && (
-                  <div className="space-y-4 pl-6 border-l-2 border-white/10">
-                    <p className="text-xs text-gray-400">
-                      Set different prices for different date ranges leading up to your event. The ticket price will automatically change based on the current date.
-                    </p>
-                    
-                    {formData.pricingTimeline.tiers?.map((tier, index) => (
-                      <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
-                        <div className="flex items-center justify-between">
-                          <span className="text-white text-sm font-medium">
-                            Price Tier {index + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removePricingTier(index)}
-                            className="text-red-400 hover:text-red-300 text-xs"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        {/* Label */}
+                {formData.questionnaire?.enabled && (
+                  <div className="space-y-3 pl-6 border-l-2 border-white/10">
+                    {formData.questionnaire.questions?.map((item, index) => (
+                      <div key={index} className="space-y-2">
+                        {formData.questionnaire.questions.length > 1 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-white text-xs font-medium">
+                              Question {index + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeQuestion(index)}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
                         <div>
-                          <label className="block text-white text-xs font-medium mb-1">
-                            Label (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            value={tier.label}
-                            onChange={(e) => updatePricingTier(index, 'label', e.target.value)}
-                            placeholder="e.g., Early Bird, Regular, Last Minute"
+                          <textarea
+                            value={item.question}
+                            onChange={(e) => handleQuestionChange(index, e.target.value)}
+                            placeholder="Enter your question here..."
+                            rows="2"
                             className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                          />
-                        </div>
-
-                        {/* Date Range */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-white text-xs font-medium mb-1">
-                              Start Date
-                            </label>
-                            <input
-                              type="date"
-                              value={tier.startDate ? tier.startDate.split('T')[0] : ''}
-                              onChange={(e) => updatePricingTier(index, 'startDate', e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white text-xs font-medium mb-1">
-                              End Date
-                            </label>
-                            <input
-                              type="date"
-                              value={tier.endDate ? tier.endDate.split('T')[0] : ''}
-                              onChange={(e) => updatePricingTier(index, 'endDate', e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Price */}
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-1">
-                            Price (₹)
-                          </label>
-                          <input
-                            type="number"
-                            value={tier.price}
-                            onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
-                            placeholder="₹0"
-                            min="0"
-                            step="0.01"
-                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
                       </div>
                     ))}
                     
-                    {/* Add Tier Button */}
-                    {(formData.pricingTimeline.tiers?.length || 0) < 5 && (
+                    {/* Add More Button - Show if less than 3 questions */}
+                    {(formData.questionnaire.questions?.length || 0) < 3 && (
                       <button
                         type="button"
-                        onClick={addPricingTier}
+                        onClick={addQuestion}
                         className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
                       >
                         <span className="text-lg">+</span>
-                        <span>Add Price Tier</span>
+                        <span>Add Question</span>
                       </button>
                     )}
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Example: Early Bird till March 25 at ₹500, Regular till March 31 at ₹700, Last Minute till event day at ₹1000. The base price above will be used for any dates not covered by tiers.
+                      💡 Ask participants questions before booking (max 3 questions)
                     </p>
                   </div>
                 )}
@@ -2158,6 +2241,18 @@ const EventCreation = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Cropper Modal - disabled for now */}
+      {/* {cropperFile && (
+        <ImageCropper
+          file={cropperFile}
+          onComplete={(blob) => {
+            setCropperFile(null);
+            uploadEventImages(blob);
+          }}
+          onCancel={() => setCropperFile(null)}
+        />
+      )} */}
     </div>
   );
 };

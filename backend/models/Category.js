@@ -155,8 +155,10 @@ categorySchema.virtual('clusterInfo').get(function() {
 
 // Method to increment view count
 categorySchema.methods.incrementView = async function() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use IST date for view tracking
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  const todayISTStr = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+  const today = new Date(todayISTStr + 'T00:00:00.000Z');
 
   // Increment total views
   this.analytics.views += 1;
@@ -164,9 +166,8 @@ categorySchema.methods.incrementView = async function() {
 
   // Update or create today's view history entry
   const todayEntry = this.viewHistory.find(entry => {
-    const entryDate = new Date(entry.date);
-    entryDate.setHours(0, 0, 0, 0);
-    return entryDate.getTime() === today.getTime();
+    const entryDateStr = new Date(new Date(entry.date).getTime() + IST_OFFSET).toISOString().split('T')[0];
+    return entryDateStr === todayISTStr;
   });
 
   if (todayEntry) {

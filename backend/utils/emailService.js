@@ -131,11 +131,9 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
         <p style="color: #333; font-size: 22px; font-weight: bold; margin: 10px 0; letter-spacing: 1px;">
           Ticket ID: ${ticket.ticketNumber}
         </p>
-        ${ticket.quantity && ticket.quantity > 1 ? `
         <p style="color: #666; font-size: 16px; margin: 10px 0; background: #f3f4f6; padding: 8px 16px; border-radius: 6px; display: inline-block;">
-          <strong>👥 Spots Booked:</strong> ${ticket.quantity}
+          <strong>🎫 Ticket:</strong> ${ticket.quantity || 1} ${(ticket.quantity || 1) === 1 ? 'Spot' : 'Spots'}
         </p>
-        ` : ''}
         <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
           <img src="${qrCodeSrc}" alt="QR Code" style="width: 200px; height: 200px; max-width: 200px; margin: 10px auto; display: block; border: 2px solid #e5e7eb; padding: 10px; background: white;" />
           <p style="color: #666; font-size: 14px; margin: 15px 0 5px 0;">

@@ -102,11 +102,16 @@ async function sendEventReminders() {
     
     for (const event of upcomingEvents) {
       // Check if we already sent reminder for this event today
+      // Use IST midnight for dedup check
+      const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+      const todayISTStr = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+      const todayISTMidnight = new Date(todayISTStr + 'T00:00:00.000Z');
+      todayISTMidnight.setTime(todayISTMidnight.getTime() - IST_OFFSET);
       const existingReminder = await Notification.findOne({
         type: 'event_reminder',
         relatedEvent: event._id,
         createdAt: {
-          $gte: new Date(now.setHours(0, 0, 0, 0))
+          $gte: todayISTMidnight
         }
       });
       
@@ -513,13 +518,13 @@ async function runDailyReconciliation() {
     
     console.log('💰 Starting daily payment reconciliation...');
     
-    // Get yesterday's date range
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get yesterday's date range in IST
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const nowISTStr = new Date(Date.now() + IST_OFFSET_MS).toISOString().split('T')[0];
+    const todayISTMidnightUTC = new Date(new Date(nowISTStr + 'T00:00:00.000Z').getTime() - IST_OFFSET_MS);
+    const yesterdayISTMidnightUTC = new Date(todayISTMidnightUTC.getTime() - 24 * 60 * 60 * 1000);
+    const yesterday = yesterdayISTMidnightUTC;
+    const today = todayISTMidnightUTC;
     
     // Find ONLY unverified paid tickets for reconciliation (purchased in last 30 days)
     // IMPORTANT: Skip already verified tickets (reconciliationStatus: 'verified') 

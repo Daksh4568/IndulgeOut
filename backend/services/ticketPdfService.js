@@ -137,7 +137,7 @@ async function generateTicketPdf(opts) {
         { label: 'Date', value: eventDate },
         { label: 'Time', value: eventTime },
         { label: 'Venue', value: venueName },
-        { label: 'Tickets', value: String(spots) },
+        { label: 'Tickets', value: `${spots} ${Number(spots) === 1 ? 'Spot' : 'Spots'}` },
         { label: 'Booking ID', value: ticketNumber },
       ];
 

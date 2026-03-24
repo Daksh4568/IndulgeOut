@@ -130,8 +130,8 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         id: 'profile_incomplete',
         type: 'profile_incomplete',
         priority: 'high',
-        title: 'Complete Your Venue Profile',
-        description: `Complete your profile to attract more events. Missing: ${profileCheck.missingFields.join(', ')}.`,
+        title: 'Complete Your Profile',
+        description: 'Tip: A complete profile attracts more events and collaborations.',
         ctaText: 'Complete Profile',
         itemId: null,
         metadata: {

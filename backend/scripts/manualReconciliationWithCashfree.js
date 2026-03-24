@@ -88,26 +88,35 @@ async function runManualReconciliation(options) {
       }
       
       startDate = new Date(earliestTicket.purchaseDate);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
+      // Use IST-aware day boundaries
+      const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+      const startISTStr = new Date(startDate.getTime() + IST_OFFSET).toISOString().split('T')[0];
+      startDate = new Date(new Date(startISTStr + 'T00:00:00.000Z').getTime() - IST_OFFSET);
+      const endISTStr = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+      endDate = new Date(new Date(endISTStr + 'T23:59:59.999Z').getTime() - IST_OFFSET);
       
       console.log(`📅 Processing ALL historical tickets`);
       console.log(`   From: ${startDate.toDateString()}`);
       console.log(`   To: ${endDate.toDateString()}`);
     } else if (options.from && options.to) {
       startDate = new Date(options.from);
-      startDate.setHours(0, 0, 0, 0);
+      const IST_OFF2 = 5.5 * 60 * 60 * 1000;
+      const fromISTStr = new Date(startDate.getTime() + IST_OFF2).toISOString().split('T')[0];
+      startDate = new Date(new Date(fromISTStr + 'T00:00:00.000Z').getTime() - IST_OFF2);
       endDate = new Date(options.to);
-      endDate.setHours(23, 59, 59, 999);
+      const toISTStr = new Date(endDate.getTime() + IST_OFF2).toISOString().split('T')[0];
+      endDate = new Date(new Date(toISTStr + 'T23:59:59.999Z').getTime() - IST_OFF2);
       
       console.log(`📅 Processing date range: ${startDate.toDateString()} to ${endDate.toDateString()}`);
     } else if (options.days) {
       endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
+      const IST_OFF3 = 5.5 * 60 * 60 * 1000;
+      const endISTStr3 = new Date(endDate.getTime() + IST_OFF3).toISOString().split('T')[0];
+      endDate = new Date(new Date(endISTStr3 + 'T23:59:59.999Z').getTime() - IST_OFF3);
       startDate = new Date();
       startDate.setDate(startDate.getDate() - options.days);
-      startDate.setHours(0, 0, 0, 0);
+      const startISTStr3 = new Date(startDate.getTime() + IST_OFF3).toISOString().split('T')[0];
+      startDate = new Date(new Date(startISTStr3 + 'T00:00:00.000Z').getTime() - IST_OFF3);
       
       console.log(`📅 Processing last ${options.days} days`);
       console.log(`   From: ${startDate.toDateString()}`);
@@ -116,9 +125,10 @@ async function runManualReconciliation(options) {
       // Default: yesterday only
       startDate = new Date();
       startDate.setDate(startDate.getDate() - 1);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(0, 0, 0, 0);
+      const IST_OFF4 = 5.5 * 60 * 60 * 1000;
+      const startISTStr4 = new Date(startDate.getTime() + IST_OFF4).toISOString().split('T')[0];
+      startDate = new Date(new Date(startISTStr4 + 'T00:00:00.000Z').getTime() - IST_OFF4);
+      endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1);
       
       console.log(`📅 Processing yesterday's tickets: ${startDate.toDateString()}`);
     }
@@ -592,13 +602,13 @@ async function runManualReconciliation(options) {
       if (event.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length > 0) {
         console.log(`     Time-Based Pricing: ENABLED`);
         event.pricingTimeline.tiers.forEach((tier, i) => {
+          const IST_OFF = 5.5 * 60 * 60 * 1000;
+          const toISTStr = (d) => new Date(new Date(d).getTime() + IST_OFF).toISOString().split('T')[0];
+          const tierStartStr = toISTStr(tier.startDate);
+          const tierEndStr = toISTStr(tier.endDate);
           const tierTickets = eventTickets.filter(t => {
-            const purchaseDate = new Date(t.purchaseDate);
-            const start = new Date(tier.startDate);
-            const end = new Date(tier.endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return purchaseDate >= start && purchaseDate <= end;
+            const purchaseStr = toISTStr(t.purchaseDate);
+            return purchaseStr >= tierStartStr && purchaseStr <= tierEndStr;
           });
           const tierRevenue = tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0);
           console.log(`       Tier ${i + 1}: ${tier.label || 'N/A'} - ₹${tier.price} (${new Date(tier.startDate).toLocaleDateString()} to ${new Date(tier.endDate).toLocaleDateString()}) → ${tierTickets.length} tickets, ₹${tierRevenue}`);

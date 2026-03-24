@@ -724,13 +724,14 @@ const EventAnalytics = () => {
                 <h3 className="text-sm font-medium text-gray-400 mb-3">Scheduled Price Tiers</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {analytics.pricingTimeline.tiers.map((tier, index) => {
-                    const now = new Date();
-                    const start = new Date(tier.startDate);
-                    const end = new Date(tier.endDate);
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(23, 59, 59, 999);
-                    const isActive = now >= start && now <= end;
-                    const isPast = now > end;
+                    // IST-aware date comparison for tier status
+                    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+                    const toISTDate = (d) => new Date(new Date(d).getTime() + IST_OFFSET).toISOString().split('T')[0];
+                    const todayIST = toISTDate(new Date());
+                    const startIST = toISTDate(tier.startDate);
+                    const endIST = toISTDate(tier.endDate);
+                    const isActive = todayIST >= startIST && todayIST <= endIST;
+                    const isPast = todayIST > endIST;
                     
                     return (
                       <div 
@@ -1286,15 +1287,15 @@ const EventAnalytics = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-white">
-                          ₹{attendee.metadata?.basePrice || attendee.price?.amount || 0}
+                          ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          Ticket Price
+                          {(attendee.quantity || 1) > 1 ? `Per spot × ${attendee.quantity}` : 'Per spot'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-white">
-                          ₹{attendee.metadata?.priceAtPurchase || attendee.price?.amount || 0}
+                          ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)}
                         </div>
                         {attendee.metadata?.pricingTimelineTier && (
                           <div className="text-xs text-purple-400">
