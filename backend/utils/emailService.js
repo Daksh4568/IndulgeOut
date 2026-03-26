@@ -31,7 +31,10 @@ const createTransporter = () => {
     },
     tls: {
       rejectUnauthorized: false // For development
-    }
+    },
+    connectionTimeout: 10000, // 10s to establish connection
+    greetingTimeout: 10000,   // 10s for server greeting
+    socketTimeout: 15000,     // 15s for socket inactivity
   });
 };
 
@@ -111,12 +114,16 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
       ticketKeys: ticket ? Object.keys(ticket) : []
     });
 
-    const eventDate = new Date(event.date).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const eventDate = (() => {
+      const startStr = new Date(event.date).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      if (!event.endDate) return startStr;
+      const endStr = new Date(event.endDate).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      return `${startStr} - ${endStr}`;
+    })();
 
     // Prefer hosted URL over base64 for better email client compatibility
     const qrCodeSrc = ticket?.qrCodeUrl || ticket?.qrCode;
@@ -232,12 +239,16 @@ const sendWhatsAppTicketNotification = async (user, event, ticket) => {
 
     const firstName = (user.name || 'Guest').split(' ')[0];
 
-    const eventDate = new Date(event.date).toLocaleDateString('en-IN', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    const eventDate = (() => {
+      const startStr = new Date(event.date).toLocaleDateString('en-IN', {
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+      });
+      if (!event.endDate) return startStr;
+      const endStr = new Date(event.endDate).toLocaleDateString('en-IN', {
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+      });
+      return `${startStr} - ${endStr}`;
+    })();
 
     const eventTime = event.startTime && event.endTime
       ? `${event.startTime} - ${event.endTime}`

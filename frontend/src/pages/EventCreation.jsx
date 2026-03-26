@@ -628,13 +628,18 @@ const EventCreation = () => {
         ...newTiers[index],
         [field]: value,
       };
-      return {
+      // Sync price.amount with the first tier's price so backend always has a valid price
+      const updates = {
         ...prev,
         pricingTimeline: {
           ...prev.pricingTimeline,
           tiers: newTiers,
         },
       };
+      if (field === 'price' && index === 0) {
+        updates.price = { ...prev.price, amount: Number(value) || 0 };
+      }
+      return updates;
     });
   };
 
@@ -1126,7 +1131,7 @@ const EventCreation = () => {
 
     const remainingSlots = 5 - uploadedImages.length;
     if (files.length > remainingSlots) {
-      toast.error(`You can only upload ${remainingSlots} more image(s)`);
+      toast.error(`You can only upload upto 5 images`);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -1191,6 +1196,117 @@ const EventCreation = () => {
     if (formData.categories.length === 0) {
       toast.error("Please select at least one category");
       return;
+    }
+
+    // Validate pricing timeline (Early Bird)
+    if (formData.pricingTimeline?.enabled) {
+      const tiers = formData.pricingTimeline.tiers || [];
+      if (tiers.length === 0) {
+        toast.error("Early Bird is enabled but no price tiers added. Please add at least one tier or disable Early Bird.");
+        return;
+      }
+      for (let i = 0; i < tiers.length; i++) {
+        const tier = tiers[i];
+        if (!tier.startDate) {
+          toast.error(`Early Bird Tier ${i + 1}: Start Date is required`);
+          return;
+        }
+        if (!tier.endDate) {
+          toast.error(`Early Bird Tier ${i + 1}: End Date is required`);
+          return;
+        }
+        if (new Date(tier.endDate) < new Date(tier.startDate)) {
+          toast.error(`Early Bird Tier ${i + 1}: End Date cannot be before Start Date`);
+          return;
+        }
+        if (!tier.price && tier.price !== 0) {
+          toast.error(`Early Bird Tier ${i + 1}: Price is required`);
+          return;
+        }
+        if (Number(tier.price) < 0) {
+          toast.error(`Early Bird Tier ${i + 1}: Price cannot be negative`);
+          return;
+        }
+      }
+      // Check for overlapping date ranges
+      for (let i = 0; i < tiers.length; i++) {
+        for (let j = i + 1; j < tiers.length; j++) {
+          const a = tiers[i], b = tiers[j];
+          if (a.startDate && a.endDate && b.startDate && b.endDate) {
+            if (a.startDate <= b.endDate && b.startDate <= a.endDate) {
+              toast.error(`Early Bird Tier ${i + 1} and Tier ${j + 1} have overlapping date ranges`);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Validate grouping offers
+    if (formData.groupingOffers?.enabled) {
+      const tiers = formData.groupingOffers.tiers || [];
+      for (let i = 1; i < tiers.length; i++) {
+        if (!tiers[i].people || tiers[i].people < 2) {
+          toast.error(`Group Offer Tier ${i + 1}: Number of people must be at least 2`);
+          return;
+        }
+        if (!tiers[i].price && tiers[i].price !== 0) {
+          toast.error(`Group Offer Tier ${i + 1}: Price is required`);
+          return;
+        }
+        if (Number(tiers[i].price) < 0) {
+          toast.error(`Group Offer Tier ${i + 1}: Price cannot be negative`);
+          return;
+        }
+      }
+    }
+
+    // Validate coupons
+    if (formData.coupons?.enabled) {
+      const codes = formData.coupons.codes || [];
+      if (codes.length === 0) {
+        toast.error("Coupon section is enabled but no coupons added. Please add a coupon or disable it.");
+        return;
+      }
+      for (let i = 0; i < codes.length; i++) {
+        if (!codes[i].code || !codes[i].code.trim()) {
+          toast.error(`Coupon ${i + 1}: Coupon code is required`);
+          return;
+        }
+        if (!codes[i].discountValue || codes[i].discountValue <= 0) {
+          toast.error(`Coupon ${i + 1}: Discount value must be greater than 0`);
+          return;
+        }
+        if (codes[i].discountType === 'percentage' && codes[i].discountValue > 100) {
+          toast.error(`Coupon ${i + 1}: Percentage discount cannot exceed 100%`);
+          return;
+        }
+      }
+      // Check for duplicate coupon codes
+      const codeSet = new Set();
+      for (const c of codes) {
+        const upper = c.code?.trim().toUpperCase();
+        if (upper && codeSet.has(upper)) {
+          toast.error(`Duplicate coupon code: ${upper}`);
+          return;
+        }
+        codeSet.add(upper);
+      }
+    }
+
+    // Validate questionnaire
+    if (formData.questionnaire?.enabled) {
+      const questions = formData.questionnaire.questions || [];
+      if (questions.length === 0) {
+        toast.error("Questionnaire is enabled but no questions added. Please add a question or disable it.");
+        return;
+      }
+      for (let i = 0; i < questions.length; i++) {
+        if (!questions[i].question || !questions[i].question.trim()) {
+          toast.error(`Question ${i + 1}: Question text is required`);
+          return;
+        }
+      }
     }
     
     setIsLoading(true);
@@ -1439,7 +1555,7 @@ const EventCreation = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-white text-sm font-medium mb-2">
-                    Date <span className="text-red-400">*</span>
+                    {showEndDate ? 'Start Date' : 'Date'} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="date"
@@ -1470,14 +1586,19 @@ const EventCreation = () => {
                     </label>
                   </div>
                   {showEndDate && (
-                    <input
-                      type="date"
-                      name="endDate"
-                      value={formData.endDate}
-                      onChange={handleInputChange}
-                      min={formData.date || undefined}
-                      className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                    />
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        name="endDate"
+                        value={formData.endDate}
+                        onChange={handleInputChange}
+                        min={formData.date || undefined}
+                        className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1655,9 +1776,13 @@ const EventCreation = () => {
                     placeholder="₹0"
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    disabled={formData.pricingTimeline?.enabled}
+                    className={`w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${formData.pricingTimeline?.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     required
                   />
+                  {formData.pricingTimeline?.enabled && (
+                    <p className="text-[10px] text-yellow-400/80 mt-1 italic">Price is set by Early Bird tiers</p>
+                  )}
                 </div>
               </div>
 
@@ -1873,7 +1998,7 @@ const EventCreation = () => {
                     )}
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Example: Early Bird till March 25 at ₹500, Regular till March 31 at ₹700, Last Minute till event day at ₹1000. The base price above will be used for any dates not covered by tiers.
+                      💡 Example: Early Bird till March 25 at ₹500, Regular till March 31 at ₹700, Last Minute till event day at ₹1000.
                     </p>
                   </div>
                 )}
@@ -2053,7 +2178,7 @@ const EventCreation = () => {
                     </button>
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Create discount codes for early birds or special groups (e.g., INDULGE100 for first 10 users)
+                      💡 Create discount codes for special offers (e.g., Giving 10% discount to first 20 users)
                     </p>
                     {(() => {
                       const ticketPrice = Number(formData.price?.amount) || 0;
@@ -2068,10 +2193,13 @@ const EventCreation = () => {
                       const discountAmt = discountType === 'percentage'
                         ? Math.round(ticketPrice * discountValue / 100)
                         : Math.round(discountValue);
+                      const discountPct = discountType === 'percentage'
+                        ? discountValue
+                        : ticketPrice > 0 ? Math.round((discountValue / ticketPrice) * 100) : 0;
                       const finalPrice = Math.max(0, ticketPrice - discountAmt);
                       return (
                         <p className="text-xs text-gray-400 italic mt-1">
-                          💡 Eg: You are giving ₹{discountAmt} off on a ticket of ₹{ticketPrice} per user — user pays ₹{finalPrice} per ticket
+                          💡 Eg: You are giving {discountPct}% (₹{discountAmt}) off on a ticket of ₹{ticketPrice} per user — user pays ₹{finalPrice} per ticket
                         </p>
                       );
                     })()}

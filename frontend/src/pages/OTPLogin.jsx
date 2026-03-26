@@ -264,7 +264,7 @@ const OTPLogin = () => {
                   <div>
                     <div className="flex gap-2">
                       <select 
-                        className="px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent"
+                        className="flex-shrink-0 w-[85px] px-2 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                         style={{ '--tw-ring-color': '#7878E9' }}
                       >
                         <option value="+91">🇮🇳 +91</option>
@@ -276,7 +276,7 @@ const OTPLogin = () => {
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
                         placeholder="Enter mobile number"
-                        className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                        className="flex-1 min-w-0 px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                         style={{ '--tw-ring-color': '#7878E9' }}
                       />
                     </div>

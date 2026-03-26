@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +49,34 @@ const AdminDashboard = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Marketing state
+  const [marketingAudienceType, setMarketingAudienceType] = useState('all_b2c');
+  const [marketingOrganizerId, setMarketingOrganizerId] = useState('');
+  const [marketingCategories, setMarketingCategories] = useState([]);
+  const [marketingEventId, setMarketingEventId] = useState('');
+  const [marketingEvents, setMarketingEvents] = useState([]);
+  const [marketingEventSearch, setMarketingEventSearch] = useState('');
+  const [marketingOrganizers, setMarketingOrganizers] = useState([]);
+  const [marketingOrganizerSearch, setMarketingOrganizerSearch] = useState('');
+  const [showOrganizerDropdown, setShowOrganizerDropdown] = useState(false);
+  const orgDropdownRef = useRef(null);
+  const [marketingAudiencePreview, setMarketingAudiencePreview] = useState(null);
+  const [marketingLoading, setMarketingLoading] = useState(false);
+  const [marketingSending, setMarketingSending] = useState(false);
+  const [marketingResult, setMarketingResult] = useState(null);
+  const [showMarketingConfirm, setShowMarketingConfirm] = useState(false);
+
+  // Close organizer dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (orgDropdownRef.current && !orgDropdownRef.current.contains(e.target)) {
+        setShowOrganizerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Check if user is admin
   useEffect(() => {
     if (authLoading) return;
@@ -87,6 +115,9 @@ const AdminDashboard = () => {
         case 'organizers':
           fetchOrganizers();
           setCurrentView('list');
+          break;
+        case 'marketing':
+          fetchMarketingData();
           break;
         default:
           break;
@@ -287,6 +318,74 @@ const AdminDashboard = () => {
     setSelectedEvent(null);
     setEventDetails(null);
   };
+
+  // ==================== MARKETING FUNCTIONS ====================
+
+  const fetchMarketingData = async () => {
+    try {
+      const [eventsRes, orgRes] = await Promise.all([
+        api.get('/admin/marketing/events'),
+        api.get('/admin/organizers?limit=100')
+      ]);
+      if (eventsRes.data.success) setMarketingEvents(eventsRes.data.events);
+      if (orgRes.data.organizers) setMarketingOrganizers(orgRes.data.organizers);
+    } catch (err) {
+      console.error('Error fetching marketing data:', err);
+    }
+  };
+
+  const fetchMarketingAudience = async () => {
+    setMarketingLoading(true);
+    setMarketingAudiencePreview(null);
+    try {
+      const params = new URLSearchParams({ audienceType: marketingAudienceType });
+      if (marketingAudienceType === 'organizer_specific' && marketingOrganizerId) {
+        params.append('organizerId', marketingOrganizerId);
+      }
+      if (marketingAudienceType === 'category_interests' && marketingCategories.length > 0) {
+        params.append('categories', marketingCategories.join(','));
+      }
+      const res = await api.get(`/admin/marketing/audience?${params.toString()}`);
+      if (res.data.success) {
+        setMarketingAudiencePreview(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching audience preview:', err);
+    } finally {
+      setMarketingLoading(false);
+    }
+  };
+
+  const handleSendMarketing = async () => {
+    setMarketingSending(true);
+    setMarketingResult(null);
+    setShowMarketingConfirm(false);
+    try {
+      const body = {
+        audienceType: marketingAudienceType,
+        eventId: marketingEventId,
+      };
+      if (marketingAudienceType === 'organizer_specific') body.organizerId = marketingOrganizerId;
+      if (marketingAudienceType === 'category_interests') body.categories = marketingCategories;
+
+      const res = await api.post('/admin/marketing/send', body);
+      setMarketingResult(res.data);
+    } catch (err) {
+      console.error('Error sending marketing messages:', err);
+      setMarketingResult({ success: false, error: err.response?.data?.error || 'Failed to send' });
+    } finally {
+      setMarketingSending(false);
+    }
+  };
+
+  const MARKETING_CATEGORIES = [
+    'Social Mixers',
+    'Wellness, Fitness & Sports',
+    'Art, Music & Dance',
+    'Immersive',
+    'Food & Beverage',
+    'Games'
+  ];
 
   const fetchProposalDetails = async (id) => {
     try {
@@ -621,7 +720,8 @@ const AdminDashboard = () => {
                 { id: 'counters', label: 'Pending Counters', badge: pendingCounters.length || null },
                 { id: 'all-collaborations', label: 'All Collaborations', badge: null },
                 { id: 'flagged', label: 'Flagged Items', badge: flaggedProposals.length || null },
-                { id: 'analytics', label: 'Analytics', badge: null }
+                { id: 'analytics', label: 'Analytics', badge: null },
+                { id: 'marketing', label: 'Marketing', badge: null }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -2182,11 +2282,11 @@ const AdminDashboard = () => {
                                 </div>
                                 <div className="text-xl font-bold text-white mb-1">₹{tier.price}</div>
                                 <div className="text-xs text-gray-400 mb-2">
-                                  {new Date(tier.startDate).toLocaleDateString()} → {new Date(tier.endDate).toLocaleDateString()}
+                                  {new Date(tier.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} → {new Date(tier.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-gray-400">{tier.spotsBought || 0} spots</span>
-                                  <span className="text-green-400 font-medium">₹{(tier.revenue || 0).toLocaleString()}</span>
+                                  <span className="text-green-400 font-medium">₹{(tier.revenue || 0).toLocaleString('en-IN')}</span>
                                 </div>
                               </div>
                             );
@@ -2203,7 +2303,7 @@ const AdminDashboard = () => {
                           <table className="min-w-full divide-y divide-gray-700">
                             <thead className="bg-zinc-800">
                               <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Date</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Date & Time</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Previous</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">New Price</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reason</th>
@@ -2214,7 +2314,7 @@ const AdminDashboard = () => {
                               {eventDetails.priceChangeHistory.map((change, index) => (
                                 <tr key={index} className="hover:bg-zinc-800">
                                   <td className="px-4 py-3 text-sm text-white">
-                                    {new Date(change.changedAt).toLocaleString()}
+                                    {new Date(change.changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-300">₹{change.previousPrice}</td>
                                   <td className="px-4 py-3 text-sm font-semibold text-white">
@@ -2223,9 +2323,9 @@ const AdminDashboard = () => {
                                   </td>
                                   <td className="px-4 py-3 text-sm">
                                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                      change.reason === 'initial_creation' ? 'bg-blue-100 text-blue-800' :
-                                      change.reason === 'timeline_automatic' ? 'bg-purple-100 text-purple-800' :
-                                      'bg-yellow-100 text-yellow-800'
+                                      change.reason === 'initial_creation' ? 'bg-blue-500/20 text-blue-400' :
+                                      change.reason === 'timeline_automatic' ? 'bg-purple-500/20 text-purple-400' :
+                                      'bg-yellow-500/20 text-yellow-400'
                                     }`}>
                                       {change.reason === 'initial_creation' ? 'Created' : 
                                        change.reason === 'timeline_automatic' ? 'Auto (Timeline)' : 'Manual Edit'}
@@ -2251,37 +2351,98 @@ const AdminDashboard = () => {
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket #</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Purchase Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Price</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Price at Purchase</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Booking Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order ID</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Coupon Used</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Per Ticket Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Total Ticket Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                            Final Amount Paid
+                            <span className="block text-[10px] normal-case text-gray-500 font-normal">(inc. Fees & GST)</span>
+                          </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Settlement</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reconciliation</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-700">
-                        {eventDetails.attendees.map((attendee) => (
+                        {[...eventDetails.attendees].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)).map((attendee) => (
                           <tr key={attendee.ticketNumber} className="hover:bg-zinc-800">
-                            <td className="px-4 py-3 text-sm font-mono text-white">{attendee.ticketNumber}</td>
+                            <td className="px-4 py-3 text-sm font-mono text-white">
+                              {attendee.ticketNumber}
+                              {attendee.quantity > 1 && (
+                                <span className="ml-1 inline-flex items-center px-1.5 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full">
+                                  × {attendee.quantity}
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-sm">
                               <div>
                                 <p className="font-medium text-white">{attendee.user?.name}</p>
                                 <p className="text-xs text-gray-500">{attendee.user?.email}</p>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm text-white">{new Date(attendee.purchaseDate).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-white">₹{attendee.price}</td>
+                            <td className="px-4 py-3 text-sm text-white">
+                              <div>
+                                {new Date(attendee.purchaseDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(attendee.purchaseDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </td>
                             <td className="px-4 py-3 text-sm">
-                              <div className="text-white">₹{attendee.priceAtPurchase || attendee.price}</div>
+                              {attendee.orderId ? (
+                                <div className="font-mono text-xs text-blue-400 truncate max-w-[150px]" title={attendee.orderId}>
+                                  {attendee.orderId.substring(0, 18)}...
+                                </div>
+                              ) : (
+                                <span className="text-gray-600 text-xs">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className="px-2 py-1 text-xs font-medium bg-gray-700/50 text-gray-300 rounded-full">
+                                {attendee.ticketType}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {attendee.couponCode ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-300 rounded-full inline-block w-fit">
+                                    {attendee.couponCode}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    -₹{attendee.couponDiscount || 0}
+                                    {attendee.discountType === 'percentage' ? ` (${attendee.discountValue}%)` : ''}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-600 text-xs">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="font-semibold text-white">
+                                ₹{attendee.priceAtPurchase || attendee.price}
+                              </div>
+                              <div className="text-xs text-gray-500">Per spot</div>
                               {attendee.pricingTimelineTier && (
                                 <div className="text-xs text-purple-400">{attendee.pricingTimelineTier}</div>
                               )}
-                              {attendee.couponCode && (
-                                <div className="text-xs text-green-400">🎟️ {attendee.couponCode} (-₹{attendee.couponDiscount || 0})</div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="text-white">
+                                ₹{attendee.basePrice || ((attendee.priceAtPurchase || attendee.price) * (attendee.quantity || 1))}
+                              </div>
+                              {(attendee.quantity || 1) > 1 && (
+                                <div className="text-xs text-gray-500">
+                                  ₹{attendee.priceAtPurchase || attendee.price} × {attendee.quantity} spots
+                                </div>
                               )}
-                              {attendee.groupingOffer && (
-                                <div className="text-xs text-blue-400">👥 {attendee.groupingOffer}</div>
-                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="font-semibold text-green-400">
+                                ₹{attendee.totalPaid || attendee.price}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-sm">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -2322,6 +2483,371 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
+        
+        {/* Marketing Tab */}
+        {activeTab === 'marketing' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">📱 WhatsApp Marketing</h2>
+              <p className="text-gray-400">Send promotional event messages to targeted users via WhatsApp</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Filters */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Step 1: Audience Selection */}
+                <div className="bg-zinc-900 border border-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Step 1: Select Target Audience</h3>
+                  
+                  <div className="space-y-3">
+                    {[
+                      { value: 'all_b2c', label: 'All B2C Users', desc: 'Every registered user with a phone number' },
+                      { value: 'organizer_specific', label: 'Organizer-Specific Users', desc: 'Users who previously booked events from a specific organizer' },
+                      { value: 'category_interests', label: 'Category Interests', desc: 'Users who selected specific interest categories in their profile' },
+                    ].map(opt => (
+                      <label
+                        key={opt.value}
+                        className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                          marketingAudienceType === opt.value
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-gray-700 bg-white/5 hover:border-gray-600'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="audienceType"
+                          value={opt.value}
+                          checked={marketingAudienceType === opt.value}
+                          onChange={(e) => {
+                            setMarketingAudienceType(e.target.value);
+                            setMarketingAudiencePreview(null);
+                            setMarketingResult(null);
+                          }}
+                          className="mt-1"
+                          style={{ accentColor: '#7878E9' }}
+                        />
+                        <div>
+                          <p className="text-white font-medium text-sm">{opt.label}</p>
+                          <p className="text-gray-400 text-xs mt-0.5">{opt.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* Organizer Dropdown with Search */}
+                  {marketingAudienceType === 'organizer_specific' && (
+                    <div className="mt-4 relative" ref={orgDropdownRef}>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Select Organizer</label>
+                      <div
+                        className="w-full px-4 py-3 rounded-lg bg-white/5 border border-gray-700 text-white text-sm cursor-pointer flex items-center justify-between"
+                        onClick={() => setShowOrganizerDropdown(!showOrganizerDropdown)}
+                      >
+                        <span className={marketingOrganizerId ? 'text-white' : 'text-gray-400'}>
+                          {marketingOrganizerId
+                            ? (() => {
+                                const sel = marketingOrganizers.find(o => o._id === marketingOrganizerId);
+                                return sel ? (sel.communityName || sel.name) : '-- Choose an organizer --';
+                              })()
+                            : '-- Choose an organizer --'}
+                        </span>
+                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${showOrganizerDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+
+                      {showOrganizerDropdown && (
+                        <div className="absolute z-50 mt-1 w-full rounded-lg bg-zinc-800 border border-gray-700 shadow-xl max-h-72 overflow-hidden">
+                          <div className="p-2 border-b border-gray-700">
+                            <input
+                              type="text"
+                              placeholder="Search organizer..."
+                              value={marketingOrganizerSearch}
+                              onChange={(e) => setMarketingOrganizerSearch(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full px-3 py-2 rounded-md bg-white/5 border border-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="overflow-y-auto max-h-56">
+                            {marketingOrganizers
+                              .filter(org => {
+                                if (!marketingOrganizerSearch) return true;
+                                const search = marketingOrganizerSearch.toLowerCase();
+                                return (org.communityName || '').toLowerCase().includes(search) ||
+                                       (org.name || '').toLowerCase().includes(search);
+                              })
+                              .map(org => (
+                                <div
+                                  key={org._id}
+                                  onClick={() => {
+                                    setMarketingOrganizerId(org._id);
+                                    setMarketingAudiencePreview(null);
+                                    setShowOrganizerDropdown(false);
+                                    setMarketingOrganizerSearch('');
+                                  }}
+                                  className={`px-4 py-2.5 cursor-pointer text-sm transition-colors hover:bg-white/10 ${
+                                    marketingOrganizerId === org._id ? 'bg-purple-500/20 text-white' : 'text-gray-300'
+                                  }`}
+                                >
+                                  <span className="font-medium">{org.communityName || org.name}</span>
+                                  <span className="text-gray-500 ml-2">— {org.stats?.totalEvents || 0} events, {org.stats?.totalSpotsBooked || 0} spots</span>
+                                </div>
+                              ))}
+                            {marketingOrganizers.filter(org => {
+                              if (!marketingOrganizerSearch) return true;
+                              const search = marketingOrganizerSearch.toLowerCase();
+                              return (org.communityName || '').toLowerCase().includes(search) ||
+                                     (org.name || '').toLowerCase().includes(search);
+                            }).length === 0 && (
+                              <p className="px-4 py-3 text-gray-500 text-sm text-center">No organizers found</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Category Checkboxes */}
+                  {marketingAudienceType === 'category_interests' && (
+                    <div className="mt-4">
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Select Categories</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {MARKETING_CATEGORIES.map(cat => (
+                          <label
+                            key={cat}
+                            className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer text-sm transition-colors ${
+                              marketingCategories.includes(cat)
+                                ? 'border-purple-500 bg-purple-500/10 text-white'
+                                : 'border-gray-700 bg-white/5 text-gray-300 hover:border-gray-600'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={marketingCategories.includes(cat)}
+                              onChange={(e) => {
+                                setMarketingCategories(prev =>
+                                  e.target.checked ? [...prev, cat] : prev.filter(c => c !== cat)
+                                );
+                                setMarketingAudiencePreview(null);
+                              }}
+                              style={{ accentColor: '#7878E9' }}
+                            />
+                            {cat}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview Button */}
+                  <button
+                    onClick={fetchMarketingAudience}
+                    disabled={
+                      marketingLoading ||
+                      (marketingAudienceType === 'organizer_specific' && !marketingOrganizerId) ||
+                      (marketingAudienceType === 'category_interests' && marketingCategories.length === 0)
+                    }
+                    className="mt-4 px-5 py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-40 transition-colors"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                  >
+                    {marketingLoading ? 'Estimating...' : 'Preview Audience'}
+                  </button>
+
+                  {/* Audience Preview */}
+                  {marketingAudiencePreview && (
+                    <div className="mt-4 p-4 rounded-lg bg-green-900/20 border border-green-700/40">
+                      <p className="text-green-400 font-semibold text-lg">
+                        🎯 {marketingAudiencePreview.totalUsers} user{marketingAudiencePreview.totalUsers !== 1 ? 's' : ''} matched
+                      </p>
+                      {marketingAudiencePreview.sampleUsers?.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-gray-400 text-xs font-medium">Sample users:</p>
+                          {marketingAudiencePreview.sampleUsers.map((u, i) => (
+                            <p key={i} className="text-gray-300 text-xs">
+                              {u.name} • {u.phone}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2: Select Event */}
+                <div className="bg-zinc-900 border border-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Step 2: Select Event to Promote</h3>
+                  
+                  <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={marketingEventSearch}
+                    onChange={(e) => setMarketingEventSearch(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-gray-700 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+                  />
+
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {marketingEvents
+                      .filter(e => !marketingEventSearch || e.title.toLowerCase().includes(marketingEventSearch.toLowerCase()))
+                      .map(evt => (
+                        <label
+                          key={evt._id}
+                          className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            marketingEventId === evt._id
+                              ? 'border-purple-500 bg-purple-500/10'
+                              : 'border-gray-700 bg-white/5 hover:border-gray-600'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="marketingEvent"
+                            value={evt._id}
+                            checked={marketingEventId === evt._id}
+                            onChange={() => setMarketingEventId(evt._id)}
+                            style={{ accentColor: '#7878E9' }}
+                          />
+                          {evt.image && (
+                            <img src={evt.image} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{evt.title}</p>
+                            <p className="text-gray-400 text-xs">
+                              {new Date(evt.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {evt.organizerName}
+                            </p>
+                            <p className="text-gray-500 text-xs truncate">{evt.venue}</p>
+                          </div>
+                        </label>
+                      ))}
+                    {marketingEvents.length === 0 && (
+                      <p className="text-gray-500 text-sm py-4 text-center">No upcoming events found</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Summary & Send */}
+              <div className="space-y-6">
+                <div className="bg-zinc-900 border border-gray-800 rounded-lg p-6 sticky top-24">
+                  <h3 className="text-lg font-semibold text-white mb-4">Campaign Summary</h3>
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Audience</span>
+                      <span className="text-white font-medium">
+                        {marketingAudienceType === 'all_b2c' ? 'All B2C Users' :
+                         marketingAudienceType === 'organizer_specific' ? 'Organizer Specific' :
+                         'Category Interests'}
+                      </span>
+                    </div>
+                    {marketingAudiencePreview && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Recipients</span>
+                        <span className="text-green-400 font-bold">{marketingAudiencePreview.totalUsers}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Event</span>
+                      <span className="text-white font-medium truncate ml-4 max-w-[160px]">
+                        {marketingEvents.find(e => e._id === marketingEventId)?.title || 'Not selected'}
+                      </span>
+                    </div>
+                    {marketingAudiencePreview && marketingAudiencePreview.totalUsers > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Est. Cost</span>
+                        <span className="text-yellow-400 font-medium">
+                          ~₹{Math.round(marketingAudiencePreview.totalUsers * 0.80)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selected Event Preview */}
+                  {marketingEventId && (() => {
+                    const sel = marketingEvents.find(e => e._id === marketingEventId);
+                    if (!sel) return null;
+                    return (
+                      <div className="mt-4 p-3 rounded-lg bg-white/5 border border-gray-700">
+                        {sel.image && (
+                          <img src={sel.image} alt="" className="w-full h-32 rounded-lg object-cover mb-3" />
+                        )}
+                        <p className="text-white text-sm font-semibold">{sel.title}</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          {new Date(sel.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                        <p className="text-gray-400 text-xs">{sel.startTime} - {sel.endTime} • {sel.venue}</p>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => setShowMarketingConfirm(true)}
+                    disabled={!marketingEventId || !marketingAudiencePreview || marketingAudiencePreview.totalUsers === 0 || marketingSending}
+                    className="mt-6 w-full py-3 rounded-lg text-white font-semibold text-sm disabled:opacity-40 transition-colors"
+                    style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                  >
+                    {marketingSending ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                        Sending...
+                      </span>
+                    ) : '📤 Send WhatsApp Campaign'}
+                  </button>
+
+                  {/* Result */}
+                  {marketingResult && (
+                    <div className={`mt-4 p-4 rounded-lg border ${
+                      marketingResult.success
+                        ? 'bg-green-900/20 border-green-700/40'
+                        : 'bg-red-900/20 border-red-700/40'
+                    }`}>
+                      {marketingResult.success ? (
+                        <>
+                          <p className="text-green-400 font-semibold">✅ Campaign Sent!</p>
+                          <p className="text-gray-300 text-sm mt-1">
+                            {marketingResult.sent} sent, {marketingResult.failed} failed out of {marketingResult.total} users
+                          </p>
+                          <p className="text-gray-400 text-xs mt-1">Event: {marketingResult.eventTitle}</p>
+                        </>
+                      ) : (
+                        <p className="text-red-400 font-semibold">❌ {marketingResult.error || 'Failed to send campaign'}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Modal */}
+            {showMarketingConfirm && (
+              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                <div className="bg-zinc-900 border border-gray-700 rounded-lg max-w-md w-full p-6">
+                  <h3 className="text-lg font-bold text-white mb-3">Confirm WhatsApp Campaign</h3>
+                  <p className="text-gray-300 text-sm mb-4">
+                    You are about to send a WhatsApp marketing message about{' '}
+                    <strong className="text-white">{marketingEvents.find(e => e._id === marketingEventId)?.title}</strong>{' '}
+                    to <strong className="text-green-400">{marketingAudiencePreview?.totalUsers}</strong> users.
+                  </p>
+                  <p className="text-yellow-400 text-xs mb-6">
+                    ⚠️ Estimated cost: ~₹{Math.round((marketingAudiencePreview?.totalUsers || 0) * 0.80)} (Marketing template rate)
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowMarketingConfirm(false)}
+                      className="flex-1 px-4 py-2.5 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSendMarketing}
+                      className="flex-1 px-4 py-2.5 rounded-lg text-white text-sm font-medium"
+                      style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                    >
+                      📤 Send Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
 
       {/* Proposal Details Modal */}

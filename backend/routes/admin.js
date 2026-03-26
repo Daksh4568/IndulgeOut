@@ -1725,7 +1725,7 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         purchaseDate: t.purchaseDate,
         quantity: t.quantity || 1,
         ticketType: t.metadata?.ticketType || 'general',
-        priceAtPurchase: t.metadata?.priceAtPurchase || 0,
+        perTicketPrice: t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0),
         pricingTimelineTier: t.metadata?.pricingTimelineTier || '',
         groupingOffer: t.metadata?.groupingOffer || '',
         tierPeople: t.metadata?.tierPeople || '',
@@ -1733,7 +1733,7 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         couponDiscountType: ticketCoupon?.discountType || '',
         couponDiscountApplied: ticketCoupon?.discountApplied || 0,
         originalPriceBeforeCoupon: ticketCoupon ? basePrice + (ticketCoupon.discountApplied || 0) : basePrice,
-        basePrice: basePrice,
+        totalTicketPrice: basePrice,
         gstAndOtherCharges: gstCharges,
         platformFees: platformFees,
         totalPaidByUser: totalPaidByUser,
@@ -1788,10 +1788,10 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     if (format === 'csv') {
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'priceAtPurchase', 'pricingTimelineTier',
+        'quantity', 'ticketType', 'perTicketPrice', 'pricingTimelineTier',
         'groupingOffer', 'tierPeople',
         'couponCode', 'couponDiscountType', 'couponDiscountApplied',
-        'originalPriceBeforeCoupon', 'basePrice', 'gstAndOtherCharges', 'platformFees',
+        'originalPriceBeforeCoupon', 'totalTicketPrice', 'gstAndOtherCharges', 'platformFees',
         'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
         'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
         'cashfreeServiceCharge', 'cashfreeServiceTax', 'cashfreeTotalDeducted',
@@ -1862,8 +1862,8 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`# FIELD EXPLANATIONS:`);
       csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
       csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
-      csvRows.push(`#   - basePrice: Organizer's share before gateway fees (after coupon discount)`);
-      csvRows.push(`#   - priceAtPurchase: Event ticket price at the time of purchase`);
+      csvRows.push(`#   - totalTicketPrice: Total ticket price (per ticket × spots, organizer's share before gateway fees)`);
+      csvRows.push(`#   - perTicketPrice: Per ticket price at the time of purchase`);
       csvRows.push(`#   - pricingTimelineTier: Which pricing timeline tier was active at purchase`);
       csvRows.push(`#   - groupingOffer: Group offer tier label (if applicable)`);
       csvRows.push(`#   - tierPeople: Number of people in the group tier`);
@@ -2680,14 +2680,17 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       price: ticket.price?.amount,
       quantity: ticket.quantity || 1,
       ticketType: ticket.metadata?.ticketType || 'general',
-      priceAtPurchase: ticket.metadata?.priceAtPurchase || ticket.price?.amount || 0,
+      priceAtPurchase: ticket.metadata?.priceAtPurchase || (ticket.metadata?.basePrice ? Math.round(ticket.metadata.basePrice / (ticket.quantity || 1)) : ticket.price?.amount || 0),
       pricingTimelineTier: ticket.metadata?.pricingTimelineTier || null,
       basePrice: ticket.metadata?.basePrice || 0,
       couponCode: ticket.metadata?.couponCode || null,
       couponDiscount: ticket.metadata?.couponDiscount || 0,
+      discountType: ticket.metadata?.discountType || null,
+      discountValue: ticket.metadata?.discountValue || null,
       groupingOffer: ticket.metadata?.groupingOffer || null,
       tierPeople: ticket.metadata?.tierPeople || null,
       orderId: ticket.metadata?.orderId,
+      totalPaid: ticket.metadata?.totalPaid || ticket.price?.amount || 0,
       paymentId: ticket.paymentId,
       paymentMethod: ticket.gatewayResponse?.paymentMethod,
       status: ticket.status,
@@ -2932,6 +2935,243 @@ router.get('/collaborations/:id/workspace/spectate', requirePermission('approve_
       success: false,
       error: 'Failed to fetch workspace data'
     });
+  }
+});
+
+// ==================== WHATSAPP MARKETING ====================
+
+/**
+ * GET /api/admin/marketing/audience
+ * Estimate audience size based on filters
+ * Query params: audienceType (all_b2c | organizer_specific | category_interests), organizerId, categories (comma-separated)
+ */
+router.get('/marketing/audience', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { audienceType, organizerId, categories } = req.query;
+    const Ticket = require('../models/Ticket');
+
+    let userQuery = { phoneNumber: { $exists: true, $nin: ['', null] } };
+    let userIds = null;
+
+    switch (audienceType) {
+      case 'all_b2c':
+        userQuery.role = 'user';
+        break;
+
+      case 'organizer_specific': {
+        if (!organizerId) {
+          return res.status(400).json({ success: false, error: 'organizerId is required' });
+        }
+        // Find all events by this organizer
+        const orgEvents = await Event.find({ host: organizerId }).select('_id');
+        const eventIds = orgEvents.map(e => e._id);
+        // Find unique users who bought tickets for these events
+        const tickets = await Ticket.find({
+          event: { $in: eventIds },
+          status: { $ne: 'cancelled' }
+        }).select('user').lean();
+        userIds = [...new Set(tickets.map(t => t.user.toString()))];
+        userQuery._id = { $in: userIds };
+        break;
+      }
+
+      case 'category_interests': {
+        const categoryList = categories ? categories.split(',').map(c => c.trim()) : [];
+        if (categoryList.length === 0) {
+          return res.status(400).json({ success: false, error: 'At least one category is required' });
+        }
+        userQuery.role = 'user';
+        userQuery.interests = { $in: categoryList };
+        break;
+      }
+
+      default:
+        return res.status(400).json({ success: false, error: 'Invalid audienceType' });
+    }
+
+    const totalUsers = await User.countDocuments(userQuery);
+    const sampleUsers = await User.find(userQuery)
+      .select('name email phoneNumber')
+      .limit(5)
+      .lean();
+
+    res.json({
+      success: true,
+      totalUsers,
+      sampleUsers: sampleUsers.map(u => ({
+        name: u.name,
+        email: u.email,
+        phone: u.phoneNumber ? `${u.phoneNumber.slice(0, 3)}****${u.phoneNumber.slice(-3)}` : 'N/A'
+      }))
+    });
+  } catch (error) {
+    console.error('Error estimating marketing audience:', error);
+    res.status(500).json({ success: false, error: 'Failed to estimate audience' });
+  }
+});
+
+/**
+ * GET /api/admin/marketing/events
+ * Get upcoming published events for the event selector
+ */
+router.get('/marketing/events', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { search } = req.query;
+    const query = {
+      status: 'published',
+      date: { $gte: new Date() }
+    };
+    if (search) {
+      query.title = { $regex: search, $options: 'i' };
+    }
+    const events = await Event.find(query)
+      .select('title date startTime endTime location images slug host')
+      .populate('host', 'name communityProfile.communityName')
+      .sort({ date: 1 })
+      .limit(50)
+      .lean();
+
+    res.json({
+      success: true,
+      events: events.map(e => ({
+        _id: e._id,
+        title: e.title,
+        date: e.date,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        venue: [e.location?.address, e.location?.city].filter(Boolean).join(', '),
+        image: e.images?.[0] || '',
+        slug: e.slug || '',
+        organizerName: e.host?.communityProfile?.communityName || e.host?.name || 'Unknown'
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching marketing events:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch events' });
+  }
+});
+
+/**
+ * POST /api/admin/marketing/send
+ * Send WhatsApp marketing messages to the filtered audience for a specific event
+ * Body: { audienceType, organizerId, categories[], eventId }
+ */
+router.post('/marketing/send', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { audienceType, organizerId, categories, eventId } = req.body;
+    const Ticket = require('../models/Ticket');
+    const { sendWhatsAppMarketing } = require('../services/msg91Service');
+
+    if (!eventId) {
+      return res.status(400).json({ success: false, error: 'eventId is required' });
+    }
+
+    // Fetch the event
+    const event = await Event.findById(eventId).populate('host', 'name').lean();
+    if (!event) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
+    }
+
+    // Build user query
+    let userQuery = { phoneNumber: { $exists: true, $nin: ['', null] } };
+
+    switch (audienceType) {
+      case 'all_b2c':
+        userQuery.role = 'user';
+        break;
+
+      case 'organizer_specific': {
+        if (!organizerId) {
+          return res.status(400).json({ success: false, error: 'organizerId is required' });
+        }
+        const orgEvents = await Event.find({ host: organizerId }).select('_id');
+        const eventIds = orgEvents.map(e => e._id);
+        const tickets = await Ticket.find({
+          event: { $in: eventIds },
+          status: { $ne: 'cancelled' }
+        }).select('user').lean();
+        const userIds = [...new Set(tickets.map(t => t.user.toString()))];
+        userQuery._id = { $in: userIds };
+        break;
+      }
+
+      case 'category_interests': {
+        const categoryList = Array.isArray(categories) ? categories : [];
+        if (categoryList.length === 0) {
+          return res.status(400).json({ success: false, error: 'At least one category is required' });
+        }
+        userQuery.role = 'user';
+        userQuery.interests = { $in: categoryList };
+        break;
+      }
+
+      default:
+        return res.status(400).json({ success: false, error: 'Invalid audienceType' });
+    }
+
+    // Fetch all target users
+    const users = await User.find(userQuery).select('name phoneNumber').lean();
+
+    if (users.length === 0) {
+      return res.json({ success: true, sent: 0, failed: 0, total: 0, message: 'No users matched the filter' });
+    }
+
+    // Prepare event details
+    const eventDate = new Date(event.date).toLocaleDateString('en-IN', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+    const eventTime = event.startTime && event.endTime
+      ? `${event.startTime} - ${event.endTime}`
+      : 'TBD';
+    const venueName = [event.location?.address, event.location?.city].filter(Boolean).join(', ') || 'TBD';
+    const eventImageUrl = event.images?.[0] || '';
+    const eventSlug = event.slug || '';
+
+    // Send messages in batches of 10 with 1s delay between batches
+    let sent = 0;
+    let failed = 0;
+    const batchSize = 10;
+
+    for (let i = 0; i < users.length; i += batchSize) {
+      const batch = users.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(user => sendWhatsAppMarketing(user.phoneNumber, {
+          userName: (user.name || 'there').split(' ')[0],
+          eventName: event.title,
+          eventDate,
+          eventTime,
+          venueName,
+          eventImageUrl,
+          eventSlug,
+        }))
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.success) {
+          sent++;
+        } else {
+          failed++;
+        }
+      }
+
+      // Rate limit: wait 1s between batches
+      if (i + batchSize < users.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    console.log(`📱 [Marketing] Campaign complete: ${sent} sent, ${failed} failed out of ${users.length} users for event "${event.title}"`);
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      total: users.length,
+      eventTitle: event.title,
+    });
+  } catch (error) {
+    console.error('Error sending marketing messages:', error);
+    res.status(500).json({ success: false, error: 'Failed to send marketing messages' });
   }
 });
 

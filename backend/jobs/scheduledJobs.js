@@ -68,6 +68,13 @@ function initializeScheduledJobs() {
     await generateMonthlySettlementReports();
   });
   scheduledTasks.push(monthlyReportJob);
+
+  // Pricing timeline auto-update - runs daily at 12:01 AM IST
+  const pricingTimelineJob = cron.schedule('1 0 * * *', async () => {
+    console.log('💰 Running pricing timeline auto-update job...');
+    await applyPricingTimelineChanges();
+  });
+  scheduledTasks.push(pricingTimelineJob);
   
   console.log('✅ Scheduled jobs initialized:');
   console.log('   - Event reminders: Daily at 9:00 AM');
@@ -78,6 +85,7 @@ function initializeScheduledJobs() {
   console.log('   - Low booking alerts: Daily at 8:00 AM');
   console.log('   - Payment reconciliation: Daily at 2:00 AM');
   console.log('   - Monthly settlement reports: 1st of month at 3:00 AM');
+  console.log('   - Pricing timeline auto-update: Daily at 12:01 AM');
 }
 
 /**
@@ -923,6 +931,86 @@ async function generateMonthlySettlementReports() {
 }
 
 /**
+ * Apply pricing timeline changes automatically
+ * Runs daily at 12:01 AM IST — detects when a new pricing tier becomes active
+ * and logs it in priceChangeHistory with reason 'timeline_automatic'
+ */
+async function applyPricingTimelineChanges() {
+  try {
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const todayIST = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+    const toISTDateStr = (d) => new Date(new Date(d).getTime() + IST_OFFSET).toISOString().split('T')[0];
+
+    // Find all published/live events with pricing timeline enabled and date in the future
+    const events = await Event.find({
+      status: { $in: ['published', 'live'] },
+      date: { $gte: new Date() },
+      'pricingTimeline.enabled': true,
+      'pricingTimeline.tiers.0': { $exists: true }
+    });
+
+    console.log(`💰 [Pricing Timeline] Found ${events.length} events with active pricing timelines`);
+
+    let updated = 0;
+
+    for (const event of events) {
+      // Find which tier is active today
+      const activeTier = event.pricingTimeline.tiers.find(tier => {
+        const startStr = toISTDateStr(tier.startDate);
+        const endStr = toISTDateStr(tier.endDate);
+        return todayIST >= startStr && todayIST <= endStr;
+      });
+
+      if (!activeTier) continue;
+
+      const currentStoredPrice = event.price?.amount || 0;
+      const tierPrice = activeTier.price;
+
+      // Only log if the stored price differs from the active tier price
+      if (currentStoredPrice === tierPrice) continue;
+
+      // Check if we already logged this tier transition today
+      const alreadyLogged = (event.priceChangeHistory || []).some(change => {
+        if (change.reason !== 'timeline_automatic') return false;
+        const changeDate = toISTDateStr(change.changedAt);
+        return changeDate === todayIST && change.newPrice === tierPrice;
+      });
+
+      if (alreadyLogged) continue;
+
+      // Push price change history entry and update stored price atomically
+      await Event.findByIdAndUpdate(event._id, {
+        $set: { 'price.amount': tierPrice },
+        $push: {
+          priceChangeHistory: {
+            previousPrice: currentStoredPrice,
+            newPrice: tierPrice,
+            changedAt: new Date(),
+            reason: 'timeline_automatic',
+            spotsBookedAtPrevPrice: event.currentParticipants || 0,
+            groupingOffersSnapshot: {
+              enabled: event.groupingOffers?.enabled || false,
+              tiers: (event.groupingOffers?.tiers || []).map(t => ({
+                people: t.people,
+                price: t.price,
+                label: t.label || ''
+              }))
+            }
+          }
+        }
+      });
+
+      console.log(`  ✅ ${event.title}: ₹${currentStoredPrice} → ₹${tierPrice} (tier: ${activeTier.label || 'unnamed'})`);
+      updated++;
+    }
+
+    console.log(`💰 [Pricing Timeline] Updated ${updated} event(s)`);
+  } catch (error) {
+    console.error('❌ Error in pricing timeline auto-update:', error);
+  }
+}
+
+/**
  * Stop all scheduled tasks (for cleanup/testing)
  */
 function stopAllJobs() {
@@ -942,5 +1030,6 @@ module.exports = {
   sendKYCPendingReminders,
   sendLowBookingAlerts,
   runDailyReconciliation,
-  generateMonthlySettlementReports
+  generateMonthlySettlementReports,
+  applyPricingTimelineChanges
 };

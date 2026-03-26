@@ -423,6 +423,17 @@ const BillingPage = () => {
     });
   };
 
+  const formatDateRange = (startDate, endDate) => {
+    if (!endDate) return formatDate(startDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+    if (sameMonth) {
+      return `${start.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} - ${end.getDate()}`;
+    }
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
@@ -478,7 +489,7 @@ const BillingPage = () => {
                 <div className="flex-1">
                   <h4 className="text-lg font-semibold text-white mb-2">{event.title}</h4>
                   <p className="text-gray-400 text-sm">
-                    {formatDate(event.date)} | {event.startTime && event.endTime 
+                    {formatDateRange(event.date, event.endDate)} | {event.startTime && event.endTime 
                       ? `${convert24To12Hour(event.startTime)} - ${convert24To12Hour(event.endTime)}` 
                       : event.time}
                   </p>

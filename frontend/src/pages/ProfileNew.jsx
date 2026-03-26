@@ -739,49 +739,6 @@ const ProfileNew = () => {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
-        {/* Profile Completion Progress Tracker */}
-        {(() => {
-          const { percentage, completed, total, missingFields } = getProfileCompletionDetails();
-          return (
-            <div className="mb-6 bg-[#171717] rounded-lg p-4 sm:p-5 border border-gray-800">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${percentage === 100 ? 'bg-green-900/40' : 'bg-indigo-900/40'}`}>
-                    {percentage === 100 ? (
-                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="h-5 w-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">
-                      {percentage === 100 ? 'Profile Complete!' : 'Profile Completion'}
-                    </h3>
-                    <p className="text-xs text-gray-400">{completed}/{total} fields completed</p>
-                  </div>
-                </div>
-                <span className={`text-lg font-bold ${percentage === 100 ? 'text-green-400' : 'text-[#7878E9]'}`}>
-                  {percentage}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-800 rounded-full h-2.5">
-                <div
-                  className={`h-2.5 rounded-full transition-all duration-500 ${percentage === 100 ? 'bg-green-500' : ''}`}
-                  style={{ width: `${percentage}%`, ...(percentage < 100 ? { background: 'linear-gradient(90deg, #7878E9, #3D3DD4)' } : {}) }}
-                />
-              </div>
-              {percentage < 100 && missingFields.length > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Missing: {missingFields.slice(0, 3).join(', ')}{missingFields.length > 3 ? ` +${missingFields.length - 3} more` : ''}
-                </p>
-              )}
-            </div>
-          );
-        })()}
 
         {/* B2C User Layout */}
         {profileData.role === 'user' && (
@@ -1240,6 +1197,46 @@ const ProfileNew = () => {
 
             {/* Right Column - Interests & Support */}
             <div className="space-y-6">
+              {/* Compact Profile Completion */}
+              {(() => {
+                const { percentage, completed, total, missingFields } = getProfileCompletionDetails();
+                return (
+                  <div className="bg-[#171717] rounded-lg p-4 border border-gray-800 transition-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {percentage === 100 ? (
+                          <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        )}
+                        <span className="text-sm font-semibold text-white">
+                          {percentage === 100 ? 'Complete!' : 'Profile'}
+                        </span>
+                        <span className="text-xs text-gray-400">{completed}/{total}</span>
+                      </div>
+                      <span className={`text-sm font-bold ${percentage === 100 ? 'text-green-400' : 'text-[#7878E9]'}`}>
+                        {percentage}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-500 ${percentage === 100 ? 'bg-green-500' : ''}`}
+                        style={{ width: `${percentage}%`, ...(percentage < 100 ? { background: 'linear-gradient(90deg, #7878E9, #3D3DD4)' } : {}) }}
+                      />
+                    </div>
+                    {percentage < 100 && missingFields.length > 0 && (
+                      <p className="text-[10px] text-gray-500 mt-1.5">
+                        Missing: {missingFields.slice(0, 2).join(', ')}{missingFields.length > 2 ? ` +${missingFields.length - 2} more` : ''}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Interests Card */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center justify-between mb-4">
@@ -2024,7 +2021,48 @@ const ProfileNew = () => {
             </div>
 
             {/* RIGHT COLUMN - Hosting Preferences & Help */}
-            <div className="space-y-6">{/* Hosting Preferences */}
+            <div className="space-y-6">
+              {/* Compact Profile Completion */}
+              {(() => {
+                const { percentage, completed, total, missingFields } = getProfileCompletionDetails();
+                return (
+                  <div className="bg-[#171717] rounded-lg p-4 border border-gray-800 transition-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {percentage === 100 ? (
+                          <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        )}
+                        <span className="text-sm font-semibold text-white">
+                          {percentage === 100 ? 'Complete!' : 'Profile'}
+                        </span>
+                        <span className="text-xs text-gray-400">{completed}/{total}</span>
+                      </div>
+                      <span className={`text-sm font-bold ${percentage === 100 ? 'text-green-400' : 'text-[#7878E9]'}`}>
+                        {percentage}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-500 ${percentage === 100 ? 'bg-green-500' : ''}`}
+                        style={{ width: `${percentage}%`, ...(percentage < 100 ? { background: 'linear-gradient(90deg, #7878E9, #3D3DD4)' } : {}) }}
+                      />
+                    </div>
+                    {percentage < 100 && missingFields.length > 0 && (
+                      <p className="text-[10px] text-gray-500 mt-1.5">
+                        Missing: {missingFields.slice(0, 2).join(', ')}{missingFields.length > 2 ? ` +${missingFields.length - 2} more` : ''}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Hosting Preferences */}
               <div className="bg-[#171717] rounded-lg p-6 transition-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-semibold">Hosting Preferences</h3>

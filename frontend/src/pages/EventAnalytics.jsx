@@ -46,7 +46,7 @@ const EventAnalytics = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("name");
+  const [sortBy, setSortBy] = useState("purchaseDate");
   const [showResponsesModal, setShowResponsesModal] = useState(false);
   const [selectedAttendee, setSelectedAttendee] = useState(null);
   
@@ -193,6 +193,7 @@ const EventAnalytics = () => {
     return new Date(dateString).toLocaleString("en-IN", {
       day: "numeric",
       month: "short",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
@@ -782,7 +783,7 @@ const EventAnalytics = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-700/50">
-                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Date</th>
+                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Date & Time</th>
                           <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Previous Price</th>
                           <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">New Price</th>
                           <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Reason</th>
@@ -1104,7 +1105,7 @@ const EventAnalytics = () => {
               >
                 <option value="name">Sort by Name</option>
                 <option value="checkInTime">Sort by Check-in</option>
-                <option value="purchaseDate">Sort by Purchase</option>
+                <option value="purchaseDate">Sort by Booking Date</option>
               </select>
 
               <button
@@ -1144,7 +1145,7 @@ const EventAnalytics = () => {
                       Ticket Number
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Purchase Date
+                      Booking Date
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Order ID
@@ -1156,13 +1157,14 @@ const EventAnalytics = () => {
                       Coupon Used
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Base Price
+                      Per Ticket Price
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Price at Purchase
+                      Total Ticket Price
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Total Paid
+                      Final Amount Paid
+                      <span className="block text-[10px] normal-case text-gray-500 font-normal">(inc. Fees & GST)</span>
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Status
@@ -1290,12 +1292,7 @@ const EventAnalytics = () => {
                           ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {(attendee.quantity || 1) > 1 ? `Per spot × ${attendee.quantity}` : 'Per spot'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-white">
-                          ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)}
+                          Per spot
                         </div>
                         {attendee.metadata?.pricingTimelineTier && (
                           <div className="text-xs text-purple-400">
@@ -1304,11 +1301,18 @@ const EventAnalytics = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-white">
+                          ₹{attendee.metadata?.basePrice || ((attendee.metadata?.priceAtPurchase || attendee.price?.amount || 0) * (attendee.quantity || 1))}
+                        </div>
+                        {(attendee.quantity || 1) > 1 && (
+                          <div className="text-xs text-gray-500">
+                            ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)} × {attendee.quantity} spots
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-green-400">
                           ₹{attendee.metadata?.totalPaid || attendee.price?.amount || 0}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Inc. Fees & GST
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

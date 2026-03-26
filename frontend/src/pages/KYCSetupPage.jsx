@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const KYCSetupPage = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [activeStep, setActiveStep] = useState(1); // 1 = ID Proof, 2 = Bank Details
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -86,9 +88,10 @@ const KYCSetupPage = () => {
 
       setSuccess(true);
 
-      // Redirect and refresh after 2 seconds
+      // Refresh auth context with updated KYC data, then navigate
+      await refreshUser();
       setTimeout(() => {
-        window.location.href = '/dashboard';
+        navigate('/create-event');
       }, 2000);
 
     } catch (err) {
@@ -258,7 +261,7 @@ const KYCSetupPage = () => {
                   type="text"
                   value={bankDetails.accountHolderName}
                   onChange={(e) => handleBankDetailsChange('accountHolderName', e.target.value)}
-                  placeholder="e.g. Mukesh Ganpade"
+                  placeholder="e.g. Daksh Pratap Singh"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                   required
                 />
@@ -272,7 +275,7 @@ const KYCSetupPage = () => {
                   type="text"
                   value={bankDetails.accountNumber}
                   onChange={(e) => handleBankDetailsChange('accountNumber', e.target.value)}
-                  placeholder="e.g. Mukesh Ganpade"
+                  placeholder="e.g. 12345678900909"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                   required
                 />
@@ -286,7 +289,7 @@ const KYCSetupPage = () => {
                   type="text"
                   value={bankDetails.ifscCode}
                   onChange={(e) => handleBankDetailsChange('ifscCode', e.target.value.toUpperCase())}
-                  placeholder="e.g. Mukesh Ganpade"
+                  placeholder="e.g. ABCD0123456"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                   required
                 />
@@ -300,7 +303,7 @@ const KYCSetupPage = () => {
                   type="text"
                   value={bankDetails.billingAddress}
                   onChange={(e) => handleBankDetailsChange('billingAddress', e.target.value)}
-                  placeholder="e.g. Mukesh Ganpade"
+                  placeholder="e.g. 123 Main St, City, State, ZIP"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                   required
                 />
@@ -314,7 +317,7 @@ const KYCSetupPage = () => {
                   type="text"
                   value={bankDetails.gstNumber}
                   onChange={(e) => handleBankDetailsChange('gstNumber', e.target.value.toUpperCase())}
-                  placeholder="e.g. Mukesh Ganpade"
+                  placeholder="e.g. 22AAAAA0000A1Z5"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                 />
               </div>
@@ -327,7 +330,7 @@ const KYCSetupPage = () => {
                   type="text"
                   value={bankDetails.upiId}
                   onChange={(e) => handleBankDetailsChange('upiId', e.target.value)}
-                  placeholder="e.g. Mukesh Ganpade"
+                  placeholder="e.g. daksh@upi"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent transition-all"
                 />
               </div>
