@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import CityDropdown from '../components/CityDropdown';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -65,6 +66,12 @@ const AdminDashboard = () => {
   const [marketingSending, setMarketingSending] = useState(false);
   const [marketingResult, setMarketingResult] = useState(null);
   const [showMarketingConfirm, setShowMarketingConfirm] = useState(false);
+  // Sub-filters
+  const [marketingAgeMin, setMarketingAgeMin] = useState('');
+  const [marketingAgeMax, setMarketingAgeMax] = useState('');
+  const [marketingGender, setMarketingGender] = useState('');
+  const [marketingCity, setMarketingCity] = useState('');
+  const [showSubFilters, setShowSubFilters] = useState(false);
 
   // Close organizer dropdown on outside click
   useEffect(() => {
@@ -345,6 +352,12 @@ const AdminDashboard = () => {
       if (marketingAudienceType === 'category_interests' && marketingCategories.length > 0) {
         params.append('categories', marketingCategories.join(','));
       }
+      // Sub-filters
+      if (marketingAgeMin) params.append('ageMin', marketingAgeMin);
+      if (marketingAgeMax) params.append('ageMax', marketingAgeMax);
+      if (marketingGender) params.append('gender', marketingGender);
+      if (marketingCity.trim()) params.append('city', marketingCity.trim());
+
       const res = await api.get(`/admin/marketing/audience?${params.toString()}`);
       if (res.data.success) {
         setMarketingAudiencePreview(res.data);
@@ -367,6 +380,11 @@ const AdminDashboard = () => {
       };
       if (marketingAudienceType === 'organizer_specific') body.organizerId = marketingOrganizerId;
       if (marketingAudienceType === 'category_interests') body.categories = marketingCategories;
+      // Sub-filters
+      if (marketingAgeMin) body.ageMin = marketingAgeMin;
+      if (marketingAgeMax) body.ageMax = marketingAgeMax;
+      if (marketingGender) body.gender = marketingGender;
+      if (marketingCity.trim()) body.city = marketingCity.trim();
 
       const res = await api.post('/admin/marketing/send', body);
       setMarketingResult(res.data);
@@ -377,6 +395,10 @@ const AdminDashboard = () => {
       setMarketingSending(false);
     }
   };
+
+  // MSG91 WhatsApp pricing per message (Marketing template rate for India)
+  // Utility templates: ₹0.115 | Marketing templates: ₹0.78 (Meta) + MSG91 markup
+  const MSG91_MARKETING_RATE = 0.80;
 
   const MARKETING_CATEGORIES = [
     'Social Mixers',
@@ -2637,6 +2659,89 @@ const AdminDashboard = () => {
                     </div>
                   )}
 
+                  {/* Sub-Filters: Age, Gender, City */}
+                  <div className="mt-5 border-t border-gray-700 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowSubFilters(prev => !prev)}
+                      className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${showSubFilters ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      Refine Audience
+                      {(marketingAgeMin || marketingAgeMax || marketingGender || marketingCity) && (
+                        <span className="ml-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs">
+                          {[marketingAgeMin || marketingAgeMax ? 'age' : '', marketingGender, marketingCity].filter(Boolean).length} active
+                        </span>
+                      )}
+                    </button>
+
+                    {showSubFilters && (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Age Range - Manual Inputs */}
+                        <div>
+                          <label className="block text-gray-300 text-xs font-medium mb-1.5">Age Range</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              placeholder="Min"
+                              min="1"
+                              max="100"
+                              value={marketingAgeMin}
+                              onChange={(e) => { setMarketingAgeMin(e.target.value); setMarketingAudiencePreview(null); }}
+                              className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            />
+                            <span className="text-gray-500 text-sm">–</span>
+                            <input
+                              type="number"
+                              placeholder="Max"
+                              min="1"
+                              max="100"
+                              value={marketingAgeMax}
+                              onChange={(e) => { setMarketingAgeMax(e.target.value); setMarketingAudiencePreview(null); }}
+                              className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Gender */}
+                        <div>
+                          <label className="block text-gray-300 text-xs font-medium mb-1.5">Gender</label>
+                          <select
+                            value={marketingGender}
+                            onChange={(e) => { setMarketingGender(e.target.value); setMarketingAudiencePreview(null); }}
+                            className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-gray-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 appearance-none"
+                          >
+                            <option value="" className="bg-zinc-800">All Genders</option>
+                            <option value="Male" className="bg-zinc-800">Male</option>
+                            <option value="Female" className="bg-zinc-800">Female</option>
+                            <option value="Non-binary" className="bg-zinc-800">Non-binary</option>
+                          </select>
+                        </div>
+
+                        {/* City */}
+                        <div>
+                          <label className="block text-gray-300 text-xs font-medium mb-1.5">City</label>
+                          <CityDropdown
+                            value={marketingCity}
+                            onChange={(val) => { setMarketingCity(val); setMarketingAudiencePreview(null); }}
+                            placeholder="All Cities"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Clear sub-filters */}
+                    {showSubFilters && (marketingAgeMin || marketingAgeMax || marketingGender || marketingCity) && (
+                      <button
+                        type="button"
+                        onClick={() => { setMarketingAgeMin(''); setMarketingAgeMax(''); setMarketingGender(''); setMarketingCity(''); setMarketingAudiencePreview(null); }}
+                        className="mt-2 text-xs text-gray-400 hover:text-gray-300 underline"
+                      >
+                        Clear all sub-filters
+                      </button>
+                    )}
+                  </div>
+
                   {/* Preview Button */}
                   <button
                     onClick={fetchMarketingAudience}
@@ -2662,7 +2767,7 @@ const AdminDashboard = () => {
                           <p className="text-gray-400 text-xs font-medium">Sample users:</p>
                           {marketingAudiencePreview.sampleUsers.map((u, i) => (
                             <p key={i} className="text-gray-300 text-xs">
-                              {u.name} • {u.phone}
+                              {u.name} • {u.phone}{u.age ? ` • ${u.age}y` : ''}{u.gender ? ` • ${u.gender}` : ''}{u.city ? ` • ${u.city}` : ''}
                             </p>
                           ))}
                         </div>
@@ -2752,8 +2857,28 @@ const AdminDashboard = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-400">Est. Cost</span>
                         <span className="text-yellow-400 font-medium">
-                          ~₹{Math.round(marketingAudiencePreview.totalUsers * 0.80)}
+                          ~₹{(marketingAudiencePreview.totalUsers * MSG91_MARKETING_RATE).toFixed(2)}
                         </span>
+                      </div>
+                    )}
+                    {marketingAudiencePreview && marketingAudiencePreview.totalUsers > 0 && (
+                      <p className="text-gray-500 text-xs mt-1">₹{MSG91_MARKETING_RATE}/msg — Marketing template rate</p>
+                    )}
+                    {/* Sub-filter summary */}
+                    {(marketingAgeMin || marketingAgeMax || marketingGender || marketingCity) && (
+                      <div className="pt-2 border-t border-gray-700">
+                        <p className="text-gray-500 text-xs font-medium mb-1">Filters</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(marketingAgeMin || marketingAgeMax) && (
+                            <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-xs">{marketingAgeMin || '?'}–{marketingAgeMax || '?'}y</span>
+                          )}
+                          {marketingGender && (
+                            <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-xs">{marketingGender}</span>
+                          )}
+                          {marketingCity && (
+                            <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-xs">{marketingCity}</span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2825,7 +2950,7 @@ const AdminDashboard = () => {
                     to <strong className="text-green-400">{marketingAudiencePreview?.totalUsers}</strong> users.
                   </p>
                   <p className="text-yellow-400 text-xs mb-6">
-                    ⚠️ Estimated cost: ~₹{Math.round((marketingAudiencePreview?.totalUsers || 0) * 0.80)} (Marketing template rate)
+                    ⚠️ Estimated cost: ~₹{((marketingAudiencePreview?.totalUsers || 0) * MSG91_MARKETING_RATE).toFixed(2)} ({marketingAudiencePreview?.totalUsers} × ₹{MSG91_MARKETING_RATE}/msg — Marketing template rate)
                   </p>
                   <div className="flex gap-3">
                     <button

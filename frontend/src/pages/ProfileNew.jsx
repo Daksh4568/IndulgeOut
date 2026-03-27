@@ -11,11 +11,12 @@ import SupportModal from '../components/SupportModal'
 import ImageCropper from '../components/ImageCropper'
 import { api } from '../config/api.js'
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
+import CityDropdown from '../components/CityDropdown';
 
 const ProfileNew = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout, isAuthenticated, loading: authLoading, isHostPartner, isCommunityOrganizer, isVenue, isBrandSponsor } = useAuth()
+  const { user, logout, isAuthenticated, loading: authLoading, isHostPartner, isCommunityOrganizer, isVenue, isBrandSponsor, refreshUser } = useAuth()
   
   // Refs
   const fileInputRef = useRef(null)
@@ -399,6 +400,7 @@ const ProfileNew = () => {
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Profile updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      refreshUser()
     } catch (error) {
       console.error('Error:', error)
       setMessage({ type: 'error', text: 'Failed to update profile' })
@@ -420,6 +422,7 @@ const ProfileNew = () => {
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Hosting preferences updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      refreshUser()
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update hosting preferences' })
     } finally {
@@ -434,6 +437,7 @@ const ProfileNew = () => {
       setProfileData(response.data.user)
       setMessage({ type: 'success', text: 'Interest removed!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 2000)
+      refreshUser()
     } catch (error) {
       console.error('Error removing interest:', error)
       setMessage({ type: 'error', text: 'Failed to remove interest' })
@@ -446,13 +450,12 @@ const ProfileNew = () => {
       const response = await api.put('/users/profile/payout', payoutForm)
       setProfileData(response.data.user)
       setEditingSection(null)
-      setMessage({ type: 'success', text: 'Payout information updated! Refreshing...' })
-      // Refresh the page after 1.5 seconds to update auth context
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
+      setMessage({ type: 'success', text: 'Payout information updated!' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      refreshUser()
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update payout information' })
+    } finally {
       setSaving(false)
     }
   }
@@ -472,6 +475,7 @@ const ProfileNew = () => {
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Venue details updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      refreshUser()
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update venue details' })
     } finally {
@@ -1020,12 +1024,10 @@ const ProfileNew = () => {
                       {/* City */}
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">City</label>
-                        <input 
-                          type="text"
+                        <CityDropdown
                           value={profileForm.city}
-                          onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-                          className="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
-                          placeholder="Your city"
+                          onChange={(val) => setProfileForm({ ...profileForm, city: val })}
+                          placeholder="Select your city"
                         />
                       </div>
                       

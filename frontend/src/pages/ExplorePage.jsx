@@ -1134,22 +1134,24 @@ export default function ExplorePage() {
                           <>
                             {/* Mobile: Vertical Stack - Show all communities */}
                             <div className="block sm:hidden space-y-4">
-                              {lockedCommunities.map(community => (
+                              {lockedCommunities.map((community, index) => (
                                 <CommunityCard
                                   key={community._id}
                                   community={community}
                                   onFavorite={handleFavorite}
+                                  defaultImageIndex={index}
                                 />
                               ))}
                             </div>
                             
                             {/* Desktop: Grid Layout */}
                             <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                              {lockedCommunities.map(community => (
+                              {lockedCommunities.map((community, index) => (
                                 <CommunityCard
                                   key={community._id}
                                   community={community}
                                   onFavorite={handleFavorite}
+                                  defaultImageIndex={index}
                                 />
                               ))}
                             </div>

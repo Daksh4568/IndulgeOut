@@ -740,20 +740,33 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    // Track price changes before updating
+    // Track price changes and pricing mode transitions before updating
     const oldPrice = event.price?.amount || 0;
     const newPrice = req.body.price?.amount !== undefined ? Number(req.body.price.amount) : oldPrice;
-    
+    const priceChanged = oldPrice !== newPrice;
+
+    // Detect pricing mode transition (regular ↔ time-based)
+    const oldTimelineEnabled = event.pricingTimeline?.enabled || false;
+    const newTimelineEnabled = req.body.pricingTimeline?.enabled !== undefined
+      ? req.body.pricingTimeline.enabled
+      : oldTimelineEnabled;
+    const pricingModeChanged = oldTimelineEnabled !== newTimelineEnabled;
+
     let updatedEvent;
-    if (oldPrice !== newPrice) {
-      // Count spots booked at the previous price
+    if (priceChanged || pricingModeChanged) {
       const spotsBookedAtPrevPrice = event.currentParticipants || 0;
+
+      // Determine the reason
+      let reason = 'manual_edit';
+      if (pricingModeChanged) {
+        reason = newTimelineEnabled ? 'mode_switch_to_timeline' : 'mode_switch_to_regular';
+      }
       
       const priceChangeEntry = {
         previousPrice: oldPrice,
-        newPrice: newPrice,
+        newPrice: priceChanged ? newPrice : oldPrice,
         changedAt: new Date(),
-        reason: 'manual_edit',
+        reason,
         spotsBookedAtPrevPrice: spotsBookedAtPrevPrice,
         groupingOffersSnapshot: {
           enabled: event.groupingOffers?.enabled || false,
@@ -765,7 +778,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         }
       };
       
-      console.log(`💰 Price change detected: ₹${oldPrice} → ₹${newPrice} (${spotsBookedAtPrevPrice} spots booked at old price)`);
+      console.log(`💰 Price ${priceChanged ? 'change' : 'mode switch'}: ₹${oldPrice} → ₹${priceChanged ? newPrice : oldPrice} [${reason}] (${spotsBookedAtPrevPrice} spots booked)`);
 
       // First push the price change history atomically
       await Event.findByIdAndUpdate(event._id, {
@@ -1293,6 +1306,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         }))
       } : { enabled: false, codes: [] },
       // Price change history and pricing timeline
+      currentPrice: event.getCurrentPrice(),
       priceChangeHistory: (event.priceChangeHistory || []).map(change => ({
         previousPrice: change.previousPrice,
         newPrice: change.newPrice,

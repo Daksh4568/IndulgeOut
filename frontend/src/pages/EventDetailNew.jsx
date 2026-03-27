@@ -169,31 +169,33 @@ const EventDetail = () => {
     const venueLine = eventVenue
       ? (eventCity && !eventVenue.includes(eventCity) ? `${eventVenue}, ${eventCity}` : eventVenue)
       : eventAddress || eventCity;
-    
-    // Build a rich share message
-    const shareText = `🎉 ${eventTitle}\n📅 ${eventDate}\n📍 ${venueLine}\n💰 ${eventPrice}\n\nBook now 👇\n${eventUrl}`;
+
+    // Google Maps link for the location
+    const mapsQuery = encodeURIComponent(eventAddress || venueLine);
+    const mapsLink = `https://maps.google.com/maps?q=${mapsQuery}`;
     
     switch (platform) {
       case 'whatsapp': {
-        // Use api.whatsapp.com for better cross-platform support and clickable links
-        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+        // Use the backend OG share URL so WhatsApp's crawler sees proper og:image meta tags
+        const eventSlug = event?.slug || id;
+        const ogShareUrl = `${window.location.origin}/share/events/${eventSlug}`;
+        const waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${venueLine}\n💰 ${eventPrice}\n\nBook now 👇\n${ogShareUrl}`;
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
         window.open(waUrl, '_blank');
         setShowShareModal(false);
         return;
       }
       case 'instagram': {
-        // Instagram has no direct web share API — copy details and open DM
-        const igText = `${eventTitle}\n${eventDate} | ${venueLine}\n${eventPrice}\n\n${eventUrl}`;
+        // Clean text with Maps link so the full address is a single clickable link
+        const igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${mapsLink}\n💰 ${eventPrice}\n\n${eventUrl}`;
         navigator.clipboard.writeText(igText).then(() => {
           toast?.success('Event details & link copied! Paste in your Instagram chat.');
         }).catch(() => {
           toast?.info('Copy the event link and share it on Instagram');
         });
-        // Try Instagram deep link first (works on mobile), fallback to web DMs
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobile) {
           window.location.href = 'instagram://direct-inbox';
-          // Fallback after short delay if deep link doesn't work
           setTimeout(() => {
             window.open('https://www.instagram.com/direct/inbox/', '_blank');
           }, 1500);
@@ -203,15 +205,20 @@ const EventDetail = () => {
         setShowShareModal(false);
         return;
       }
-      case 'linkedin': {
-        const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
-        window.open(liUrl, '_blank', 'width=600,height=400');
+      case 'x': {
+        const eventSlugX = event?.slug || id;
+        const ogShareUrlX = `${window.location.origin}/share/events/${eventSlugX}`;
+        const xText = `${eventTitle} — ${eventDate} | ${eventPrice}`;
+        const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(ogShareUrlX)}`;
+        window.open(xUrl, '_blank', 'width=600,height=400');
         setShowShareModal(false);
         return;
       }
-      case 'facebook': {
-        const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
-        window.open(fbUrl, '_blank', 'width=600,height=400');
+      case 'linkedin': {
+        const eventSlugLi = event?.slug || id;
+        const ogShareUrlLi = `${window.location.origin}/share/events/${eventSlugLi}`;
+        const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogShareUrlLi)}`;
+        window.open(liUrl, '_blank', 'width=600,height=400');
         setShowShareModal(false);
         return;
       }

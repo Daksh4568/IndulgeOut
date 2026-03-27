@@ -2940,6 +2940,35 @@ router.get('/collaborations/:id/workspace/spectate', requirePermission('approve_
 
 // ==================== WHATSAPP MARKETING ====================
 
+// City alias map — matches both old and new spellings in the DB
+const CITY_ALIASES = {
+  'Bengaluru': ['Bangalore', 'Bengaluru'],
+  'Chennai': ['Madras', 'Chennai'],
+  'Delhi': ['New Delhi', 'Delhi'],
+  'Gurgaon': ['Gurugram', 'Gurgaon'],
+  'Kochi': ['Cochin', 'Kochi'],
+  'Kolkata': ['Calcutta', 'Kolkata'],
+  'Mumbai': ['Bombay', 'Mumbai'],
+  'Mysuru': ['Mysore', 'Mysuru'],
+  'Thiruvananthapuram': ['Trivandrum', 'Thiruvananthapuram'],
+  'Vadodara': ['Baroda', 'Vadodara'],
+  'Varanasi': ['Banaras', 'Benares', 'Varanasi'],
+  'Visakhapatnam': ['Vizag', 'Visakhapatnam'],
+  'Mangalore': ['Mangaluru', 'Mangalore'],
+  'Goa': ['Panaji', 'Goa'],
+};
+
+function buildCityRegex(city) {
+  // Find all aliases for the given city
+  const lower = city.toLowerCase().trim();
+  for (const [canonical, aliases] of Object.entries(CITY_ALIASES)) {
+    if (canonical.toLowerCase() === lower || aliases.some(a => a.toLowerCase() === lower)) {
+      return { $regex: `^(${aliases.join('|')})$`, $options: 'i' };
+    }
+  }
+  return { $regex: city, $options: 'i' };
+}
+
 /**
  * GET /api/admin/marketing/audience
  * Estimate audience size based on filters
@@ -2947,7 +2976,7 @@ router.get('/collaborations/:id/workspace/spectate', requirePermission('approve_
  */
 router.get('/marketing/audience', adminAuthMiddleware, async (req, res) => {
   try {
-    const { audienceType, organizerId, categories } = req.query;
+    const { audienceType, organizerId, categories, ageMin, ageMax, gender, city } = req.query;
     const Ticket = require('../models/Ticket');
 
     let userQuery = { phoneNumber: { $exists: true, $nin: ['', null] } };
@@ -2989,9 +3018,22 @@ router.get('/marketing/audience', adminAuthMiddleware, async (req, res) => {
         return res.status(400).json({ success: false, error: 'Invalid audienceType' });
     }
 
+    // Apply sub-filters: age, gender, city
+    if (ageMin || ageMax) {
+      userQuery.age = {};
+      if (ageMin) userQuery.age.$gte = parseInt(ageMin, 10);
+      if (ageMax) userQuery.age.$lte = parseInt(ageMax, 10);
+    }
+    if (gender) {
+      userQuery.gender = gender;
+    }
+    if (city) {
+      userQuery['location.city'] = buildCityRegex(city);
+    }
+
     const totalUsers = await User.countDocuments(userQuery);
     const sampleUsers = await User.find(userQuery)
-      .select('name email phoneNumber')
+      .select('name email phoneNumber age gender location.city')
       .limit(5)
       .lean();
 
@@ -3001,7 +3043,10 @@ router.get('/marketing/audience', adminAuthMiddleware, async (req, res) => {
       sampleUsers: sampleUsers.map(u => ({
         name: u.name,
         email: u.email,
-        phone: u.phoneNumber ? `${u.phoneNumber.slice(0, 3)}****${u.phoneNumber.slice(-3)}` : 'N/A'
+        phone: u.phoneNumber ? `${u.phoneNumber.slice(0, 3)}****${u.phoneNumber.slice(-3)}` : 'N/A',
+        age: u.age || null,
+        gender: u.gender || null,
+        city: u.location?.city || null
       }))
     });
   } catch (error) {
@@ -3058,7 +3103,7 @@ router.get('/marketing/events', adminAuthMiddleware, async (req, res) => {
  */
 router.post('/marketing/send', adminAuthMiddleware, async (req, res) => {
   try {
-    const { audienceType, organizerId, categories, eventId } = req.body;
+    const { audienceType, organizerId, categories, eventId, ageMin, ageMax, gender, city } = req.body;
     const Ticket = require('../models/Ticket');
     const { sendWhatsAppMarketing } = require('../services/msg91Service');
 
@@ -3107,6 +3152,19 @@ router.post('/marketing/send', adminAuthMiddleware, async (req, res) => {
 
       default:
         return res.status(400).json({ success: false, error: 'Invalid audienceType' });
+    }
+
+    // Apply sub-filters: age, gender, city
+    if (ageMin || ageMax) {
+      userQuery.age = {};
+      if (ageMin) userQuery.age.$gte = parseInt(ageMin, 10);
+      if (ageMax) userQuery.age.$lte = parseInt(ageMax, 10);
+    }
+    if (gender) {
+      userQuery.gender = gender;
+    }
+    if (city) {
+      userQuery['location.city'] = buildCityRegex(city);
     }
 
     // Fetch all target users

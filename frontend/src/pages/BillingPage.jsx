@@ -5,6 +5,7 @@ import { ToastContext } from '../App';
 import { api } from '../config/api';
 import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
+import UserDetailsModal from '../components/UserDetailsModal';
 import { ArrowLeft, Users, Ticket, CreditCard, CheckCircle2, UserPlus, X } from 'lucide-react';
 import { getOptimizedCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { convert24To12Hour } from '../utils/timeUtils';
@@ -13,7 +14,7 @@ import { trackInitiateCheckout } from '../utils/metaPixel';
 const BillingPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const toast = useContext(ToastContext);
 
   const [event, setEvent] = useState(null);
@@ -35,6 +36,9 @@ const BillingPage = () => {
 
   // Login prompt modal
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // User details modal (age, gender, city)
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
 
   // Check if user is registered
   const [isRegistered, setIsRegistered] = useState(false);
@@ -241,6 +245,16 @@ const BillingPage = () => {
       console.log('💾 Saving ticket selection:', ticketData);
       sessionStorage.setItem('ticketSelection', JSON.stringify(ticketData));
       setShowLoginPrompt(true);
+      return;
+    }
+
+    // Check if returning user is missing age, gender, or city
+    const hasPreviousBooking = (user.registeredEvents?.length || 0) > 0;
+    const missingAge = !user.age;
+    const missingGender = !user.gender;
+    const missingCity = !user.location?.city;
+    if (hasPreviousBooking && (missingAge || missingGender || missingCity)) {
+      setShowUserDetailsModal(true);
       return;
     }
 
@@ -904,6 +918,20 @@ const BillingPage = () => {
         onClose={() => setShowLoginPrompt(false)}
         eventTitle={event?.title}
         message="Sign in to book your tickets"
+      />
+
+      {/* User Details Modal (age, gender, city) */}
+      <UserDetailsModal
+        isOpen={showUserDetailsModal}
+        onClose={() => setShowUserDetailsModal(false)}
+        onSave={async () => {
+          setShowUserDetailsModal(false);
+          await refreshUser();
+          toast.success('Details saved! You can now proceed.');
+        }}
+        existingAge={user?.age}
+        existingGender={user?.gender}
+        existingCity={user?.location?.city}
       />
     </div>
   );

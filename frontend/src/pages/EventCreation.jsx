@@ -1198,6 +1198,16 @@ const EventCreation = () => {
       return;
     }
 
+    // Validate multi-day end date
+    if (showEndDate && !formData.endDate) {
+      toast.error("Multi-day event is enabled but End Date is not set. Please add an End Date or uncheck the option.");
+      return;
+    }
+    if (showEndDate && formData.endDate && formData.date && new Date(formData.endDate) < new Date(formData.date)) {
+      toast.error("End Date cannot be before the Start Date");
+      return;
+    }
+
     // Validate pricing timeline (Early Bird)
     if (formData.pricingTimeline?.enabled) {
       const tiers = formData.pricingTimeline.tiers || [];
@@ -1588,7 +1598,7 @@ const EventCreation = () => {
                   {showEndDate && (
                     <div>
                       <label className="block text-white text-sm font-medium mb-2">
-                        End Date
+                        End Date <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="date"
@@ -1820,7 +1830,7 @@ const EventCreation = () => {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-gray-400 text-xs mb-1">
-                              People
+                              People{index > 0 && <span className="text-red-400"> *</span>}
                             </label>
                             {index === 0 ? (
                               <input
@@ -1842,7 +1852,7 @@ const EventCreation = () => {
                           </div>
                           <div>
                             <label className="block text-gray-400 text-xs mb-1">
-                              Price (₹)
+                              Price (₹){index > 0 && <span className="text-red-400"> *</span>}
                             </label>
                             {index === 0 ? (
                               <div>
@@ -1945,7 +1955,7 @@ const EventCreation = () => {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-white text-xs font-medium mb-1">
-                              Start Date
+                              Start Date <span className="text-red-400">*</span>
                             </label>
                             <input
                               type="date"
@@ -1956,7 +1966,7 @@ const EventCreation = () => {
                           </div>
                           <div>
                             <label className="block text-white text-xs font-medium mb-1">
-                              End Date
+                              End Date <span className="text-red-400">*</span>
                             </label>
                             <input
                               type="date"
@@ -1970,7 +1980,7 @@ const EventCreation = () => {
                         {/* Price */}
                         <div>
                           <label className="block text-white text-xs font-medium mb-1">
-                            Price (₹)
+                            Price (₹) <span className="text-red-400">*</span>
                           </label>
                           <input
                             type="number"
@@ -2040,7 +2050,7 @@ const EventCreation = () => {
                         {/* Coupon Code */}
                         <div>
                           <label className="block text-white text-xs font-medium mb-1">
-                            Coupon Code
+                            Coupon Code <span className="text-red-400">*</span>
                           </label>
                           <input
                             type="text"
@@ -2069,7 +2079,7 @@ const EventCreation = () => {
 
                           <div>
                             <label className="block text-white text-xs font-medium mb-1">
-                              Discount Value
+                              Discount Value <span className="text-red-400">*</span>
                             </label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
@@ -2230,7 +2240,7 @@ const EventCreation = () => {
                         {formData.questionnaire.questions.length > 1 && (
                           <div className="flex items-center justify-between">
                             <span className="text-white text-xs font-medium">
-                              Question {index + 1}
+                              Question {index + 1} <span className="text-red-400">*</span>
                             </span>
                             <button
                               type="button"
@@ -2242,6 +2252,11 @@ const EventCreation = () => {
                           </div>
                         )}
                         <div>
+                          {formData.questionnaire.questions.length === 1 && (
+                            <label className="block text-white text-xs font-medium mb-1">
+                              Question 1 <span className="text-red-400">*</span>
+                            </label>
+                          )}
                           <textarea
                             value={item.question}
                             onChange={(e) => handleQuestionChange(index, e.target.value)}

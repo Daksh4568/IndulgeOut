@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import axios from "axios";
 import API_URL from "../config/api";
 import { useAuth } from "../contexts/AuthContext";
+import CityDropdown from "../components/CityDropdown";
 
 const VenueSignup = () => {
   const navigate = useNavigate();
@@ -319,25 +320,11 @@ const VenueSignup = () => {
                 <label className="block text-white text-sm font-medium mb-2">
                   City <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="city"
+                <CityDropdown
                   value={formData.city}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                  style={{ "--tw-ring-color": "#7878E9" }}
-                >
-                  <option value="">Select city</option>
-                  <option value="Mumbai">Mumbai</option>
-                  <option value="Delhi">Delhi</option>
-                  <option value="Bangalore">Bangalore</option>
-                  <option value="Hyderabad">Hyderabad</option>
-                  <option value="Chennai">Chennai</option>
-                  <option value="Kolkata">Kolkata</option>
-                  <option value="Pune">Pune</option>
-                  <option value="Ahmedabad">Ahmedabad</option>
-                  <option value="Jaipur">Jaipur</option>
-                  <option value="Other">Other</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, city: val })}
+                  placeholder="Select city"
+                />
               </div>
 
               <div>

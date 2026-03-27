@@ -319,7 +319,7 @@ const UserDashboard = () => {
                   style={{ fontFamily: 'Oswald, sans-serif' }}
                 >
                   <Star className="h-4 w-4" />
-                  Leave Review
+                  Leave a Review
                 </button>
               )}
               {isSaved && (

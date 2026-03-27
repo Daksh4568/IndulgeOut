@@ -777,57 +777,123 @@ const EventAnalytics = () => {
             {/* Price Change History Log */}
             {analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-3">Price Change History</h3>
-                <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-700/50">
-                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Date & Time</th>
-                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Previous Price</th>
-                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">New Price</th>
-                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Reason</th>
-                          <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Spots at Prev Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.priceChangeHistory.map((change, index) => (
-                          <tr key={index} className="border-b border-gray-700/30 last:border-b-0 hover:bg-white/5">
-                            <td className="px-4 py-3 text-sm text-white">
-                              {formatDateTime(change.changedAt)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-300">
-                              ₹{change.previousPrice}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-medium text-white">
-                              ₹{change.newPrice}
-                              {change.newPrice > change.previousPrice ? (
-                                <TrendingUp className="inline h-3 w-3 ml-1 text-red-400" />
-                              ) : change.newPrice < change.previousPrice ? (
-                                <TrendingDown className="inline h-3 w-3 ml-1 text-green-400" />
-                              ) : null}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                change.reason === 'initial_creation' 
-                                  ? 'bg-blue-500/20 text-blue-400'
-                                  : change.reason === 'timeline_automatic'
-                                    ? 'bg-purple-500/20 text-purple-400'
-                                    : 'bg-yellow-500/20 text-yellow-400'
-                              }`}>
-                                {change.reason === 'initial_creation' ? 'Created' : 
-                                 change.reason === 'timeline_automatic' ? 'Auto (Timeline)' : 'Manual Edit'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-300">
-                              {change.spotsBookedAtPrevPrice}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <h3 className="text-sm font-medium text-gray-400 mb-3">Pricing Breakdown</h3>
+                {(() => {
+                  // Transform price change history into price periods
+                  const history = analytics.priceChangeHistory;
+                  const totalSpots = analytics.attendance?.totalAttendees || 0;
+                  const currentPrice = analytics.currentPrice ?? history[history.length - 1]?.newPrice;
+                  
+                  const periods = [];
+                  
+                  // First period: from event creation to first change
+                  if (history.length > 0) {
+                    periods.push({
+                      price: history[0].previousPrice,
+                      startLabel: 'Event created',
+                      endLabel: formatDateTime(history[0].changedAt),
+                      spotsBooked: history[0].spotsBookedAtPrevPrice || 0,
+                      isActive: false,
+                      reason: 'initial_creation',
+                    });
+                  }
+                  
+                  // Middle periods from change entries
+                  for (let i = 0; i < history.length; i++) {
+                    const startTime = history[i].changedAt;
+                    const endTime = i < history.length - 1 ? history[i + 1].changedAt : null;
+                    const spotsAtEnd = i < history.length - 1 
+                      ? (history[i + 1].spotsBookedAtPrevPrice || 0) 
+                      : totalSpots;
+                    const spotsAtStart = history[i].spotsBookedAtPrevPrice || 0;
+                    
+                    periods.push({
+                      price: history[i].newPrice,
+                      startLabel: formatDateTime(startTime),
+                      endLabel: endTime ? formatDateTime(endTime) : null,
+                      spotsBooked: spotsAtEnd - spotsAtStart,
+                      isActive: !endTime,
+                      reason: history[i].reason,
+                    });
+                  }
+
+                  // Filter out ₹0 periods with 0 spots (initial creation noise)
+                  const displayPeriods = periods.filter(p => !(p.price === 0 && p.spotsBooked === 0 && !p.isActive));
+
+                  // Helper to get pricing mode label
+                  const getModeLabel = (reason) => {
+                    switch (reason) {
+                      case 'timeline_automatic': return { text: 'Time-Based', color: 'text-blue-400' };
+                      case 'mode_switch_to_timeline': return { text: '⏰ Switched to Time-Based', color: 'text-blue-400' };
+                      case 'mode_switch_to_regular': return { text: '↩ Switched to Regular', color: 'text-yellow-400' };
+                      default: return null;
+                    }
+                  };
+
+                  // Propagate time-based label to subsequent auto-periods
+                  // If a period follows a mode_switch_to_timeline, mark it as time-based even if reason is something else
+                  let inTimelineMode = false;
+                  const enrichedPeriods = displayPeriods.map(p => {
+                    if (p.reason === 'mode_switch_to_timeline') inTimelineMode = true;
+                    if (p.reason === 'mode_switch_to_regular') inTimelineMode = false;
+                    return { ...p, isTimelinePricing: inTimelineMode || p.reason === 'timeline_automatic' };
+                  });
+
+                  return (
+                    <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-700/50">
+                              <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Ticket Price</th>
+                              <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Active Period</th>
+                              <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Spots Sold</th>
+                              <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Revenue</th>
+                              <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {enrichedPeriods.map((period, index) => {
+                              const modeLabel = getModeLabel(period.reason);
+                              return (
+                                <tr key={index} className={`border-b border-gray-700/30 last:border-b-0 ${period.isActive ? 'bg-green-900/10' : period.isTimelinePricing ? 'bg-blue-900/5' : 'hover:bg-white/5'}`}>
+                                  <td className={`px-4 py-3 ${period.isActive ? 'text-green-400' : 'text-white'}`}>
+                                    <div className="text-sm font-semibold">₹{period.price}</div>
+                                    {modeLabel && (
+                                      <div className={`text-[10px] mt-0.5 ${modeLabel.color}`}>{modeLabel.text}</div>
+                                    )}
+                                    {!modeLabel && period.isTimelinePricing && (
+                                      <div className="text-[10px] mt-0.5 text-blue-400">⏰ Time-Based</div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-gray-400">
+                                    <div>{period.startLabel}</div>
+                                    <div className="text-gray-600">→ {period.isActive ? 'Now' : period.endLabel}</div>
+                                  </td>
+                                  <td className={`px-4 py-3 text-sm font-medium ${period.isActive ? 'text-green-400' : 'text-white'}`}>
+                                    {period.spotsBooked}
+                                  </td>
+                                  <td className={`px-4 py-3 text-sm font-medium ${period.isActive ? 'text-green-400' : 'text-white'}`}>
+                                    ₹{period.price * period.spotsBooked}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      period.isActive 
+                                        ? 'bg-green-500/20 text-green-400'
+                                        : 'bg-gray-600/20 text-gray-400'
+                                    }`}>
+                                      {period.isActive ? 'Active' : 'Ended'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

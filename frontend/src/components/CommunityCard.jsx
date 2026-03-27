@@ -2,7 +2,14 @@ import { MapPin, Users, Heart, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
-const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
+const DEFAULT_COMMUNITY_IMAGES = [
+  '/images/BackgroundLogin.jpg',
+  '/images/communities2.jpg',
+  '/images/communities3.jpg',
+  '/images/communities4.jpg',
+];
+
+const CommunityCard = ({ community, onFavorite, isLocked = false, defaultImageIndex = 0 }) => {
   const [isFavorited, setIsFavorited] = useState(false);
 
   const handleFavorite = (e) => {
@@ -43,7 +50,7 @@ const CommunityCard = ({ community, onFavorite, isLocked = false }) => {
           />
         ) : (
           <img
-            src="/images/BackgroundLogin.jpg"
+            src={DEFAULT_COMMUNITY_IMAGES[defaultImageIndex % DEFAULT_COMMUNITY_IMAGES.length]}
             alt={community.name || "Community poster"}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />

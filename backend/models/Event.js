@@ -170,9 +170,11 @@ const eventSchema = new mongoose.Schema({
     reason: {
       type: String,
       enum: [
-        'manual_edit',          // Host manually changed the price via Edit Event page
-        'timeline_automatic',   // Cron job detected a new pricing tier became active (time-based pricing)
-        'initial_creation'      // Price set when the event was first created
+        'manual_edit',              // Host manually changed the price via Edit Event page
+        'timeline_automatic',       // Cron job detected a new pricing tier became active (time-based pricing)
+        'initial_creation',         // Price set when the event was first created
+        'mode_switch_to_timeline',  // Host enabled time-based pricing
+        'mode_switch_to_regular'    // Host disabled time-based pricing and switched back to regular
       ],
       default: 'manual_edit'
     },

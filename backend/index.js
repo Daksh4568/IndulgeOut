@@ -27,6 +27,7 @@ const reviewRoutes = require('./routes/reviews.js');
 const notificationRoutes = require('./routes/notifications.js');
 const settlementRoutes = require('./routes/settlements.js');
 const cronRoutes = require('./routes/cron.js');
+const shareRoutes = require('./routes/share.js');
 
 // Import scheduled jobs
 const { initializeScheduledJobs } = require('./jobs/scheduledJobs.js');
@@ -151,6 +152,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/share', shareRoutes);
 
 console.log('✅ All routes registered:', [
   '/api/auth',
