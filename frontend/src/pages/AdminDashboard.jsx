@@ -396,6 +396,37 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleExportAudienceCSV = async () => {
+    try {
+      const params = new URLSearchParams({ audienceType: marketingAudienceType });
+      if (marketingAudienceType === 'organizer_specific' && marketingOrganizerId) {
+        params.append('organizerId', marketingOrganizerId);
+      }
+      if (marketingAudienceType === 'category_interests' && marketingCategories.length > 0) {
+        params.append('categories', marketingCategories.join(','));
+      }
+      if (marketingAgeMin) params.append('ageMin', marketingAgeMin);
+      if (marketingAgeMax) params.append('ageMax', marketingAgeMax);
+      if (marketingGender) params.append('gender', marketingGender);
+      if (marketingCity.trim()) params.append('city', marketingCity.trim());
+
+      const res = await api.get(`/admin/marketing/audience/export?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `b2c_users_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting audience CSV:', err);
+    }
+  };
+
   // MSG91 WhatsApp pricing per message (Marketing template rate for India)
   // Utility templates: ₹0.115 | Marketing templates: ₹0.78 (Meta) + MSG91 markup
   const MSG91_MARKETING_RATE = 0.80;
@@ -2759,9 +2790,20 @@ const AdminDashboard = () => {
                   {/* Audience Preview */}
                   {marketingAudiencePreview && (
                     <div className="mt-4 p-4 rounded-lg bg-green-900/20 border border-green-700/40">
-                      <p className="text-green-400 font-semibold text-lg">
-                        🎯 {marketingAudiencePreview.totalUsers} user{marketingAudiencePreview.totalUsers !== 1 ? 's' : ''} matched
-                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-green-400 font-semibold text-lg">
+                          🎯 {marketingAudiencePreview.totalUsers} user{marketingAudiencePreview.totalUsers !== 1 ? 's' : ''} matched
+                        </p>
+                        {marketingAudiencePreview.totalUsers > 0 && (
+                          <button
+                            onClick={handleExportAudienceCSV}
+                            className="px-3 py-1.5 rounded-lg bg-white/10 border border-gray-600 text-gray-200 text-xs font-medium hover:bg-white/20 transition-colors flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Export CSV
+                          </button>
+                        )}
+                      </div>
                       {marketingAudiencePreview.sampleUsers?.length > 0 && (
                         <div className="mt-2 space-y-1">
                           <p className="text-gray-400 text-xs font-medium">Sample users:</p>

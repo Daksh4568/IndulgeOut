@@ -443,4 +443,60 @@ router.get('/host/:hostId', async (req, res) => {
   }
 });
 
+// @route   GET /api/communities/:id/event-reviews
+// @desc    Get all reviews from all events hosted by this community's host
+// @access  Public
+router.get('/:id/event-reviews', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid community ID format' });
+    }
+
+    const community = await Community.findById(req.params.id).select('host');
+    if (!community || !community.host) {
+      return res.status(404).json({ message: 'Community not found' });
+    }
+
+    // Find all events by this host
+    const hostEvents = await Event.find({ host: community.host }).select('_id title date');
+    const eventIds = hostEvents.map(e => e._id);
+
+    if (eventIds.length === 0) {
+      return res.json({ reviews: [], totalReviews: 0, averageRating: 0 });
+    }
+
+    // Fetch all reviews for those events
+    const Review = require('../models/Review');
+    const reviews = await Review.find({ event: { $in: eventIds } })
+      .populate('user', 'name profilePicture')
+      .populate('event', 'title date')
+      .sort({ createdAt: -1 });
+
+    const totalReviews = reviews.length;
+    let averageRating = 0;
+    if (totalReviews > 0) {
+      averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
+    }
+
+    res.json({
+      reviews: reviews.map(r => ({
+        _id: r._id,
+        rating: r.rating,
+        comment: r.comment,
+        photos: r.photos,
+        createdAt: r.createdAt,
+        user: r.user,
+        event: r.event,
+        isVerifiedAttendee: r.isVerifiedAttendee,
+        helpfulCount: r.helpfulCount
+      })),
+      totalReviews,
+      averageRating: Math.round(averageRating * 10) / 10
+    });
+  } catch (error) {
+    console.error('Error fetching community event reviews:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -17,7 +17,7 @@ import {
   XCircle,
   Edit2
 } from 'lucide-react';
-import { api } from '../config/api.js';
+import { api, API_URL } from '../config/api.js';
 import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import ShareModal from '../components/ShareModal';
@@ -170,24 +170,25 @@ const EventDetail = () => {
       ? (eventCity && !eventVenue.includes(eventCity) ? `${eventVenue}, ${eventCity}` : eventVenue)
       : eventAddress || eventCity;
 
-    // Google Maps link for the location
-    const mapsQuery = encodeURIComponent(eventAddress || venueLine);
-    const mapsLink = `https://maps.google.com/maps?q=${mapsQuery}`;
+    // Short readable location text for messages
+    const shortLocation = eventVenue
+      ? (eventCity ? `${eventVenue}, ${eventCity}` : eventVenue)
+      : eventCity || '';
+
+    // Backend share URL for OG tags (bypasses Amplify, goes directly to Vercel)
+    const eventSlug = event?.slug || id;
+    const ogShareUrl = `${API_URL}/share/events/${eventSlug}`;
     
     switch (platform) {
       case 'whatsapp': {
-        // Use the backend OG share URL so WhatsApp's crawler sees proper og:image meta tags
-        const eventSlug = event?.slug || id;
-        const ogShareUrl = `${window.location.origin}/share/events/${eventSlug}`;
-        const waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${venueLine}\n💰 ${eventPrice}\n\nBook now 👇\n${ogShareUrl}`;
+        const waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${shortLocation}\n💰 ${eventPrice}\n\nBook now 👇\n${ogShareUrl}`;
         const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
         window.open(waUrl, '_blank');
         setShowShareModal(false);
         return;
       }
       case 'instagram': {
-        // Clean text with Maps link so the full address is a single clickable link
-        const igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${mapsLink}\n💰 ${eventPrice}\n\n${eventUrl}`;
+        const igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${shortLocation}\n💰 ${eventPrice}\n\n${eventUrl}`;
         navigator.clipboard.writeText(igText).then(() => {
           toast?.success('Event details & link copied! Paste in your Instagram chat.');
         }).catch(() => {
@@ -206,18 +207,14 @@ const EventDetail = () => {
         return;
       }
       case 'x': {
-        const eventSlugX = event?.slug || id;
-        const ogShareUrlX = `${window.location.origin}/share/events/${eventSlugX}`;
         const xText = `${eventTitle} — ${eventDate} | ${eventPrice}`;
-        const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(ogShareUrlX)}`;
+        const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(ogShareUrl)}`;
         window.open(xUrl, '_blank', 'width=600,height=400');
         setShowShareModal(false);
         return;
       }
       case 'linkedin': {
-        const eventSlugLi = event?.slug || id;
-        const ogShareUrlLi = `${window.location.origin}/share/events/${eventSlugLi}`;
-        const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogShareUrlLi)}`;
+        const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogShareUrl)}`;
         window.open(liUrl, '_blank', 'width=600,height=400');
         setShowShareModal(false);
         return;

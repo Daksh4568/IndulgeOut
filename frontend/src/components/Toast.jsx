@@ -14,31 +14,31 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
   const types = {
     success: {
       icon: CheckCircle,
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      borderColor: 'border-green-200 dark:border-green-800',
-      textColor: 'text-green-800 dark:text-green-200',
-      iconColor: 'text-green-500 dark:text-green-400'
+      bgColor: 'bg-green-900 sm:bg-green-50 sm:dark:bg-green-900/20',
+      borderColor: 'border-green-700 sm:border-green-200 sm:dark:border-green-800',
+      textColor: 'text-green-100 sm:text-green-800 sm:dark:text-green-200',
+      iconColor: 'text-green-300 sm:text-green-500 sm:dark:text-green-400'
     },
     error: {
       icon: XCircle,
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-      borderColor: 'border-red-200 dark:border-red-800',
-      textColor: 'text-red-800 dark:text-red-200',
-      iconColor: 'text-red-500 dark:text-red-400'
+      bgColor: 'bg-red-900 sm:bg-red-50 sm:dark:bg-red-900/20',
+      borderColor: 'border-red-700 sm:border-red-200 sm:dark:border-red-800',
+      textColor: 'text-red-100 sm:text-red-800 sm:dark:text-red-200',
+      iconColor: 'text-red-300 sm:text-red-500 sm:dark:text-red-400'
     },
     warning: {
       icon: AlertCircle,
-      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-      borderColor: 'border-yellow-200 dark:border-yellow-800',
-      textColor: 'text-yellow-800 dark:text-yellow-200',
-      iconColor: 'text-yellow-500 dark:text-yellow-400'
+      bgColor: 'bg-yellow-900 sm:bg-yellow-50 sm:dark:bg-yellow-900/20',
+      borderColor: 'border-yellow-700 sm:border-yellow-200 sm:dark:border-yellow-800',
+      textColor: 'text-yellow-100 sm:text-yellow-800 sm:dark:text-yellow-200',
+      iconColor: 'text-yellow-300 sm:text-yellow-500 sm:dark:text-yellow-400'
     },
     info: {
       icon: Info,
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      textColor: 'text-blue-800 dark:text-blue-200',
-      iconColor: 'text-blue-500 dark:text-blue-400'
+      bgColor: 'bg-blue-900 sm:bg-blue-50 sm:dark:bg-blue-900/20',
+      borderColor: 'border-blue-700 sm:border-blue-200 sm:dark:border-blue-800',
+      textColor: 'text-blue-100 sm:text-blue-800 sm:dark:text-blue-200',
+      iconColor: 'text-blue-300 sm:text-blue-500 sm:dark:text-blue-400'
     }
   };
 
@@ -46,12 +46,12 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
   const Icon = config.icon;
 
   return (
-    <div className={`fixed top-20 right-4 left-4 sm:left-auto sm:min-w-[320px] sm:max-w-md z-50 animate-slideInRight`}>
-      <div className={`${config.bgColor} ${config.borderColor} border rounded-lg shadow-lg p-4`}>
-        <div className="flex items-start gap-3">
-          <Icon className={`h-5 w-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
-          <div className="flex-1">
-            <p className={`text-sm font-medium ${config.textColor}`}>{message}</p>
+    <div className={`fixed top-4 sm:top-20 right-2 left-2 sm:right-4 sm:left-auto sm:min-w-[320px] sm:max-w-md z-50 animate-slideInRight`}>
+      <div className={`${config.bgColor} ${config.borderColor} border rounded-lg shadow-lg p-2.5 sm:p-4`}>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${config.iconColor} flex-shrink-0`} />
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs sm:text-sm font-medium ${config.textColor}`}>{message}</p>
           </div>
           {onClose && (
             <button
@@ -59,7 +59,7 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
               className={`${config.textColor} hover:opacity-70 transition-opacity flex-shrink-0`}
               aria-label="Close notification"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
           )}
         </div>
@@ -86,9 +86,9 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
 // Toast Container Component
 export const ToastContainer = ({ toasts, removeToast }) => {
   return (
-    <div className="fixed top-20 right-4 left-4 sm:left-auto space-y-2 z-50 pointer-events-none">
+    <div className="fixed top-4 sm:top-20 right-2 left-2 sm:right-4 sm:left-auto space-y-2 z-50 pointer-events-none">
       {toasts.map((toast, index) => (
-        <div key={toast.id} className="pointer-events-auto" style={{ marginTop: `${index * 70}px` }}>
+        <div key={toast.id} className="pointer-events-auto" style={{ marginTop: index > 0 ? '8px' : '0' }}>
           <Toast
             message={toast.message}
             type={toast.type}

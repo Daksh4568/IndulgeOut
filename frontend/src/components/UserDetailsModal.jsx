@@ -72,7 +72,7 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
           </div>
 
           <p className="text-gray-300 text-sm text-center mb-6">
-            These details are necessary to book events. Please fill them in to continue.
+            Help us understand you a little better so we can show you events and experiences that you'll enjoy.
           </p>
 
           <div className="space-y-4">

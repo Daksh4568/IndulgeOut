@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Upload } from "lucide-react";
 import axios from "axios";
 import API_URL from "../config/api";
 import { useAuth } from "../contexts/AuthContext";
 import CityDropdown from "../components/CityDropdown";
+import { ToastContext } from "../App";
 
 const VenueSignup = () => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
+  const toast = useContext(ToastContext);
   const [formData, setFormData] = useState({
     venueName: "",
     venueType: "",
@@ -70,34 +72,68 @@ const VenueSignup = () => {
     e.preventDefault();
     setError("");
 
-    // Validation
+    // Validation with toast messages
     if (!formData.venueName.trim()) {
-      setError("Please enter venue name");
+      toast?.error("Venue name is required");
+      return;
+    }
+    if (formData.venueName.trim().length < 2) {
+      toast?.error("Venue name must be at least 2 characters");
       return;
     }
     if (!formData.contactPersonName.trim()) {
-      setError("Please enter contact person name");
+      toast?.error("Contact person name is required");
+      return;
+    }
+    if (formData.contactPersonName.trim().length < 2) {
+      toast?.error("Contact person name must be at least 2 characters");
       return;
     }
     if (!formData.phoneNumber.trim()) {
-      setError("Please enter phone number");
+      toast?.error("Phone number is required");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(formData.phoneNumber.trim())) {
+      toast?.error("Please enter a valid 10-digit Indian phone number");
       return;
     }
     if (!formData.email.trim()) {
-      setError("Please enter email");
+      toast?.error("Email address is required");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      toast?.error("Please enter a valid email address");
       return;
     }
     if (!formData.city.trim()) {
-      setError("Please select city");
+      toast?.error("Please select your city");
       return;
     }
     if (!formData.venueType) {
-      setError("Please select venue type");
+      toast?.error("Please select your venue type");
       return;
     }
     if (!formData.capacityRange) {
-      setError("Please select capacity range");
+      toast?.error("Please select venue capacity range");
       return;
+    }
+    if (formData.instagramLink && !/^https?:\/\/(www\.)?instagram\.com\/.+/.test(formData.instagramLink.trim())) {
+      toast?.error("Please enter a valid Instagram URL (e.g., https://instagram.com/yourprofile)");
+      return;
+    }
+    // Validate photo sizes
+    if (photos.length > 0) {
+      const totalSize = photos.reduce((sum, f) => sum + f.size, 0);
+      if (totalSize > 5 * 1024 * 1024) {
+        toast?.error("Total photo size should not exceed 5MB");
+        return;
+      }
+      for (const photo of photos) {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) {
+          toast?.error("Only JPEG, PNG and WebP images are allowed");
+          return;
+        }
+      }
     }
 
     setIsLoading(true);
@@ -144,7 +180,9 @@ const VenueSignup = () => {
       // Redirect to venue dashboard
       navigate("/venue/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      const msg = err.response?.data?.message || "Registration failed. Please try again.";
+      setError(msg);
+      toast?.error(msg);
     } finally {
       setIsLoading(false);
     }

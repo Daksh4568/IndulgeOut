@@ -3056,6 +3056,136 @@ router.get('/marketing/audience', adminAuthMiddleware, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/marketing/audience/export
+ * Export filtered B2C users as CSV with first ticket purchase info
+ * Same query params as /marketing/audience
+ */
+router.get('/marketing/audience/export', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { audienceType, organizerId, categories, ageMin, ageMax, gender, city } = req.query;
+    const Ticket = require('../models/Ticket');
+
+    let userQuery = { phoneNumber: { $exists: true, $nin: ['', null] } };
+    let userIds = null;
+
+    switch (audienceType) {
+      case 'all_b2c':
+        userQuery.role = 'user';
+        break;
+      case 'organizer_specific': {
+        if (!organizerId) {
+          return res.status(400).json({ success: false, error: 'organizerId is required' });
+        }
+        const orgEvents = await Event.find({ host: organizerId }).select('_id');
+        const eventIds = orgEvents.map(e => e._id);
+        const tickets = await Ticket.find({ event: { $in: eventIds }, status: { $ne: 'cancelled' } }).select('user').lean();
+        userIds = [...new Set(tickets.map(t => t.user.toString()))];
+        userQuery._id = { $in: userIds };
+        break;
+      }
+      case 'category_interests': {
+        const categoryList = categories ? categories.split(',').map(c => c.trim()) : [];
+        if (categoryList.length === 0) {
+          return res.status(400).json({ success: false, error: 'At least one category is required' });
+        }
+        userQuery.role = 'user';
+        userQuery.interests = { $in: categoryList };
+        break;
+      }
+      default:
+        return res.status(400).json({ success: false, error: 'Invalid audienceType' });
+    }
+
+    // Sub-filters
+    if (ageMin || ageMax) {
+      userQuery.age = {};
+      if (ageMin) userQuery.age.$gte = parseInt(ageMin, 10);
+      if (ageMax) userQuery.age.$lte = parseInt(ageMax, 10);
+    }
+    if (gender) userQuery.gender = gender;
+    if (city) userQuery['location.city'] = buildCityRegex(city);
+
+    const users = await User.find(userQuery)
+      .select('name email phoneNumber age gender location.city')
+      .lean();
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, error: 'No users found for the given filters' });
+    }
+
+    // Get first ticket per user (earliest purchaseDate, non-cancelled)
+    const userIdList = users.map(u => u._id);
+    const firstTickets = await Ticket.aggregate([
+      { $match: { user: { $in: userIdList }, status: { $ne: 'cancelled' } } },
+      { $sort: { purchaseDate: 1 } },
+      { $group: {
+        _id: '$user',
+        firstTicketDate: { $first: '$purchaseDate' },
+        firstEventId: { $first: '$event' },
+      }},
+    ]);
+
+    // Collect event IDs and fetch event + host details
+    const eventIds = [...new Set(firstTickets.map(t => t.firstEventId.toString()))];
+    const events = await Event.find({ _id: { $in: eventIds } })
+      .select('title host')
+      .populate('host', 'communityProfile.communityName name')
+      .lean();
+    const eventMap = {};
+    for (const ev of events) { eventMap[ev._id.toString()] = ev; }
+
+    // Build lookup: userId -> first ticket info
+    const ticketMap = {};
+    for (const t of firstTickets) {
+      const ev = eventMap[t.firstEventId.toString()];
+      ticketMap[t._id.toString()] = {
+        firstTicketDate: t.firstTicketDate,
+        firstEventName: ev?.title || '',
+        communityName: ev?.host?.communityProfile?.communityName || ev?.host?.name || '',
+      };
+    }
+
+    // Build CSV
+    const escapeCSV = (val) => {
+      if (val == null) return '';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const header = 'User Name,Mobile Number,Email,Age,City,Gender,First Ticket Date,First Event Name,Community Name';
+    const rows = users.map(u => {
+      const info = ticketMap[u._id.toString()] || {};
+      const ticketDate = info.firstTicketDate
+        ? new Date(info.firstTicketDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '';
+      return [
+        escapeCSV(u.name),
+        escapeCSV(u.phoneNumber),
+        escapeCSV(u.email),
+        escapeCSV(u.age || ''),
+        escapeCSV(u.location?.city || ''),
+        escapeCSV(u.gender || ''),
+        escapeCSV(ticketDate),
+        escapeCSV(info.firstEventName || ''),
+        escapeCSV(info.communityName || ''),
+      ].join(',');
+    });
+
+    const csv = [header, ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="b2c_users_export_${Date.now()}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting marketing audience CSV:', error);
+    res.status(500).json({ success: false, error: 'Failed to export audience' });
+  }
+});
+
+/**
  * GET /api/admin/marketing/events
  * Get upcoming published events for the event selector
  */

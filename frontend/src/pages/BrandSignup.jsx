@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Upload } from "lucide-react";
 import axios from "axios";
 import API_URL from "../config/api";
 import { useAuth } from "../contexts/AuthContext";
 import CityDropdown from "../components/CityDropdown";
+import { ToastContext } from "../App";
 
 const BrandSignup = () => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
+  const toast = useContext(ToastContext);
   const [formData, setFormData] = useState({
     brandName: "",
     brandCategory: "",
@@ -48,30 +50,64 @@ const BrandSignup = () => {
     e.preventDefault();
     setError("");
 
-    // Validation
+    // Validation with toast messages
     if (!formData.brandName.trim()) {
-      setError("Please enter brand name");
+      toast?.error("Brand name is required");
+      return;
+    }
+    if (formData.brandName.trim().length < 2) {
+      toast?.error("Brand name must be at least 2 characters");
       return;
     }
     if (!formData.brandCategory.trim()) {
-      setError("Please enter brand category");
+      toast?.error("Please select a brand category");
       return;
     }
     if (!formData.contactPersonName.trim()) {
-      setError("Please enter contact person name");
+      toast?.error("Contact person name is required");
+      return;
+    }
+    if (formData.contactPersonName.trim().length < 2) {
+      toast?.error("Contact person name must be at least 2 characters");
       return;
     }
     if (!formData.phoneNumber.trim()) {
-      setError("Please enter phone number");
+      toast?.error("Phone number is required");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(formData.phoneNumber.trim())) {
+      toast?.error("Please enter a valid 10-digit Indian phone number");
       return;
     }
     if (!formData.workEmail.trim()) {
-      setError("Please enter work email");
+      toast?.error("Work email is required");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.workEmail.trim())) {
+      toast?.error("Please enter a valid email address");
       return;
     }
     if (!formData.city.trim()) {
-      setError("Please select city");
+      toast?.error("Please select your city");
       return;
+    }
+    if (formData.instagramLink && !/^https?:\/\/(www\.)?instagram\.com\/.+/.test(formData.instagramLink.trim())) {
+      toast?.error("Please enter a valid Instagram URL (e.g., https://instagram.com/yourprofile)");
+      return;
+    }
+    // Validate photo sizes
+    if (photos.length > 0) {
+      const totalSize = photos.reduce((sum, f) => sum + f.size, 0);
+      if (totalSize > 5 * 1024 * 1024) {
+        toast?.error("Total photo size should not exceed 5MB");
+        return;
+      }
+      for (const photo of photos) {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) {
+          toast?.error("Only JPEG, PNG and WebP images are allowed");
+          return;
+        }
+      }
     }
 
     setIsLoading(true);
@@ -116,7 +152,9 @@ const BrandSignup = () => {
       // Redirect to brand dashboard
       navigate("/brand/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      const msg = err.response?.data?.message || "Registration failed. Please try again.";
+      setError(msg);
+      toast?.error(msg);
     } finally {
       setIsLoading(false);
     }

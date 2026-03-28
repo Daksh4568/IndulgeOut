@@ -847,9 +847,9 @@ const ProfileNew = () => {
                     </div>
                   </div>
 
-                  {/* Age and Gender - Display for B2C users */}
-                  {(profileData.age || profileData.gender) && (
-                    <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-800">
+                  {/* Age, Gender, City - Display for B2C users */}
+                  {(profileData.age || profileData.gender || profileData.location?.city) && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-800">
                       {/* Age */}
                       {profileData.age && (
                         <div className="flex items-center gap-3 text-gray-300">
@@ -876,6 +876,19 @@ const ProfileNew = () => {
                           <div className="min-w-0">
                             <p className="text-xs text-gray-500">Gender</p>
                             <p className="text-sm font-medium">{profileData.gender}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* City */}
+                      {profileData.location?.city && (
+                        <div className="flex items-center gap-3 text-gray-300">
+                          <div className="h-10 w-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-gray-500">City</p>
+                            <p className="text-sm font-medium">{profileData.location.city}</p>
                           </div>
                         </div>
                       )}

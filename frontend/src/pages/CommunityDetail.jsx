@@ -42,6 +42,8 @@ const CommunityDetail = () => {
   const [touchEnd, setTouchEnd] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
+  const [eventReviews, setEventReviews] = useState([]);
+  const [eventReviewStats, setEventReviewStats] = useState({ totalReviews: 0, averageRating: 0 });
 
   // Carousel navigation functions
   const nextImage = () => {
@@ -163,6 +165,9 @@ const CommunityDetail = () => {
         if (response.data.community.host?._id) {
           fetchHostCommunities(response.data.community.host._id);
         }
+        
+        // Fetch event reviews for this community
+        fetchEventReviews();
       }
     } catch (error) {
       console.error('Error fetching community:', error);
@@ -186,6 +191,21 @@ const CommunityDetail = () => {
       }
     } catch (error) {
       console.error('Error fetching host communities:', error);
+    }
+  };
+
+  const fetchEventReviews = async () => {
+    try {
+      const response = await api.get(`/communities/${id}/event-reviews`);
+      if (response.data.reviews) {
+        setEventReviews(response.data.reviews);
+        setEventReviewStats({
+          totalReviews: response.data.totalReviews || 0,
+          averageRating: response.data.averageRating || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching event reviews:', error);
     }
   };
 
@@ -702,7 +722,16 @@ const CommunityDetail = () => {
             </div>
           )}
 
-          {activeTab === 'reviews' && (
+          {activeTab === 'reviews' && (() => {
+            // Combine community testimonials and event reviews for unified stats
+            const allReviews = [
+              ...(community.testimonials || []).map(t => ({ ...t, _type: 'testimonial' })),
+              ...eventReviews.map(r => ({ ...r, _type: 'event' })),
+            ];
+            const totalCount = allReviews.length;
+            const avgRating = totalCount > 0 ? allReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalCount : 0;
+
+            return (
             <div>
               <h2 className="text-2xl font-bold text-white mb-6" style={{ fontFamily: 'Oswald, sans-serif' }}>
                 Reviews
@@ -712,15 +741,15 @@ const CommunityDetail = () => {
                 {/* Rating Summary */}
                 <div className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800 flex flex-col items-center justify-center">
                   <div className="text-5xl font-bold mb-2" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: 'Oswald, sans-serif' }}>
-                    {community.stats?.averageRating?.toFixed(1) || '0.0'}
+                    {avgRating.toFixed(1)}
                   </div>
                   <div className="flex gap-1 mb-2">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className={`h-5 w-5 ${star <= (community.stats?.averageRating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
+                      <Star key={star} className={`h-5 w-5 ${star <= avgRating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
                     ))}
                   </div>
                   <div className="text-gray-400 text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                    Based on {community.testimonials?.length || 0} reviews
+                    Based on {totalCount} review{totalCount !== 1 ? 's' : ''}
                   </div>
                 </div>
 
@@ -730,8 +759,8 @@ const CommunityDetail = () => {
                     Rating Breakdown:
                   </h3>
                   {[5, 4, 3, 2, 1].map((stars) => {
-                    const count = community.testimonials?.filter(t => t.rating === stars).length || 0;
-                    const percentage = community.testimonials?.length ? (count / community.testimonials.length) * 100 : 0;
+                    const count = allReviews.filter(r => r.rating === stars).length;
+                    const percentage = totalCount ? (count / totalCount) * 100 : 0;
                     return (
                       <div key={stars} className="flex items-center gap-3 mb-3">
                         <div className="flex items-center gap-1 w-16">
@@ -798,10 +827,73 @@ const CommunityDetail = () => {
                 </div>
               )}
 
-              {/* Recent Reviews */}
+              {/* Event Reviews */}
+              {eventReviews.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Event Reviews
+                  </h3>
+                  <div className="space-y-4">
+                    {eventReviews.map((review) => (
+                      <div key={review._id} className="bg-zinc-900/50 rounded-lg p-6 border border-gray-800">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                            {review.user?.profilePicture ? (
+                              <img src={review.user.profilePicture} alt={review.user.name} className="w-12 h-12 rounded-full object-cover" />
+                            ) : (
+                              <span className="text-lg font-bold text-gray-400">
+                                {review.user?.name?.charAt(0) || 'U'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h4 className="font-bold text-white text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                  {review.user?.name || 'Anonymous'}
+                                  {review.isVerifiedAttendee && (
+                                    <span className="ml-2 px-1.5 py-0.5 bg-green-900/30 text-green-400 rounded text-[10px] uppercase font-semibold">Verified</span>
+                                  )}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <div className="flex gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
+                                    ))}
+                                  </div>
+                                  {review.event?.title && (
+                                    <span className="px-2 py-0.5 bg-purple-900/30 text-purple-400 rounded text-[10px] font-medium">
+                                      {review.event.title}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                                {formatDate(review.createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-sm leading-relaxed" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {review.comment}
+                            </p>
+                            {review.photos?.length > 0 && (
+                              <div className="flex gap-2 mt-3">
+                                {review.photos.map((photo, i) => (
+                                  <img key={i} src={photo} alt="Review" className="w-16 h-16 rounded-lg object-cover border border-gray-700" />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Community Testimonials */}
               <div>
                 <h3 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                  Recent Reviews
+                  {eventReviews.length > 0 ? 'Community Testimonials' : 'Recent Reviews'}
                 </h3>
                 <div className="space-y-4">
                   {community.testimonials && community.testimonials.length > 0 ? (
@@ -840,7 +932,7 @@ const CommunityDetail = () => {
                         </div>
                       </div>
                     ))
-                  ) : (
+                  ) : eventReviews.length === 0 ? (
                     <div className="text-center py-12 bg-zinc-900/50 rounded-lg border border-gray-800">
                       <Star className="h-16 w-16 text-gray-600 mx-auto mb-4" />
                       <h4 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
@@ -850,11 +942,12 @@ const CommunityDetail = () => {
                         Be the first to share your experience!
                       </p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {activeTab === 'forum' && (
             <div>
