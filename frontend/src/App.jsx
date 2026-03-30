@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, useParams } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider } from './contexts/AuthContext'
 import { NotificationProvider } from './contexts/NotificationContext'
@@ -75,6 +75,12 @@ function ScrollToTop() {
   return null;
 }
 
+// Redirect /share/events/:id to /events/:id (fallback when Amplify proxy doesn't intercept)
+function ShareRedirect() {
+  const params = useParams();
+  return <Navigate to={`/events/${params.id}`} replace />;
+}
+
 function AppContent() {
   const location = useLocation();
   
@@ -139,6 +145,8 @@ function AppContent() {
         <Route path="/create-event" element={<ErrorBoundary><EventCreation /></ErrorBoundary>} />
         <Route path="/edit-event/:id" element={<ErrorBoundary><EventCreation /></ErrorBoundary>} />
         <Route path="/events/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
+        {/* Share URL fallback — if Amplify proxy misses, redirect to event page */}
+        <Route path="/share/events/:id" element={<ShareRedirect />} />
         <Route path="/billing/:eventId" element={<ErrorBoundary><BillingPage /></ErrorBoundary>} />
         <Route path="/events/:eventId/review" element={<ErrorBoundary><EventReviewPage /></ErrorBoundary>} />
         <Route path="/event/:id" element={<ErrorBoundary><EventDetail /></ErrorBoundary>} />
