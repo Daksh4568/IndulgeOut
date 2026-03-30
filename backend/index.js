@@ -65,7 +65,7 @@ const connectDB = async () => {
   }
 };
 
-// Connect to database initially
+// Connect to database initially with mongodb
 connectDB().catch(console.error);
 
 // CORS Configuration for cross-origin access
