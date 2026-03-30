@@ -61,20 +61,11 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
         html5Qr = new Html5Qrcode(containerId, { verbose: false });
         html5QrRef.current = html5Qr;
 
-        // Camera config — optimized per platform
-        const cameraConfig = isIOS
-          ? {
-              facingMode: 'environment',
-              // iOS: lower resolution = faster decode cycles
-              advanced: [{ width: { ideal: 1280 } }, { height: { ideal: 720 } }],
-            }
-          : {
-              facingMode: 'environment',
-              advanced: [{ width: { ideal: 1920 } }, { height: { ideal: 1080 } }],
-            };
+        // Camera config — must have exactly 1 key: facingMode or deviceId
+        const cameraConfig = { facingMode: 'environment' };
 
         const scanConfig = {
-          fps: isIOS ? 15 : 20, // iOS needs lower FPS to avoid frame drops
+          fps: isIOS ? 15 : 20,
           qrbox: (vw, vh) => {
             const edge = Math.min(vw, vh);
             const size = Math.floor(edge * 0.7);
@@ -82,8 +73,10 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
           },
           aspectRatio: 1.0,
           disableFlip: false,
-          // Only scan QR codes for faster detection
-          formatsToSupport: [0], // 0 = QR_CODE in Html5QrcodeSupportedFormats
+          formatsToSupport: [0], // QR_CODE only for faster detection
+          videoConstraints: isIOS
+            ? { width: { ideal: 1280 }, height: { ideal: 720 } }
+            : { width: { ideal: 1920 }, height: { ideal: 1080 } },
         };
 
         await html5Qr.start(
