@@ -2,12 +2,12 @@ import React from 'react';
 
 const EventSnapshotSection = ({ formData, setFormData }) => {
   const eventCategories = [
-    'Music & Concerts',
-    'Comedy & Standup',
-    'Art & Exhibitions',
-    'Food & Culinary',
-    'Workshops',
-    'Networking',
+    'Social Mixers',
+    'Wellness, Fitness & Sports',
+    'Art, Music & Dance',
+    'Immersive',
+    'Food & Beverage',
+    'Games',
   ];
 
   const attendeeRanges = ['20-40', '40-80', '80-150', '150+'];

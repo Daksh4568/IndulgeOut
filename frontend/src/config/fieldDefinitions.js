@@ -10,12 +10,12 @@ export const FIELD_DEFINITIONS = {
     type: 'select',
     label: 'Event Type',
     options: [
-      'Music & Concerts',
-      'Comedy & Standup',
-      'Art & Exhibitions',
-      'Food & Culinary',
-      'Workshops',
-      'Networking'
+      'Social Mixers',
+      'Wellness, Fitness & Sports',
+      'Art, Music & Dance',
+      'Immersive',
+      'Food & Beverage',
+      'Games'
     ]
   },
 
@@ -48,12 +48,12 @@ export const FIELD_DEFINITIONS = {
     type: 'select',
     label: 'Event Category',
     options: [
-      'Music & Concerts',
-      'Comedy & Standup',
-      'Art & Exhibitions',
-      'Food & Culinary',
-      'Workshops',
-      'Networking'
+      'Social Mixers',
+      'Wellness, Fitness & Sports',
+      'Art, Music & Dance',
+      'Immersive',
+      'Food & Beverage',
+      'Games'
     ]
   },
 
@@ -166,44 +166,26 @@ export const FIELD_DEFINITIONS = {
   onGroundBranding: {
     type: 'selectable-card',
     label: 'On-ground Branding',
-    description: 'Physical branding at the event venue',
+    description: 'Physical branding at the event',
     subOptions: [
       { id: 'stage_backdrop', label: 'Stage Backdrop' },
       { id: 'standees', label: 'Standees' },
-      { id: 'booth', label: 'Booth Space' }
+      { id: 'booth', label: 'Entrance/Exit' }
     ]
   },
 
   sampling: {
     type: 'selectable-card',
-    label: 'Sampling / Product Demo',
+    label: 'Product Sampling / Trials',
     description: 'Distribute products or samples to attendees',
-    subOptions: [
-      { id: 'product_samples', label: 'Product Samples' },
-      { id: 'demo_booth', label: 'Demo Booth' }
-    ]
+    subOptions: []
   },
 
   sponsoredSegments: {
     type: 'selectable-card',
-    label: 'Sponsored Segments',
-    description: 'Dedicated time slots for brand activities',
-    subOptions: [
-      { id: 'speaking_slot', label: 'Speaking Slot' },
-      { id: 'game_activity', label: 'Game/Activity' },
-      { id: 'performance', label: 'Performance' }
-    ]
-  },
-
-  speaking: {
-    type: 'selectable-card',
-    label: 'Speaking / Stage Integration',
-    description: 'Brand representative speaking opportunity',
-    subOptions: [
-      { id: 'welcome_address', label: 'Welcome Address' },
-      { id: 'panel_discussion', label: 'Panel Discussion' },
-      { id: 'workshop_hosting', label: 'Workshop Hosting' }
-    ]
+    label: 'Sponsored Segment / Exclusive Naming Rights',
+    description: 'Title sponsor, session sponsor, or naming rights',
+    subOptions: []
   },
 
   digitalShoutouts: {
@@ -220,13 +202,9 @@ export const FIELD_DEFINITIONS = {
 
   leadCapture: {
     type: 'selectable-card',
-    label: 'Lead Capture',
-    description: 'Collect attendee information',
-    subOptions: [
-      { id: 'registration_data', label: 'Registration Data' },
-      { id: 'booth_signup', label: 'Booth Signup' },
-      { id: 'survey', label: 'Survey' }
-    ]
+    label: 'Lead Capture / Registration Data',
+    description: 'Collect attendee information for the brand',
+    subOptions: []
   },
 
   // ═══════════════════════════════════════
@@ -240,7 +218,7 @@ export const FIELD_DEFINITIONS = {
     label: 'Revenue Share',
     description: 'Share a percentage of ticket sales',
     inputType: 'percentage',
-    options: ['20%', '30%', '40%', 'Open to discussion']
+    options: ['10%', '20%', '30%', '40%', '50%', 'Open to discussion']
   },
 
   flatRental: {
@@ -332,13 +310,9 @@ export const FIELD_DEFINITIONS = {
 
   sponsoredSegment: {
     type: 'selectable-card',
-    label: 'Sponsored Segment / Naming Rights',
-    description: 'Title sponsor, session sponsor',
-    subOptions: [
-      { id: 'title_sponsor', label: 'Title Sponsor' },
-      { id: 'session_sponsor', label: 'Session Sponsor' },
-      { id: 'activity_sponsor', label: 'Activity Sponsor' }
-    ]
+    label: 'Sponsored Segment / Exclusive Naming Rights',
+    description: 'Title sponsor, session sponsor, or naming rights',
+    subOptions: []
   },
 
   exclusivity: {
@@ -388,7 +362,7 @@ export const FIELD_DEFINITIONS = {
   preferredFormats: {
     type: 'multi-select',
     label: 'Preferred Formats',
-    options: ['Music & Concerts', 'Comedy Shows', 'Workshops', 'Networking Events', 'Food & Cultural', 'Sports & Fitness']
+    options: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
   },
 
   timeline: {

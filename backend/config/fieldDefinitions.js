@@ -9,12 +9,12 @@ const FIELD_DEFINITIONS = {
     type: 'select',
     label: 'Event Category',
     options: [
-      'Music & Concerts',
-      'Comedy & Standup',
-      'Art & Exhibitions',
-      'Food & Culinary',
-      'Workshops',
-      'Networking'
+      'Social Mixers',
+      'Wellness, Fitness & Sports',
+      'Art, Music & Dance',
+      'Immersive',
+      'Food & Beverage',
+      'Games'
     ]
   },
   
@@ -22,12 +22,12 @@ const FIELD_DEFINITIONS = {
     type: 'select',
     label: 'Event Type',
     options: [
-      'Concert',
-      'Workshop',
-      'Networking Event',
-      'Party',
-      'Exhibition',
-      'Conference'
+      'Social Mixers',
+      'Wellness, Fitness & Sports',
+      'Art, Music & Dance',
+      'Immersive',
+      'Food & Beverage',
+      'Games'
     ]
   },
   
@@ -195,50 +195,21 @@ const FIELD_DEFINITIONS = {
       options: [
         'stage_backdrop',
         'standees',
-        'booth'
+        'entrance_exit'
       ]
     }
   },
   
   sampling: {
     type: 'boolean-with-details',
-    label: 'Product Sampling',
-    hasSubOptions: true,
-    subOptions: {
-      type: 'checkbox',
-      options: [
-        'product_samples',
-        'demo_booth'
-      ]
-    }
+    label: 'Product Sampling / Trials',
+    hasSubOptions: false
   },
   
   sponsoredSegments: {
     type: 'boolean-with-details',
-    label: 'Sponsored Segments',
-    hasSubOptions: true,
-    subOptions: {
-      type: 'checkbox',
-      options: [
-        'speaking_slot',
-        'game_activity',
-        'performance'
-      ]
-    }
-  },
-  
-  speaking: {
-    type: 'boolean-with-details',
-    label: 'Speaking / Stage Integration',
-    hasSubOptions: true,
-    subOptions: {
-      type: 'checkbox',
-      options: [
-        'welcome_address',
-        'panel_discussion',
-        'workshop_hosting'
-      ]
-    }
+    label: 'Sponsored Segment / Exclusive Naming Rights',
+    hasSubOptions: false
   },
   
   digitalShoutouts: {
@@ -258,16 +229,8 @@ const FIELD_DEFINITIONS = {
   
   leadCapture: {
     type: 'boolean-with-details',
-    label: 'Lead Capture',
-    hasSubOptions: true,
-    subOptions: {
-      type: 'checkbox',
-      options: [
-        'registration_data',
-        'booth_signup',
-        'survey'
-      ]
-    }
+    label: 'Lead Capture / Registration Data',
+    hasSubOptions: false
   },
   
   // Pricing & Payment
@@ -538,11 +501,12 @@ const FIELD_DEFINITIONS = {
     type: 'multi-select',
     label: 'Preferred Formats',
     options: [
-      'Social Media',
-      'Events',
-      'Content Marketing',
-      'Influencer Partnership',
-      'Experiential Marketing'
+      'Social Mixers',
+      'Wellness, Fitness & Sports',
+      'Art, Music & Dance',
+      'Immersive',
+      'Food & Beverage',
+      'Games'
     ]
   },
   

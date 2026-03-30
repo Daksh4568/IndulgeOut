@@ -174,7 +174,6 @@ const CommunityCounterFormBrand = () => {
       barterOffer: proposalData.brandOffers?.barter,
       coMarketingOffer: proposalData.brandOffers?.coMarketing,
       contentOffer: proposalData.brandOffers?.content,
-      speakingOffer: proposalData.brandOffers?.speaking,
       brandingExpectation: proposalData.brandExpectations?.branding,
       speakingExpectation: proposalData.brandExpectations?.speaking,
       sponsoredSegmentExpectation: proposalData.brandExpectations?.sponsoredSegment,
@@ -215,15 +214,13 @@ const CommunityCounterFormBrand = () => {
       { key: 'cashOffer', label: 'Cash Sponsorship', originalValue: proposalData.brandOffers?.cash },
       { key: 'barterOffer', label: 'Barter / Products', originalValue: proposalData.brandOffers?.barter },
       { key: 'coMarketingOffer', label: 'Co-Marketing', originalValue: proposalData.brandOffers?.coMarketing },
-      { key: 'contentOffer', label: 'Content Support', originalValue: proposalData.brandOffers?.content },
-      { key: 'speakingOffer', label: 'Speaking / Brand Integration', originalValue: proposalData.brandOffers?.speaking }
+      { key: 'contentOffer', label: 'Content Support', originalValue: proposalData.brandOffers?.content }
     ].filter(f => f.originalValue?.selected);
 
     const expectationFields = [
       { key: 'brandingExpectation', label: 'Branding / Logo Placement', originalValue: proposalData.brandExpectations?.branding },
-      { key: 'speakingExpectation', label: 'Speaking Slot', originalValue: proposalData.brandExpectations?.speaking },
-      { key: 'sponsoredSegmentExpectation', label: 'Sponsored Segment', originalValue: proposalData.brandExpectations?.sponsoredSegment },
-      { key: 'leadCaptureExpectation', label: 'Lead Capture', originalValue: proposalData.brandExpectations?.leadCapture },
+      { key: 'speakingExpectation', label: 'Sponsored Segment / Exclusive Naming Rights', originalValue: proposalData.brandExpectations?.speaking },
+      { key: 'leadCaptureExpectation', label: 'Lead Capture / Registration Data', originalValue: proposalData.brandExpectations?.leadCapture },
       { key: 'digitalShoutoutsExpectation', label: 'Digital Shoutouts', originalValue: proposalData.brandExpectations?.digitalShoutouts },
       { key: 'exclusivityExpectation', label: 'Category Exclusivity', originalValue: proposalData.brandExpectations?.exclusivity },
       { key: 'contentRightsExpectation', label: 'Content Rights', originalValue: proposalData.brandExpectations?.contentRights },
@@ -363,8 +360,8 @@ const CommunityCounterFormBrand = () => {
             {currentField === 'coMarketingOffer' && 'Co-Marketing'}
             {currentField === 'contentOffer' && 'Content Support'}
             {currentField === 'brandingExpectation' && 'Branding Expectations'}
-            {currentField === 'speakingExpectation' && 'Speaking Slot'}
-            {currentField === 'leadCaptureExpectation' && 'Lead Capture'}
+            {currentField === 'speakingExpectation' && 'Sponsored Segment / Exclusive Naming Rights'}
+            {currentField === 'leadCaptureExpectation' && 'Lead Capture / Registration Data'}
             {currentField === 'exclusivityExpectation' && 'Exclusivity'}
             {currentField === 'contentRightsExpectation' && 'Content Rights'}
           </h3>
@@ -453,7 +450,7 @@ const CommunityCounterFormBrand = () => {
               )}
               <p className="text-sm text-gray-400 mb-3">Select formats you can support:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['Music & Concerts', 'Comedy Shows', 'Workshops', 'Networking Events', 'Food & Cultural', 'Sports & Fitness'].map(format => {
+                {['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'].map(format => {
                   const currentValue = modifyValue || [];
                   const isSelected = currentValue.includes(format);
                   return (
@@ -761,59 +758,6 @@ const CommunityCounterFormBrand = () => {
                 onChange={(e) => setModifyValue(e.target.value)}
                 rows={4}
                 placeholder="e.g., Need professional videographer..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
-              />
-            </div>
-          )}
-
-          {currentField === 'speakingOffer' && (
-            <div>
-              <p className="text-sm text-gray-400 mb-3">What brand proposed:</p>
-              {proposalData.brandOffers?.speaking && (
-                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-                  <p className="text-blue-400 text-xs mb-2">BRAND'S OFFER:</p>
-                  <p className="text-white text-sm">• {proposalData.brandOffers.speaking.value || 'Brand integration requested'}</p>
-                  {proposalData.brandOffers.speaking.subOptions && Object.keys(proposalData.brandOffers.speaking.subOptions).length > 0 && (
-                    <div className="text-white text-sm space-y-1 mt-2">
-                      {Object.entries(proposalData.brandOffers.speaking.subOptions).map(([key, value]) => (
-                        value && value.selected && (
-                          <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
-                        )
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {proposalData.brandOffers?.speaking?.subOptions && Object.keys(proposalData.brandOffers.speaking.subOptions).length > 0 && (
-                <div>
-                  <p className="text-sm text-gray-400 mb-3">Select which speaking/integration options you can provide:</p>
-                  <div className="space-y-2 mb-4">
-                    {Object.entries(proposalData.brandOffers.speaking.subOptions)
-                      .filter(([_, value]) => value && value.selected)
-                      .map(([key, value]) => {
-                        const currentValue = modifyValue || {};
-                        const isSelected = currentValue[key] !== false;
-                        return (
-                          <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
-                              className="w-5 h-5 rounded border-gray-600"
-                            />
-                            <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
-                          </label>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-              <p className="text-sm text-gray-400 mb-3">Your counter-offer or additional notes:</p>
-              <textarea
-                value={typeof modifyValue === 'string' ? modifyValue : ''}
-                onChange={(e) => setModifyValue(e.target.value)}
-                rows={4}
-                placeholder="e.g., Can provide 5-minute welcome mention only..."
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
               />
             </div>

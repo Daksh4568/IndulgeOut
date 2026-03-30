@@ -527,7 +527,12 @@ router.post('/draft', authMiddleware, async (req, res) => {
         brandDeliverables: formData.brandDeliverables || {},
         pricing: formData.pricing || {},
         audienceProof: formData.audienceProof || {},
-        supportingInfo: formData.supportingInfo || {}
+        supportingInfo: {
+          ...formData.supportingInfo,
+          images: Array.isArray(formData.supportingInfo?.images)
+            ? formData.supportingInfo.images.map(img => typeof img === 'object' && img.url ? img.url : img)
+            : []
+        }
       };
     } else if (type === 'brandToCommunity') {
       collaborationData.brandToCommunity = {
@@ -740,7 +745,12 @@ router.post('/propose', authMiddleware, async (req, res) => {
         brandDeliverables: formData.brandDeliverables || {},
         pricing: formData.pricing || {},
         audienceProof: formData.audienceProof || {},
-        supportingInfo: formData.supportingInfo || {}
+        supportingInfo: {
+          ...formData.supportingInfo,
+          images: Array.isArray(formData.supportingInfo?.images)
+            ? formData.supportingInfo.images.map(img => typeof img === 'object' && img.url ? img.url : img)
+            : []
+        }
       };
     } else if (type === 'brandToCommunity') {
       collaborationData.brandToCommunity = {

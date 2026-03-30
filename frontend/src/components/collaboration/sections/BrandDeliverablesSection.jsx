@@ -27,45 +27,27 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
     {
       id: 'onGroundBranding',
       title: 'On-ground Branding',
-      description: 'Physical branding at the event venue',
+      description: 'Physical branding at the event',
       hasSubOptions: true,
       subOptions: [
         { id: 'stage_backdrop', label: 'Stage Backdrop' },
         { id: 'standees', label: 'Standees' },
-        { id: 'booth', label: 'Booth Space' },
+        { id: 'booth', label: 'Entrance/Exit' },
       ],
     },
     {
       id: 'sampling',
-      title: 'Sampling / Product Demo',
+      title: 'Product Sampling / Trials',
       description: 'Distribute products or samples to attendees',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'product_samples', label: 'Product Samples' },
-        { id: 'demo_booth', label: 'Demo Booth' },
-      ],
+      hasSubOptions: false,
+      subOptions: [],
     },
     {
       id: 'sponsoredSegments',
-      title: 'Sponsored Segments',
-      description: 'Dedicated time slots for brand activities',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'speaking_slot', label: 'Speaking Slot' },
-        { id: 'game_activity', label: 'Game/Activity' },
-        { id: 'performance', label: 'Performance' },
-      ],
-    },
-    {
-      id: 'speaking',
-      title: 'Speaking / Stage Integration',
-      description: 'Brand representative speaking opportunity',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'welcome_address', label: 'Welcome Address' },
-        { id: 'panel_discussion', label: 'Panel Discussion' },
-        { id: 'workshop_hosting', label: 'Workshop Hosting' },
-      ],
+      title: 'Sponsored Segment / Exclusive Naming Rights',
+      description: 'Title sponsor, session sponsor, or naming rights',
+      hasSubOptions: false,
+      subOptions: [],
     },
     {
       id: 'digitalShoutouts',
@@ -81,14 +63,10 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
     },
     {
       id: 'leadCapture',
-      title: 'Lead Capture',
-      description: 'Collect attendee information',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'registration_data', label: 'Registration Data' },
-        { id: 'booth_signup', label: 'Booth Signup' },
-        { id: 'survey', label: 'Survey' },
-      ],
+      title: 'Lead Capture / Registration Data',
+      description: 'Collect attendee information for the brand',
+      hasSubOptions: false,
+      subOptions: [],
     },
   ];
 
@@ -224,6 +202,38 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
                       )}
                       
                       {/* View Comment button - always visible if comment exists */}
+                      {hasComment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCommentModal(deliverable.title, deliverable.id);
+                          }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
+                        >
+                          View Comment
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {/* Comment buttons for standalone fields (no sub-options) */}
+                  {!deliverable.hasSubOptions && isSelected && (
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {isHovered && !hasComment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCommentModal(deliverable.title, deliverable.id);
+                          }}
+                          onMouseEnter={(e) => e.stopPropagation()}
+                          className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
+                          style={{
+                            background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                          }}
+                        >
+                          Add Comment
+                        </button>
+                      )}
                       {hasComment && (
                         <button
                           onClick={(e) => {

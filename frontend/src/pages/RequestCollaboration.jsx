@@ -399,13 +399,12 @@ const RequestCollaboration = () => {
                     }`}
                   >
                     <option value="">Select event type</option>
-                    <option value="workshop">Workshop</option>
-                    <option value="meetup">Meetup</option>
-                    <option value="social">Social Gathering</option>
-                    <option value="networking">Networking Event</option>
-                    <option value="launch">Product Launch</option>
-                    <option value="activation">Brand Activation</option>
-                    <option value="other">Other</option>
+                    <option value="Social Mixers">Social Mixers</option>
+                    <option value="Wellness, Fitness & Sports">Wellness, Fitness & Sports</option>
+                    <option value="Art, Music & Dance">Art, Music & Dance</option>
+                    <option value="Immersive">Immersive</option>
+                    <option value="Food & Beverage">Food & Beverage</option>
+                    <option value="Games">Games</option>
                   </select>
                   {errors.eventType && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.eventType}</p>

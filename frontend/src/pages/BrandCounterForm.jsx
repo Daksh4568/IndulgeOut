@@ -179,7 +179,6 @@ const BrandCounterForm = () => {
       onGroundBranding: proposalData.brandDeliverables?.onGroundBranding,
       sampling: proposalData.brandDeliverables?.sampling,
       sponsoredSegments: proposalData.brandDeliverables?.sponsoredSegments,
-      speaking: proposalData.brandDeliverables?.speaking,
       digitalShoutouts: proposalData.brandDeliverables?.digitalShoutouts,
       leadCapture: proposalData.brandDeliverables?.leadCapture,
       commercialModel: proposalData.pricing
@@ -216,11 +215,10 @@ const BrandCounterForm = () => {
     const deliverableFields = [
       { key: 'logoPlacement', label: 'Logo Placement', originalValue: proposalData.brandDeliverables?.logoPlacement },
       { key: 'onGroundBranding', label: 'On-Ground Branding', originalValue: proposalData.brandDeliverables?.onGroundBranding },
-      { key: 'sampling', label: 'Sampling / Product Demo', originalValue: proposalData.brandDeliverables?.sampling },
-      { key: 'sponsoredSegments', label: 'Sponsored Segments', originalValue: proposalData.brandDeliverables?.sponsoredSegments },
+      { key: 'sampling', label: 'Product Sampling / Trials', originalValue: proposalData.brandDeliverables?.sampling },
+      { key: 'sponsoredSegments', label: 'Sponsored Segment / Exclusive Naming Rights', originalValue: proposalData.brandDeliverables?.sponsoredSegments },
       { key: 'digitalShoutouts', label: 'Digital Shoutouts', originalValue: proposalData.brandDeliverables?.digitalShoutouts },
-      { key: 'leadCapture', label: 'Lead Capture', originalValue: proposalData.brandDeliverables?.leadCapture },
-      { key: 'speaking', label: 'Speaking', originalValue: proposalData.brandDeliverables?.speaking }
+      { key: 'leadCapture', label: 'Lead Capture / Registration Data', originalValue: proposalData.brandDeliverables?.leadCapture }
     ].filter(f => f.originalValue?.selected);
 
     const commercialFields = [
@@ -384,7 +382,7 @@ const BrandCounterForm = () => {
             <div>
               <p className="text-sm text-gray-400 mb-3">Select event category:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['Music & Concerts', 'Comedy & Standup', 'Art & Exhibitions', 'Food & Culinary', 'Workshops', 'Networking'].map(option => (
+                {['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'].map(option => (
                   <button
                     key={option}
                     onClick={() => setModifyValue(option)}
@@ -786,44 +784,6 @@ const BrandCounterForm = () => {
               <p className="text-sm text-gray-400 mb-3">Select which options you can provide:</p>
               <div className="space-y-2">
                 {proposalData.brandDeliverables?.leadCapture?.subOptions && Object.entries(proposalData.brandDeliverables.leadCapture.subOptions)
-                  .filter(([_, value]) => value && value.selected)
-                  .map(([key, value]) => {
-                    const currentValue = modifyValue || {};
-                    const isSelected = currentValue[key] !== false;
-                    return (
-                      <label key={key} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => setModifyValue({...modifyValue, [key]: e.target.checked})}
-                          className="w-5 h-5 rounded border-gray-600"
-                        />
-                        <span className="text-white">{key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
-                      </label>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
-
-          {currentField === 'speaking' && (
-            <div>
-              <p className="text-sm text-gray-400 mb-3">What community proposed:</p>
-              {proposalData.brandDeliverables?.speaking?.subOptions && (
-                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-                  <p className="text-blue-400 text-xs mb-2">REQUESTED OPTIONS:</p>
-                  <div className="text-white text-sm space-y-1">
-                    {Object.entries(proposalData.brandDeliverables.speaking.subOptions).map(([key, value]) => (
-                      value && value.selected && (
-                        <p key={key}>• {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
-                      )
-                    ))}
-                  </div>
-                </div>
-              )}
-              <p className="text-sm text-gray-400 mb-3">Select which options you can provide:</p>
-              <div className="space-y-2">
-                {proposalData.brandDeliverables?.speaking?.subOptions && Object.entries(proposalData.brandDeliverables.speaking.subOptions)
                   .filter(([_, value]) => value && value.selected)
                   .map(([key, value]) => {
                     const currentValue = modifyValue || {};

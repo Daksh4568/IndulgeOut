@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { api } from '../../../config/api';
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   
   const audienceProofOptions = [
     { id: 'pastSponsorBrands', label: 'Past Sponsor Brands', placeholder: 'e.g., Coca-Cola, Nike, Red Bull...' },
     { id: 'averageAttendance', label: 'Average Attendance', placeholder: 'e.g., 200-300 people per event' },
     { id: 'communitySize', label: 'Community Size', placeholder: 'e.g., 5000+ active members' },
-    { id: 'repeatEventRate', label: 'Repeat Event Rate', placeholder: 'e.g., 80% attendees return' },
+    { id: 'repeatEventRate', label: 'Repeat Event Rate', placeholder: 'e.g., 30% of the attendees return in every subsequent event', inputType: 'percentage' },
   ];
   
   const handleAudienceProofToggle = (optionId) => {
@@ -38,26 +41,37 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
   };
 
   const handleImageUpload = async (files) => {
+    setUploadError('');
     const fileArray = Array.from(files);
     const currentImages = formData.supportingInfo?.images || [];
     
     // Limit to 3 images total
     const remainingSlots = 3 - currentImages.length;
     if (remainingSlots === 0) {
-      alert('Maximum 3 images allowed');
+      setUploadError('Maximum 3 images allowed');
       return;
     }
 
     const filesToUpload = fileArray.slice(0, remainingSlots);
     
-    // Validate file types
+    // Validate file types and size
+    const errors = [];
     const validFiles = filesToUpload.filter(file => {
-      const isValid = file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/jpg';
-      if (!isValid) {
-        alert(`${file.name} is not a valid image type. Only PNG and JPG are allowed.`);
+      const isValidType = file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/jpg';
+      if (!isValidType) {
+        errors.push(`${file.name}: Only PNG and JPG formats are allowed`);
+        return false;
       }
-      return isValid;
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name}: File size exceeds 5MB limit`);
+        return false;
+      }
+      return true;
     });
+
+    if (errors.length > 0) {
+      setUploadError(errors.join('. '));
+    }
 
     if (validFiles.length === 0) return;
 
@@ -92,7 +106,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
       }
     } catch (error) {
       console.error('Image upload error:', error);
-      alert('Failed to upload images. Please try again.');
+      setUploadError(error.response?.data?.message || 'Failed to upload images. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -153,7 +167,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
           </div>
           <div>
             <h2 className="text-white text-xl font-semibold">SUPPORTING INFO (OPTIONAL)</h2>
-            <p className="text-gray-400 text-sm">Photos and notes help venues respond faster</p>
+            <p className="text-gray-400 text-sm">{proposalType === 'communityToBrand' ? 'Photos and notes help brands respond faster' : 'Photos and notes help venues respond faster'}</p>
           </div>
         </div>
       </div>
@@ -221,7 +235,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
                   {uploading ? 'Uploading...' : 'Click to upload photos'}
                 </p>
                 <p className="text-gray-500 text-sm">
-                  Up to {3 - currentImages.length} more {3 - currentImages.length === 1 ? 'image' : 'images'} • PNG, JPG
+                  Up to {3 - currentImages.length} more {3 - currentImages.length === 1 ? 'image' : 'images'} • PNG, JPG • Max 5MB each
                 </p>
               </div>
             </div>
@@ -230,6 +244,10 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
 
         {currentImages.length === 3 && (
           <p className="text-green-400 text-sm mt-2">✓ Maximum 3 images uploaded</p>
+        )}
+
+        {uploadError && (
+          <p className="text-red-400 text-sm mt-2">{uploadError}</p>
         )}
       </div>
 
@@ -264,13 +282,33 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
                   </div>
                   
                   {isSelected && (
-                    <input
-                      type="text"
-                      value={value}
-                      onChange={(e) => handleAudienceProofValue(option.id, e.target.value)}
-                      placeholder={option.placeholder}
-                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                    option.inputType === 'percentage' ? (
+                      <div className="relative w-full">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={value}
+                          onChange={(e) => {
+                            const num = e.target.value;
+                            if (num === '' || (Number(num) >= 0 && Number(num) <= 100)) {
+                              handleAudienceProofValue(option.id, num);
+                            }
+                          }}
+                          placeholder={option.placeholder}
+                          className="w-full px-4 py-2 pr-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">%</span>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => handleAudienceProofValue(option.id, e.target.value)}
+                        placeholder={option.placeholder}
+                        className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    )
                   )}
                 </div>
               );
@@ -282,7 +320,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
       {/* Note to Venue/Brand */}
       <div>
         <label className="block text-white text-base mb-4">
-          Note to {proposalType === 'communityToVenue' ? 'venue' : proposalType === 'communityToBrand' ? 'brand' : 'community'}
+          Additional Notes:
         </label>
         <textarea
           value={formData.supportingInfo?.note || ''}
@@ -295,7 +333,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
               },
             })
           }
-          placeholder="Anything important the venue should know?"
+          placeholder={proposalType === 'communityToBrand' ? 'Anything important the brand should know?' : proposalType === 'communityToVenue' ? 'Anything important the venue should know?' : 'Anything important the community should know?'}
           className="w-full h-32 px-4 py-3 bg-black border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
         />
       </div>

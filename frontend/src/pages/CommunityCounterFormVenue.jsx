@@ -309,7 +309,7 @@ const CommunityCounterFormVenue = () => {
             <div>
               <p className="text-sm text-gray-400 mb-3">Select formats you'll host:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['Concert/Music', 'Standup/Comedy', 'Networking', 'Workshop', 'Exhibition', 'Private Party', 'Festival', 'Conference'].map(format => {
+                {['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'].map(format => {
                   const currentValue = modifyValue || [];
                   const isSelected = currentValue.includes(format);
                   return (

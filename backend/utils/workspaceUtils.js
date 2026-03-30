@@ -58,7 +58,7 @@ const WORKSPACE_FIELD_CONFIGS = {
     },
     brandDeliverables: {
       title: 'Brand Deliverables',
-      fields: ['logoPlacement', 'onGroundBranding', 'sampling', 'sponsoredSegments', 'speaking', 'digitalShoutouts', 'leadCapture']
+      fields: ['logoPlacement', 'onGroundBranding', 'sampling', 'sponsoredSegments', 'digitalShoutouts', 'leadCapture']
     },
     pricing: {
       title: 'Pricing & Payment',
@@ -92,7 +92,7 @@ const WORKSPACE_FIELD_CONFIGS = {
     },
     brandOffers: {
       title: 'Brand Offers',
-      fields: ['cash', 'barter', 'coMarketing', 'content', 'speaking']
+      fields: ['cash', 'barter', 'coMarketing', 'content']
     },
     brandExpectations: {
       title: 'Brand Expectations',
@@ -112,8 +112,7 @@ const COUNTER_FIELD_KEY_MAP = {
       cashOffer: 'cash',
       barterOffer: 'barter',
       coMarketingOffer: 'coMarketing',
-      contentOffer: 'content',
-      speakingOffer: 'speaking'
+      contentOffer: 'content'
     },
     brandExpectations: {
       brandingExpectation: 'branding',

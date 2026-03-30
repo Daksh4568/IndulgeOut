@@ -56,17 +56,6 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
         { id: 'social_content', label: 'Social Content' },
       ],
     },
-    {
-      id: 'speaking',
-      title: 'Speaking / Brand Integration',
-      description: 'Welcome mention, sponsored segment',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'welcome_mention', label: 'Welcome Mention' },
-        { id: 'sponsored_segment', label: 'Sponsored Segment' },
-        { id: 'workshop', label: 'Workshop/Demo' },
-      ],
-    },
   ];
 
   const expectations = [
@@ -83,36 +72,15 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
     },
     {
       id: 'speaking',
-      title: 'Speaking / Presentation Slot',
-      description: 'Time to present or speak',
-      hasSubOptions: true,
-      subOptions: [
-        { id: '5min', label: '5 minutes' },
-        { id: '10min', label: '10 minutes' },
-        { id: '15min', label: '15 minutes' },
-      ],
-    },
-    {
-      id: 'sponsoredSegment',
-      title: 'Sponsored Segment / Naming Rights',
-      description: 'Title sponsor, session sponsor',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'title_sponsor', label: 'Title Sponsor' },
-        { id: 'session_sponsor', label: 'Session Sponsor' },
-        { id: 'activity_sponsor', label: 'Activity Sponsor' },
-      ],
+      title: 'Sponsored Segment / Exclusive Naming Rights',
+      description: 'Title sponsor, session sponsor, or naming rights',
+      hasSubOptions: false,
     },
     {
       id: 'leadCapture',
-      title: 'Lead Capture / Data Sharing',
-      description: 'QR signups, opt-ins, contest entries',
-      hasSubOptions: true,
-      subOptions: [
-        { id: 'qr_signup', label: 'QR Signup' },
-        { id: 'contest_entry', label: 'Contest Entry' },
-        { id: 'email_optin', label: 'Email Opt-in' },
-      ],
+      title: 'Lead Capture / Registration Data',
+      description: 'Collect attendee information',
+      hasSubOptions: false,
     },
     {
       id: 'digitalShoutouts',
@@ -293,6 +261,38 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
                         )}
                         
                         {/* View Comment button - always visible if comment exists */}
+                        {hasComment && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCommentModal(item.title, item.id, type);
+                            }}
+                            onMouseEnter={(e) => e.stopPropagation()}
+                            className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-indigo-400 hover:text-indigo-300 underline bg-transparent"
+                          >
+                            View Comment
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {/* Comment buttons for standalone fields (no sub-options) */}
+                    {!item.hasSubOptions && isSelected && (
+                      <div className="flex flex-wrap gap-3 mt-3">
+                        {isHovered && !hasComment && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCommentModal(item.title, item.id, type);
+                            }}
+                            onMouseEnter={(e) => e.stopPropagation()}
+                            className="px-4 py-2 rounded-lg transition-all text-sm font-medium text-white hover:opacity-90"
+                            style={{
+                              background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
+                            }}
+                          >
+                            Add Comment
+                          </button>
+                        )}
                         {hasComment && (
                           <button
                             onClick={(e) => {

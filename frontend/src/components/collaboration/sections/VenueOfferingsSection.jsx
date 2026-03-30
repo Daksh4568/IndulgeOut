@@ -13,7 +13,7 @@ const VenueOfferingsSection = ({ formData, setFormData }) => {
 
   const venueTypes = ['Cafe', 'Bar', 'Studio', 'Club', 'Outdoor', 'Restaurant', 'Coworking', 'Other'];
   const capacityRanges = ['10-20', '20-40', '40-80', '80-150', '150+'];
-  const eventFormats = ['Music', 'Comedy', 'Workshops', 'Networking', 'Art', 'Food Events'];
+  const eventFormats = ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'];
 
   const offerings = [
     {

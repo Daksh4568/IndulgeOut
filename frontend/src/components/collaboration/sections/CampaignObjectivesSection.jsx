@@ -10,12 +10,12 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
   ];
 
   const eventFormats = [
-    'Music & Concerts',
-    'Comedy Shows',
-    'Workshops',
-    'Networking Events',
-    'Food & Cultural',
-    'Sports & Fitness',
+    'Social Mixers',
+    'Wellness, Fitness & Sports',
+    'Art, Music & Dance',
+    'Immersive',
+    'Food & Beverage',
+    'Games',
   ];
   
   const cities = [

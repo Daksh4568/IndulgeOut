@@ -19,7 +19,7 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
       description: 'Share a percentage of ticket sales with the venue',
       hasInput: true,
       inputType: 'percentage',
-      options: ['20%', '30%', '40%', 'Open to discussion'],
+      options: ['10%', '20%', '30%', '40%', '50%', 'Open to discussion'],
     },
     {
       id: 'flatRental',
@@ -44,7 +44,7 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
     {
       id: 'cashSponsorship',
       title: 'Cash Sponsorship',
-      description: 'Fixed monetary sponsorship amount',
+      description: 'Total sponsorship amount requested',
       hasInput: true,
       inputType: 'amount',
       placeholder: 'Enter sponsorship amount',
@@ -52,15 +52,15 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
     {
       id: 'barter',
       title: 'Barter / In-Kind',
-      description: 'Products, prizes, vouchers, or services',
+      description: 'Products, merchandises, prizes, vouchers, or services',
       hasInput: true,
       inputType: 'text',
-      placeholder: 'Describe the barter (e.g., "50 product samples + 10 vouchers")',
+      placeholder: 'Describe the barter (e.g., "50 product samples + 10 vouchers required")',
     },
     {
       id: 'stallCost',
       title: 'Stall/Booth Fee',
-      description: 'Booth or sales space rental at the event',
+      description: 'Fee charged to the brand for booth or on-ground sales station',
       hasInput: true,
       inputType: 'amount',
       placeholder: 'Enter stall cost',
@@ -68,10 +68,10 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
     {
       id: 'revenueShare',
       title: 'Revenue Share',
-      description: 'Share a percentage of event or activation revenue',
+      description: '% of ticket or overall event revenue to be shared with the brand',
       hasInput: true,
       inputType: 'percentage',
-      options: ['20%', '30%', '40%', 'Open to discussion'],
+      options: ['10%', '20%', '30%', '40%', '50%', 'Open to discussion'],
     },
   ];
 
@@ -139,7 +139,7 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
             <h2 className="text-white text-xl font-semibold">PRICING & PAYMENT</h2>
             <p className="text-gray-400 text-sm">
               {proposalType === 'communityToBrand' 
-                ? 'What commercial model works for both parties?' 
+                ? 'Choose your preferred commercial model' 
                 : 'How do you want to pay the venue?'}
             </p>
           </div>
@@ -149,7 +149,7 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
       {/* Question 6: Pricing Model */}
       <div>
         <label className="block text-white text-base mb-4">
-          6. Choose your preferred pricing model <span className="text-red-500">*</span>
+          Choose your preferred commercial model <span className="text-red-500"></span>
         </label>
         
         <div className="space-y-4">

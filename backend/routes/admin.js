@@ -3106,7 +3106,7 @@ router.get('/marketing/audience/export', requirePermission('view_analytics'), as
     if (city) userQuery['location.city'] = buildCityRegex(city);
 
     const users = await User.find(userQuery)
-      .select('name email phoneNumber age gender location.city')
+      .select('name email phoneNumber age gender location.city createdAt')
       .lean();
 
     if (users.length === 0) {
@@ -3155,11 +3155,14 @@ router.get('/marketing/audience/export', requirePermission('view_analytics'), as
       return str;
     };
 
-    const header = 'User Name,Mobile Number,Email,Age,City,Gender,First Ticket Date,First Event Name,Community Name';
+    const header = 'User Name,Mobile Number,Email,Age,City,Gender,Date of Joining,First Ticket Date,First Event Name,Community Name';
     const rows = users.map(u => {
       const info = ticketMap[u._id.toString()] || {};
       const ticketDate = info.firstTicketDate
         ? new Date(info.firstTicketDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '';
+      const joinDate = u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
         : '';
       return [
         escapeCSV(u.name),
@@ -3168,6 +3171,7 @@ router.get('/marketing/audience/export', requirePermission('view_analytics'), as
         escapeCSV(u.age || ''),
         escapeCSV(u.location?.city || ''),
         escapeCSV(u.gender || ''),
+        escapeCSV(joinDate),
         escapeCSV(ticketDate),
         escapeCSV(info.firstEventName || ''),
         escapeCSV(info.communityName || ''),

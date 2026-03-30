@@ -361,7 +361,7 @@ const ProposalForm = () => {
       },
       communityToBrand: {
         title: 'Ready to propose collaboration?',
-        subtitle: 'This brand will review and respond here',
+        subtitle: 'The brand will review and respond here',
       },
       brandToCommunity: {
         title: 'Ready to send your proposal?',
