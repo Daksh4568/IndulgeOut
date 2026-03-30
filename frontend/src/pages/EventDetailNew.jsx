@@ -17,7 +17,7 @@ import {
   XCircle,
   Edit2
 } from 'lucide-react';
-import { api, API_URL } from '../config/api.js';
+import { api } from '../config/api.js';
 import NavigationBar from '../components/NavigationBar';
 import LoginPromptModal from '../components/LoginPromptModal';
 import ShareModal from '../components/ShareModal';
@@ -175,9 +175,9 @@ const EventDetail = () => {
       ? (eventCity ? `${eventVenue}, ${eventCity}` : eventVenue)
       : eventCity || '';
 
-    // Backend share URL for OG tags (bypasses Amplify, goes directly to Vercel)
+    // Share URL via Amplify proxy (amplify.yml rewrites /share/* → Vercel backend)
     const eventSlug = event?.slug || id;
-    const ogShareUrl = `${API_URL}/share/events/${eventSlug}`;
+    const ogShareUrl = `${window.location.origin}/share/events/${eventSlug}`;
     
     switch (platform) {
       case 'whatsapp': {

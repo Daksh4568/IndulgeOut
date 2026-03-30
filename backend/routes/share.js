@@ -11,6 +11,17 @@ async function findEventByIdOrSlug(identifier) {
   return Event.findOne({ slug: identifier }).select('title slug description date location images price currentEffectivePrice').lean();
 }
 
+// Derive the frontend origin from the incoming request (works when proxied through Amplify)
+function getFrontendUrl(req) {
+  // When Amplify proxies the request, the original host header is preserved
+  const host = req.get('X-Forwarded-Host') || req.get('host') || '';
+  const proto = req.get('X-Forwarded-Proto') || req.protocol || 'https';
+  if (host.includes('indulgeout.com')) {
+    return `${proto}://${host}`;
+  }
+  return process.env.FRONTEND_URL || 'https://www.indulgeout.com';
+}
+
 // GET /share/events/:slugOrId — serves OG meta tags for social crawlers, redirects real users
 router.get('/events/:slugOrId', async (req, res) => {
   try {
@@ -18,11 +29,11 @@ router.get('/events/:slugOrId', async (req, res) => {
 
     if (!event) {
       // Fallback: redirect to homepage
-      const frontendUrl = process.env.FRONTEND_URL || 'https://www.indulgeout.com';
+      const frontendUrl = getFrontendUrl(req);
       return res.redirect(302, frontendUrl);
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://www.indulgeout.com';
+    const frontendUrl = getFrontendUrl(req);
     const eventSlug = event.slug || event._id;
     const canonicalUrl = `${frontendUrl}/events/${eventSlug}`;
 
@@ -71,7 +82,7 @@ router.get('/events/:slugOrId', async (req, res) => {
 </html>`);
   } catch (error) {
     console.error('Share OG route error:', error);
-    const frontendUrl = process.env.FRONTEND_URL || 'https://www.indulgeout.com';
+    const frontendUrl = getFrontendUrl(req);
     res.redirect(302, frontendUrl);
   }
 });
