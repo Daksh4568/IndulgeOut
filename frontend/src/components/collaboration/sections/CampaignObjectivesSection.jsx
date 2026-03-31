@@ -23,10 +23,10 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
     'Delhi',
     'Bengaluru',
     'Hyderabad',
-    'Chennai',
     'Pune',
     'Kolkata',
     'Any City',
+    'Others',
   ];
 
   const handleObjectiveToggle = (objectiveId) => {
@@ -132,8 +132,18 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
         </label>
         <p className="text-gray-400 text-sm mb-3">Where do you want to collaborate?</p>
         <select
-          value={formData.city || ''}
-          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+          value={
+            formData.city && !cities.includes(formData.city) && formData.city !== ''
+              ? 'Others'
+              : formData.city || ''
+          }
+          onChange={(e) => {
+            if (e.target.value === 'Others') {
+              setFormData({ ...formData, city: 'Others', customCity: '' });
+            } else {
+              setFormData({ ...formData, city: e.target.value, customCity: undefined });
+            }
+          }}
           className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">Select a city</option>
@@ -143,6 +153,17 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
             </option>
           ))}
         </select>
+        {(formData.city === 'Others' || (formData.city && !cities.includes(formData.city) && formData.city !== '')) && (
+          <div className="mt-3">
+            <input
+              type="text"
+              value={formData.city === 'Others' ? (formData.customCity || '') : formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value || 'Others', customCity: e.target.value })}
+              placeholder="Enter your city name..."
+              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
       </div>
 
       {/* Preferred Timeline */}
@@ -152,34 +173,115 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
         </label>
         <p className="text-gray-400 text-sm mb-3">When do you want to run this campaign?</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Start Date</label>
-            <input
-              type="date"
-              value={formData.timeline?.startDate || ''}
-              onChange={(e) => setFormData({
-                ...formData,
-                timeline: { ...formData.timeline, startDate: e.target.value }
-              })}
-              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+        {/* Start Date */}
+        <div className="mb-4">
+          <label className="block text-sm text-gray-400 mb-2">Start Date</label>
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg p-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                <input
+                  type="date"
+                  value={typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.date || '' : formData.timeline?.startDate || ''}
+                  onChange={(e) => {
+                    const current = typeof formData.timeline?.startDate === 'object' ? formData.timeline.startDate : { date: formData.timeline?.startDate || '', startTime: '', endTime: '' };
+                    setFormData({
+                      ...formData,
+                      timeline: { ...formData.timeline, startDate: { ...current, date: e.target.value } }
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                <input
+                  type="time"
+                  value={typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.startTime || '' : ''}
+                  onChange={(e) => {
+                    const current = typeof formData.timeline?.startDate === 'object' ? formData.timeline.startDate : { date: formData.timeline?.startDate || '', startTime: '', endTime: '' };
+                    setFormData({
+                      ...formData,
+                      timeline: { ...formData.timeline, startDate: { ...current, startTime: e.target.value } }
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                <input
+                  type="time"
+                  value={typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.endTime || '' : ''}
+                  onChange={(e) => {
+                    const current = typeof formData.timeline?.startDate === 'object' ? formData.timeline.startDate : { date: formData.timeline?.startDate || '', startTime: '', endTime: '' };
+                    setFormData({
+                      ...formData,
+                      timeline: { ...formData.timeline, startDate: { ...current, endTime: e.target.value } }
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">End Date</label>
-            <input
-              type="date"
-              value={formData.timeline?.endDate || ''}
-              onChange={(e) => setFormData({
-                ...formData,
-                timeline: { ...formData.timeline, endDate: e.target.value }
-              })}
-              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+        </div>
+
+        {/* End Date */}
+        <div className="mb-4">
+          <label className="block text-sm text-gray-400 mb-2">End Date</label>
+          <div className="bg-zinc-900 border border-gray-800 rounded-lg p-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                <input
+                  type="date"
+                  value={typeof formData.timeline?.endDate === 'object' ? formData.timeline?.endDate?.date || '' : formData.timeline?.endDate || ''}
+                  onChange={(e) => {
+                    const current = typeof formData.timeline?.endDate === 'object' ? formData.timeline.endDate : { date: formData.timeline?.endDate || '', startTime: '', endTime: '' };
+                    setFormData({
+                      ...formData,
+                      timeline: { ...formData.timeline, endDate: { ...current, date: e.target.value } }
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                <input
+                  type="time"
+                  value={typeof formData.timeline?.endDate === 'object' ? formData.timeline?.endDate?.startTime || '' : ''}
+                  onChange={(e) => {
+                    const current = typeof formData.timeline?.endDate === 'object' ? formData.timeline.endDate : { date: formData.timeline?.endDate || '', startTime: '', endTime: '' };
+                    setFormData({
+                      ...formData,
+                      timeline: { ...formData.timeline, endDate: { ...current, startTime: e.target.value } }
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                <input
+                  type="time"
+                  value={typeof formData.timeline?.endDate === 'object' ? formData.timeline?.endDate?.endTime || '' : ''}
+                  onChange={(e) => {
+                    const current = typeof formData.timeline?.endDate === 'object' ? formData.timeline.endDate : { date: formData.timeline?.endDate || '', startTime: '', endTime: '' };
+                    setFormData({
+                      ...formData,
+                      timeline: { ...formData.timeline, endDate: { ...current, endTime: e.target.value } }
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+              </div>
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-4">
           <input
             type="checkbox"
             id="flexible-dates"
@@ -194,6 +296,133 @@ const CampaignObjectivesSection = ({ formData, setFormData }) => {
             Flexible on dates
           </label>
         </div>
+
+        {/* Backup Date Toggle */}
+        <button
+          type="button"
+          onClick={() => {
+            const show = !formData.showBackupTimeline;
+            setFormData({
+              ...formData,
+              showBackupTimeline: show,
+              backupTimeline: show ? (formData.backupTimeline || { startDate: { date: '', startTime: '', endTime: '' }, endDate: { date: '', startTime: '', endTime: '' } }) : formData.backupTimeline
+            });
+          }}
+          className="text-indigo-400 text-sm font-medium hover:text-indigo-300 transition-colors"
+        >
+          {formData.showBackupTimeline ? '− Remove backup date' : '+ Add backup date'}
+        </button>
+
+        {/* Backup Timeline */}
+        {formData.showBackupTimeline && (
+          <div className="mt-4 border border-gray-700 rounded-lg p-4">
+            <p className="text-gray-400 text-sm mb-3">Backup Timeline</p>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-2">Start Date</label>
+              <div className="bg-zinc-900 border border-gray-800 rounded-lg p-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                    <input
+                      type="date"
+                      value={formData.backupTimeline?.startDate?.date || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        backupTimeline: {
+                          ...formData.backupTimeline,
+                          startDate: { ...(formData.backupTimeline?.startDate || {}), date: e.target.value }
+                        }
+                      })}
+                      className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                    <input
+                      type="time"
+                      value={formData.backupTimeline?.startDate?.startTime || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        backupTimeline: {
+                          ...formData.backupTimeline,
+                          startDate: { ...(formData.backupTimeline?.startDate || {}), startTime: e.target.value }
+                        }
+                      })}
+                      className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                    <input
+                      type="time"
+                      value={formData.backupTimeline?.startDate?.endTime || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        backupTimeline: {
+                          ...formData.backupTimeline,
+                          startDate: { ...(formData.backupTimeline?.startDate || {}), endTime: e.target.value }
+                        }
+                      })}
+                      className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">End Date</label>
+              <div className="bg-zinc-900 border border-gray-800 rounded-lg p-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                    <input
+                      type="date"
+                      value={formData.backupTimeline?.endDate?.date || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        backupTimeline: {
+                          ...formData.backupTimeline,
+                          endDate: { ...(formData.backupTimeline?.endDate || {}), date: e.target.value }
+                        }
+                      })}
+                      className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                    <input
+                      type="time"
+                      value={formData.backupTimeline?.endDate?.startTime || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        backupTimeline: {
+                          ...formData.backupTimeline,
+                          endDate: { ...(formData.backupTimeline?.endDate || {}), startTime: e.target.value }
+                        }
+                      })}
+                      className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                    <input
+                      type="time"
+                      value={formData.backupTimeline?.endDate?.endTime || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        backupTimeline: {
+                          ...formData.backupTimeline,
+                          endDate: { ...(formData.backupTimeline?.endDate || {}), endTime: e.target.value }
+                        }
+                      })}
+                      className="w-full px-3 py-2.5 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -351,21 +351,85 @@ const FieldEditorModal = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-2">Start Date</label>
-              <input
-                type="date"
-                value={value?.startDate || ''}
-                onChange={(e) => setValue({ ...value, startDate: e.target.value })}
-                className="w-full px-4 py-3 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                  <input
+                    type="date"
+                    value={typeof value?.startDate === 'object' ? value?.startDate?.date || '' : value?.startDate || ''}
+                    onChange={(e) => {
+                      const current = typeof value?.startDate === 'object' ? value.startDate : { date: value?.startDate || '', startTime: '', endTime: '' };
+                      setValue({ ...value, startDate: { ...current, date: e.target.value } });
+                    }}
+                    className="w-full px-3 py-2.5 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                  <input
+                    type="time"
+                    value={typeof value?.startDate === 'object' ? value?.startDate?.startTime || '' : ''}
+                    onChange={(e) => {
+                      const current = typeof value?.startDate === 'object' ? value.startDate : { date: value?.startDate || '', startTime: '', endTime: '' };
+                      setValue({ ...value, startDate: { ...current, startTime: e.target.value } });
+                    }}
+                    className="w-full px-3 py-2.5 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                  <input
+                    type="time"
+                    value={typeof value?.startDate === 'object' ? value?.startDate?.endTime || '' : ''}
+                    onChange={(e) => {
+                      const current = typeof value?.startDate === 'object' ? value.startDate : { date: value?.startDate || '', startTime: '', endTime: '' };
+                      setValue({ ...value, startDate: { ...current, endTime: e.target.value } });
+                    }}
+                    className="w-full px-3 py-2.5 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-2">End Date</label>
-              <input
-                type="date"
-                value={value?.endDate || ''}
-                onChange={(e) => setValue({ ...value, endDate: e.target.value })}
-                className="w-full px-4 py-3 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                  <input
+                    type="date"
+                    value={typeof value?.endDate === 'object' ? value?.endDate?.date || '' : value?.endDate || ''}
+                    onChange={(e) => {
+                      const current = typeof value?.endDate === 'object' ? value.endDate : { date: value?.endDate || '', startTime: '', endTime: '' };
+                      setValue({ ...value, endDate: { ...current, date: e.target.value } });
+                    }}
+                    className="w-full px-3 py-2.5 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                  <input
+                    type="time"
+                    value={typeof value?.endDate === 'object' ? value?.endDate?.startTime || '' : ''}
+                    onChange={(e) => {
+                      const current = typeof value?.endDate === 'object' ? value.endDate : { date: value?.endDate || '', startTime: '', endTime: '' };
+                      setValue({ ...value, endDate: { ...current, startTime: e.target.value } });
+                    }}
+                    className="w-full px-3 py-2.5 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                  <input
+                    type="time"
+                    value={typeof value?.endDate === 'object' ? value?.endDate?.endTime || '' : ''}
+                    onChange={(e) => {
+                      const current = typeof value?.endDate === 'object' ? value.endDate : { date: value?.endDate || '', startTime: '', endTime: '' };
+                      setValue({ ...value, endDate: { ...current, endTime: e.target.value } });
+                    }}
+                    className="w-full px-3 py-2.5 bg-black border-2 border-gray-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+              </div>
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-300">
               <input

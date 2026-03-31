@@ -8,8 +8,6 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
     fieldName: '',
     parentField: '',
   });
-  
-  const [hoveredCard, setHoveredCard] = useState(null);
 
   const deliverables = [
     {
@@ -58,7 +56,7 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
         { id: 'instagram_posts', label: 'Instagram Posts' },
         { id: 'stories', label: 'Stories' },
         { id: 'reels', label: 'Reels' },
-        { id: 'email_mention', label: 'Email Mention' },
+        { id: 'email_mention', label: 'WhatsApp/Email Mention' },
       ],
     },
     {
@@ -138,21 +136,11 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
         <div className="space-y-4">
           {deliverables.map((deliverable) => {
             const isSelected = formData.brandDeliverables?.[deliverable.id]?.selected;
-            const isHovered = hoveredCard === deliverable.id;
             const hasComment = formData.brandDeliverables?.[deliverable.id]?.comment;
-            
-            const selectedSubOptions = deliverable.subOptions?.filter((subOption) => 
-              formData.brandDeliverables[deliverable.id]?.subOptions?.[subOption.id]?.selected
-            ) || [];
-            
-            // Show all options when hovered, otherwise show selected ones
-            const displaySubOptions = (isHovered && isSelected) ? deliverable.subOptions : selectedSubOptions;
             
             return (
               <div
                 key={deliverable.id}
-                onMouseEnter={() => isSelected && setHoveredCard(deliverable.id)}
-                onMouseLeave={() => setHoveredCard(null)}
               >
                 <SelectableCard
                   title={deliverable.title}
@@ -162,7 +150,7 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
                 >
                   {deliverable.hasSubOptions && isSelected && (
                     <div className="flex flex-wrap gap-3 mt-3">
-                      {displaySubOptions.map((subOption) => {
+                      {deliverable.subOptions.map((subOption) => {
                         const isSubSelected =
                           formData.brandDeliverables[deliverable.id]?.subOptions?.[subOption.id]?.selected;
                         
@@ -184,8 +172,8 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
                         );
                       })}
                       
-                      {/* Add Comment button - only visible on hover when no comment exists */}
-                      {isHovered && !hasComment && (
+                      {/* Add Comment button - visible when selected and no comment exists */}
+                      {!hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -219,7 +207,7 @@ const BrandDeliverablesSection = ({ formData, setFormData }) => {
                   {/* Comment buttons for standalone fields (no sub-options) */}
                   {!deliverable.hasSubOptions && isSelected && (
                     <div className="flex flex-wrap gap-3 mt-3">
-                      {isHovered && !hasComment && (
+                      {!hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

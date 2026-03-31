@@ -72,7 +72,9 @@ const collaborationSchema = new mongoose.Schema({
     eventFormat: [String],  // Array: Workshop, Mixer/Social, Tournament, etc.
     targetAudience: [String],  // Array: Students, Young professionals, etc.
     nicheAudienceDetails: String,  // If 'Niche community' selected
-    eventDate: Date,
+    eventDate: mongoose.Schema.Types.Mixed,  // { date: Date, startTime: String, endTime: String } or Date
+    backupDate: mongoose.Schema.Types.Mixed,  // { date: Date, startTime: String, endTime: String } (optional)
+    showBackupDate: Boolean,
     city: String,
     
     // Section 2: Brand Deliverables
@@ -173,11 +175,9 @@ const collaborationSchema = new mongoose.Schema({
     targetAudience: String,
     preferredFormats: [String],
     city: String,
-    timeline: {
-      startDate: Date,
-      endDate: Date,
-      flexible: Boolean
-    },
+    timeline: mongoose.Schema.Types.Mixed,
+    backupTimeline: mongoose.Schema.Types.Mixed,
+    showBackupTimeline: Boolean,
     
     // Section 2: Brand Offers
     brandOffers: {

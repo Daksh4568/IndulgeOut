@@ -8,8 +8,6 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
     fieldName: '',
     modelId: '',
   });
-  
-  const [hoveredCard, setHoveredCard] = useState(null);
 
   // Venue pricing models (for communityToVenue)
   const venuePricingModels = [
@@ -137,11 +135,11 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
           </div>
           <div>
             <h2 className="text-white text-xl font-semibold">PRICING & PAYMENT</h2>
-            <p className="text-gray-400 text-sm">
+            {/* <p className="text-gray-400 text-sm">
               {proposalType === 'communityToBrand' 
                 ? 'Choose your preferred commercial model' 
                 : 'How do you want to pay the venue?'}
-            </p>
+            </p> */}
           </div>
         </div>
       </div>
@@ -157,13 +155,10 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
             const isSelected = formData.pricing?.[model.id]?.selected;
             const savedValue = formData.pricing?.[model.id]?.value;
             const savedComment = formData.pricing?.[model.id]?.comment;
-            const isHovered = hoveredCard === model.id;
             
             return (
               <div
                 key={model.id}
-                onMouseEnter={() => isSelected && setHoveredCard(model.id)}
-                onMouseLeave={() => setHoveredCard(null)}
               >
                 <SelectableCard
                   title={model.title}
@@ -171,8 +166,8 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
                   isSelected={isSelected}
                   onClick={() => handleModelToggle(model.id)}
                 >
-                  {/* Input Fields (shown when selected AND (hovering OR no value)) */}
-                  {model.hasInput && isSelected && (isHovered || !savedValue) && (
+                  {/* Input Fields (shown when selected) */}
+                  {model.hasInput && isSelected && (
                     <div className="flex flex-wrap items-center gap-3 mt-3">
                       {model.inputType === 'percentage' && model.options ? (
                         // Percentage buttons
@@ -228,7 +223,7 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
                       )}
                       
                       {/* Comment buttons */}
-                      {isHovered && !savedComment && (
+                      {!savedComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -259,8 +254,8 @@ const PricingSection = ({ formData, setFormData, proposalType }) => {
                     </div>
                   )}
                   
-                  {/* Display saved value (shown when NOT hovering AND value exists) */}
-                  {isSelected && !isHovered && savedValue && (
+                  {/* Display saved value is now inline above, this block removed */}
+                  {false && isSelected && savedValue && (
                     <div className="flex flex-wrap items-center gap-3 mt-3">
                       <span className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm font-medium">
                         {model.inputType === 'amount' ? `₹${savedValue}` : savedValue}

@@ -100,7 +100,19 @@ const FieldHistoryModal = ({
         return `${value.date} ${value.startTime || ''} ${value.endTime ? `- ${value.endTime}` : ''}`.trim();
       }
       if (value.startDate) {
-        return `${value.startDate}${value.endDate ? ` to ${value.endDate}` : ''}${value.flexible ? ' (Flexible)' : ''}`;
+        const formatDatePart = (d) => {
+          if (typeof d === 'object' && d !== null) {
+            const parts = [d.date || ''];
+            if (d.startTime) parts.push(d.startTime);
+            if (d.endTime) parts.push(`- ${d.endTime}`);
+            return parts.join(' ');
+          }
+          return d || '';
+        };
+        const start = formatDatePart(value.startDate);
+        const end = value.endDate ? ` to ${formatDatePart(value.endDate)}` : '';
+        const flex = value.flexible ? ' (Flexible)' : '';
+        return `${start}${end}${flex}`;
       }
       // Sub-options objects - show selected keys as chips
       if (!Array.isArray(value)) {

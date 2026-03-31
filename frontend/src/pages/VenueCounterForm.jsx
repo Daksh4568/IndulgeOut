@@ -286,7 +286,7 @@ const VenueCounterForm = () => {
                     onClick={() => setModifyValue(option)}
                     className={`py-3 px-4 rounded-lg border transition-all ${
                       modifyValue === option
-                        ? 'bg-yellow-600 border-yellow-400 text-white'
+                        ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                         : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                     }`}
                   >
@@ -380,7 +380,8 @@ const VenueCounterForm = () => {
           <div className="flex gap-3 mt-6">
             <button
               onClick={saveModification}
-              className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+              className="flex-1 py-3 hover:opacity-90 text-white rounded-lg font-medium transition-colors"
+              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
               Save Changes
             </button>

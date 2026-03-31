@@ -29,7 +29,20 @@ const EventSnapshotSection = ({ formData, setFormData }) => {
     'Niche community',
   ];
   
-  const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Pune'];
+  const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Pune', 'Others'];
+
+  const handleDateChange = (field, value) => {
+    const currentDate = formData.eventDate && typeof formData.eventDate === 'object' ? formData.eventDate : { date: '', startTime: '', endTime: '' };
+    setFormData({ ...formData, eventDate: { ...currentDate, [field]: value } });
+  };
+
+  const toggleBackupDate = () => {
+    setFormData({
+      ...formData,
+      showBackupDate: !formData.showBackupDate,
+      backupDate: !formData.showBackupDate ? { date: '', startTime: '', endTime: '' } : formData.backupDate,
+    });
+  };
   
   const handleFormatToggle = (format) => {
     const formats = formData.eventFormat || [];
@@ -168,19 +181,90 @@ const EventSnapshotSection = ({ formData, setFormData }) => {
         )}
       </div>
 
-      {/* Event Date */}
+      {/* Event Date & Time */}
       <div>
         <label className="block text-white text-base mb-4">
           5. Event Date <span className="text-red-500">*</span>
         </label>
-        <input
-          type="date"
-          value={formData.eventDate || ''}
-          onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-          min={new Date().toISOString().split('T')[0]}
-          className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
-          style={{ colorScheme: 'dark' }}
-        />
+        <div className=" rounded-xl p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-gray-400 text-xs uppercase tracking-wider mb-2">DATE</label>
+              <input
+                type="date"
+                value={(typeof formData.eventDate === 'object' ? formData.eventDate?.date : formData.eventDate) || ''}
+                onChange={(e) => handleDateChange('date', e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-xs uppercase tracking-wider mb-2">START TIME</label>
+              <input
+                type="time"
+                value={(typeof formData.eventDate === 'object' ? formData.eventDate?.startTime : '') || ''}
+                onChange={(e) => handleDateChange('startTime', e.target.value)}
+                className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-xs uppercase tracking-wider mb-2">END TIME</label>
+              <input
+                type="time"
+                value={(typeof formData.eventDate === 'object' ? formData.eventDate?.endTime : '') || ''}
+                onChange={(e) => handleDateChange('endTime', e.target.value)}
+                className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleBackupDate}
+            className="mt-4 text-indigo-400 text-sm hover:text-indigo-300 transition-colors flex items-center gap-1"
+          >
+            {formData.showBackupDate ? '− Remove backup date' : '+ Add backup date option'}
+          </button>
+
+          {formData.showBackupDate && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-800">
+              <div>
+                <label className="block text-gray-400 text-xs uppercase tracking-wider mb-2">BACKUP DATE</label>
+                <input
+                  type="date"
+                  value={formData.backupDate?.date || ''}
+                  onChange={(e) => setFormData({ ...formData, backupDate: { ...formData.backupDate, date: e.target.value } })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-xs uppercase tracking-wider mb-2">START TIME</label>
+                <input
+                  type="time"
+                  value={formData.backupDate?.startTime || ''}
+                  onChange={(e) => setFormData({ ...formData, backupDate: { ...formData.backupDate, startTime: e.target.value } })}
+                  className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-xs uppercase tracking-wider mb-2">END TIME</label>
+                <input
+                  type="time"
+                  value={formData.backupDate?.endTime || ''}
+                  onChange={(e) => setFormData({ ...formData, backupDate: { ...formData.backupDate, endTime: e.target.value } })}
+                  className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* City */}
@@ -192,17 +276,38 @@ const EventSnapshotSection = ({ formData, setFormData }) => {
           {cities.map((city) => (
             <button
               key={city}
-              onClick={() => setFormData({ ...formData, city })}
+              onClick={() => {
+                if (city === 'Others') {
+                  setFormData({ ...formData, city: 'Others', customCity: '' });
+                } else {
+                  setFormData({ ...formData, city, customCity: undefined });
+                }
+              }}
               className={`px-6 py-4 rounded-xl border-2 transition-all duration-300 ${
-                formData.city === city
-                  ? 'bg-indigo-500 bg-opacity-10 border-indigo-500 text-white'
-                  : 'bg-black border-gray-800 text-gray-300 hover:border-gray-700'
+                city === 'Others'
+                  ? (formData.city === 'Others' || (formData.city && !cities.slice(0, -1).includes(formData.city)))
+                    ? 'bg-indigo-500 bg-opacity-10 border-indigo-500 text-white'
+                    : 'bg-black border-gray-800 text-gray-300 hover:border-gray-700'
+                  : formData.city === city
+                    ? 'bg-indigo-500 bg-opacity-10 border-indigo-500 text-white'
+                    : 'bg-black border-gray-800 text-gray-300 hover:border-gray-700'
               }`}
             >
               {city}
             </button>
           ))}
         </div>
+        {(formData.city === 'Others' || (formData.city && !cities.slice(0, -1).includes(formData.city))) && (
+          <div className="mt-3">
+            <input
+              type="text"
+              value={formData.city === 'Others' ? (formData.customCity || '') : formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value || 'Others', customCity: e.target.value })}
+              placeholder="Enter your city name..."
+              className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

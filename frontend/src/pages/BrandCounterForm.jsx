@@ -388,7 +388,7 @@ const BrandCounterForm = () => {
                     onClick={() => setModifyValue(option)}
                     className={`py-3 px-4 rounded-lg border transition-all ${
                       modifyValue === option
-                        ? 'bg-yellow-600 border-yellow-400 text-white'
+                        ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                         : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                     }`}
                   >
@@ -410,7 +410,7 @@ const BrandCounterForm = () => {
                     onClick={() => setModifyValue(option)}
                     className={`py-3 px-4 rounded-lg border transition-all ${
                       modifyValue === option
-                        ? 'bg-yellow-600 border-yellow-400 text-white'
+                        ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                         : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                     }`}
                   >
@@ -451,7 +451,7 @@ const BrandCounterForm = () => {
                       }}
                       className={`py-3 px-4 rounded-lg border transition-all ${
                         isSelected
-                          ? 'bg-yellow-600 border-yellow-400 text-white'
+                          ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                           : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                       }`}
                     >
@@ -478,16 +478,52 @@ const BrandCounterForm = () => {
               {proposalData.eventDate && (
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
                   <p className="text-blue-400 text-xs mb-2">SCHEDULED DATE:</p>
-                  <p className="text-white text-sm">{new Date(proposalData.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  <p className="text-white text-sm">
+                    {typeof proposalData.eventDate === 'object' && proposalData.eventDate.date
+                      ? `${new Date(proposalData.eventDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}${proposalData.eventDate.startTime ? ` | ${proposalData.eventDate.startTime} - ${proposalData.eventDate.endTime || ''}` : ''}`
+                      : new Date(proposalData.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                    }
+                  </p>
+                  {proposalData.backupDate?.date && (
+                    <p className="text-gray-400 text-xs mt-1">
+                      Backup: {new Date(proposalData.backupDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      {proposalData.backupDate.startTime ? ` | ${proposalData.backupDate.startTime} - ${proposalData.backupDate.endTime || ''}` : ''}
+                    </p>
+                  )}
                 </div>
               )}
-              <p className="text-sm text-gray-400 mb-3">Your preferred date:</p>
-              <input
-                type="date"
-                value={modifyValue || ''}
-                onChange={(e) => setModifyValue(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
-              />
+              <p className="text-sm text-gray-400 mb-3">Your preferred date & time:</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={modifyValue?.date || modifyValue || ''}
+                    onChange={(e) => setModifyValue(prev => typeof prev === 'object' ? { ...prev, date: e.target.value } : { date: e.target.value, startTime: '', endTime: '' })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Start Time</label>
+                    <input
+                      type="time"
+                      value={modifyValue?.startTime || ''}
+                      onChange={(e) => setModifyValue(prev => typeof prev === 'object' ? { ...prev, startTime: e.target.value } : { date: prev || '', startTime: e.target.value, endTime: '' })}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">End Time</label>
+                    <input
+                      type="time"
+                      value={modifyValue?.endTime || ''}
+                      onChange={(e) => setModifyValue(prev => typeof prev === 'object' ? { ...prev, endTime: e.target.value } : { date: prev || '', startTime: '', endTime: e.target.value })}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -542,7 +578,7 @@ const BrandCounterForm = () => {
                       }}
                       className={`py-3 px-4 rounded-lg border transition-all ${
                         isSelected
-                          ? 'bg-yellow-600 border-yellow-400 text-white'
+                          ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                           : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                       }`}
                     >
@@ -853,7 +889,8 @@ const BrandCounterForm = () => {
           <div className="flex gap-3 mt-6">
             <button
               onClick={saveModification}
-              className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+              className="flex-1 py-3 hover:opacity-90 text-white rounded-lg font-medium transition-colors"
+              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
               Save Changes
             </button>
@@ -983,10 +1020,24 @@ const BrandCounterForm = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Event Date</h3>
               <p className="text-sm text-gray-400 mb-2">SCHEDULED</p>
-              <p className="text-white mb-1">{new Date(formData.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="text-white mb-1">
+                {typeof formData.eventDate === 'object' && formData.eventDate.date
+                  ? `${new Date(formData.eventDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}${formData.eventDate.startTime ? ` | ${formData.eventDate.startTime} - ${formData.eventDate.endTime || ''}` : ''}`
+                  : new Date(formData.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                }
+              </p>
+              {formData.backupDate?.date && (
+                <p className="text-gray-400 text-sm mt-1">
+                  Backup: {new Date(formData.backupDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  {formData.backupDate.startTime ? ` | ${formData.backupDate.startTime} - ${formData.backupDate.endTime || ''}` : ''}
+                </p>
+              )}
               {fieldResponses.eventDate?.action === 'modify' && (
                 <p className="text-yellow-400 text-sm mt-2">
-                  Your preferred date: {fieldResponses.eventDate?.modifiedValue}
+                  Your preferred date: {typeof fieldResponses.eventDate?.modifiedValue === 'object'
+                    ? `${fieldResponses.eventDate.modifiedValue.date}${fieldResponses.eventDate.modifiedValue.startTime ? ` | ${fieldResponses.eventDate.modifiedValue.startTime} - ${fieldResponses.eventDate.modifiedValue.endTime || ''}` : ''}`
+                    : fieldResponses.eventDate?.modifiedValue
+                  }
                 </p>
               )}
               {renderFieldActionButtons('eventDate')}

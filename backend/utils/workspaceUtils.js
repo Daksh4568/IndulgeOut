@@ -54,7 +54,7 @@ const WORKSPACE_FIELD_CONFIGS = {
   communityToBrand: {
     eventSnapshot: {
       title: 'Event Details',
-      fields: ['eventCategory', 'expectedAttendees', 'eventFormat', 'targetAudience', 'eventDate', 'city']
+      fields: ['eventCategory', 'expectedAttendees', 'eventFormat', 'targetAudience', 'eventDate', 'backupDate', 'city']
     },
     brandDeliverables: {
       title: 'Brand Deliverables',
@@ -88,7 +88,7 @@ const WORKSPACE_FIELD_CONFIGS = {
   brandToCommunity: {
     campaignSnapshot: {
       title: 'Campaign Details',
-      fields: ['campaignObjectives', 'targetAudience', 'preferredFormats', 'city', 'timeline']
+      fields: ['campaignObjectives', 'targetAudience', 'preferredFormats', 'city', 'timeline', 'backupTimeline']
     },
     brandOffers: {
       title: 'Brand Offers',

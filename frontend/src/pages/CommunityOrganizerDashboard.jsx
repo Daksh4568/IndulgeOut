@@ -1248,14 +1248,14 @@ const CommunityOrganizerDashboard = () => {
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {currentCollabs.map((collab) => {
-                const statusBadge = getStatusBadge(collab.status);
                 const collabType = getCollaborationType(collab);
                 const partner = getPartnerInfo(collab);
 
                 return (
                   <div
                     key={collab._id}
-                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                    className="w-[calc(100vw-3rem)] flex-shrink-0 snap-center bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
+                    onClick={() => navigate(`/collaborations/${collab._id}/agreement`)}
                   >
                     <div className="p-4 flex flex-col flex-grow">
                       <div className="flex items-start justify-between mb-3">
@@ -1265,9 +1265,6 @@ const CommunityOrganizerDashboard = () => {
                         >
                           {collab.requestDetails?.eventName || 'Collaboration Request'}
                         </h3>
-                        <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
-                          {statusBadge.text}
-                        </span>
                       </div>
 
                       {/* Partner Info */}
@@ -1320,19 +1317,24 @@ const CommunityOrganizerDashboard = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                      <div className="flex flex-col gap-2 pt-3 border-t border-gray-800 mt-auto">
                         <button
-                          onClick={() => navigate(`/collaborations/${collab._id}/workspace`)}
-                          disabled={collab.status !== 'counter_delivered' && collab.status !== 'completed'}
-                          className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full ${
-                            collab.status === 'counter_delivered' || collab.status === 'completed'
-                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-900/30'
-                              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                          }`}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/collaborations/${collab._id}/agreement`); }}
+                          className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full bg-zinc-800 border border-gray-700 text-gray-300 hover:border-gray-600"
                         >
                           <Layout className="h-4 w-4" />
-                          <span>Open Workspace</span>
+                          <span>View Agreement</span>
                         </button>
+                        {(collab.status === 'counter_delivered' || collab.status === 'completed') && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/collaborations/${collab._id}/workspace`); }}
+                            className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-white shadow-lg shadow-purple-900/30"
+                            style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                          >
+                            <Layout className="h-4 w-4" />
+                            <span>Open Workspace</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1354,14 +1356,14 @@ const CommunityOrganizerDashboard = () => {
                     className="grid grid-cols-4 gap-4 flex-shrink-0 w-full"
                   >
                     {currentCollabs.slice(pageIndex * cardsPerView, (pageIndex + 1) * cardsPerView).map((collab) => {
-                      const statusBadge = getStatusBadge(collab.status);
                       const collabType = getCollaborationType(collab);
                       const partner = getPartnerInfo(collab);
 
                       return (
                         <div
                           key={collab._id}
-                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col"
+                          className="bg-zinc-900 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors flex flex-col cursor-pointer"
+                          onClick={() => navigate(`/collaborations/${collab._id}/agreement`)}
                         >
                           <div className="p-4 flex flex-col flex-grow h-full">
                             <div className="flex items-start justify-between mb-3">
@@ -1371,9 +1373,6 @@ const CommunityOrganizerDashboard = () => {
                               >
                                 {collab.requestDetails?.eventName || 'Collaboration Request'}
                               </h3>
-                              <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0`}>
-                                {statusBadge.text}
-                              </span>
                             </div>
 
                             {/* Partner Info */}
@@ -1426,19 +1425,24 @@ const CommunityOrganizerDashboard = () => {
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                            <div className="flex flex-col gap-2 pt-3 border-t border-gray-800 mt-auto">
                               <button
-                                onClick={() => navigate(`/collaborations/${collab._id}/workspace`)}
-                                disabled={collab.status !== 'counter_delivered' && collab.status !== 'completed'}
-                                className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full ${
-                                  collab.status === 'counter_delivered' || collab.status === 'completed'
-                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-900/30'
-                                    : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                                }`}
+                                onClick={(e) => { e.stopPropagation(); navigate(`/collaborations/${collab._id}/agreement`); }}
+                                className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full bg-zinc-800 border border-gray-700 text-gray-300 hover:border-gray-600"
                               >
                                 <Layout className="h-4 w-4" />
-                                <span>Open Workspace</span>
+                                <span>View Agreement</span>
                               </button>
+                              {(collab.status === 'counter_delivered' || collab.status === 'completed') && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/collaborations/${collab._id}/workspace`); }}
+                                  className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-white shadow-lg shadow-purple-900/30"
+                                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                                >
+                                  <Layout className="h-4 w-4" />
+                                  <span>Open Workspace</span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>

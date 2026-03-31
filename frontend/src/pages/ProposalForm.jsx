@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send } from 'lucide-react';
 import NavigationBar from '../components/NavigationBar';
 import { api } from '../config/api';
+import { ToastContext } from '../App';
 
 // Community → Venue sections
 import EventInfoSection from '../components/collaboration/sections/EventInfoSection';
@@ -25,6 +26,7 @@ import VenueCommercialSection from '../components/collaboration/sections/VenueCo
 const ProposalForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useContext(ToastContext);
   
   // Get proposal type from URL params or location state
   // proposalType: 'communityToVenue', 'communityToBrand', 'brandToCommunity', 'venueToCommunity'
@@ -55,7 +57,9 @@ const ProposalForm = () => {
     // Brand → Community
     campaignObjectives: {},
     preferredFormats: [],
-    timeline: { startDate: '', endDate: '', flexible: false },
+    timeline: { startDate: { date: '', startTime: '', endTime: '' }, endDate: { date: '', startTime: '', endTime: '' }, flexible: false },
+    backupTimeline: { startDate: { date: '', startTime: '', endTime: '' }, endDate: { date: '', startTime: '', endTime: '' } },
+    showBackupTimeline: false,
     brandOffers: {},
     brandExpectations: {},
     
@@ -103,7 +107,7 @@ const ProposalForm = () => {
           // Load the draft formData
           if (response.data.draft.formData) {
             setFormData(response.data.draft.formData);
-            alert('📝 Draft loaded! Continue from where you left off.');
+            toast?.success('Draft loaded! Continue from where you left off.');
           }
         }
       } catch (error) {
@@ -140,7 +144,7 @@ const ProposalForm = () => {
   const handleSaveAsDraft = async () => {
     // Validate recipient info
     if (!recipientId || !recipientType) {
-      alert('Missing recipient information. Please go back and select a partner again.');
+      toast?.error('Missing recipient information. Please go back and select a partner again.');
       return;
     }
 
@@ -158,11 +162,11 @@ const ProposalForm = () => {
       const response = await api.post('/collaborations/draft', payload);
       
       console.log('Draft saved successfully:', response.data);
-      alert('Draft saved successfully!');
+      toast?.success('Draft saved successfully!');
     } catch (error) {
       console.error('Error saving draft:', error);
       const errorMsg = error.response?.data?.error || 'Failed to save draft. Please try again.';
-      alert(errorMsg);
+      toast?.error(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -212,8 +216,9 @@ const ProposalForm = () => {
     } else if (proposalType === 'brandToCommunity') {
       switch (stepIndex) {
         case 0: // Objectives
+          const tlStartDate = typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.date : formData.timeline?.startDate;
           return !!(Object.keys(formData.campaignObjectives || {}).length > 0 && 
-                    formData.targetAudience && formData.city && formData.timeline?.startDate);
+                    formData.targetAudience && formData.city && tlStartDate);
         case 1: // Offer & Expect
           return Object.keys(formData.brandOffers || {}).length > 0 && 
                  Object.keys(formData.brandExpectations || {}).length > 0;
@@ -242,110 +247,111 @@ const ProposalForm = () => {
   const validateForm = () => {
     if (proposalType === 'communityToVenue') {
       if (!formData.eventType) {
-        alert('Please select an event type');
+        toast?.error('Please select an event type');
         return false;
       }
       if (!formData.expectedAttendees || !formData.seatingCapacity) {
-        alert('Please select expected attendees and seating capacity');
+        toast?.error('Please select expected attendees and seating capacity');
         return false;
       }
       if (!formData.eventDate.date || !formData.eventDate.startTime || !formData.eventDate.endTime) {
-        alert('Please fill in all event date and time fields');
+        toast?.error('Please fill in all event date and time fields');
         return false;
       }
       if (Object.keys(formData.requirements).length === 0) {
-        alert('Please select at least one requirement');
+        toast?.error('Please select at least one requirement');
         return false;
       }
       if (Object.keys(formData.pricing).filter((key) => key !== 'additionalNotes').length === 0) {
-        alert('Please select at least one pricing model');
+        toast?.error('Please select at least one pricing model');
         return false;
       }
     } else if (proposalType === 'communityToBrand') {
       // Section 1: Event Snapshot
       if (!formData.eventCategory) {
-        alert('Please select an event category');
+        toast?.error('Please select an event category');
         return false;
       }
       if (!formData.expectedAttendees) {
-        alert('Please select expected attendees range');
+        toast?.error('Please select expected attendees range');
         return false;
       }
       if (!formData.eventFormat || formData.eventFormat.length === 0) {
-        alert('Please select at least one event format');
+        toast?.error('Please select at least one event format');
         return false;
       }
       if (!formData.targetAudience || formData.targetAudience.length === 0) {
-        alert('Please select at least one target audience');
+        toast?.error('Please select at least one target audience');
         return false;
       }
-      if (!formData.eventDate) {
-        alert('Please select an event date');
+      if (!formData.eventDate || (typeof formData.eventDate === 'object' && !formData.eventDate.date) || (typeof formData.eventDate === 'string' && !formData.eventDate)) {
+        toast?.error('Please select an event date');
         return false;
       }
       if (!formData.city) {
-        alert('Please select a city');
+        toast?.error('Please select a city');
         return false;
       }
       
       // Section 2: Brand Deliverables
       if (Object.keys(formData.brandDeliverables).length === 0) {
-        alert('Please select at least one deliverable for the brand');
+        toast?.error('Please select at least one deliverable for the brand');
         return false;
       }
       
       // Section 3: Pricing
       if (Object.keys(formData.pricing).filter((key) => key !== 'additionalNotes').length === 0) {
-        alert('Please select at least one pricing model');
+        toast?.error('Please select at least one pricing model');
         return false;
       }
       
       // Section 4: Audience Proof
       if (!formData.audienceProof || Object.keys(formData.audienceProof).length === 0) {
-        alert('Please provide at least one audience proof item');
+        toast?.error('Please provide at least one audience proof item');
         return false;
       }
     } else if (proposalType === 'brandToCommunity') {
       // Section 1: Campaign Snapshot
       if (Object.keys(formData.campaignObjectives).length === 0) {
-        alert('Please select at least one campaign objective');
+        toast?.error('Please select at least one campaign objective');
         return false;
       }
       if (!formData.targetAudience) {
-        alert('Please describe your target audience');
+        toast?.error('Please describe your target audience');
         return false;
       }
       if (!formData.city) {
-        alert('Please select a city');
+        toast?.error('Please select a city');
         return false;
       }
-      if (!formData.timeline?.startDate) {
-        alert('Please select a timeline start date');
+      const startDateVal = typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.date : formData.timeline?.startDate;
+      if (!startDateVal) {
+        toast?.error('Please select a timeline start date');
         return false;
       }
       
       // Section 2: Brand Offers
       if (Object.keys(formData.brandOffers).length === 0) {
-        alert('Please select what you can offer');
+        toast?.error('Please select what you can offer');
         return false;
       }
       
       // Section 3: Brand Expectations
       if (Object.keys(formData.brandExpectations).length === 0) {
-        alert('Please select what you expect from the community');
+        toast?.error('Please select what you expect from the community');
         return false;
       }
     } else if (proposalType === 'venueToCommunity') {
       if (!formData.venueType || !formData.capacityRange) {
-        alert('Please complete venue snapshot');
+        toast?.error('Please complete venue snapshot');
         return false;
       }
       if (Object.keys(formData.venueOfferings).length === 0) {
-        alert('Please select at least one offering');
+        toast?.error('Please select at least one offering');
         return false;
       }
       if (Object.keys(formData.commercialModels).length === 0) {
-        alert('Please select a commercial model');
+        toast?.error('Please select a commercial model');
         return false;
       }
     }
@@ -413,6 +419,8 @@ const ProposalForm = () => {
           preferredFormats: formData.preferredFormats,
           city: formData.city,
           timeline: formData.timeline,
+          backupTimeline: formData.showBackupTimeline && formData.backupTimeline?.startDate?.date ? formData.backupTimeline : undefined,
+          showBackupTimeline: formData.showBackupTimeline || false,
           brandOffers: formData.brandOffers,
           brandExpectations: formData.brandExpectations,
           additionalTerms: formData.additionalTerms,
@@ -440,7 +448,7 @@ const ProposalForm = () => {
 
     // Validate recipient info
     if (!recipientId || !recipientType) {
-      alert('Missing recipient information. Please go back and select a partner again.');
+      toast?.error('Missing recipient information. Please go back and select a partner again.');
       return;
     }
 
@@ -472,7 +480,7 @@ const ProposalForm = () => {
     } catch (error) {
       console.error('Error sending proposal:', error);
       const errorMsg = error.response?.data?.error || 'Failed to send request. Please try again.';
-      alert(errorMsg);
+      toast?.error(errorMsg);
     } finally {
       setIsSending(false);
     }
@@ -623,36 +631,38 @@ const ProposalForm = () => {
         </div>
 
         {/* Submit Actions */}
-        <div className="mt-12 mb-16">
+        <div className="mt-8 mb-6">
           <div
-            className="p-6 rounded-2xl"
+            className="px-5 py-4 rounded-xl flex items-center justify-between gap-4 flex-wrap"
             style={{
               background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
             }}
           >
-            <h3 className="text-white text-lg font-semibold mb-1">
-              {getSubmitActionText().title}
-            </h3>
-            <p className="text-indigo-100 text-sm mb-4">
-              {getSubmitActionText().subtitle}
-            </p>
+            <div>
+              <h3 className="text-white text-base font-semibold">
+                {getSubmitActionText().title}
+              </h3>
+              <p className="text-indigo-100 text-xs">
+                {getSubmitActionText().subtitle}
+              </p>
+            </div>
             
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={handleSaveAsDraft}
                 disabled={isSaving}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-white bg-opacity-10 border border-white border-opacity-30 text-white rounded-lg hover:bg-opacity-20 transition-all font-medium disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-10 border border-white border-opacity-30 text-white rounded-lg hover:bg-opacity-20 transition-all text-sm font-medium disabled:opacity-50"
               >
-                <Save className="h-5 w-5" />
+                <Save className="h-4 w-4" />
                 {isSaving ? 'Saving...' : 'SAVE AS DRAFT'}
               </button>
               
               <button
                 onClick={handleSendRequest}
                 disabled={isSending}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition-all font-medium disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition-all text-sm font-medium disabled:opacity-50"
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
                 {isSending ? 'Sending...' : 'SEND REQUEST'}
               </button>
             </div>

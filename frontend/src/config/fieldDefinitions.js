@@ -73,7 +73,7 @@ export const FIELD_DEFINITIONS = {
   city: {
     type: 'select',
     label: 'City',
-    options: ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata', 'Any City']
+    options: ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Pune', 'Kolkata', 'Any City', 'Others']
   },
 
   // ═══════════════════════════════════════
@@ -196,7 +196,7 @@ export const FIELD_DEFINITIONS = {
       { id: 'instagram_posts', label: 'Instagram Posts' },
       { id: 'stories', label: 'Stories' },
       { id: 'reels', label: 'Reels' },
-      { id: 'email_mention', label: 'Email Mention' }
+      { id: 'email_mention', label: 'WhatsApp/Email Mention' }
     ]
   },
 
@@ -370,6 +370,11 @@ export const FIELD_DEFINITIONS = {
     label: 'Timeline'
   },
 
+  backupTimeline: {
+    type: 'daterange',
+    label: 'Backup Timeline'
+  },
+
   // ═══════════════════════════════════════
   // AUDIENCE PROOF - Read Only
   // ═══════════════════════════════════════
@@ -455,12 +460,21 @@ export function formatFieldValue(fieldName, value) {
   }
   
   if ((definition.type === 'daterange' || definition.type === 'event-datetime') && typeof value === 'object') {
+    const formatDatePart = (d) => {
+      if (typeof d === 'object' && d !== null) {
+        const parts = [d.date || ''];
+        if (d.startTime) parts.push(d.startTime);
+        if (d.endTime) parts.push(`- ${d.endTime}`);
+        return parts.join(' ');
+      }
+      return d || '';
+    };
     const parts = [];
     if (value.date) parts.push(value.date);
-    if (value.startDate) parts.push(`From: ${value.startDate}`);
-    if (value.endDate) parts.push(`To: ${value.endDate}`);
-    if (value.startTime) parts.push(value.startTime);
-    if (value.endTime) parts.push(`- ${value.endTime}`);
+    if (value.startDate) parts.push(`From: ${formatDatePart(value.startDate)}`);
+    if (value.endDate) parts.push(`To: ${formatDatePart(value.endDate)}`);
+    if (value.startTime && !value.startDate) parts.push(value.startTime);
+    if (value.endTime && !value.startDate) parts.push(`- ${value.endTime}`);
     if (value.flexible) parts.push('(Flexible)');
     return parts.length > 0 ? parts.join(' ') : 'Not set';
   }

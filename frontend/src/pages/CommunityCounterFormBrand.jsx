@@ -408,7 +408,7 @@ const CommunityCounterFormBrand = () => {
                       }}
                       className={`w-full py-3 px-4 rounded-lg border text-left transition-all ${
                         isSelected
-                          ? 'bg-yellow-600 border-yellow-400 text-white'
+                          ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                           : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                       }`}
                     >
@@ -464,7 +464,7 @@ const CommunityCounterFormBrand = () => {
                       }}
                       className={`py-3 px-4 rounded-lg border transition-all ${
                         isSelected
-                          ? 'bg-yellow-600 border-yellow-400 text-white'
+                          ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
                           : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
                       }`}
                     >
@@ -505,37 +505,134 @@ const CommunityCounterFormBrand = () => {
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
                   <p className="text-blue-400 text-xs mb-2">BRAND'S TIMELINE:</p>
                   <div className="text-white text-sm space-y-1">
-                    {proposalData.timeline.startDate && (
-                      <p>• Start: {new Date(proposalData.timeline.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                    )}
-                    {proposalData.timeline.endDate && (
-                      <p>• End: {new Date(proposalData.timeline.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                    )}
+                    {(() => {
+                      const sd = proposalData.timeline.startDate;
+                      const sdDate = typeof sd === 'object' ? sd?.date : sd;
+                      const sdStart = typeof sd === 'object' ? sd?.startTime : '';
+                      const sdEnd = typeof sd === 'object' ? sd?.endTime : '';
+                      if (!sdDate) return null;
+                      return (
+                        <p>• Start: {new Date(sdDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {sdStart && ` • ${sdStart}`}{sdEnd && ` - ${sdEnd}`}
+                        </p>
+                      );
+                    })()}
+                    {(() => {
+                      const ed = proposalData.timeline.endDate;
+                      const edDate = typeof ed === 'object' ? ed?.date : ed;
+                      const edStart = typeof ed === 'object' ? ed?.startTime : '';
+                      const edEnd = typeof ed === 'object' ? ed?.endTime : '';
+                      if (!edDate) return null;
+                      return (
+                        <p>• End: {new Date(edDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {edStart && ` • ${edStart}`}{edEnd && ` - ${edEnd}`}
+                        </p>
+                      );
+                    })()}
                     {proposalData.timeline.flexible && (
                       <p className="text-green-400">• Flexible on dates</p>
                     )}
                   </div>
+                  {proposalData.backupTimeline?.startDate?.date && (
+                    <div className="text-white text-sm space-y-1 mt-2 border-t border-blue-700/50 pt-2">
+                      <p className="text-blue-400 text-xs">BACKUP TIMELINE:</p>
+                      <p>• Start: {new Date(proposalData.backupTimeline.startDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {proposalData.backupTimeline.startDate.startTime && ` • ${proposalData.backupTimeline.startDate.startTime}`}
+                        {proposalData.backupTimeline.startDate.endTime && ` - ${proposalData.backupTimeline.startDate.endTime}`}
+                      </p>
+                      {proposalData.backupTimeline.endDate?.date && (
+                        <p>• End: {new Date(proposalData.backupTimeline.endDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {proposalData.backupTimeline.endDate.startTime && ` • ${proposalData.backupTimeline.endDate.startTime}`}
+                          {proposalData.backupTimeline.endDate.endTime && ` - ${proposalData.backupTimeline.endDate.endTime}`}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               <p className="text-sm text-gray-400 mb-3">Your preferred timeline:</p>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    value={modifyValue?.startDate || ''}
-                    onChange={(e) => setModifyValue({ ...modifyValue, startDate: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
-                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                      <input
+                        type="date"
+                        value={typeof modifyValue?.startDate === 'object' ? modifyValue?.startDate?.date || '' : modifyValue?.startDate || ''}
+                        onChange={(e) => {
+                          const current = typeof modifyValue?.startDate === 'object' ? modifyValue.startDate : { date: modifyValue?.startDate || '', startTime: '', endTime: '' };
+                          setModifyValue({ ...modifyValue, startDate: { ...current, date: e.target.value } });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                      <input
+                        type="time"
+                        value={typeof modifyValue?.startDate === 'object' ? modifyValue?.startDate?.startTime || '' : ''}
+                        onChange={(e) => {
+                          const current = typeof modifyValue?.startDate === 'object' ? modifyValue.startDate : { date: modifyValue?.startDate || '', startTime: '', endTime: '' };
+                          setModifyValue({ ...modifyValue, startDate: { ...current, startTime: e.target.value } });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                      <input
+                        type="time"
+                        value={typeof modifyValue?.startDate === 'object' ? modifyValue?.startDate?.endTime || '' : ''}
+                        onChange={(e) => {
+                          const current = typeof modifyValue?.startDate === 'object' ? modifyValue.startDate : { date: modifyValue?.startDate || '', startTime: '', endTime: '' };
+                          setModifyValue({ ...modifyValue, startDate: { ...current, endTime: e.target.value } });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">End Date</label>
-                  <input
-                    type="date"
-                    value={modifyValue?.endDate || ''}
-                    onChange={(e) => setModifyValue({ ...modifyValue, endDate: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
-                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                      <input
+                        type="date"
+                        value={typeof modifyValue?.endDate === 'object' ? modifyValue?.endDate?.date || '' : modifyValue?.endDate || ''}
+                        onChange={(e) => {
+                          const current = typeof modifyValue?.endDate === 'object' ? modifyValue.endDate : { date: modifyValue?.endDate || '', startTime: '', endTime: '' };
+                          setModifyValue({ ...modifyValue, endDate: { ...current, date: e.target.value } });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                      <input
+                        type="time"
+                        value={typeof modifyValue?.endDate === 'object' ? modifyValue?.endDate?.startTime || '' : ''}
+                        onChange={(e) => {
+                          const current = typeof modifyValue?.endDate === 'object' ? modifyValue.endDate : { date: modifyValue?.endDate || '', startTime: '', endTime: '' };
+                          setModifyValue({ ...modifyValue, endDate: { ...current, startTime: e.target.value } });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                      <input
+                        type="time"
+                        value={typeof modifyValue?.endDate === 'object' ? modifyValue?.endDate?.endTime || '' : ''}
+                        onChange={(e) => {
+                          const current = typeof modifyValue?.endDate === 'object' ? modifyValue.endDate : { date: modifyValue?.endDate || '', startTime: '', endTime: '' };
+                          setModifyValue({ ...modifyValue, endDate: { ...current, endTime: e.target.value } });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-gray-300">
                   <input
@@ -1153,7 +1250,8 @@ const CommunityCounterFormBrand = () => {
           <div className="flex gap-3 mt-6">
             <button
               onClick={saveModification}
-              className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+              className="flex-1 py-3 hover:opacity-90 text-white rounded-lg font-medium transition-colors"
+              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
             >
               Save Changes
             </button>
@@ -1334,25 +1432,78 @@ const CommunityCounterFormBrand = () => {
               <h3 className="font-semibold mb-2">Preferred Timeline</h3>
               <p className="text-sm text-gray-400 mb-2">DATE RANGE</p>
               <div className="text-white space-y-1">
-                {formData.timeline.startDate && (
-                  <p>Start: {new Date(formData.timeline.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                )}
-                {formData.timeline.endDate && (
-                  <p>End: {new Date(formData.timeline.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                )}
+                {(() => {
+                  const sd = formData.timeline.startDate;
+                  const sdDate = typeof sd === 'object' ? sd?.date : sd;
+                  const sdStartTime = typeof sd === 'object' ? sd?.startTime : '';
+                  const sdEndTime = typeof sd === 'object' ? sd?.endTime : '';
+                  if (!sdDate) return null;
+                  return (
+                    <p>Start: {new Date(sdDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {sdStartTime && ` • ${sdStartTime}`}{sdEndTime && ` - ${sdEndTime}`}
+                    </p>
+                  );
+                })()}
+                {(() => {
+                  const ed = formData.timeline.endDate;
+                  const edDate = typeof ed === 'object' ? ed?.date : ed;
+                  const edStartTime = typeof ed === 'object' ? ed?.startTime : '';
+                  const edEndTime = typeof ed === 'object' ? ed?.endTime : '';
+                  if (!edDate) return null;
+                  return (
+                    <p>End: {new Date(edDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {edStartTime && ` • ${edStartTime}`}{edEndTime && ` - ${edEndTime}`}
+                    </p>
+                  );
+                })()}
                 {formData.timeline.flexible && (
                   <p className="text-green-400 text-sm">✓ Flexible on dates</p>
                 )}
               </div>
+              {formData.backupTimeline?.startDate?.date && (
+                <div className="mt-2 text-white space-y-1">
+                  <p className="text-gray-400 text-sm">Backup Timeline:</p>
+                  <p>Start: {new Date(formData.backupTimeline.startDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {formData.backupTimeline.startDate.startTime && ` • ${formData.backupTimeline.startDate.startTime}`}
+                    {formData.backupTimeline.startDate.endTime && ` - ${formData.backupTimeline.startDate.endTime}`}
+                  </p>
+                  {formData.backupTimeline.endDate?.date && (
+                    <p>End: {new Date(formData.backupTimeline.endDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {formData.backupTimeline.endDate.startTime && ` • ${formData.backupTimeline.endDate.startTime}`}
+                      {formData.backupTimeline.endDate.endTime && ` - ${formData.backupTimeline.endDate.endTime}`}
+                    </p>
+                  )}
+                </div>
+              )}
               {fieldResponses.timeline?.action === 'modify' && (
                 <div className="text-yellow-400 text-sm mt-2 space-y-1">
                   <p className="font-semibold">Your preferred timeline:</p>
-                  {fieldResponses.timeline?.modifiedValue?.startDate && (
-                    <p>• Start: {new Date(fieldResponses.timeline.modifiedValue.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  )}
-                  {fieldResponses.timeline?.modifiedValue?.endDate && (
-                    <p>• End: {new Date(fieldResponses.timeline.modifiedValue.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  )}
+                  {(() => {
+                    const mv = fieldResponses.timeline.modifiedValue;
+                    const msd = mv?.startDate;
+                    const msdDate = typeof msd === 'object' ? msd?.date : msd;
+                    const msdStart = typeof msd === 'object' ? msd?.startTime : '';
+                    const msdEnd = typeof msd === 'object' ? msd?.endTime : '';
+                    if (!msdDate) return null;
+                    return (
+                      <p>• Start: {new Date(msdDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {msdStart && ` • ${msdStart}`}{msdEnd && ` - ${msdEnd}`}
+                      </p>
+                    );
+                  })()}
+                  {(() => {
+                    const mv = fieldResponses.timeline.modifiedValue;
+                    const med = mv?.endDate;
+                    const medDate = typeof med === 'object' ? med?.date : med;
+                    const medStart = typeof med === 'object' ? med?.startTime : '';
+                    const medEnd = typeof med === 'object' ? med?.endTime : '';
+                    if (!medDate) return null;
+                    return (
+                      <p>• End: {new Date(medDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {medStart && ` • ${medStart}`}{medEnd && ` - ${medEnd}`}
+                      </p>
+                    );
+                  })()}
                   {fieldResponses.timeline?.modifiedValue?.flexible && (
                     <p>• Flexible on dates</p>
                   )}

@@ -9,8 +9,6 @@ const RequirementsSection = ({ formData, setFormData, proposalType }) => {
     parentField: '',
     subField: '',
   });
-  
-  const [hoveredCard, setHoveredCard] = useState(null);
 
   const requirements = [
     {
@@ -168,19 +166,11 @@ const RequirementsSection = ({ formData, setFormData, proposalType }) => {
         <div className="space-y-4">
           {requirements.map((requirement) => {
             const isSelected = formData.requirements?.[requirement.id]?.selected;
-            const isHovered = hoveredCard === requirement.id;
             const hasComment = formData.requirements?.[requirement.id]?.comment;
-            
-            // Get selected sub-options
-            const selectedSubOptions = requirement.subOptions?.filter((subOption) => 
-              formData.requirements[requirement.id]?.subOptions?.[subOption.id]?.selected
-            ) || [];
             
             return (
               <div
                 key={requirement.id}
-                onMouseEnter={() => isSelected && setHoveredCard(requirement.id)}
-                onMouseLeave={() => setHoveredCard(null)}
               >
                 <SelectableCard
                   title={requirement.title}
@@ -191,8 +181,7 @@ const RequirementsSection = ({ formData, setFormData, proposalType }) => {
                   {/* Sub-options displayed inline on the right */}
                   {requirement.hasSubOptions && isSelected && (
                     <div className="flex flex-wrap gap-3 mt-3">
-                      {/* Show ALL sub-options when hovered, only SELECTED when not hovered */}
-                      {(isHovered ? requirement.subOptions : selectedSubOptions).map((subOption) => {
+                      {requirement.subOptions.map((subOption) => {
                         const isSubSelected =
                           formData.requirements[requirement.id]?.subOptions?.[subOption.id]?.selected;
                         
@@ -214,8 +203,8 @@ const RequirementsSection = ({ formData, setFormData, proposalType }) => {
                         );
                       })}
                       
-                      {/* Add Comment button - only visible on hover when no comment exists */}
-                      {isHovered && !hasComment && (
+                      {/* Add Comment button - visible when selected and no comment exists */}
+                      {!hasComment && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

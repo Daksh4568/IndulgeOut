@@ -9,7 +9,7 @@ const OTPLogin = () => {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   
-  const [loginMethod, setLoginMethod] = useState('phone') // 'phone' or 'email'
+  const [loginMethod, setLoginMethod] = useState('email') // 'phone' or 'email'
   const [step, setStep] = useState(1) // 1: Enter identifier, 2: Enter OTP
   const [identifier, setIdentifier] = useState('')
   const [otp, setOTP] = useState('')

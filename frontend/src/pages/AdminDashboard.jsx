@@ -440,6 +440,279 @@ const AdminDashboard = () => {
     'Games'
   ];
 
+  // ==================== PROPOSAL/COUNTER FORMATTING HELPERS ====================
+  const formatFieldValue = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) {
+      // Handle arrays of objects (like images)
+      if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+        if (value[0].url || value[0].key) return '__IMAGES__';
+        return value.map(v => JSON.stringify(v)).join(', ');
+      }
+      return value.join(', ') || 'N/A';
+    }
+    if (typeof value === 'object') {
+      if (value.date) {
+        const d = new Date(value.date);
+        const dateStr = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const time = value.startTime && value.endTime ? ` | ${value.startTime} - ${value.endTime}` : '';
+        return `${dateStr}${time}`;
+      }
+      const selected = Object.entries(value)
+        .filter(([, v]) => v?.selected || v === true)
+        .map(([k]) => k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim());
+      if (selected.length) return selected.join(', ');
+      if (typeof value.value !== 'undefined') return String(value.value);
+      return JSON.stringify(value);
+    }
+    if (typeof value === 'string' && !isNaN(Date.parse(value)) && value.includes('-') && value.length > 8) {
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return String(value);
+  };
+
+  const formatPricingData = (pricing) => {
+    if (!pricing) return 'N/A';
+    const parts = [];
+    if (pricing.cashSponsorship?.selected) parts.push(`Cash Sponsorship: ₹${pricing.cashSponsorship.value || 'TBD'}`);
+    if (pricing.revenueShare?.selected) parts.push(`Revenue Share: ${pricing.revenueShare.value || 'TBD'}`);
+    if (pricing.flatRental?.selected) parts.push(`Flat Rental: ₹${pricing.flatRental.value || 'TBD'}`);
+    if (pricing.coverCharge?.selected) parts.push(`Cover Charge: ₹${pricing.coverCharge.value || 'TBD'}/person`);
+    if (pricing.barter?.selected) parts.push(`Barter: ${pricing.barter.value || 'TBD'}`);
+    if (pricing.stallCost?.selected) parts.push(`Stall Cost: ₹${pricing.stallCost.value || 'TBD'}`);
+    if (pricing.additionalNotes) parts.push(`Notes: ${pricing.additionalNotes}`);
+    return parts.length ? parts.join(' • ') : 'N/A';
+  };
+
+  const formatAudienceProofData = (proof) => {
+    if (!proof) return 'N/A';
+    const parts = [];
+    if (proof.pastSponsorBrands?.selected) parts.push(`Past Sponsors: ${proof.pastSponsorBrands.value || 'Yes'}`);
+    if (proof.averageAttendance?.selected) parts.push(`Avg Attendance: ${proof.averageAttendance.value || 'Yes'}`);
+    if (proof.communitySize?.selected) parts.push(`Community Size: ${proof.communitySize.value || 'Yes'}`);
+    if (proof.repeatEventRate?.selected) parts.push(`Repeat Rate: ${proof.repeatEventRate.value || 'Yes'}%`);
+    return parts.length ? parts.join(' • ') : 'N/A';
+  };
+
+  const getProposalSections = (collab) => {
+    const type = collab.type;
+    const data = collab.communityToBrand || collab.communityToVenue || collab.brandToCommunity || collab.venueToCommunity || collab.formData || {};
+
+    if (type === 'communityToBrand') {
+      return [
+        {
+          title: 'Event & Campaign Details',
+          fields: [
+            { label: 'Event Category', value: data.eventCategory },
+            { label: 'Expected Attendees', value: data.expectedAttendees },
+            { label: 'Event Format', value: data.eventFormat },
+            { label: 'Target Audience', value: data.targetAudience },
+            { label: 'Niche Audience Details', value: data.nicheAudienceDetails },
+            { label: 'Event Date', value: data.eventDate },
+            { label: 'Backup Date', value: data.backupDate },
+            { label: 'City', value: data.city },
+          ].filter(f => f.value !== undefined && f.value !== null && f.value !== '')
+        },
+        {
+          title: 'Brand Deliverables',
+          fields: Object.entries(data.brandDeliverables || {})
+            .filter(([, v]) => v?.selected)
+            .map(([k, v]) => {
+              const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+              const subs = v.subOptions ? Object.entries(v.subOptions).filter(([, sv]) => sv?.selected).map(([sk]) => sk.replace(/_/g, ' ')).join(', ') : '';
+              return { label, value: subs || 'Requested', comment: v.comment };
+            })
+        },
+        {
+          title: 'Commercial Terms',
+          fields: [{ label: 'Pricing Model', value: formatPricingData(data.pricing) }]
+        },
+        {
+          title: 'Audience Proof',
+          fields: [{ label: 'Supporting Data', value: formatAudienceProofData(data.audienceProof) }]
+        },
+        {
+          title: 'Supporting Information',
+          fields: [
+            ...(data.supportingInfo?.images?.length ? [{ label: 'Images', value: data.supportingInfo.images, isImages: true }] : []),
+            ...(data.supportingInfo?.note ? [{ label: 'Note', value: data.supportingInfo.note }] : []),
+          ]
+        }
+      ];
+    }
+
+    if (type === 'communityToVenue') {
+      return [
+        {
+          title: 'Event & Timing Details',
+          fields: [
+            { label: 'Capacity', value: data.seatingCapacity || data.expectedAttendees },
+            { label: 'Event Date', value: data.eventDate },
+            { label: 'Backup Date', value: data.backupDate },
+            { label: 'Event Type', value: data.eventType },
+            { label: 'Event Category', value: data.eventCategory },
+            { label: 'City', value: data.city },
+          ].filter(f => f.value !== undefined && f.value !== null && f.value !== '')
+        },
+        {
+          title: 'Venue Services & Equipment',
+          fields: Object.entries(data.requirements || {})
+            .filter(([, v]) => v?.selected)
+            .map(([k, v]) => {
+              const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+              const subs = v.subOptions ? Object.entries(v.subOptions).filter(([, sv]) => sv?.selected).map(([sk]) => sk.replace(/_/g, ' ')).join(', ') : '';
+              return { label, value: subs || 'Requested', comment: v.comment };
+            })
+        },
+        {
+          title: 'Commercial Terms',
+          fields: [{ label: 'Pricing Model', value: formatPricingData(data.pricing) }]
+        },
+        {
+          title: 'Supporting Information',
+          fields: [
+            ...(data.supportingInfo?.images?.length ? [{ label: 'Images', value: data.supportingInfo.images, isImages: true }] : []),
+            ...(data.supportingInfo?.note ? [{ label: 'Note', value: data.supportingInfo.note }] : []),
+          ]
+        }
+      ];
+    }
+
+    if (type === 'brandToCommunity') {
+      return [
+        {
+          title: 'Campaign Details',
+          fields: [
+            { label: 'Campaign Objectives', value: data.campaignObjectives ? Object.keys(data.campaignObjectives).filter(k => data.campaignObjectives[k]).join(', ') : null },
+            { label: 'Target Audience', value: data.targetAudience },
+            { label: 'Preferred Formats', value: data.preferredFormats },
+            { label: 'City', value: data.city },
+            { label: 'Timeline', value: (() => {
+              const tl = data.timeline;
+              if (!tl?.startDate) return null;
+              const sdDate = typeof tl.startDate === 'object' ? tl.startDate.date : tl.startDate;
+              const edDate = typeof tl.endDate === 'object' ? tl.endDate.date : tl.endDate;
+              const sdTime = typeof tl.startDate === 'object' && tl.startDate.startTime ? ` ${tl.startDate.startTime}${tl.startDate.endTime ? '-' + tl.startDate.endTime : ''}` : '';
+              const edTime = typeof tl.endDate === 'object' && tl.endDate.startTime ? ` ${tl.endDate.startTime}${tl.endDate.endTime ? '-' + tl.endDate.endTime : ''}` : '';
+              const start = sdDate ? new Date(sdDate).toLocaleDateString('en-IN') + sdTime : '';
+              const end = edDate ? new Date(edDate).toLocaleDateString('en-IN') + edTime : 'TBD';
+              return start ? `${start} - ${end}` : null;
+            })() },
+            { label: 'Backup Timeline', value: (() => {
+              const bt = data.backupTimeline;
+              if (!bt?.startDate?.date) return null;
+              const sdTime = bt.startDate.startTime ? ` ${bt.startDate.startTime}${bt.startDate.endTime ? '-' + bt.startDate.endTime : ''}` : '';
+              const edTime = bt.endDate?.startTime ? ` ${bt.endDate.startTime}${bt.endDate.endTime ? '-' + bt.endDate.endTime : ''}` : '';
+              const start = new Date(bt.startDate.date).toLocaleDateString('en-IN') + sdTime;
+              const end = bt.endDate?.date ? new Date(bt.endDate.date).toLocaleDateString('en-IN') + edTime : 'TBD';
+              return `${start} - ${end}`;
+            })() },
+          ].filter(f => f.value !== undefined && f.value !== null && f.value !== '')
+        },
+        {
+          title: 'Brand Offers',
+          fields: Object.entries(data.brandOffers || {})
+            .filter(([, v]) => v?.selected)
+            .map(([k, v]) => ({
+              label: k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim(),
+              value: v.value || 'Offered',
+              comment: v.comment,
+            }))
+        },
+        {
+          title: 'Brand Expectations',
+          fields: Object.entries(data.brandExpectations || {})
+            .filter(([, v]) => v?.selected)
+            .map(([k, v]) => ({
+              label: k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim(),
+              value: v.value || 'Expected',
+              comment: v.comment,
+            }))
+        },
+        {
+          title: 'Supporting Information',
+          fields: [
+            ...(data.supportingInfo?.images?.length ? [{ label: 'Images', value: data.supportingInfo.images, isImages: true }] : []),
+            ...(data.supportingInfo?.note ? [{ label: 'Note', value: data.supportingInfo.note }] : []),
+          ]
+        }
+      ];
+    }
+
+    if (type === 'venueToCommunity') {
+      return [
+        {
+          title: 'Venue Details',
+          fields: [
+            { label: 'Venue Type', value: data.venueType },
+            { label: 'Capacity Range', value: data.capacityRange },
+            { label: 'Preferred Event Formats', value: data.preferredEventFormats },
+            { label: 'City', value: data.city },
+          ].filter(f => f.value !== undefined && f.value !== null && f.value !== '')
+        },
+        {
+          title: 'Venue Offerings',
+          fields: Object.entries(data.venueOfferings || {})
+            .filter(([, v]) => v?.selected)
+            .map(([k, v]) => ({
+              label: k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim(),
+              value: v.value || 'Included',
+              comment: v.comment,
+            }))
+        },
+        {
+          title: 'Commercial Terms',
+          fields: Object.entries(data.commercialModels || {})
+            .filter(([, v]) => v?.selected)
+            .map(([k, v]) => ({
+              label: k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim(),
+              value: v.value || 'Offered',
+              comment: v.comment,
+            }))
+        },
+        {
+          title: 'Supporting Information',
+          fields: [
+            ...(data.supportingInfo?.images?.length ? [{ label: 'Images', value: data.supportingInfo.images, isImages: true }] : []),
+            ...(data.supportingInfo?.note ? [{ label: 'Note', value: data.supportingInfo.note }] : []),
+          ]
+        }
+      ];
+    }
+
+    // Fallback: render formData as flat key-value
+    return [{
+      title: 'Proposal Details',
+      fields: Object.entries(data).map(([k, v]) => ({
+        label: k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim(),
+        value: v,
+      }))
+    }];
+  };
+
+  // Render an image value (array of image URLs or {url, key} objects)
+  const renderImageGallery = (images) => {
+    if (!images || !Array.isArray(images)) return null;
+    const urls = images.map(img => {
+      if (typeof img === 'string') return img;
+      if (img?.url) return img.url;
+      if (img?.key) return `https://${img.key}`;
+      return null;
+    }).filter(Boolean);
+    if (urls.length === 0) return <span className="text-gray-500 text-sm">No images</span>;
+    return (
+      <div className="flex flex-wrap gap-2 mt-1">
+        {urls.map((url, i) => (
+          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+            <img src={url} alt={`Attachment ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-700 hover:border-purple-500 transition-colors" />
+          </a>
+        ))}
+      </div>
+    );
+  };
+
   const fetchProposalDetails = async (id) => {
     try {
       const res = await api.get(`/admin/collaborations/${id}`);
@@ -3139,39 +3412,37 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Form Data */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Original Proposal Details</h4>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {selectedProposal.formData && Object.entries(selectedProposal.formData).map(([key, value]) => {
-                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                      return (
-                        <div key={key} className="pl-4 border-l-2 border-purple-300 dark:border-purple-700">
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                          </p>
-                          <div className="pl-3 space-y-1">
-                            {Object.entries(value).map(([subKey, subValue]) => (
-                              <p key={subKey} className="text-sm text-gray-600 dark:text-gray-400">
-                                <span className="font-medium">{subKey}:</span> {String(subValue)}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div key={key} className="flex justify-between items-start">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[200px]">
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                        </span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400 text-right max-w-md break-words">
-                          {String(value)}
-                        </span>
+              {/* Proposal Data - Structured Sections */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white text-lg">📋 Original Proposal Details</h4>
+                {getProposalSections(selectedProposal).map((section, sIdx) => (
+                  section.fields.length > 0 && (
+                    <div key={sIdx} className="border border-gray-700 rounded-lg overflow-hidden">
+                      <div className="bg-zinc-800 px-4 py-2 border-b border-gray-700">
+                        <h5 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">{section.title}</h5>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="divide-y divide-gray-800">
+                        {section.fields.map((field, fIdx) => (
+                          <div key={fIdx} className="px-4 py-3">
+                            <div className="flex justify-between items-start">
+                              <span className="text-sm font-medium text-gray-300 min-w-[200px]">{field.label}</span>
+                              <div className="text-right max-w-md">
+                                {field.isImages ? (
+                                  renderImageGallery(field.value)
+                                ) : (
+                                  <span className="text-sm text-white break-words">{formatFieldValue(field.value)}</span>
+                                )}
+                              </div>
+                            </div>
+                            {field.comment && (
+                              <p className="text-xs text-gray-500 mt-1 italic">💬 {field.comment}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
               </div>
 
               {/* Counter Response Section */}
@@ -3202,58 +3473,79 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Field-by-Field Responses */}
-                  {selectedCounter.counterData?.fieldResponses && (
-                    <div className="mb-4">
-                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📝 Field Responses:</h5>
-                      {Object.keys(selectedCounter.counterData.fieldResponses).length > 0 ? (
-                        <div className="space-y-2">
-                          {Object.entries(selectedCounter.counterData.fieldResponses).map(([field, response]) => (
+                  {/* Field-by-Field Responses - Structured Like Agreement Page */}
+                  {selectedCounter.counterData?.fieldResponses && Object.keys(selectedCounter.counterData.fieldResponses).length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <h5 className="text-sm font-semibold text-gray-300 mb-3">📝 Field Responses:</h5>
+                      {(() => {
+                        const responses = selectedCounter.counterData.fieldResponses;
+                        const proposalData = selectedProposal.communityToBrand || selectedProposal.communityToVenue || selectedProposal.brandToCommunity || selectedProposal.venueToCommunity || selectedProposal.formData || {};
+                        const sections = getProposalSections(selectedProposal);
+                        const fieldMap = {};
+                        sections.forEach(s => s.fields.forEach(f => { if (f.label) fieldMap[f.label] = f; }));
+
+                        return Object.entries(responses).map(([field, response]) => {
+                          const fieldLabel = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                          const matchedField = fieldMap[fieldLabel];
+                          const proposedValue = matchedField ? formatFieldValue(matchedField.value) : null;
+
+                          return (
                             <div key={field} className={`p-3 rounded-lg border ${
-                              response.action === 'accept' ? 'border-green-300 bg-green-50 dark:bg-green-900/20' :
-                              response.action === 'modify' ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' :
-                              'border-red-300 bg-red-50 dark:bg-red-900/20'
+                              response.action === 'accept' ? 'border-green-600/50 bg-green-900/20' :
+                              response.action === 'modify' ? 'border-yellow-600/50 bg-yellow-900/20' :
+                              'border-red-600/50 bg-red-900/20'
                             }`}>
-                              <div className="flex items-start justify-between">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                </span>
+                              <div className="flex items-start justify-between mb-2">
+                                <span className="text-sm font-medium text-white">{fieldLabel}</span>
                                 <span className={`px-2 py-0.5 text-xs font-bold rounded ${
                                   response.action === 'accept' ? 'bg-green-500 text-white' :
-                                  response.action === 'modify' ? 'bg-blue-500 text-white' :
+                                  response.action === 'modify' ? 'bg-yellow-500 text-black' :
                                   'bg-red-500 text-white'
                                 }`}>
-                                  {response.action.toUpperCase()}
+                                  {response.action === 'accept' ? 'ACCEPTED' : response.action === 'modify' ? 'MODIFIED' : 'DECLINED'}
                                 </span>
                               </div>
-                              {response.action === 'modify' && response.modifiedValue && (
-                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                                  <strong>Modified Value:</strong> {String(response.modifiedValue)}
-                                </p>
-                              )}
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                {proposedValue && (
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Proposed</p>
+                                    <p className="text-gray-300">{proposedValue}</p>
+                                  </div>
+                                )}
+                                {response.action === 'modify' && response.modifiedValue && (
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Modified To</p>
+                                    <p className="text-yellow-300">{formatFieldValue(response.modifiedValue)}</p>
+                                  </div>
+                                )}
+                                {response.action === 'accept' && proposedValue && (
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Response</p>
+                                    <p className="text-green-400">Accepted as-is</p>
+                                  </div>
+                                )}
+                              </div>
                               {response.note && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                                  💬 "{response.note}"
-                                </p>
+                                <p className="text-xs text-gray-400 mt-2 italic">💬 "{response.note}"</p>
                               )}
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500 italic">No field responses recorded</p>
-                      )}
+                          );
+                        });
+                      })()}
                     </div>
                   )}
 
                   {/* House Rules */}
-                  {selectedCounter.counterData?.houseRules && (
-                    <div className="mb-4 p-3 bg-zinc-800 rounded-lg">
-                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">House Rules:</h5>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                  {selectedCounter.counterData?.houseRules && Object.keys(selectedCounter.counterData.houseRules).length > 0 && (
+                    <div className="mb-4 border border-gray-700 rounded-lg overflow-hidden">
+                      <div className="bg-zinc-800 px-4 py-2 border-b border-gray-700">
+                        <h5 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">House Rules & Policies</h5>
+                      </div>
+                      <div className="divide-y divide-gray-800">
                         {Object.entries(selectedCounter.counterData.houseRules).map(([rule, value]) => (
-                          <div key={rule}>
-                            <span className="text-gray-500 dark:text-gray-400">{rule}:</span>
-                            <span className="ml-2 text-gray-900 dark:text-white font-medium">{String(value)}</span>
+                          <div key={rule} className="px-4 py-3 flex justify-between items-start">
+                            <span className="text-sm font-medium text-gray-300">{rule.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</span>
+                            <span className="text-sm text-white font-medium">{typeof value === 'boolean' ? (value ? 'Allowed' : 'Not Allowed') : String(value)}</span>
                           </div>
                         ))}
                       </div>
@@ -3262,12 +3554,12 @@ const AdminDashboard = () => {
 
                   {/* Commercial Counter */}
                   {selectedCounter.counterData?.commercialCounter && (
-                    <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                    <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border border-yellow-700/50">
                       <h5 className="text-sm font-semibold text-yellow-900 dark:text-yellow-300 mb-2">💰 Commercial Counter-Offer:</h5>
-                      <p className="text-sm"><strong>Model:</strong> {selectedCounter.counterData.commercialCounter.model}</p>
-                      <p className="text-sm"><strong>Value:</strong> {selectedCounter.counterData.commercialCounter.value}</p>
+                      <p className="text-sm text-gray-300"><strong>Model:</strong> {selectedCounter.counterData.commercialCounter.model}</p>
+                      <p className="text-sm text-gray-300"><strong>Value:</strong> {selectedCounter.counterData.commercialCounter.value}</p>
                       {selectedCounter.counterData.commercialCounter.note && (
-                        <p className="text-sm mt-1 italic">Note: {selectedCounter.counterData.commercialCounter.note}</p>
+                        <p className="text-sm mt-1 italic text-gray-400">Note: {selectedCounter.counterData.commercialCounter.note}</p>
                       )}
                     </div>
                   )}
@@ -3275,8 +3567,8 @@ const AdminDashboard = () => {
                   {/* General Notes */}
                   {selectedCounter.counterData?.generalNotes && (
                     <div className="p-3 bg-zinc-800 rounded-lg">
-                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">General Notes:</h5>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{selectedCounter.counterData.generalNotes}</p>
+                      <h5 className="text-sm font-semibold text-gray-300 mb-2">General Notes:</h5>
+                      <p className="text-sm text-gray-400">{selectedCounter.counterData.generalNotes}</p>
                     </div>
                   )}
                 </div>
@@ -3567,6 +3859,39 @@ const AdminDashboard = () => {
                 </p>
               </div>
 
+              {/* Original Proposal Data - Structured */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-white text-lg">📋 Original Proposal Details</h4>
+                {getProposalSections(selectedCounter).map((section, sIdx) => (
+                  section.fields.length > 0 && (
+                    <div key={sIdx} className="border border-gray-700 rounded-lg overflow-hidden">
+                      <div className="bg-zinc-800 px-4 py-2 border-b border-gray-700">
+                        <h5 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">{section.title}</h5>
+                      </div>
+                      <div className="divide-y divide-gray-800">
+                        {section.fields.map((field, fIdx) => (
+                          <div key={fIdx} className="px-4 py-3">
+                            <div className="flex justify-between items-start">
+                              <span className="text-sm font-medium text-gray-300 min-w-[200px]">{field.label}</span>
+                              <div className="text-right max-w-md">
+                                {field.isImages ? (
+                                  renderImageGallery(field.value)
+                                ) : (
+                                  <span className="text-sm text-white break-words">{formatFieldValue(field.value)}</span>
+                                )}
+                              </div>
+                            </div>
+                            {field.comment && (
+                              <p className="text-xs text-gray-500 mt-1 italic">💬 {field.comment}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
+
               {/* Counter Responder */}
               <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">COUNTER SUBMITTED BY</p>
@@ -3585,54 +3910,78 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Field Responses */}
+              {/* Field Responses - Structured */}
               {selectedCounter.counterData?.fieldResponses && Object.keys(selectedCounter.counterData.fieldResponses).length > 0 && (
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Field-by-Field Responses</h4>
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {Object.entries(selectedCounter.counterData.fieldResponses).map(([field, response]) => (
-                      <div key={field} className={`p-3 rounded-lg border-2 ${
-                        response.action === 'accept' ? 'border-green-300 bg-green-50 dark:bg-green-900/20' :
-                        response.action === 'modify' ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' :
-                        'border-red-300 bg-red-50 dark:bg-red-900/20'
-                      }`}>
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                          </span>
-                          <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                            response.action === 'accept' ? 'bg-green-500 text-white' :
-                            response.action === 'modify' ? 'bg-blue-500 text-white' :
-                            'bg-red-500 text-white'
-                          }`}>
-                            {response.action.toUpperCase()}
-                          </span>
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-white mb-3">📝 Field-by-Field Responses</h4>
+                  {(() => {
+                    const responses = selectedCounter.counterData.fieldResponses;
+                    const sections = getProposalSections(selectedCounter);
+                    const fieldMap = {};
+                    sections.forEach(s => s.fields.forEach(f => { if (f.label) fieldMap[f.label] = f; }));
+
+                    return Object.entries(responses).map(([field, response]) => {
+                      const fieldLabel = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                      const matchedField = fieldMap[fieldLabel];
+                      const proposedValue = matchedField ? formatFieldValue(matchedField.value) : null;
+
+                      return (
+                        <div key={field} className={`p-3 rounded-lg border ${
+                          response.action === 'accept' ? 'border-green-600/50 bg-green-900/20' :
+                          response.action === 'modify' ? 'border-yellow-600/50 bg-yellow-900/20' :
+                          'border-red-600/50 bg-red-900/20'
+                        }`}>
+                          <div className="flex items-start justify-between mb-2">
+                            <span className="text-sm font-medium text-white">{fieldLabel}</span>
+                            <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                              response.action === 'accept' ? 'bg-green-500 text-white' :
+                              response.action === 'modify' ? 'bg-yellow-500 text-black' :
+                              'bg-red-500 text-white'
+                            }`}>
+                              {response.action === 'accept' ? 'ACCEPTED' : response.action === 'modify' ? 'MODIFIED' : 'DECLINED'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            {proposedValue && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Proposed</p>
+                                <p className="text-gray-300">{proposedValue}</p>
+                              </div>
+                            )}
+                            {response.action === 'modify' && response.modifiedValue && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Modified To</p>
+                                <p className="text-yellow-300">{formatFieldValue(response.modifiedValue)}</p>
+                              </div>
+                            )}
+                            {response.action === 'accept' && proposedValue && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Response</p>
+                                <p className="text-green-400">Accepted as-is</p>
+                              </div>
+                            )}
+                          </div>
+                          {response.note && (
+                            <p className="text-xs text-gray-400 mt-2 italic">💬 "{response.note}"</p>
+                          )}
                         </div>
-                        {response.action === 'modify' && response.modifiedValue && (
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                            <strong>New Value:</strong> {String(response.modifiedValue)}
-                          </p>
-                        )}
-                        {response.note && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                            💬 "{response.note}"
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
 
               {/* House Rules (if applicable) */}
-              {selectedCounter.counterData?.houseRules && (
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">House Rules</h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+              {selectedCounter.counterData?.houseRules && Object.keys(selectedCounter.counterData.houseRules).length > 0 && (
+                <div className="border border-gray-700 rounded-lg overflow-hidden">
+                  <div className="bg-zinc-800 px-4 py-2 border-b border-gray-700">
+                    <h5 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">House Rules & Policies</h5>
+                  </div>
+                  <div className="divide-y divide-gray-800">
                     {Object.entries(selectedCounter.counterData.houseRules).map(([rule, value]) => (
-                      <div key={rule}>
-                        <span className="text-gray-500 dark:text-gray-400">{rule}:</span>
-                        <p className="text-gray-900 dark:text-white font-medium">{String(value)}</p>
+                      <div key={rule} className="px-4 py-3 flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-300">{rule.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</span>
+                        <span className="text-sm text-white font-medium">{typeof value === 'boolean' ? (value ? 'Allowed' : 'Not Allowed') : String(value)}</span>
                       </div>
                     ))}
                   </div>
@@ -3641,10 +3990,10 @@ const AdminDashboard = () => {
 
               {/* Commercial Counter (if applicable) */}
               {selectedCounter.counterData?.commercialCounter && (
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/20">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">💰 Commercial Counter-Offer</h4>
+                <div className="border border-yellow-700/50 rounded-lg p-4 bg-yellow-900/20">
+                  <h4 className="font-semibold text-yellow-300 mb-3">💰 Commercial Counter-Offer</h4>
                   <div className="space-y-2 text-sm">
-                    <p className="text-gray-700 dark:text-gray-300">
+                    <p className="text-gray-300">
                       <strong>Model:</strong> {selectedCounter.counterData.commercialCounter.model}
                     </p>
                     <p className="text-gray-700 dark:text-gray-300">

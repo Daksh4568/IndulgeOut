@@ -9,8 +9,6 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
     parentField: '',
     type: '', // 'offers' or 'expects'
   });
-  
-  const [hoveredCard, setHoveredCard] = useState(null);
 
   const offers = [
     {
@@ -197,21 +195,11 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
           <div className="space-y-4">
             {items.map((item) => {
               const isSelected = formData[field]?.[item.id]?.selected;
-              const isHovered = hoveredCard === `${type}-${item.id}`;
               const hasComment = formData[field]?.[item.id]?.comment;
-              
-              const selectedSubOptions = item.subOptions?.filter((subOption) => 
-                formData[field]?.[item.id]?.subOptions?.[subOption.id]?.selected
-              ) || [];
-              
-              // Show all options when hovered, otherwise show selected ones
-              const displaySubOptions = (isHovered && isSelected) ? item.subOptions : selectedSubOptions;
               
               return (
                 <div
                   key={item.id}
-                  onMouseEnter={() => isSelected && setHoveredCard(`${type}-${item.id}`)}
-                  onMouseLeave={() => setHoveredCard(null)}
                 >
                   <SelectableCard
                     title={item.title}
@@ -221,7 +209,7 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
                   >
                     {item.hasSubOptions && isSelected && (
                       <div className="flex flex-wrap gap-3 mt-3">
-                        {displaySubOptions.map((subOption) => {
+                        {item.subOptions.map((subOption) => {
                           const isSubSelected =
                             formData[field]?.[item.id]?.subOptions?.[subOption.id]?.selected;
                           
@@ -243,8 +231,8 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
                           );
                         })}
                         
-                        {/* Add Comment button - only visible on hover when no comment exists */}
-                        {isHovered && !hasComment && (
+                        {/* Add Comment button - visible when selected and no comment exists */}
+                        {!hasComment && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -278,7 +266,7 @@ const BrandOffersExpectsSection = ({ formData, setFormData }) => {
                     {/* Comment buttons for standalone fields (no sub-options) */}
                     {!item.hasSubOptions && isSelected && (
                       <div className="flex flex-wrap gap-3 mt-3">
-                        {isHovered && !hasComment && (
+                        {!hasComment && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

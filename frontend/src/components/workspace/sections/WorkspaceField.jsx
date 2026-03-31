@@ -33,12 +33,21 @@ const WorkspaceField = ({
     if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
       // Check for date objects
       if ('date' in value || 'startTime' in value || 'startDate' in value) {
+        const formatDatePart = (d) => {
+          if (typeof d === 'object' && d !== null) {
+            const parts = [d.date || ''];
+            if (d.startTime) parts.push(d.startTime);
+            if (d.endTime) parts.push(`- ${d.endTime}`);
+            return parts.join(' ');
+          }
+          return d || '';
+        };
         const parts = [];
         if (value.date) parts.push(value.date);
-        if (value.startDate) parts.push(value.startDate);
-        if (value.startTime) parts.push(value.startTime);
-        if (value.endTime) parts.push(`- ${value.endTime}`);
-        if (value.endDate) parts.push(`to ${value.endDate}`);
+        if (value.startDate) parts.push(formatDatePart(value.startDate));
+        if (value.startTime && !value.startDate) parts.push(value.startTime);
+        if (value.endTime && !value.startDate) parts.push(`- ${value.endTime}`);
+        if (value.endDate) parts.push(`to ${formatDatePart(value.endDate)}`);
         if (value.flexible) parts.push('(Flexible)');
         return <span className="text-white text-sm">{parts.join(' ')}</span>;
       }

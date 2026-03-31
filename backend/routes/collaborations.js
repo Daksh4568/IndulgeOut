@@ -522,7 +522,9 @@ router.post('/draft', authMiddleware, async (req, res) => {
         eventFormat: formData.eventFormat || [],
         targetAudience: formData.targetAudience || [],
         nicheAudienceDetails: formData.nicheAudienceDetails,
-        eventDate: eventDate,
+        eventDate: formData.eventDate,  // Preserve full object {date, startTime, endTime} or string
+        backupDate: formData.showBackupDate && formData.backupDate?.date ? formData.backupDate : undefined,
+        showBackupDate: formData.showBackupDate || false,
         city: formData.city,
         brandDeliverables: formData.brandDeliverables || {},
         pricing: formData.pricing || {},
@@ -543,6 +545,8 @@ router.post('/draft', authMiddleware, async (req, res) => {
         preferredFormats: formData.preferredFormats || [],
         city: formData.city,
         timeline: formData.timeline || {},
+        backupTimeline: formData.showBackupTimeline && formData.backupTimeline?.startDate?.date ? formData.backupTimeline : undefined,
+        showBackupTimeline: formData.showBackupTimeline || false,
         brandOffers: formData.brandOffers || {},
         brandExpectations: formData.brandExpectations || {}
       };
@@ -740,7 +744,9 @@ router.post('/propose', authMiddleware, async (req, res) => {
         eventFormat: formData.eventFormat || [],
         targetAudience: formData.targetAudience || [],
         nicheAudienceDetails: formData.nicheAudienceDetails,
-        eventDate: eventDate,
+        eventDate: formData.eventDate,  // Preserve full object {date, startTime, endTime} or string
+        backupDate: formData.showBackupDate && formData.backupDate?.date ? formData.backupDate : undefined,
+        showBackupDate: formData.showBackupDate || false,
         city: formData.city,
         brandDeliverables: formData.brandDeliverables || {},
         pricing: formData.pricing || {},
@@ -761,6 +767,8 @@ router.post('/propose', authMiddleware, async (req, res) => {
         preferredFormats: formData.preferredFormats || [],
         city: formData.city,
         timeline: formData.timeline || {},
+        backupTimeline: formData.showBackupTimeline && formData.backupTimeline?.startDate?.date ? formData.backupTimeline : undefined,
+        showBackupTimeline: formData.showBackupTimeline || false,
         brandOffers: formData.brandOffers || {},
         brandExpectations: formData.brandExpectations || {}
       };

@@ -43,7 +43,7 @@ import BrandCounterForm from './pages/BrandCounterForm'
 import CommunityCounterFormBrand from './pages/CommunityCounterFormBrand'
 import CommunityCounterFormVenue from './pages/CommunityCounterFormVenue'
 import CounterFormRouter from './pages/CounterFormRouter'
-import FinalTermsView from './pages/FinalTermsView'
+import CollabAgreement from './pages/CollabAgreement'
 import CollabWorkspace from './pages/CollabWorkspace'
 import AdminSpectateWorkspace from './pages/AdminSpectateWorkspace'
 import AdminDashboard from './pages/AdminDashboard'
@@ -166,14 +166,14 @@ function AppContent() {
         {/* Counter Forms - Smart router detects collaboration type */}
         <Route path="/collaborations/:id/counter" element={<ErrorBoundary><CounterFormRouter /></ErrorBoundary>} />
         
+        {/* Collaboration Agreement - View proposal & counter terms */}
+        <Route path="/collaborations/:id/agreement" element={<ErrorBoundary><CollabAgreement /></ErrorBoundary>} />
+        
         {/* Collaboration Workspace - Interactive negotiation */}
         <Route path="/collaborations/:id/workspace" element={<ErrorBoundary><CollabWorkspace /></ErrorBoundary>} />
         
         {/* Admin Spectate Workspace - Read-only admin view */}
         <Route path="/admin/collaborations/:id/workspace/spectate" element={<ErrorBoundary><AdminSpectateWorkspace /></ErrorBoundary>} />
-        
-        {/* View Final Terms after collaboration is confirmed */}
-        <Route path="/collaborations/:id/final-terms" element={<ErrorBoundary><FinalTermsView /></ErrorBoundary>} />
         
         <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
