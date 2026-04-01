@@ -14,6 +14,10 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'dashboard'); // dashboard, proposals, counters, flagged, analytics, all-collaborations, organizers
   const [stats, setStats] = useState(null);
   const [collabAnalytics, setCollabAnalytics] = useState(null);
+  const [userAnalytics, setUserAnalytics] = useState(null);
+  const [userAnalyticsFilters, setUserAnalyticsFilters] = useState({ limit: 15, role: '', hostPartnerType: '' });
+  const [signupDaysFilter, setSignupDaysFilter] = useState(365);
+  const [signupDateModal, setSignupDateModal] = useState({ open: false, date: '', users: [], loading: false });
   
   // Proposals state
   const [pendingProposals, setPendingProposals] = useState([]);
@@ -33,9 +37,15 @@ const AdminDashboard = () => {
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventDetails, setEventDetails] = useState(null);
+  const [ticketCalcModal, setTicketCalcModal] = useState({ open: false, attendee: null });
   const [organizerFilters, setOrganizerFilters] = useState({ search: '', city: '', verified: '' });
   const [currentView, setCurrentView] = useState('list'); // list, organizer-details, event-details
   
+  // Refs for synced scrollbar
+  const attendeesTopScrollRef = useRef(null);
+  const attendeesBottomScrollRef = useRef(null);
+  const attendeesTableRef = useRef(null);
+
   // Modals state
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
@@ -115,6 +125,7 @@ const AdminDashboard = () => {
           break;
         case 'analytics':
           fetchCollabAnalytics();
+          fetchUserAnalytics();
           break;
         case 'all-collaborations':
           fetchAllCollaborations();
@@ -138,6 +149,14 @@ const AdminDashboard = () => {
       fetchAllCollaborations();
     }
   }, [proposalFilters]);
+
+  // Sync top scrollbar dummy width with the actual attendees table width
+  useEffect(() => {
+    if (attendeesBottomScrollRef.current && attendeesTableRef.current) {
+      const tableEl = attendeesBottomScrollRef.current.querySelector('table');
+      if (tableEl) attendeesTableRef.current.style.width = tableEl.scrollWidth + 'px';
+    }
+  }, [eventDetails]);
 
   // Fetch Functions
   const fetchDashboardData = async () => {
@@ -196,6 +215,31 @@ const AdminDashboard = () => {
       setCollabAnalytics(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching analytics:', err);
+    }
+  };
+
+  const fetchUserAnalytics = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (userAnalyticsFilters.limit) params.append('limit', userAnalyticsFilters.limit);
+      if (userAnalyticsFilters.role) params.append('role', userAnalyticsFilters.role);
+      if (userAnalyticsFilters.hostPartnerType) params.append('hostPartnerType', userAnalyticsFilters.hostPartnerType);
+      if (signupDaysFilter) params.append('signupDays', signupDaysFilter);
+      const res = await api.get(`/admin/analytics/users?${params.toString()}`);
+      setUserAnalytics(res.data.data || res.data);
+    } catch (err) {
+      console.error('Error fetching user analytics:', err);
+    }
+  };
+
+  const fetchSignupsByDate = async (date) => {
+    setSignupDateModal({ open: true, date, users: [], loading: true });
+    try {
+      const res = await api.get(`/admin/analytics/signups-by-date?date=${date}`);
+      setSignupDateModal({ open: true, date, users: res.data.data || [], loading: false });
+    } catch (err) {
+      console.error('Error fetching signups by date:', err);
+      setSignupDateModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -498,7 +542,19 @@ const AdminDashboard = () => {
 
   const getProposalSections = (collab) => {
     const type = collab.type;
-    const data = collab.communityToBrand || collab.communityToVenue || collab.brandToCommunity || collab.venueToCommunity || collab.formData || {};
+    const typeDataMap = {
+      communityToBrand: collab.communityToBrand,
+      communityToVenue: collab.communityToVenue,
+      brandToCommunity: collab.brandToCommunity,
+      venueToCommunity: collab.venueToCommunity,
+    };
+    const structuredData = typeDataMap[type];
+    // Use structured data if it has actual fields populated, otherwise fall back to formData
+    const hasContent = structuredData && Object.keys(structuredData).some(k => {
+      const v = structuredData[k];
+      return v !== undefined && v !== null && v !== '' && !(typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+    });
+    const data = hasContent ? structuredData : (collab.formData || {});
 
     if (type === 'communityToBrand') {
       return [
@@ -585,30 +641,14 @@ const AdminDashboard = () => {
         {
           title: 'Campaign Details',
           fields: [
-            { label: 'Campaign Objectives', value: data.campaignObjectives ? Object.keys(data.campaignObjectives).filter(k => data.campaignObjectives[k]).join(', ') : null },
-            { label: 'Target Audience', value: data.targetAudience },
+            { label: 'Campaign Objectives', value: Array.isArray(data.campaignObjectives) 
+              ? data.campaignObjectives.map(a => a.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')
+              : data.campaignObjectives ? Object.keys(data.campaignObjectives).filter(k => data.campaignObjectives[k]).join(', ') : null },
+            { label: 'Target Audience', value: Array.isArray(data.targetAudience) ? data.targetAudience.map(a => a.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : data.targetAudience },
             { label: 'Preferred Formats', value: data.preferredFormats },
             { label: 'City', value: data.city },
-            { label: 'Timeline', value: (() => {
-              const tl = data.timeline;
-              if (!tl?.startDate) return null;
-              const sdDate = typeof tl.startDate === 'object' ? tl.startDate.date : tl.startDate;
-              const edDate = typeof tl.endDate === 'object' ? tl.endDate.date : tl.endDate;
-              const sdTime = typeof tl.startDate === 'object' && tl.startDate.startTime ? ` ${tl.startDate.startTime}${tl.startDate.endTime ? '-' + tl.startDate.endTime : ''}` : '';
-              const edTime = typeof tl.endDate === 'object' && tl.endDate.startTime ? ` ${tl.endDate.startTime}${tl.endDate.endTime ? '-' + tl.endDate.endTime : ''}` : '';
-              const start = sdDate ? new Date(sdDate).toLocaleDateString('en-IN') + sdTime : '';
-              const end = edDate ? new Date(edDate).toLocaleDateString('en-IN') + edTime : 'TBD';
-              return start ? `${start} - ${end}` : null;
-            })() },
-            { label: 'Backup Timeline', value: (() => {
-              const bt = data.backupTimeline;
-              if (!bt?.startDate?.date) return null;
-              const sdTime = bt.startDate.startTime ? ` ${bt.startDate.startTime}${bt.startDate.endTime ? '-' + bt.startDate.endTime : ''}` : '';
-              const edTime = bt.endDate?.startTime ? ` ${bt.endDate.startTime}${bt.endDate.endTime ? '-' + bt.endDate.endTime : ''}` : '';
-              const start = new Date(bt.startDate.date).toLocaleDateString('en-IN') + sdTime;
-              const end = bt.endDate?.date ? new Date(bt.endDate.date).toLocaleDateString('en-IN') + edTime : 'TBD';
-              return `${start} - ${end}`;
-            })() },
+            { label: 'Event Date', value: data.eventDate },
+            { label: 'Backup Date', value: data.backupDate },
           ].filter(f => f.value !== undefined && f.value !== null && f.value !== '')
         },
         {
@@ -1703,8 +1743,10 @@ const AdminDashboard = () => {
         )}
 
         {/* Analytics Tab */}
-        {activeTab === 'analytics' && collabAnalytics && (
+        {activeTab === 'analytics' && (
           <div>
+            {collabAnalytics ? (
+            <>
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Collaboration Analytics</h2>
               <p className="text-gray-600 dark:text-gray-400">Insights and metrics for collaboration workflow</p>
@@ -1808,6 +1850,345 @@ const AdminDashboard = () => {
                 <p className="text-gray-500 dark:text-gray-400 text-center py-4">No recent activity</p>
               )}
             </div>
+            </>) : null}
+
+            {/* ===== USER ANALYTICS SECTION ===== */}
+            <div className="mt-10 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">User Analytics</h2>
+              <p className="text-gray-600 dark:text-gray-400">Growth, activity, and login metrics across all stakeholders (B2C + B2B)</p>
+            </div>
+
+            {userAnalytics ? (
+              <>
+                {/* User Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                  <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow p-5 text-white">
+                    <p className="text-xs opacity-90">Total Users (All)</p>
+                    <p className="text-3xl font-bold mt-1">{userAnalytics.overview?.totalUsers?.toLocaleString() || 0}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg shadow p-5 text-white">
+                    <p className="text-xs opacity-90">New This Week</p>
+                    <p className="text-3xl font-bold mt-1">{userAnalytics.overview?.newUsersThisWeek || 0}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg shadow p-5 text-white">
+                    <p className="text-xs opacity-90">New This Month</p>
+                    <p className="text-3xl font-bold mt-1">{userAnalytics.overview?.newUsersThisMonth || 0}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow p-5 text-white">
+                    <p className="text-xs opacity-90">DAU</p>
+                    <p className="text-3xl font-bold mt-1">{userAnalytics.overview?.dau || 0}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg shadow p-5 text-white">
+                    <p className="text-xs opacity-90">WAU</p>
+                    <p className="text-3xl font-bold mt-1">{userAnalytics.overview?.wau || 0}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg shadow p-5 text-white">
+                    <p className="text-xs opacity-90">MAU</p>
+                    <p className="text-3xl font-bold mt-1">{userAnalytics.overview?.mau || 0}</p>
+                  </div>
+                </div>
+
+                {/* Login Method + Role Distribution */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {/* Login Method Distribution */}
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Login Count by Method</h3>
+                    {userAnalytics.loginMethods && Object.keys(userAnalytics.loginMethods).length > 0 ? (
+                      <div className="space-y-3">
+                        {Object.entries(userAnalytics.loginMethods).map(([method, count]) => {
+                          const total = Object.values(userAnalytics.loginMethods).reduce((a, b) => a + b, 0);
+                          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                          return (
+                            <div key={method} className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-gray-300 w-20 uppercase">{method === 'sms' ? 'WhatsApp' : method}</span>
+                              <div className="flex-1 bg-gray-700 rounded-full h-4">
+                                <div
+                                  className={`h-4 rounded-full ${method === 'sms' ? 'bg-blue-500' : 'bg-purple-500'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-sm text-gray-300 w-16 text-right">{count} ({pct}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No login data yet</p>
+                    )}
+                  </div>
+
+                  {/* Role Distribution */}
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">User Roles</h3>
+                    {userAnalytics.roles && Object.keys(userAnalytics.roles).length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(userAnalytics.roles).map(([role, count]) => {
+                          const labels = { user: 'B2C Users', host_partner: 'Host Partners', admin: 'Admins' };
+                          return (
+                            <div key={role} className="p-3 bg-gray-800 rounded-lg">
+                              <p className="text-xs text-gray-400">{labels[role] || role}</p>
+                              <p className="text-xl font-bold text-white">{count}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No role data</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Daily Signups Table */}
+                {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 && (
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Signups</h3>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{userAnalytics.dailySignups.length} days &middot; {userAnalytics.dailySignups.reduce((sum, d) => sum + d.count, 0)} total</span>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-gray-400">Period</label>
+                          <select
+                            value={signupDaysFilter}
+                            onChange={(e) => {
+                              setSignupDaysFilter(Number(e.target.value));
+                            }}
+                            className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                          >
+                            <option value={7}>Last 7 days</option>
+                            <option value={30}>Last 30 days</option>
+                            <option value={90}>Last 90 days</option>
+                            <option value={180}>Last 180 days</option>
+                            <option value={365}>Last 365 days</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={fetchUserAnalytics}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-auto max-h-[400px] border border-gray-800 rounded">
+                      <table className="min-w-full text-sm">
+                        <thead className="sticky top-0 bg-zinc-900 z-10">
+                          <tr className="border-b border-gray-700">
+                            <th className="text-left py-2 px-4 text-gray-400 font-medium">#</th>
+                            <th className="text-left py-2 px-4 text-gray-400 font-medium">Date</th>
+                            <th className="text-right py-2 px-4 text-gray-400 font-medium">Signups</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userAnalytics.dailySignups.map((day, idx) => (
+                            <tr
+                              key={day._id}
+                              className="border-b border-gray-800 hover:bg-purple-900/20 cursor-pointer transition-colors"
+                              onClick={() => fetchSignupsByDate(day._id)}
+                              title={`Click to view users who signed up on ${day._id}`}
+                            >
+                              <td className="py-2 px-4 text-gray-500">{idx + 1}</td>
+                              <td className="py-2 px-4 text-gray-200">
+                                {new Date(day._id).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td className="py-2 px-4 text-right text-white font-semibold">{day.count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Signup Date Detail Modal */}
+                {signupDateModal.open && (
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSignupDateModal({ open: false, date: '', users: [], loading: false })}>
+                    <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between p-5 border-b border-gray-700">
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">Signups on {new Date(signupDateModal.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+                          <p className="text-xs text-gray-400 mt-1">{signupDateModal.users.length} user(s) registered</p>
+                        </div>
+                        <button
+                          onClick={() => setSignupDateModal({ open: false, date: '', users: [], loading: false })}
+                          className="text-gray-400 hover:text-white text-xl leading-none px-2"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <div className="overflow-auto flex-1 p-5">
+                        {signupDateModal.loading ? (
+                          <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+                            <p className="text-gray-400 mt-2 text-sm">Loading...</p>
+                          </div>
+                        ) : signupDateModal.users.length > 0 ? (
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-700">
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">#</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Name</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Email</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Role</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {signupDateModal.users.map((u, idx) => (
+                                <tr key={u._id} className="border-b border-gray-800">
+                                  <td className="py-2 px-3 text-gray-500">{idx + 1}</td>
+                                  <td className="py-2 px-3 text-white font-medium">{u.name}</td>
+                                  <td className="py-2 px-3 text-gray-300">{u.email}</td>
+                                  <td className="py-2 px-3">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      u.role === 'admin' ? 'bg-red-900/40 text-red-300' :
+                                      u.role === 'host_partner' ? 'bg-green-900/40 text-green-300' :
+                                      'bg-gray-700 text-gray-300'
+                                    }`}>
+                                      {u.role === 'host_partner'
+                                        ? (u.hostPartnerType === 'community_organizer' ? 'Organizer'
+                                          : u.hostPartnerType === 'venue' ? 'Venue'
+                                          : u.hostPartnerType === 'brand_sponsor' ? 'Brand'
+                                          : 'Host')
+                                        : u.role === 'admin' ? 'Admin' : 'B2C User'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <p className="text-gray-500 text-center py-4">No users found for this date</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Active Users */}
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Active Users</h3>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400">Show</label>
+                        <select
+                          value={userAnalyticsFilters.limit}
+                          onChange={(e) => setUserAnalyticsFilters(f => ({ ...f, limit: e.target.value }))}
+                          className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                          {[15, 25, 50, 100, 200].map(n => (
+                            <option key={n} value={n}>{n} users</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400">Role</label>
+                        <select
+                          value={userAnalyticsFilters.role}
+                          onChange={(e) => setUserAnalyticsFilters(f => ({ ...f, role: e.target.value, hostPartnerType: '' }))}
+                          className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                          <option value="">All Roles</option>
+                          <option value="user">B2C Users</option>
+                          <option value="host_partner">Host Partners</option>
+                          <option value="admin">Admins</option>
+                        </select>
+                      </div>
+                      {userAnalyticsFilters.role === 'host_partner' && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-gray-400">Type</label>
+                          <select
+                            value={userAnalyticsFilters.hostPartnerType}
+                            onChange={(e) => setUserAnalyticsFilters(f => ({ ...f, hostPartnerType: e.target.value }))}
+                            className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                          >
+                            <option value="">All Types</option>
+                            <option value="community_organizer">Organizers</option>
+                            <option value="venue">Venues</option>
+                            <option value="brand_sponsor">Brands</option>
+                          </select>
+                        </div>
+                      )}
+                      <button
+                        onClick={fetchUserAnalytics}
+                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                  {userAnalytics.topActiveUsers && userAnalytics.topActiveUsers.length > 0 ? (
+                    <div className="overflow-auto max-h-[500px] border border-gray-800 rounded">
+                      <table className="min-w-full text-sm">
+                        <thead className="sticky top-0 bg-zinc-900 z-10">
+                          <tr className="border-b border-gray-700">
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">#</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">Name</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">Email</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">Role</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">City</th>
+                            <th className="text-right py-2 px-3 text-gray-400 font-medium">Total Logins</th>
+                            <th className="text-right py-2 px-3 text-gray-400 font-medium">Email Logins</th>
+                            <th className="text-right py-2 px-3 text-gray-400 font-medium">WhatsApp Logins</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">Last Method</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">Last Login</th>
+                            <th className="text-left py-2 px-3 text-gray-400 font-medium">Joined</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userAnalytics.topActiveUsers.map((u, idx) => (
+                            <tr key={u._id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                              <td className="py-2 px-3 text-gray-400">{idx + 1}</td>
+                              <td className="py-2 px-3 text-white font-medium whitespace-nowrap">{u.name}</td>
+                              <td className="py-2 px-3 text-gray-300 whitespace-nowrap">{u.email}</td>
+                              <td className="py-2 px-3">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  u.role === 'admin' ? 'bg-red-900/40 text-red-300' :
+                                  u.role === 'host_partner' ? 'bg-green-900/40 text-green-300' :
+                                  'bg-gray-700 text-gray-300'
+                                }`}>
+                                  {u.role === 'host_partner'
+                                    ? (u.hostPartnerType === 'community_organizer' ? 'Organizer'
+                                      : u.hostPartnerType === 'venue' ? 'Venue'
+                                      : u.hostPartnerType === 'brand_sponsor' ? 'Brand'
+                                      : 'Host')
+                                    : u.role === 'admin' ? 'Admin' : 'B2C User'}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3 text-gray-300">{u.city || '—'}</td>
+                              <td className="py-2 px-3 text-right text-white font-semibold">{u.loginCount}</td>
+                              <td className="py-2 px-3 text-right">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-900/40 text-purple-300">
+                                  {u.emailLogins || 0}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3 text-right">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-900/40 text-blue-300">
+                                  {u.smsLogins || 0}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.lastLoginMethod === 'sms' ? 'bg-blue-900/40 text-blue-300' : 'bg-purple-900/40 text-purple-300'}`}>
+                                  {u.lastLoginMethod === 'sms' ? 'WHATSAPP' : u.lastLoginMethod?.toUpperCase() || '—'}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3 text-gray-300 whitespace-nowrap">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                              <td className="py-2 px-3 text-gray-400 text-xs whitespace-nowrap">{u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No login data recorded yet</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+                <p className="text-gray-400 mt-2">Loading user analytics...</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -2433,6 +2814,7 @@ const AdminDashboard = () => {
             )}
 
             {currentView === 'event-details' && eventDetails && (
+              <>
               <div>
                 {/* Header */}
                 <div className="mb-6">
@@ -2665,13 +3047,117 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* Revenue Calculation per Price Tier */}
+                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-medium text-gray-400 mb-3">Revenue Calculation per Price Tier</h4>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-700 text-sm">
+                            <thead className="bg-zinc-800">
+                              <tr>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket Price</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Spots</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Total Ticket Revenue</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Total Amt Paid<span className="block text-[9px] normal-case text-gray-500 font-normal">(incl. Fees 5.6%)</span></th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">IndulgeOut Fees<span className="block text-[9px] normal-case text-gray-500 font-normal">(3% + 2.6%)</span></th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">CF Gateway<span className="block text-[9px] normal-case text-gray-500 font-normal">(1.6% of Amt Paid)</span></th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">CF GST<span className="block text-[9px] normal-case text-gray-500 font-normal">(18% of CF Charge)</span></th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Total CF Deduction</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Proceeds after CF</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">IO Revenue<span className="block text-[9px] normal-case text-gray-500 font-normal">(incl. GST 18%)</span></th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">IO Revenue<span className="block text-[9px] normal-case text-gray-500 font-normal">(net GST 18%)</span></th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Revenue %<span className="block text-[9px] normal-case text-gray-500 font-normal">(Final IO revenue as % ticket price)</span></th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700">
+                              {(() => {
+                                const priceMap = {};
+                                (eventDetails.attendees || []).forEach(att => {
+                                  const perSpot = att.priceAtPurchase || att.price || 0;
+                                  if (!priceMap[perSpot]) priceMap[perSpot] = { spots: 0, totalBase: 0, totalPaid: 0, cfCharge: 0, cfTax: 0 };
+                                  priceMap[perSpot].spots += (att.quantity || 1);
+                                  priceMap[perSpot].totalBase += att.basePrice || (perSpot * (att.quantity || 1));
+                                  priceMap[perSpot].totalPaid += att.totalPaid || att.price || 0;
+                                  priceMap[perSpot].cfCharge += att.cashfreeServiceCharge || 0;
+                                  priceMap[perSpot].cfTax += att.cashfreeServiceTax || 0;
+                                });
+                                return Object.entries(priceMap)
+                                  .sort(([a], [b]) => Number(a) - Number(b))
+                                  .map(([price, data]) => {
+                                    const ticketRevenue = data.totalBase;
+                                    const totalAmtPaid = data.totalPaid;
+                                    const ioFees = totalAmtPaid - ticketRevenue;
+                                    const cfCharge = data.cfCharge > 0 ? data.cfCharge : totalAmtPaid * 0.016;
+                                    const cfTax = data.cfTax > 0 ? data.cfTax : cfCharge * 0.18;
+                                    const cfTotal = cfCharge + cfTax;
+                                    const proceeds = totalAmtPaid - cfTotal;
+                                    const ioRevenueInclGST = proceeds - ticketRevenue;
+                                    const ioRevenueNet = ioRevenueInclGST / 1.18;
+                                    const pct = ticketRevenue > 0 ? (ioRevenueNet / ticketRevenue) * 100 : 0;
+                                    return (
+                                      <tr key={price} className="hover:bg-zinc-800">
+                                        <td className="px-3 py-3 text-white font-medium">₹{Number(price).toLocaleString('en-IN')}</td>
+                                        <td className="px-3 py-3 text-right text-gray-300">{data.spots}</td>
+                                        <td className="px-3 py-3 text-right text-white">₹{ticketRevenue.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-white">₹{totalAmtPaid.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-gray-300">₹{ioFees.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-gray-300">
+                                          <div>₹{cfCharge.toFixed(2)}</div>
+                                          <div className="text-[9px] text-gray-500">(1.6% of ₹{totalAmtPaid.toFixed(2)})</div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right text-gray-300">
+                                          <div>₹{cfTax.toFixed(2)}</div>
+                                          <div className="text-[9px] text-gray-500">(18% of ₹{cfCharge.toFixed(2)})</div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right text-red-400">₹{cfTotal.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-white">₹{proceeds.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-green-400">₹{ioRevenueInclGST.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-green-400 font-medium">₹{ioRevenueNet.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-purple-400 font-semibold">{pct.toFixed(1)}%</td>
+                                      </tr>
+                                    );
+                                  });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Attendees List */}
                 <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
                   <h3 className="text-lg font-bold text-white mb-4">Attendees ({eventDetails.attendees.length})</h3>
-                  <div className="overflow-x-auto">
+                  {/* Top horizontal scrollbar */}
+                  <div
+                    ref={attendeesTopScrollRef}
+                    className="overflow-x-auto"
+                    style={{ overflowY: 'hidden', height: '16px', marginBottom: '-1px' }}
+                    onScroll={() => {
+                      if (attendeesBottomScrollRef.current && attendeesTopScrollRef.current) {
+                        attendeesBottomScrollRef.current.scrollLeft = attendeesTopScrollRef.current.scrollLeft;
+                      }
+                    }}
+                  >
+                    <div ref={attendeesTableRef} style={{ height: '1px' }} />
+                  </div>
+                  {/* Bottom scrollbar (main table) */}
+                  <div
+                    ref={attendeesBottomScrollRef}
+                    className="overflow-x-auto"
+                    onScroll={() => {
+                      if (attendeesTopScrollRef.current && attendeesBottomScrollRef.current) {
+                        attendeesTopScrollRef.current.scrollLeft = attendeesBottomScrollRef.current.scrollLeft;
+                      }
+                      // Sync top dummy div width with actual table width
+                      if (attendeesTableRef.current && attendeesBottomScrollRef.current) {
+                        const tableEl = attendeesBottomScrollRef.current.querySelector('table');
+                        if (tableEl) attendeesTableRef.current.style.width = tableEl.scrollWidth + 'px';
+                      }
+                    }}
+                  >
                     <table className="min-w-full divide-y divide-gray-700">
                       <thead className="bg-zinc-800">
                         <tr>
@@ -2690,6 +3176,7 @@ const AdminDashboard = () => {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Settlement</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reconciliation</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Calculation</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-700">
@@ -2799,6 +3286,14 @@ const AdminDashboard = () => {
                                 {attendee.reconciliationStatus}
                               </span>
                             </td>
+                            <td className="px-4 py-3 text-sm text-center">
+                              <button
+                                onClick={() => setTicketCalcModal({ open: true, attendee })}
+                                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors font-medium"
+                              >
+                                View
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -2806,6 +3301,131 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Ticket Calculation Modal */}
+              {ticketCalcModal.open && ticketCalcModal.attendee && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setTicketCalcModal({ open: false, attendee: null })}>
+                  <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between p-5 border-b border-gray-700">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Ticket Calculation Breakdown</h3>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {ticketCalcModal.attendee.user?.name} &middot; {ticketCalcModal.attendee.ticketNumber} &middot; {ticketCalcModal.attendee.quantity || 1} spot(s)
+                        </p>
+                      </div>
+                      <button onClick={() => setTicketCalcModal({ open: false, attendee: null })} className="text-gray-400 hover:text-white text-xl leading-none px-2">&times;</button>
+                    </div>
+                    <div className="overflow-auto flex-1 p-5">
+                      {(() => {
+                        const a = ticketCalcModal.attendee;
+                        const perSpotPrice = a.priceAtPurchase || a.price || 0;
+                        const spots = a.quantity || 1;
+                        const ticketPrice = a.basePrice || (perSpotPrice * spots);
+                        const totalPaid = a.totalPaid || a.price || 0;
+                        const gstCharges = a.gstCharges || 0;
+                        const platformFees = a.platformFees || 0;
+                        const calcPlatformFees = platformFees > 0 ? platformFees : ticketPrice * 0.03;
+                        const calcGstCharges = gstCharges > 0 ? gstCharges : ticketPrice * 0.026;
+                        const totalFeesPercent = 5.6;
+                        const totalFees = calcPlatformFees + calcGstCharges;
+                        const cfServiceCharge = a.cashfreeServiceCharge || 0;
+                        const cfServiceTax = a.cashfreeServiceTax || 0;
+                        const estCfCharge = cfServiceCharge > 0 ? cfServiceCharge : totalPaid * 0.016;
+                        const estCfTax = cfServiceTax > 0 ? cfServiceTax : estCfCharge * 0.18;
+                        const cfTotalDeduction = estCfCharge + estCfTax;
+                        const proceedsAfterGateway = totalPaid - cfTotalDeduction;
+                        const indulgeOutRevenueInclGST = proceedsAfterGateway - ticketPrice;
+                        const indulgeOutRevenueNetGST = indulgeOutRevenueInclGST / 1.18;
+                        const revenuePercent = ticketPrice > 0 ? (indulgeOutRevenueNetGST / ticketPrice) * 100 : 0;
+
+                        return (
+                          <>
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-700">
+                                  <th className="text-left py-2 text-gray-400 font-medium">Description</th>
+                                  <th className="text-right py-2 text-gray-400 font-medium">Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-800">
+                                <tr>
+                                  <td className="py-3 text-gray-200">
+                                    Ticket Price
+                                    <span className="text-xs text-gray-400 ml-1">(₹{perSpotPrice} × {spots} spot{spots > 1 ? 's' : ''})</span>
+                                  </td>
+                                  <td className="py-3 text-right text-white font-medium">₹{ticketPrice.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-3 text-gray-200">
+                                    Total Amount Paid incl. IndulgeOut Fees &amp; Charges
+                                    <span className="text-xs text-gray-400 block mt-0.5">(Platform Fees + Payment Gateway + GST = {totalFeesPercent}% = ₹{totalFees.toFixed(2)})</span>
+                                  </td>
+                                  <td className="py-3 text-right text-white font-medium">₹{totalPaid.toFixed(2)}</td>
+                                </tr>
+                                <tr className="bg-zinc-800/50">
+                                  <td className="py-3 text-gray-300 pl-4 text-xs">↳ Platform Fees (3%)</td>
+                                  <td className="py-3 text-right text-gray-300 text-xs">₹{calcPlatformFees.toFixed(2)}</td>
+                                </tr>
+                                <tr className="bg-zinc-800/50">
+                                  <td className="py-3 text-gray-300 pl-4 text-xs">↳ GST &amp; Other Charges (2.6%)</td>
+                                  <td className="py-3 text-right text-gray-300 text-xs">₹{calcGstCharges.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-3 text-gray-200">
+                                    Cashfree Payment Gateway Charges
+                                    <span className="text-xs text-gray-400 ml-1">(1.6% of ₹{totalPaid.toFixed(2)})</span>
+                                  </td>
+                                  <td className="py-3 text-right text-white font-medium">₹{estCfCharge.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-3 text-gray-200">
+                                    Cashfree Payment Gateway GST on charges
+                                    <span className="text-xs text-gray-400 ml-1">(18% of ₹{estCfCharge.toFixed(2)})</span>
+                                  </td>
+                                  <td className="py-3 text-right text-white font-medium">₹{estCfTax.toFixed(2)}</td>
+                                </tr>
+                                <tr className="border-t border-gray-600">
+                                  <td className="py-3 text-gray-200 font-medium">Total CashFree Deduction</td>
+                                  <td className="py-3 text-right text-red-400 font-semibold">₹{cfTotalDeduction.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-3 text-gray-200">Total Proceeds after payment gateway deductions</td>
+                                  <td className="py-3 text-right text-white font-medium">₹{proceedsAfterGateway.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-3 text-gray-200">Total IndulgeOut Revenue incl. GST 18%</td>
+                                  <td className="py-3 text-right text-green-400 font-medium">₹{indulgeOutRevenueInclGST.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-3 text-gray-200">Total IndulgeOut Revenue net GST 18%</td>
+                                  <td className="py-3 text-right text-green-400 font-medium">₹{indulgeOutRevenueNetGST.toFixed(2)}</td>
+                                </tr>
+                                <tr className="border-t-2 border-purple-500/50">
+                                  <td className="py-3 text-white font-bold">Final IndulgeOut revenue as a % ticket price</td>
+                                  <td className="py-3 text-right text-purple-400 font-bold text-lg">{revenuePercent.toFixed(1)}%</td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            {a.couponCode && (
+                              <div className="mt-4 p-3 bg-green-900/20 border border-green-800/40 rounded-lg">
+                                <p className="text-xs text-green-400 font-medium">Coupon Applied: <span className="text-green-300">{a.couponCode}</span> (−₹{a.couponDiscount || 0})</p>
+                              </div>
+                            )}
+
+                            {cfServiceCharge === 0 && cfServiceTax === 0 && (
+                              <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-800/40 rounded-lg">
+                                <p className="text-xs text-yellow-400">⚠ Cashfree settlement data not yet available. Gateway charges shown are estimated (1.6% + 18% GST).</p>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </div>
         )}
@@ -3479,7 +4099,20 @@ const AdminDashboard = () => {
                       <h5 className="text-sm font-semibold text-gray-300 mb-3">📝 Field Responses:</h5>
                       {(() => {
                         const responses = selectedCounter.counterData.fieldResponses;
-                        const proposalData = selectedProposal.communityToBrand || selectedProposal.communityToVenue || selectedProposal.brandToCommunity || selectedProposal.venueToCommunity || selectedProposal.formData || {};
+                        const proposalData = (() => {
+                          const typeMap = {
+                            communityToBrand: selectedProposal.communityToBrand,
+                            communityToVenue: selectedProposal.communityToVenue,
+                            brandToCommunity: selectedProposal.brandToCommunity,
+                            venueToCommunity: selectedProposal.venueToCommunity,
+                          };
+                          const sd = typeMap[selectedProposal.type];
+                          const hasCont = sd && Object.keys(sd).some(k => {
+                            const v = sd[k];
+                            return v !== undefined && v !== null && v !== '' && !(typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+                          });
+                          return hasCont ? sd : (selectedProposal.formData || {});
+                        })();
                         const sections = getProposalSections(selectedProposal);
                         const fieldMap = {};
                         sections.forEach(s => s.fields.forEach(f => { if (f.label) fieldMap[f.label] = f; }));

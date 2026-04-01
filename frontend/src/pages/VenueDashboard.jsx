@@ -148,14 +148,13 @@ const VenueDashboard = () => {
     };
 
     const getCollaborationType = (collab) => {
-      if (collab.requestDetails?.venueRequest) return { text: 'Venue', color: 'bg-purple-600' };
-      if (collab.requestDetails?.brandSponsorship) {
-        const types = collab.requestDetails.brandSponsorship.sponsorshipType || [];
-        if (types.includes('product_sampling')) return { text: 'Sampling', color: 'bg-green-600' };
-        if (types.includes('paid_monetary')) return { text: 'Sponsorship', color: 'bg-blue-600' };
-        return { text: 'Brand', color: 'bg-blue-600' };
-      }
-      return { text: 'Partnership', color: 'bg-indigo-600' };
+      const typeMap = {
+        'communityToVenue': { text: 'Community → Venue', color: 'bg-purple-600' },
+        'communityToBrand': { text: 'Community → Brand', color: 'bg-blue-600' },
+        'brandToCommunity': { text: 'Brand → Community', color: 'bg-blue-600' },
+        'venueToCommunity': { text: 'Venue → Community', color: 'bg-purple-600' },
+      };
+      return typeMap[collab.type] || { text: collab.type || 'Partnership', color: 'bg-indigo-600' };
     };
 
     const getPartnerInfo = (collab) => {
@@ -166,13 +165,13 @@ const VenueDashboard = () => {
       if (isInitiator) {
         return {
           name: collab.recipient?.name || 'Partner',
-          location: collab.requestDetails?.venueRequest?.specialRequirements || 'Location N/A',
+          location: collab.formData?.city || 'Location N/A',
           type: collab.recipient?.userType || collab.recipientType || 'Partner'
         };
       } else {
         return {
           name: collab.initiator?.name || 'Partner',
-          location: collab.initiator?.name || 'Location N/A',
+          location: collab.formData?.city || 'Location N/A',
           type: collab.initiator?.userType || collab.proposerType || 'Partner'
         };
       }
@@ -279,7 +278,7 @@ const VenueDashboard = () => {
                         </div>
                         <div className="flex items-center text-sm text-gray-400">
                           <Users className="h-4 w-4 mr-2" />
-                          <span>Music & Social</span>
+                          <span>{partner.name}</span>
                         </div>
                       </div>
 
@@ -382,7 +381,7 @@ const VenueDashboard = () => {
                               </div>
                               <div className="flex items-center text-sm text-gray-400">
                                 <Users className="h-4 w-4 mr-2" />
-                                <span>Music & Social</span>
+                                <span>{partner.name}</span>
                               </div>
                             </div>
 

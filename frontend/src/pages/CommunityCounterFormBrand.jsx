@@ -169,7 +169,7 @@ const CommunityCounterFormBrand = () => {
       targetAudience: proposalData.targetAudience,
       preferredFormats: proposalData.preferredFormats,
       city: proposalData.city,
-      timeline: proposalData.timeline,
+      eventDate: proposalData.eventDate,
       cashOffer: proposalData.brandOffers?.cash,
       barterOffer: proposalData.brandOffers?.barter,
       coMarketingOffer: proposalData.brandOffers?.coMarketing,
@@ -207,7 +207,7 @@ const CommunityCounterFormBrand = () => {
       { key: 'targetAudience', label: 'Target Audience', originalValue: proposalData.targetAudience },
       { key: 'preferredFormats', label: 'Preferred Formats', originalValue: proposalData.preferredFormats },
       { key: 'city', label: 'City', originalValue: proposalData.city },
-      { key: 'timeline', label: 'Timeline', originalValue: proposalData.timeline }
+      { key: 'timeline', label: 'Event Date', originalValue: proposalData.eventDate }
     ].filter(f => f.originalValue);
 
     const offerFields = [
@@ -387,10 +387,12 @@ const CommunityCounterFormBrand = () => {
               <div className="space-y-2">
                 {[
                   { id: 'brand_awareness', label: 'Brand Awareness' },
-                  { id: 'product_trials', label: 'Product Trials' },
+                  { id: 'product_trials', label: 'Product Trial / Sampling' },
                   { id: 'lead_generation', label: 'Lead Generation' },
-                  { id: 'sales', label: 'Direct Sales' },
-                  { id: 'engagement', label: 'Community Engagement' }
+                  { id: 'sales', label: 'Sales Conversion' },
+                  { id: 'engagement', label: 'Community Engagement' },
+                  { id: 'market_testing', label: 'Market Testing' },
+                  { id: 'content_creation', label: 'Content Creation' }
                 ].map(objective => {
                   const currentValue = (typeof modifyValue === 'object' && modifyValue !== null && !Array.isArray(modifyValue)) ? modifyValue : {};
                   const isSelected = currentValue[objective.id] === true;
@@ -423,14 +425,48 @@ const CommunityCounterFormBrand = () => {
           {/* Target Audience */}
           {currentField === 'targetAudience' && (
             <div>
-              <p className="text-sm text-gray-400 mb-3">Describe your actual audience reach:</p>
-              <textarea
-                value={modifyValue || ''}
-                onChange={(e) => setModifyValue(e.target.value)}
-                rows={4}
-                placeholder="e.g., 2000 active members, 70% aged 22-32..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white resize-none"
-              />
+              <p className="text-sm text-gray-400 mb-3">Brand proposed audience:</p>
+              {proposalData.targetAudience && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S TARGET AUDIENCE:</p>
+                  <p className="text-white text-sm">
+                    {Array.isArray(proposalData.targetAudience)
+                      ? proposalData.targetAudience.map(a => a.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')
+                      : proposalData.targetAudience}
+                  </p>
+                </div>
+              )}
+              <p className="text-sm text-gray-400 mb-3">Select your audience:</p>
+              <div className="space-y-2">
+                {[
+                  { id: 'students', label: 'Students' },
+                  { id: 'young_professionals', label: 'Young Professionals' },
+                  { id: 'founders_creators', label: 'Founders / Creators' },
+                  { id: 'families', label: 'Families' },
+                  { id: 'niche_community', label: 'Niche Community' }
+                ].map(audience => {
+                  const currentValue = Array.isArray(modifyValue) ? modifyValue : [];
+                  const isSelected = currentValue.includes(audience.id);
+                  return (
+                    <button
+                      key={audience.id}
+                      onClick={() => {
+                        const updated = isSelected
+                          ? currentValue.filter(a => a !== audience.id)
+                          : [...currentValue, audience.id];
+                        setModifyValue(updated);
+                      }}
+                      className={`w-full py-3 px-4 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? 'bg-yellow-900/20 text-yellow-400 border-yellow-600'
+                          : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-yellow-600'
+                      }`}
+                    >
+                      {audience.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -450,7 +486,7 @@ const CommunityCounterFormBrand = () => {
               )}
               <p className="text-sm text-gray-400 mb-3">Select formats you can support:</p>
               <div className="grid grid-cols-2 gap-3">
-                {['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games'].map(format => {
+                {['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation', 'Open to suggestions'].map(format => {
                   const currentValue = modifyValue || [];
                   const isSelected = currentValue.includes(format);
                   return (
@@ -497,152 +533,78 @@ const CommunityCounterFormBrand = () => {
             </div>
           )}
 
-          {/* Timeline */}
+          {/* Event Date */}
           {currentField === 'timeline' && (
             <div>
-              <p className="text-sm text-gray-400 mb-3">Brand proposed timeline:</p>
-              {proposalData.timeline && (
+              <p className="text-sm text-gray-400 mb-3">Brand proposed date:</p>
+              {proposalData.eventDate && (
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-                  <p className="text-blue-400 text-xs mb-2">BRAND'S TIMELINE:</p>
+                  <p className="text-blue-400 text-xs mb-2">BRAND'S DATE:</p>
                   <div className="text-white text-sm space-y-1">
                     {(() => {
-                      const sd = proposalData.timeline.startDate;
-                      const sdDate = typeof sd === 'object' ? sd?.date : sd;
-                      const sdStart = typeof sd === 'object' ? sd?.startTime : '';
-                      const sdEnd = typeof sd === 'object' ? sd?.endTime : '';
-                      if (!sdDate) return null;
-                      return (
-                        <p>• Start: {new Date(sdDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          {sdStart && ` • ${sdStart}`}{sdEnd && ` - ${sdEnd}`}
-                        </p>
-                      );
-                    })()}
-                    {(() => {
-                      const ed = proposalData.timeline.endDate;
+                      const ed = proposalData.eventDate;
                       const edDate = typeof ed === 'object' ? ed?.date : ed;
                       const edStart = typeof ed === 'object' ? ed?.startTime : '';
                       const edEnd = typeof ed === 'object' ? ed?.endTime : '';
                       if (!edDate) return null;
                       return (
-                        <p>• End: {new Date(edDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        <p>• {new Date(edDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                           {edStart && ` • ${edStart}`}{edEnd && ` - ${edEnd}`}
                         </p>
                       );
                     })()}
-                    {proposalData.timeline.flexible && (
-                      <p className="text-green-400">• Flexible on dates</p>
-                    )}
                   </div>
-                  {proposalData.backupTimeline?.startDate?.date && (
+                  {proposalData.backupDate?.date && (
                     <div className="text-white text-sm space-y-1 mt-2 border-t border-blue-700/50 pt-2">
-                      <p className="text-blue-400 text-xs">BACKUP TIMELINE:</p>
-                      <p>• Start: {new Date(proposalData.backupTimeline.startDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        {proposalData.backupTimeline.startDate.startTime && ` • ${proposalData.backupTimeline.startDate.startTime}`}
-                        {proposalData.backupTimeline.startDate.endTime && ` - ${proposalData.backupTimeline.startDate.endTime}`}
+                      <p className="text-blue-400 text-xs">BACKUP DATE:</p>
+                      <p>• {new Date(proposalData.backupDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {proposalData.backupDate.startTime && ` • ${proposalData.backupDate.startTime}`}
+                        {proposalData.backupDate.endTime && ` - ${proposalData.backupDate.endTime}`}
                       </p>
-                      {proposalData.backupTimeline.endDate?.date && (
-                        <p>• End: {new Date(proposalData.backupTimeline.endDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          {proposalData.backupTimeline.endDate.startTime && ` • ${proposalData.backupTimeline.endDate.startTime}`}
-                          {proposalData.backupTimeline.endDate.endTime && ` - ${proposalData.backupTimeline.endDate.endTime}`}
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>
               )}
-              <p className="text-sm text-gray-400 mb-3">Your preferred timeline:</p>
+              <p className="text-sm text-gray-400 mb-3">Your preferred date:</p>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Start Date</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">DATE</label>
-                      <input
-                        type="date"
-                        value={typeof modifyValue?.startDate === 'object' ? modifyValue?.startDate?.date || '' : modifyValue?.startDate || ''}
-                        onChange={(e) => {
-                          const current = typeof modifyValue?.startDate === 'object' ? modifyValue.startDate : { date: modifyValue?.startDate || '', startTime: '', endTime: '' };
-                          setModifyValue({ ...modifyValue, startDate: { ...current, date: e.target.value } });
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">START TIME</label>
-                      <input
-                        type="time"
-                        value={typeof modifyValue?.startDate === 'object' ? modifyValue?.startDate?.startTime || '' : ''}
-                        onChange={(e) => {
-                          const current = typeof modifyValue?.startDate === 'object' ? modifyValue.startDate : { date: modifyValue?.startDate || '', startTime: '', endTime: '' };
-                          setModifyValue({ ...modifyValue, startDate: { ...current, startTime: e.target.value } });
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">END TIME</label>
-                      <input
-                        type="time"
-                        value={typeof modifyValue?.startDate === 'object' ? modifyValue?.startDate?.endTime || '' : ''}
-                        onChange={(e) => {
-                          const current = typeof modifyValue?.startDate === 'object' ? modifyValue.startDate : { date: modifyValue?.startDate || '', startTime: '', endTime: '' };
-                          setModifyValue({ ...modifyValue, startDate: { ...current, endTime: e.target.value } });
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
-                      />
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">DATE</label>
+                    <input
+                      type="date"
+                      value={typeof modifyValue === 'object' ? modifyValue?.date || '' : modifyValue || ''}
+                      onChange={(e) => {
+                        const current = typeof modifyValue === 'object' ? modifyValue : { date: '', startTime: '', endTime: '' };
+                        setModifyValue({ ...current, date: e.target.value });
+                      }}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">START TIME</label>
+                    <input
+                      type="time"
+                      value={typeof modifyValue === 'object' ? modifyValue?.startTime || '' : ''}
+                      onChange={(e) => {
+                        const current = typeof modifyValue === 'object' ? modifyValue : { date: '', startTime: '', endTime: '' };
+                        setModifyValue({ ...current, startTime: e.target.value });
+                      }}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">END TIME</label>
+                    <input
+                      type="time"
+                      value={typeof modifyValue === 'object' ? modifyValue?.endTime || '' : ''}
+                      onChange={(e) => {
+                        const current = typeof modifyValue === 'object' ? modifyValue : { date: '', startTime: '', endTime: '' };
+                        setModifyValue({ ...current, endTime: e.target.value });
+                      }}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
+                    />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">End Date</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">DATE</label>
-                      <input
-                        type="date"
-                        value={typeof modifyValue?.endDate === 'object' ? modifyValue?.endDate?.date || '' : modifyValue?.endDate || ''}
-                        onChange={(e) => {
-                          const current = typeof modifyValue?.endDate === 'object' ? modifyValue.endDate : { date: modifyValue?.endDate || '', startTime: '', endTime: '' };
-                          setModifyValue({ ...modifyValue, endDate: { ...current, date: e.target.value } });
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">START TIME</label>
-                      <input
-                        type="time"
-                        value={typeof modifyValue?.endDate === 'object' ? modifyValue?.endDate?.startTime || '' : ''}
-                        onChange={(e) => {
-                          const current = typeof modifyValue?.endDate === 'object' ? modifyValue.endDate : { date: modifyValue?.endDate || '', startTime: '', endTime: '' };
-                          setModifyValue({ ...modifyValue, endDate: { ...current, startTime: e.target.value } });
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">END TIME</label>
-                      <input
-                        type="time"
-                        value={typeof modifyValue?.endDate === 'object' ? modifyValue?.endDate?.endTime || '' : ''}
-                        onChange={(e) => {
-                          const current = typeof modifyValue?.endDate === 'object' ? modifyValue.endDate : { date: modifyValue?.endDate || '', startTime: '', endTime: '' };
-                          setModifyValue({ ...modifyValue, endDate: { ...current, endTime: e.target.value } });
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white [color-scheme:dark]"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <label className="flex items-center gap-2 text-sm text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={modifyValue?.flexible || false}
-                    onChange={(e) => setModifyValue({ ...modifyValue, flexible: e.target.checked })}
-                    className="rounded"
-                  />
-                  Flexible on dates
-                </label>
               </div>
             </div>
           )}
@@ -1386,10 +1348,16 @@ const CommunityCounterFormBrand = () => {
           <div className="mb-6">
             <h3 className="font-semibold mb-2">Target Audience</h3>
             <p className="text-sm text-gray-400 mb-2">BRAND SEEKING</p>
-            <p className="text-white mb-1">{formData.targetAudience}</p>
+            <p className="text-white mb-1">
+              {Array.isArray(formData.targetAudience) 
+                ? formData.targetAudience.map(a => a.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')
+                : formData.targetAudience}
+            </p>
             {fieldResponses.targetAudience?.action === 'modify' && (
               <p className="text-yellow-400 text-sm mt-2">
-                Your audience: {fieldResponses.targetAudience?.modifiedValue}
+                Your audience: {Array.isArray(fieldResponses.targetAudience?.modifiedValue) 
+                  ? fieldResponses.targetAudience?.modifiedValue?.map(a => a.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')
+                  : fieldResponses.targetAudience?.modifiedValue}
               </p>
             )}
             {renderFieldActionButtons('targetAudience')}
@@ -1426,87 +1394,49 @@ const CommunityCounterFormBrand = () => {
             </div>
           )}
 
-          {/* Timeline */}
-          {formData.timeline && (
+          {/* Event Date */}
+          {formData.eventDate && (
             <div className="mb-6">
-              <h3 className="font-semibold mb-2">Preferred Timeline</h3>
-              <p className="text-sm text-gray-400 mb-2">DATE RANGE</p>
+              <h3 className="font-semibold mb-2">Event Date</h3>
+              <p className="text-sm text-gray-400 mb-2">DATE & TIME</p>
               <div className="text-white space-y-1">
                 {(() => {
-                  const sd = formData.timeline.startDate;
-                  const sdDate = typeof sd === 'object' ? sd?.date : sd;
-                  const sdStartTime = typeof sd === 'object' ? sd?.startTime : '';
-                  const sdEndTime = typeof sd === 'object' ? sd?.endTime : '';
-                  if (!sdDate) return null;
-                  return (
-                    <p>Start: {new Date(sdDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      {sdStartTime && ` • ${sdStartTime}`}{sdEndTime && ` - ${sdEndTime}`}
-                    </p>
-                  );
-                })()}
-                {(() => {
-                  const ed = formData.timeline.endDate;
+                  const ed = formData.eventDate;
                   const edDate = typeof ed === 'object' ? ed?.date : ed;
-                  const edStartTime = typeof ed === 'object' ? ed?.startTime : '';
-                  const edEndTime = typeof ed === 'object' ? ed?.endTime : '';
+                  const edStart = typeof ed === 'object' ? ed?.startTime : '';
+                  const edEnd = typeof ed === 'object' ? ed?.endTime : '';
                   if (!edDate) return null;
                   return (
-                    <p>End: {new Date(edDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      {edStartTime && ` • ${edStartTime}`}{edEndTime && ` - ${edEndTime}`}
+                    <p>{new Date(edDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {edStart && ` • ${edStart}`}{edEnd && ` - ${edEnd}`}
                     </p>
                   );
                 })()}
-                {formData.timeline.flexible && (
-                  <p className="text-green-400 text-sm">✓ Flexible on dates</p>
-                )}
               </div>
-              {formData.backupTimeline?.startDate?.date && (
+              {formData.backupDate?.date && (
                 <div className="mt-2 text-white space-y-1">
-                  <p className="text-gray-400 text-sm">Backup Timeline:</p>
-                  <p>Start: {new Date(formData.backupTimeline.startDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    {formData.backupTimeline.startDate.startTime && ` • ${formData.backupTimeline.startDate.startTime}`}
-                    {formData.backupTimeline.startDate.endTime && ` - ${formData.backupTimeline.startDate.endTime}`}
+                  <p className="text-gray-400 text-sm">Backup Date:</p>
+                  <p>{new Date(formData.backupDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {formData.backupDate.startTime && ` • ${formData.backupDate.startTime}`}
+                    {formData.backupDate.endTime && ` - ${formData.backupDate.endTime}`}
                   </p>
-                  {formData.backupTimeline.endDate?.date && (
-                    <p>End: {new Date(formData.backupTimeline.endDate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      {formData.backupTimeline.endDate.startTime && ` • ${formData.backupTimeline.endDate.startTime}`}
-                      {formData.backupTimeline.endDate.endTime && ` - ${formData.backupTimeline.endDate.endTime}`}
-                    </p>
-                  )}
                 </div>
               )}
               {fieldResponses.timeline?.action === 'modify' && (
                 <div className="text-yellow-400 text-sm mt-2 space-y-1">
-                  <p className="font-semibold">Your preferred timeline:</p>
+                  <p className="font-semibold">Your preferred date:</p>
                   {(() => {
                     const mv = fieldResponses.timeline.modifiedValue;
-                    const msd = mv?.startDate;
-                    const msdDate = typeof msd === 'object' ? msd?.date : msd;
-                    const msdStart = typeof msd === 'object' ? msd?.startTime : '';
-                    const msdEnd = typeof msd === 'object' ? msd?.endTime : '';
-                    if (!msdDate) return null;
+                    const mvDate = typeof mv === 'object' ? mv?.date : mv;
+                    const mvStart = typeof mv === 'object' ? mv?.startTime : '';
+                    const mvEnd = typeof mv === 'object' ? mv?.endTime : '';
+                    if (!mvDate) return null;
                     return (
-                      <p>• Start: {new Date(msdDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        {msdStart && ` • ${msdStart}`}{msdEnd && ` - ${msdEnd}`}
+                      <p>• {new Date(mvDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {mvStart && ` • ${mvStart}`}{mvEnd && ` - ${mvEnd}`}
                       </p>
                     );
                   })()}
-                  {(() => {
-                    const mv = fieldResponses.timeline.modifiedValue;
-                    const med = mv?.endDate;
-                    const medDate = typeof med === 'object' ? med?.date : med;
-                    const medStart = typeof med === 'object' ? med?.startTime : '';
-                    const medEnd = typeof med === 'object' ? med?.endTime : '';
-                    if (!medDate) return null;
-                    return (
-                      <p>• End: {new Date(medDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        {medStart && ` • ${medStart}`}{medEnd && ` - ${medEnd}`}
-                      </p>
-                    );
-                  })()}
-                  {fieldResponses.timeline?.modifiedValue?.flexible && (
-                    <p>• Flexible on dates</p>
-                  )}
                 </div>
               )}
               {renderFieldActionButtons('timeline')}

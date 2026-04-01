@@ -1749,6 +1749,10 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         cashfreeServiceCharge: t.cashfreeServiceCharge || 0,
         cashfreeServiceTax: t.cashfreeServiceTax || 0,
         cashfreeTotalDeducted: (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0),
+        proceedsAfterGateway: parseFloat((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))).toFixed(2)),
+        indulgeOutRevenueInclGST: parseFloat(((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))) - basePrice).toFixed(2)),
+        indulgeOutRevenueNetGST: parseFloat((((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))) - basePrice) / 1.18).toFixed(2)),
+        indulgeOutRevenuePercent: basePrice > 0 ? parseFloat(((((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))) - basePrice) / 1.18 / basePrice) * 100).toFixed(1)) : 0,
         reconciliationStatus: t.reconciliationStatus,
         lastReconciliationDate: t.lastReconciliationDate,
         reconciliationNotes: t.reconciliationNotes,
@@ -1795,6 +1799,7 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',
         'gatewayPaymentAmount', 'settlementStatus', 'settlementDate', 'settlementUTR', 'settlementAmount',
         'cashfreeServiceCharge', 'cashfreeServiceTax', 'cashfreeTotalDeducted',
+        'proceedsAfterGateway', 'indulgeOutRevenueInclGST', 'indulgeOutRevenueNetGST', 'indulgeOutRevenuePercent',
         'reconciliationStatus', 'lastReconciliationDate', 'reconciliationNotes',
         'checkInStatus', 'checkInTime'
       ];
@@ -1874,6 +1879,10 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`#   - cashfreeServiceCharge: Cashfree processing fee (1.2% of order amount)`);
       csvRows.push(`#   - cashfreeServiceTax: GST charged on Cashfree's processing fee`);
       csvRows.push(`#   - cashfreeTotalDeducted: Total amount deducted by Cashfree (charge + tax)`);
+      csvRows.push(`#   - proceedsAfterGateway: Amount after Cashfree deductions (totalPaid - cashfreeTotal)`);
+      csvRows.push(`#   - indulgeOutRevenueInclGST: IndulgeOut revenue including 18% GST (proceeds - ticketPrice)`);
+      csvRows.push(`#   - indulgeOutRevenueNetGST: IndulgeOut revenue after removing 18% GST`);
+      csvRows.push(`#   - indulgeOutRevenuePercent: IndulgeOut net revenue as % of ticket price`);
       csvRows.push(`#   - orderId: Cashfree order ID for verification`);
       csvRows.push(`#   - reconciliationStatus: verified = Payment confirmed with Cashfree API`);
       csvRows.push(`#   - lastReconciliationDate: When we last verified this payment with Cashfree`);
@@ -2691,6 +2700,8 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       tierPeople: ticket.metadata?.tierPeople || null,
       orderId: ticket.metadata?.orderId,
       totalPaid: ticket.metadata?.totalPaid || ticket.price?.amount || 0,
+      gstCharges: ticket.metadata?.gstAndOtherCharges || 0,
+      platformFees: ticket.metadata?.platformFees || 0,
       paymentId: ticket.paymentId,
       paymentMethod: ticket.gatewayResponse?.paymentMethod,
       status: ticket.status,
@@ -2698,6 +2709,9 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       settlementStatus: ticket.settlementStatus,
       settlementDate: ticket.settlementDate,
       settlementUTR: ticket.settlementUTR,
+      settlementAmount: ticket.settlementAmount || 0,
+      cashfreeServiceCharge: ticket.cashfreeServiceCharge || 0,
+      cashfreeServiceTax: ticket.cashfreeServiceTax || 0,
       reconciliationStatus: ticket.reconciliationStatus,
       lastReconciliationDate: ticket.lastReconciliationDate
     }));
@@ -2935,6 +2949,176 @@ router.get('/collaborations/:id/workspace/spectate', requirePermission('approve_
       success: false,
       error: 'Failed to fetch workspace data'
     });
+  }
+});
+
+// ==================== USER ANALYTICS ====================
+
+// @route   GET /api/admin/analytics/users
+// @desc    Get user analytics: growth, activity, login methods, top users
+// @access  Admin only
+router.get('/analytics/users', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+    // Query params for top active users filtering
+    const userLimit = Math.min(Math.max(parseInt(req.query.limit) || 15, 1), 200);
+    const roleFilter = req.query.role; // 'user', 'host_partner', 'admin'
+    const hostTypeFilter = req.query.hostPartnerType; // 'community_organizer', 'venue', 'brand_sponsor'
+
+    // Signups days filter (default 365)
+    const signupDays = Math.min(Math.max(parseInt(req.query.signupDays) || 365, 1), 365);
+    const signupsSince = new Date(today.getTime() - signupDays * 24 * 60 * 60 * 1000);
+
+    // Build filter for top active users
+    const topUsersFilter = { loginCount: { $gt: 0 } };
+    if (roleFilter) topUsersFilter.role = roleFilter;
+    if (hostTypeFilter && roleFilter === 'host_partner') topUsersFilter.hostPartnerType = hostTypeFilter;
+
+    // Run all aggregations in parallel
+    const [
+      totalUsers,
+      dailySignups,
+      activeToday,
+      activeThisWeek,
+      activeThisMonth,
+      loginMethodDist,
+      roleDist,
+      topActiveUsers,
+      newUsersThisWeek,
+      newUsersThisMonth
+    ] = await Promise.all([
+      // Total users (all roles)
+      User.countDocuments(),
+
+      // Daily signups (filtered by signupDays, all roles)
+      User.aggregate([
+        { $match: { createdAt: { $gte: signupsSince } } },
+        { $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 }
+        }},
+        { $sort: { _id: -1 } }
+      ]),
+
+      // DAU - users who logged in today (all roles)
+      User.countDocuments({ lastLoginAt: { $gte: today } }),
+
+      // WAU - users who logged in in last 7 days (all roles)
+      User.countDocuments({ lastLoginAt: { $gte: sevenDaysAgo } }),
+
+      // MAU - users who logged in in last 30 days (all roles)
+      User.countDocuments({ lastLoginAt: { $gte: thirtyDaysAgo } }),
+
+      // Login method distribution - count total logins per method from loginHistory
+      User.aggregate([
+        { $match: { 'loginHistory.0': { $exists: true } } },
+        { $unwind: '$loginHistory' },
+        { $group: { _id: '$loginHistory.method', count: { $sum: 1 } } }
+      ]),
+
+      // Role distribution (all users)
+      User.aggregate([
+        { $group: { _id: '$role', count: { $sum: 1 } } }
+      ]),
+
+      // Top active users by login count with per-method counts
+      User.aggregate([
+        { $match: topUsersFilter },
+        { $sort: { loginCount: -1 } },
+        { $limit: userLimit },
+        { $addFields: {
+          emailLogins: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ['$loginHistory', []] },
+                as: 'l',
+                cond: { $eq: ['$$l.method', 'email'] }
+              }
+            }
+          },
+          smsLogins: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ['$loginHistory', []] },
+                as: 'l',
+                cond: { $eq: ['$$l.method', 'sms'] }
+              }
+            }
+          }
+        }},
+        { $project: {
+          name: 1, email: 1, phoneNumber: 1, city: 1,
+          loginCount: 1, lastLoginAt: 1, lastLoginMethod: 1,
+          role: 1, hostPartnerType: 1, createdAt: 1,
+          emailLogins: 1, smsLogins: 1
+        }}
+      ]),
+
+      // New users this week (all roles)
+      User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+
+      // New users this month (all roles)
+      User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
+    ]);
+
+    // Build login method map
+    const loginMethods = {};
+    loginMethodDist.forEach(item => { loginMethods[item._id] = item.count; });
+
+    // Build role map
+    const roles = {};
+    roleDist.forEach(item => { roles[item._id || 'unknown'] = item.count; });
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          totalUsers,
+          newUsersThisWeek,
+          newUsersThisMonth,
+          dau: activeToday,
+          wau: activeThisWeek,
+          mau: activeThisMonth
+        },
+        dailySignups,
+        loginMethods,
+        roles,
+        topActiveUsers
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user analytics:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch user analytics' });
+  }
+});
+
+// @route   GET /api/admin/analytics/signups-by-date
+// @desc    Get users who signed up on a specific date
+// @access  Admin only
+router.get('/analytics/signups-by-date', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'Valid date (YYYY-MM-DD) is required' });
+    }
+
+    const startOfDay = new Date(date + 'T00:00:00.000Z');
+    const endOfDay = new Date(date + 'T23:59:59.999Z');
+
+    const users = await User.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } })
+      .select('name email role hostPartnerType createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error fetching signups by date:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch signups by date' });
   }
 });
 

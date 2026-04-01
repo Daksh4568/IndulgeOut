@@ -70,14 +70,13 @@ const FIELD_DEFINITIONS = {
   },
   
   eventDate: {
-    type: 'daterange',
-    label: 'Event Date',
-    hasFlexible: true
+    type: 'event-datetime',
+    label: 'Date & Time'
   },
   
   backupDate: {
-    type: 'date',
-    label: 'Backup Date'
+    type: 'event-datetime',
+    label: 'Backup Date & Time'
   },
   
   proposedDate: {
@@ -492,21 +491,30 @@ const FIELD_DEFINITIONS = {
   },
   
   campaignObjectives: {
-    type: 'text',
+    type: 'selectable-card',
     label: 'Campaign Objectives',
-    multiline: true
+    subOptions: [
+      { id: 'brand_awareness', label: 'Brand Awareness' },
+      { id: 'product_trials', label: 'Product Trial / Sampling' },
+      { id: 'lead_generation', label: 'Lead Generation' },
+      { id: 'sales', label: 'Sales Conversion' },
+      { id: 'engagement', label: 'Community Engagement' },
+      { id: 'market_testing', label: 'Market Testing' },
+      { id: 'content_creation', label: 'Content Creation' }
+    ]
   },
   
   preferredFormats: {
     type: 'multi-select',
     label: 'Preferred Formats',
     options: [
-      'Social Mixers',
-      'Wellness, Fitness & Sports',
-      'Art, Music & Dance',
-      'Immersive',
-      'Food & Beverage',
-      'Games'
+      'Workshop',
+      'Mixer / Social',
+      'Tournament',
+      'Performance / Show',
+      'Panel / Talk',
+      'Experiential / Activation',
+      'Open to suggestions'
     ]
   },
   
@@ -581,6 +589,28 @@ function formatFieldValue(fieldName, value) {
       }
       return String(value);
       
+    case 'event-datetime':
+      if (typeof value === 'object') {
+        const parts = [];
+        if (value.date) parts.push(value.date);
+        if (value.startTime) parts.push(`${value.startTime}`);
+        if (value.endTime) parts.push(`- ${value.endTime}`);
+        return parts.join(' ') || 'Not set';
+      }
+      return String(value);
+
+    case 'selectable-card':
+      if (Array.isArray(value)) {
+        return value.map(v => {
+          const opt = definition.subOptions?.find(o => o.id === v);
+          return opt ? opt.label : v;
+        }).join(', ');
+      }
+      if (typeof value === 'object' && value.selected) {
+        return 'Yes';
+      }
+      return String(value);
+
     case 'daterange':
       if (typeof value === 'object') {
         const parts = [];

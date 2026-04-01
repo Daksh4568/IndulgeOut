@@ -352,27 +352,25 @@ export const FIELD_DEFINITIONS = {
     label: 'Campaign Objectives',
     subOptions: [
       { id: 'brand_awareness', label: 'Brand Awareness' },
-      { id: 'product_trials', label: 'Product Trials' },
+      { id: 'product_trials', label: 'Product Trial / Sampling' },
       { id: 'lead_generation', label: 'Lead Generation' },
-      { id: 'sales', label: 'Direct Sales' },
-      { id: 'engagement', label: 'Community Engagement' }
+      { id: 'sales', label: 'Sales Conversion' },
+      { id: 'engagement', label: 'Community Engagement' },
+      { id: 'market_testing', label: 'Market Testing' },
+      { id: 'content_creation', label: 'Content Creation' }
     ]
   },
 
   preferredFormats: {
     type: 'multi-select',
     label: 'Preferred Formats',
-    options: ['Social Mixers', 'Wellness, Fitness & Sports', 'Art, Music & Dance', 'Immersive', 'Food & Beverage', 'Games']
+    options: ['Workshop', 'Mixer / Social', 'Tournament', 'Performance / Show', 'Panel / Talk', 'Experiential / Activation', 'Open to suggestions']
   },
 
-  timeline: {
-    type: 'daterange',
-    label: 'Timeline'
-  },
-
-  backupTimeline: {
-    type: 'daterange',
-    label: 'Backup Timeline'
+  targetAudience: {
+    type: 'multi-select',
+    label: 'Target Audience',
+    options: ['Students', 'Young Professionals', 'Founders / Creators', 'Families', 'Niche Community']
   },
 
   // ═══════════════════════════════════════

@@ -83,6 +83,11 @@ const CollaborationManagement = () => {
 
   const filteredCollaborations = collaborations.filter(collab => {
     if (filterStatus === 'all') return true;
+    if (filterStatus === 'under_review') return ['submitted', 'pending_admin_review', 'counter_pending_review'].includes(collab.status);
+    if (filterStatus === 'sent_to_recipient') return ['admin_approved', 'approved_delivered'].includes(collab.status);
+    if (filterStatus === 'response_received') return ['counter_delivered', 'vendor_accepted'].includes(collab.status);
+    if (filterStatus === 'confirmed') return ['completed', 'confirmed'].includes(collab.status);
+    if (filterStatus === 'declined') return ['admin_rejected', 'vendor_rejected', 'rejected', 'declined', 'cancelled'].includes(collab.status);
     return collab.status === filterStatus;
   });
 
@@ -335,12 +340,11 @@ const CollaborationManagement = () => {
               <div className="flex space-x-2">
                 {[
                   { value: 'all', label: 'All' },
-                  { value: 'pending_admin_review', label: 'Under Review' },
-                  { value: 'approved_delivered', label: activeTab === 'sent' ? 'Sent to Recipient' : 'New Proposal' },
-                  { value: 'counter_delivered', label: activeTab === 'sent' ? 'Response Received' : 'Response Sent' },
+                  { value: 'under_review', label: 'Under Review' },
+                  { value: 'sent_to_recipient', label: activeTab === 'sent' ? 'Sent to Recipient' : 'New Proposal' },
+                  { value: 'response_received', label: activeTab === 'sent' ? 'Response Received' : 'Response Sent' },
                   { value: 'confirmed', label: 'Confirmed' },
-                  { value: 'declined', label: 'Declined' },
-                  { value: 'rejected', label: 'Needs Revision' }
+                  { value: 'declined', label: 'Declined' }
                 ].map(({ value, label }) => (
                   <button
                     key={value}

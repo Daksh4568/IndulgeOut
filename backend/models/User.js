@@ -428,6 +428,15 @@ const userSchema = new mongoose.Schema({
   // Enhanced Analytics Data
   analytics: userAnalyticsSchema,
   
+  // Login Tracking
+  loginCount: { type: Number, default: 0 },
+  lastLoginAt: Date,
+  lastLoginMethod: { type: String, enum: ['sms', 'email'] },
+  loginHistory: [{
+    timestamp: { type: Date, default: Date.now },
+    method: { type: String, enum: ['sms', 'email'] }
+  }],
+  
   // User Preferences
   preferences: {
     emailNotifications: { type: Boolean, default: true },

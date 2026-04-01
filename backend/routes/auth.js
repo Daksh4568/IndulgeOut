@@ -277,7 +277,7 @@ router.post('/register', registrationLimiter, upload.array('photos', 3), async (
     const token = jwt.sign(
       { userId: user._id, email: user.email, phoneNumber: user.phoneNumber, role: user.role, hostPartnerType: user.hostPartnerType },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '90d' }
     );
 
     // Send welcome email

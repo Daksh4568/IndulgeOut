@@ -57,9 +57,6 @@ const ProposalForm = () => {
     // Brand → Community
     campaignObjectives: {},
     preferredFormats: [],
-    timeline: { startDate: { date: '', startTime: '', endTime: '' }, endDate: { date: '', startTime: '', endTime: '' }, flexible: false },
-    backupTimeline: { startDate: { date: '', startTime: '', endTime: '' }, endDate: { date: '', startTime: '', endTime: '' } },
-    showBackupTimeline: false,
     brandOffers: {},
     brandExpectations: {},
     
@@ -216,9 +213,9 @@ const ProposalForm = () => {
     } else if (proposalType === 'brandToCommunity') {
       switch (stepIndex) {
         case 0: // Objectives
-          const tlStartDate = typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.date : formData.timeline?.startDate;
+          const b2cDateVal = typeof formData.eventDate === 'object' ? formData.eventDate?.date : formData.eventDate;
           return !!(Object.keys(formData.campaignObjectives || {}).length > 0 && 
-                    formData.targetAudience && formData.city && tlStartDate);
+                    formData.targetAudience?.length > 0 && formData.city && b2cDateVal);
         case 1: // Offer & Expect
           return Object.keys(formData.brandOffers || {}).length > 0 && 
                  Object.keys(formData.brandExpectations || {}).length > 0;
@@ -316,17 +313,16 @@ const ProposalForm = () => {
         toast?.error('Please select at least one campaign objective');
         return false;
       }
-      if (!formData.targetAudience) {
-        toast?.error('Please describe your target audience');
+      if (!formData.targetAudience || formData.targetAudience.length === 0) {
+        toast?.error('Please select at least one target audience');
         return false;
       }
       if (!formData.city) {
         toast?.error('Please select a city');
         return false;
       }
-      const startDateVal = typeof formData.timeline?.startDate === 'object' ? formData.timeline?.startDate?.date : formData.timeline?.startDate;
-      if (!startDateVal) {
-        toast?.error('Please select a timeline start date');
+      if (!formData.eventDate || (typeof formData.eventDate === 'object' && !formData.eventDate.date) || (typeof formData.eventDate === 'string' && !formData.eventDate)) {
+        toast?.error('Please select an event date');
         return false;
       }
       
@@ -416,11 +412,12 @@ const ProposalForm = () => {
         return {
           campaignObjectives: formData.campaignObjectives,
           targetAudience: formData.targetAudience,
+          nicheAudienceDetails: formData.nicheAudienceDetails,
           preferredFormats: formData.preferredFormats,
           city: formData.city,
-          timeline: formData.timeline,
-          backupTimeline: formData.showBackupTimeline && formData.backupTimeline?.startDate?.date ? formData.backupTimeline : undefined,
-          showBackupTimeline: formData.showBackupTimeline || false,
+          eventDate: formData.eventDate,
+          backupDate: formData.showBackupDate && formData.backupDate?.date ? formData.backupDate : undefined,
+          showBackupDate: formData.showBackupDate || false,
           brandOffers: formData.brandOffers,
           brandExpectations: formData.brandExpectations,
           additionalTerms: formData.additionalTerms,

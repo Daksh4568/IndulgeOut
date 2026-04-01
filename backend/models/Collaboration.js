@@ -172,12 +172,13 @@ const collaborationSchema = new mongoose.Schema({
   brandToCommunity: {
     // Section 1: Campaign Snapshot
     campaignObjectives: mongoose.Schema.Types.Mixed,  // Object with objective_id: true
-    targetAudience: String,
+    targetAudience: mongoose.Schema.Types.Mixed,  // Array of audience IDs
+    nicheAudienceDetails: String,
     preferredFormats: [String],
     city: String,
-    timeline: mongoose.Schema.Types.Mixed,
-    backupTimeline: mongoose.Schema.Types.Mixed,
-    showBackupTimeline: Boolean,
+    eventDate: mongoose.Schema.Types.Mixed,
+    backupDate: mongoose.Schema.Types.Mixed,
+    showBackupDate: Boolean,
     
     // Section 2: Brand Offers
     brandOffers: {

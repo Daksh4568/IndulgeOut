@@ -141,9 +141,12 @@ router.post('/register/verify', async (req, res) => {
       },
       analytics: {
         registrationDate: new Date(),
-        registrationMethod: 'otp',
-        lastLogin: new Date()
-      }
+        registrationMethod: 'otp'
+      },
+      loginCount: 1,
+      lastLoginAt: new Date(),
+      lastLoginMethod: 'sms',
+      loginHistory: [{ timestamp: new Date(), method: 'sms' }]
     });
 
     await newUser.save();
@@ -158,7 +161,7 @@ router.post('/register/verify', async (req, res) => {
         hostPartnerType: newUser.hostPartnerType // Include for B2B users
       },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '90d' }
     );
 
     res.status(201).json({
@@ -284,9 +287,16 @@ router.post('/login/verify', async (req, res) => {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
-    // Reset OTP attempts and update last login
+    // Reset OTP attempts and update login tracking
     user.otpVerification.otpAttempts = 0;
-    user.analytics.lastLogin = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
+    user.lastLoginAt = new Date();
+    user.lastLoginMethod = 'sms';
+    if (!user.loginHistory) user.loginHistory = [];
+    user.loginHistory.push({ timestamp: new Date(), method: 'sms' });
+    if (user.loginHistory.length > 365) {
+      user.loginHistory = user.loginHistory.slice(-365);
+    }
     await user.save();
 
     // Generate auth token
@@ -299,7 +309,7 @@ router.post('/login/verify', async (req, res) => {
         hostPartnerType: user.hostPartnerType // Include for B2B users
       },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '90d' }
     );
 
     res.status(200).json({

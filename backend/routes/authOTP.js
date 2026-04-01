@@ -76,9 +76,12 @@ router.post('/otp/register', async (req, res) => {
       },
       analytics: {
         registrationDate: new Date(),
-        registrationMethod: 'direct_signup',
-        lastLogin: new Date()
-      }
+        registrationMethod: 'direct_signup'
+      },
+      loginCount: 1,
+      lastLoginAt: new Date(),
+      lastLoginMethod: 'email',
+      loginHistory: [{ timestamp: new Date(), method: 'email' }]
     });
 
     try {
@@ -103,7 +106,7 @@ router.post('/otp/register', async (req, res) => {
         role: newUser.role
       },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '90d' }
     );
 
     console.log(`✅ New B2C user registered successfully: ${email}`);
@@ -343,11 +346,15 @@ router.post('/otp/verify', async (req, res) => {
     user.otpVerification.otp = undefined; // Clear OTP after successful verification
     user.otpVerification.otpExpiry = undefined;
 
-    // Update last login timestamp
-    if (!user.analytics) {
-      user.analytics = {};
+    // Track login analytics
+    user.loginCount = (user.loginCount || 0) + 1;
+    user.lastLoginAt = new Date();
+    user.lastLoginMethod = method;
+    if (!user.loginHistory) user.loginHistory = [];
+    user.loginHistory.push({ timestamp: new Date(), method });
+    if (user.loginHistory.length > 365) {
+      user.loginHistory = user.loginHistory.slice(-365);
     }
-    user.analytics.lastLogin = new Date();
 
     await user.save({ validateModifiedOnly: true });
 
@@ -360,7 +367,7 @@ router.post('/otp/verify', async (req, res) => {
         hostPartnerType: user.hostPartnerType // Include for B2B users
       },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '90d' }
     );
 
     console.log(`✅ OTP verified for ${identifier}. User logged in.`);

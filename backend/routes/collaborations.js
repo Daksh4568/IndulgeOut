@@ -539,14 +539,13 @@ router.post('/draft', authMiddleware, async (req, res) => {
     } else if (type === 'brandToCommunity') {
       collaborationData.brandToCommunity = {
         campaignObjectives: formData.campaignObjectives || {},
-        targetAudience: Array.isArray(formData.targetAudience) 
-          ? formData.targetAudience.join(', ') 
-          : formData.targetAudience || '',
+        targetAudience: formData.targetAudience || [],
+        nicheAudienceDetails: formData.nicheAudienceDetails || '',
         preferredFormats: formData.preferredFormats || [],
         city: formData.city,
-        timeline: formData.timeline || {},
-        backupTimeline: formData.showBackupTimeline && formData.backupTimeline?.startDate?.date ? formData.backupTimeline : undefined,
-        showBackupTimeline: formData.showBackupTimeline || false,
+        eventDate: formData.eventDate,
+        backupDate: formData.showBackupDate && formData.backupDate?.date ? formData.backupDate : undefined,
+        showBackupDate: formData.showBackupDate || false,
         brandOffers: formData.brandOffers || {},
         brandExpectations: formData.brandExpectations || {}
       };
@@ -761,14 +760,13 @@ router.post('/propose', authMiddleware, async (req, res) => {
     } else if (type === 'brandToCommunity') {
       collaborationData.brandToCommunity = {
         campaignObjectives: formData.campaignObjectives || {},
-        targetAudience: Array.isArray(formData.targetAudience) 
-          ? formData.targetAudience.join(', ') 
-          : formData.targetAudience || '',
+        targetAudience: formData.targetAudience || [],
+        nicheAudienceDetails: formData.nicheAudienceDetails || '',
         preferredFormats: formData.preferredFormats || [],
         city: formData.city,
-        timeline: formData.timeline || {},
-        backupTimeline: formData.showBackupTimeline && formData.backupTimeline?.startDate?.date ? formData.backupTimeline : undefined,
-        showBackupTimeline: formData.showBackupTimeline || false,
+        eventDate: formData.eventDate,
+        backupDate: formData.showBackupDate && formData.backupDate?.date ? formData.backupDate : undefined,
+        showBackupDate: formData.showBackupDate || false,
         brandOffers: formData.brandOffers || {},
         brandExpectations: formData.brandExpectations || {}
       };

@@ -108,7 +108,6 @@ const CommunityCard = ({ community, onFavorite, isLocked = false, defaultImageIn
             <MapPin className="h-4 w-4 text-[#7878E9]" />
             <span className="text-sm" style={{ fontFamily: 'Source Serif Pro, serif' }}>
               {community.location.city}
-              {community.location.state && `, ${community.location.state}`}
             </span>
           </div>
         )}

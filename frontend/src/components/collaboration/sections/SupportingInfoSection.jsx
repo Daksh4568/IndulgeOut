@@ -167,7 +167,7 @@ const SupportingInfoSection = ({ formData, setFormData, proposalType }) => {
           </div>
           <div>
             <h2 className="text-white text-xl font-semibold">SUPPORTING INFO (OPTIONAL)</h2>
-            <p className="text-gray-400 text-sm">{proposalType === 'communityToBrand' ? 'Photos and notes help brands respond faster' : 'Photos and notes help venues respond faster'}</p>
+            <p className="text-gray-400 text-sm">{proposalType === 'communityToBrand' ? 'Photos and notes help brands respond faster' : proposalType === 'brandToCommunity' ? 'Photos and notes help communities respond faster' : 'Photos and notes help venues respond faster'}</p>
           </div>
         </div>
       </div>

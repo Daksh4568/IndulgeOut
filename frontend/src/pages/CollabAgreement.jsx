@@ -309,29 +309,11 @@ const CollabAgreement = () => {
           title: 'CAMPAIGN DETAILS',
           fields: [
             { key: 'campaignObjectives', label: 'Campaign Objectives', value: proposalData.campaignObjectives ? Object.keys(proposalData.campaignObjectives).filter(k => proposalData.campaignObjectives[k]).join(', ') : 'N/A' },
-            { key: 'targetAudience', label: 'Target Audience', value: proposalData.targetAudience },
+            { key: 'targetAudience', label: 'Target Audience', value: Array.isArray(proposalData.targetAudience) ? proposalData.targetAudience.map(a => a.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : proposalData.targetAudience },
             { key: 'preferredFormats', label: 'Preferred Formats', value: proposalData.preferredFormats },
             { key: 'city', label: 'City', value: proposalData.city },
-            { key: 'timeline', label: 'Timeline', value: (() => {
-              const tl = proposalData.timeline;
-              if (!tl?.startDate) return 'N/A';
-              const sdDate = typeof tl.startDate === 'object' ? tl.startDate.date : tl.startDate;
-              const edDate = typeof tl.endDate === 'object' ? tl.endDate.date : tl.endDate;
-              const sdTime = typeof tl.startDate === 'object' && tl.startDate.startTime ? ` ${tl.startDate.startTime}${tl.startDate.endTime ? '-' + tl.startDate.endTime : ''}` : '';
-              const edTime = typeof tl.endDate === 'object' && tl.endDate.startTime ? ` ${tl.endDate.startTime}${tl.endDate.endTime ? '-' + tl.endDate.endTime : ''}` : '';
-              const start = sdDate ? new Date(sdDate).toLocaleDateString('en-IN') + sdTime : '';
-              const end = edDate ? new Date(edDate).toLocaleDateString('en-IN') + edTime : 'TBD';
-              return start ? `${start} - ${end}` : 'N/A';
-            })() },
-            { key: 'backupTimeline', label: 'Backup Timeline', value: (() => {
-              const bt = proposalData.backupTimeline;
-              if (!bt?.startDate?.date) return null;
-              const sdTime = bt.startDate.startTime ? ` ${bt.startDate.startTime}${bt.startDate.endTime ? '-' + bt.startDate.endTime : ''}` : '';
-              const edTime = bt.endDate?.startTime ? ` ${bt.endDate.startTime}${bt.endDate.endTime ? '-' + bt.endDate.endTime : ''}` : '';
-              const start = new Date(bt.startDate.date).toLocaleDateString('en-IN') + sdTime;
-              const end = bt.endDate?.date ? new Date(bt.endDate.date).toLocaleDateString('en-IN') + edTime : 'TBD';
-              return `${start} - ${end}`;
-            })() },
+            { key: 'eventDate', label: 'Event Date', value: proposalData.eventDate },
+            { key: 'backupDate', label: 'Backup Date', value: proposalData.backupDate },
           ]
         },
         {

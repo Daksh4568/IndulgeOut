@@ -88,7 +88,7 @@ const WORKSPACE_FIELD_CONFIGS = {
   brandToCommunity: {
     campaignSnapshot: {
       title: 'Campaign Details',
-      fields: ['campaignObjectives', 'targetAudience', 'preferredFormats', 'city', 'timeline', 'backupTimeline']
+      fields: ['campaignObjectives', 'targetAudience', 'preferredFormats', 'city', 'eventDate', 'backupDate']
     },
     brandOffers: {
       title: 'Brand Offers',

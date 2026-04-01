@@ -39,7 +39,9 @@ export default function ExplorePage() {
     interest: 'all',
     sort: 'recommended',
     city: 'all',
-    rating: 'all'
+    rating: 'all',
+    categories: [],
+    cities: []
   });
 
   // Modal state
@@ -235,8 +237,10 @@ export default function ExplorePage() {
       // Apply genre filter
       if (filters.genres && filters.genres.length > 0) {
         fetchedEvents = fetchedEvents.filter(event => {
-          const eventCategory = event.category?.toLowerCase() || '';
-          return filters.genres.some(genre => eventCategory.includes(genre.toLowerCase()));
+          const eventCategories = event.categories || (event.category ? [event.category] : []);
+          return filters.genres.some(genre =>
+            eventCategories.some(cat => cat.toLowerCase() === genre.toLowerCase())
+          );
         });
       }
       
@@ -359,9 +363,16 @@ export default function ExplorePage() {
       let communities = featuredData.communities || [];
       
       // Apply community filters
-      if (communityFilters.city && communityFilters.city !== 'all') {
+      if (communityFilters.cities && communityFilters.cities.length > 0) {
+        const normalize = (s) => s?.toLowerCase().replace('bangalore', 'bengaluru') || '';
+        communities = communities.filter(community => {
+          const cityName = normalize(community.location?.city);
+          return communityFilters.cities.some(c => normalize(c) === cityName);
+        });
+      } else if (communityFilters.city && communityFilters.city !== 'all') {
+        const normalize = (s) => s?.toLowerCase().replace('bangalore', 'bengaluru') || '';
         communities = communities.filter(community => 
-          community.location?.city?.toLowerCase() === communityFilters.city.toLowerCase()
+          normalize(community.location?.city) === normalize(communityFilters.city)
         );
       }
       
@@ -372,7 +383,12 @@ export default function ExplorePage() {
         );
       }
       
-      if (communityFilters.interest && communityFilters.interest !== 'all') {
+      if (communityFilters.categories && communityFilters.categories.length > 0) {
+        communities = communities.filter(community => {
+          const cat = community.category?.toLowerCase() || '';
+          return communityFilters.categories.some(c => cat.includes(c.toLowerCase()));
+        });
+      } else if (communityFilters.interest && communityFilters.interest !== 'all') {
         communities = communities.filter(community => 
           community.category?.toLowerCase().includes(communityFilters.interest.toLowerCase())
         );
@@ -1069,54 +1085,27 @@ export default function ExplorePage() {
                     </h2>
                   </div>
                   
-                  {/* Community Filter Chips */}
+                  {/* Community Filter Bar */}
                   <div className="flex flex-wrap gap-2 mb-6">
-                    {/* Category Filter */}
-                    <button
-                      onClick={() => setCommunityFilters({...communityFilters, interest: communityFilters.interest === 'all' ? 'tech' : 'all'})}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        communityFilters.interest !== 'all'
-                          ? 'text-white'
-                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
-                      }`}
-                      style={communityFilters.interest !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span>Category</span>
-                    </button>
-                    
-                    {/* City Filter */}
-                    <button
-                      onClick={() => setCommunityFilters({...communityFilters, city: communityFilters.city === 'all' ? 'Bengaluru' : 'all'})}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        communityFilters.city !== 'all'
-                          ? 'text-white'
-                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
-                      }`}
-                      style={communityFilters.city !== 'all' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
-                    >
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>{communityFilters.city !== 'all' ? communityFilters.city : 'City'}</span>
-                    </button>
-                    
-                    {/* Trending Filter */}
-                    <button
-                      onClick={() => setCommunityFilters({...communityFilters, sort: communityFilters.sort === 'recommended' ? 'trending' : 'recommended'})}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        communityFilters.sort === 'recommended'
-                          ? 'text-white'
-                          : 'border border-gray-600 text-gray-300 hover:border-gray-400'
-                      }`}
-                      style={communityFilters.sort === 'recommended' ? { background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' } : {}}
-                    >
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      <span>Trending</span>
-                    </button>
+                    <FilterBar
+                      mode="communities"
+                      onFilterChange={(newFilters) => {
+                        setCommunityFilters(prev => ({
+                          ...prev,
+                          categories: newFilters.categories || [],
+                          cities: newFilters.cities || []
+                        }));
+                      }}
+                      activeFilters={{
+                        categories: communityFilters.categories || [],
+                        cities: communityFilters.cities || []
+                      }}
+                    />
                     
                     {/* Clear all filters */}
-                    {(communityFilters.interest !== 'all' || communityFilters.sort !== 'recommended' || communityFilters.city !== 'all') && (
+                    {((communityFilters.categories && communityFilters.categories.length > 0) || (communityFilters.cities && communityFilters.cities.length > 0)) && (
                       <button
-                        onClick={() => setCommunityFilters({ interest: 'all', sort: 'recommended', city: 'all', rating: 'all' })}
+                        onClick={() => setCommunityFilters({ interest: 'all', sort: 'recommended', city: 'all', rating: 'all', categories: [], cities: [] })}
                         className="px-3 py-1.5 rounded-full border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 text-sm font-medium transition-colors"
                       >
                         Clear
