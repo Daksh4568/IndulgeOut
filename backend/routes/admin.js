@@ -2205,7 +2205,7 @@ router.get('/organizers', requirePermission('view_analytics'), async (req, res) 
 
     // Fetch full organizer data for this page
     const organizers = await User.find({ _id: { $in: paginatedIds } })
-      .select('name email phoneNumber communityProfile payoutDetails createdAt location')
+      .select('name email phoneNumber communityProfile payoutDetails kycHistory createdAt location')
       .lean();
 
     // Map organizers by ID for ordering
@@ -2431,6 +2431,19 @@ router.get('/organizers/:organizerId', requirePermission('view_analytics'), asyn
         verifiedAt: organizer.payoutDetails?.verifiedAt,
         lastUpdated: organizer.payoutDetails?.lastUpdated
       },
+      kycHistory: (organizer.kycHistory || []).map(h => ({
+        accountHolderName: h.accountHolderName,
+        accountNumber: h.accountNumber || null,
+        ifscCode: h.ifscCode,
+        billingAddress: h.billingAddress,
+        upiId: h.upiId,
+        gstNumber: h.gstNumber,
+        idProofDocument: h.idProofDocument,
+        isVerified: h.isVerified || false,
+        verifiedAt: h.verifiedAt,
+        lastUpdated: h.lastUpdated,
+        archivedAt: h.archivedAt
+      })),
       eventStats: {
         total: (statusCounts.draft || 0) + (statusCounts.published || 0) + (statusCounts.completed || 0) + (statusCounts.cancelled || 0),
         draft: statusCounts.draft || 0,
@@ -2970,14 +2983,50 @@ router.get('/analytics/users', requirePermission('view_analytics'), async (req, 
     const roleFilter = req.query.role; // 'user', 'host_partner', 'admin'
     const hostTypeFilter = req.query.hostPartnerType; // 'community_organizer', 'venue', 'brand_sponsor'
 
-    // Signups days filter (default 365)
-    const signupDays = Math.min(Math.max(parseInt(req.query.signupDays) || 365, 1), 365);
-    const signupsSince = new Date(today.getTime() - signupDays * 24 * 60 * 60 * 1000);
+    // Signups filter: days, or month/year
+    const signupDays = req.query.signupDays ? Math.max(parseInt(req.query.signupDays), 1) : null;
+    const signupMonth = req.query.signupMonth ? parseInt(req.query.signupMonth) : null; // 0-11
+    const signupYear = req.query.signupYear ? parseInt(req.query.signupYear) : null;
+
+    let signupsSince;
+    let signupsUntil;
+    if (signupMonth !== null && signupYear) {
+      signupsSince = new Date(signupYear, signupMonth, 1);
+      signupsUntil = new Date(signupYear, signupMonth + 1, 0, 23, 59, 59, 999);
+    } else if (signupYear && signupMonth === null) {
+      signupsSince = new Date(signupYear, 0, 1);
+      signupsUntil = new Date(signupYear, 11, 31, 23, 59, 59, 999);
+    } else {
+      const days = signupDays || 365;
+      signupsSince = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+      signupsUntil = null;
+    }
 
     // Build filter for top active users
     const topUsersFilter = { loginCount: { $gt: 0 } };
     if (roleFilter) topUsersFilter.role = roleFilter;
     if (hostTypeFilter && roleFilter === 'host_partner') topUsersFilter.hostPartnerType = hostTypeFilter;
+
+    // Top active users: days, or month/year filter
+    const activeDays = req.query.activeDays ? Math.max(parseInt(req.query.activeDays), 1) : null;
+    const activeMonth = req.query.activeMonth ? parseInt(req.query.activeMonth) : null;
+    const activeYear = req.query.activeYear ? parseInt(req.query.activeYear) : null;
+
+    if (activeDays) {
+      topUsersFilter.lastLoginAt = { $gte: new Date(today.getTime() - activeDays * 24 * 60 * 60 * 1000) };
+    } else if (activeMonth !== null && activeYear) {
+      // Use loginHistory.timestamp so users who logged in during the period are found
+      // even if their lastLoginAt is more recent (e.g. logged in March AND April)
+      topUsersFilter['loginHistory.timestamp'] = {
+        $gte: new Date(activeYear, activeMonth, 1),
+        $lte: new Date(activeYear, activeMonth + 1, 0, 23, 59, 59, 999)
+      };
+    } else if (activeYear && activeMonth === null) {
+      topUsersFilter['loginHistory.timestamp'] = {
+        $gte: new Date(activeYear, 0, 1),
+        $lte: new Date(activeYear, 11, 31, 23, 59, 59, 999)
+      };
+    }
 
     // Run all aggregations in parallel
     const [
@@ -2995,9 +3044,9 @@ router.get('/analytics/users', requirePermission('view_analytics'), async (req, 
       // Total users (all roles)
       User.countDocuments(),
 
-      // Daily signups (filtered by signupDays, all roles)
+      // Daily signups (filtered, all roles)
       User.aggregate([
-        { $match: { createdAt: { $gte: signupsSince } } },
+        { $match: { createdAt: signupsUntil ? { $gte: signupsSince, $lte: signupsUntil } : { $gte: signupsSince } } },
         { $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
           count: { $sum: 1 }
@@ -3055,7 +3104,8 @@ router.get('/analytics/users', requirePermission('view_analytics'), async (req, 
           name: 1, email: 1, phoneNumber: 1, city: 1,
           loginCount: 1, lastLoginAt: 1, lastLoginMethod: 1,
           role: 1, hostPartnerType: 1, createdAt: 1,
-          emailLogins: 1, smsLogins: 1
+          emailLogins: 1, smsLogins: 1,
+          loginHistory: 1
         }}
       ]),
 
@@ -3339,7 +3389,7 @@ router.get('/marketing/audience/export', requirePermission('view_analytics'), as
       return str;
     };
 
-    const header = 'User Name,Mobile Number,Email,Age,City,Gender,Date of Joining,First Ticket Date,First Event Name,Community Name';
+    const header = 'User Name,Mobile Number,Email,Age,City,Gender,Date of Joining,First Ticket Purchase Date,First Event Name,First Community Name';
     const rows = users.map(u => {
       const info = ticketMap[u._id.toString()] || {};
       const ticketDate = info.firstTicketDate

@@ -352,9 +352,6 @@ router.post('/otp/verify', async (req, res) => {
     user.lastLoginMethod = method;
     if (!user.loginHistory) user.loginHistory = [];
     user.loginHistory.push({ timestamp: new Date(), method });
-    if (user.loginHistory.length > 365) {
-      user.loginHistory = user.loginHistory.slice(-365);
-    }
 
     await user.save({ validateModifiedOnly: true });
 

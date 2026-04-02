@@ -91,7 +91,11 @@ const BrandSignup = () => {
       toast?.error("Please select your city");
       return;
     }
-    if (formData.instagramLink && !/^https?:\/\/(www\.)?instagram\.com\/.+/.test(formData.instagramLink.trim())) {
+    if (!formData.instagramLink || !formData.instagramLink.trim()) {
+      toast?.error("Instagram / social media link is required");
+      return;
+    }
+    if (!/^https?:\/\/(www\.)?instagram\.com\/.+/.test(formData.instagramLink.trim())) {
       toast?.error("Please enter a valid Instagram URL (e.g., https://instagram.com/yourprofile)");
       return;
     }
@@ -185,7 +189,7 @@ const BrandSignup = () => {
         </div>
         {/* Glass Morphism Card */}
         <div
-          className="rounded-3xl p-8 border w-full max-h-[80vh] overflow-y-auto scrollbar-hide"
+          className="rounded-3xl px-5 py-6 sm:p-8 border w-full max-h-[80vh] overflow-y-auto overflow-x-hidden scrollbar-hide"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(10px)",
@@ -326,12 +330,12 @@ const BrandSignup = () => {
               <label className="block text-white text-sm font-medium mb-2">
                 Phone Number <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 min-w-0">
                 <select
-                  className="px-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent"
+                  className="flex-shrink-0 px-2 sm:px-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                   style={{ "--tw-ring-color": "#7878E9" }}
                 >
-                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+91">IN +91</option>
                 </select>
                 <input
                   type="tel"
@@ -339,7 +343,7 @@ const BrandSignup = () => {
                   value={formData.phoneNumber}
                   onChange={handleChange}
                   placeholder="e.g. Enter ISD / STD / Mobile Number"
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                  className="flex-1 min-w-0 px-3 sm:px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                   style={{ "--tw-ring-color": "#7878E9" }}
                 />
               </div>

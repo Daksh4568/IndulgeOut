@@ -460,85 +460,41 @@ const CollaborationManagement = () => {
                           {formatCollaborationType(collab.type)} • {isReceived ? 'From' : 'To'} {partner?.name || 'Unknown'}
                         </p>
 
-                        {/* Event Details */}
-                        {(collab.formData || collab.requestDetails) && (
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            {(collab.formData?.eventName || collab.requestDetails?.eventName) && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Calendar className="h-4 w-4 text-gray-400" />
-                                <span className="text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                  {collab.formData?.eventName || collab.requestDetails?.eventName}
-                                </span>
-                              </div>
-                            )}
-                            {(collab.formData?.eventDate || collab.requestDetails?.eventDate) && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Clock className="h-4 w-4 text-gray-400" />
-                                <span className="text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                  {formatDate(collab.formData?.eventDate || collab.requestDetails?.eventDate)}
-                                  {eventDays !== null && eventDays >= 0 && (
-                                    <span className={`ml-1 ${eventDays < 7 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
-                                      ({eventDays} days)
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Message Preview */}
-                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                          {collab.formData?.message || collab.requestDetails?.message}
-                        </p>
-
-                        {/* Venue/Brand Specific Info */}
-                        {collab.venueRequest && (
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {collab.venueRequest.expectedAttendees && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-blue-900/20 text-blue-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                <Users className="h-3 w-3" />
-                                <span>{collab.venueRequest.expectedAttendees} guests</span>
-                              </span>
-                            )}
-                            {collab.venueRequest.timeSlot && (
-                              <span className="px-2 py-1 bg-purple-900/20 text-purple-300 rounded capitalize" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                {collab.venueRequest.timeSlot.replace('_', ' ')}
-                              </span>
-                            )}
-                            {collab.venueRequest.budgetRange && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-green-900/20 text-green-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                <DollarSign className="h-3 w-3" />
-                                <span>{collab.venueRequest.budgetRange}</span>
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {collab.brandSponsorship && (
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {collab.brandSponsorship.expectedReach && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-blue-900/20 text-blue-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                <Users className="h-3 w-3" />
-                                <span>{collab.brandSponsorship.expectedReach.toLocaleString()} reach</span>
-                              </span>
-                            )}
-                            {collab.brandSponsorship.budgetProposed && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-green-900/20 text-green-300 rounded" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                                <DollarSign className="h-3 w-3" />
-                                <span>₹{(collab.brandSponsorship.budgetProposed / 1000).toFixed(0)}K</span>
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Response */}
-                        {collab.response && collab.response.message && (
-                          <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
-                            <p className="text-xs text-gray-400 mb-1" style={{ fontFamily: 'Source Serif Pro, serif' }}>Response:</p>
-                            <p className="text-sm text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>{collab.response.message}</p>
-                          </div>
-                        )}
+                        {/* Key Details: Date, Time, City in one line */}
+                        {(() => {
+                          const fd = collab.formData || {};
+                          const rd = collab.requestDetails || {};
+                          const structured = collab.communityToBrand || collab.communityToVenue || collab.brandToCommunity || collab.venueToCommunity || {};
+                          const eventDateObj = fd.eventDate || structured.eventDate || rd.eventDate;
+                          const city = fd.city || structured.city || rd.city;
+                          
+                          const parts = [];
+                          if (eventDateObj) {
+                            if (typeof eventDateObj === 'object' && eventDateObj.date) {
+                              const d = new Date(eventDateObj.date);
+                              if (!isNaN(d.getTime())) {
+                                parts.push(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+                              }
+                              if (eventDateObj.startTime && eventDateObj.endTime) {
+                                parts.push(`${eventDateObj.startTime} - ${eventDateObj.endTime}`);
+                              } else if (eventDateObj.startTime) {
+                                parts.push(eventDateObj.startTime);
+                              }
+                            } else if (typeof eventDateObj === 'string') {
+                              const d = new Date(eventDateObj);
+                              if (!isNaN(d.getTime())) {
+                                parts.push(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+                              }
+                            }
+                          }
+                          if (city) parts.push(city);
+                          
+                          return parts.length > 0 ? (
+                            <p className="text-sm text-gray-300" style={{ fontFamily: 'Source Serif Pro, serif' }}>
+                              {parts.join(' • ')}
+                            </p>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
 
@@ -600,7 +556,7 @@ const CollaborationManagement = () => {
 
                   {/* Footer */}
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <span>Sent on {formatDate(collab.createdAt)}</span>
+                    <span>{isReceived ? 'Received' : 'Sent'} on {formatDate(collab.createdAt)}</span>
                     {collab.expiresAt && new Date(collab.expiresAt) > new Date() && (
                       <span>Expires on {formatDate(collab.expiresAt)}</span>
                     )}

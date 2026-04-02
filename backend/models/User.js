@@ -374,6 +374,20 @@ const userSchema = new mongoose.Schema({
     verifiedAt: Date,
     lastUpdated: Date
   },
+  // History of previous KYC/payout details (last 2 entries)
+  kycHistory: [{
+    accountHolderName: String,
+    accountNumber: String,
+    ifscCode: String,
+    billingAddress: String,
+    upiId: String,
+    gstNumber: String,
+    idProofDocument: String,
+    isVerified: Boolean,
+    verifiedAt: Date,
+    lastUpdated: Date,
+    archivedAt: { type: Date, default: Date.now }
+  }],
   interests: [{
     type: String,
     enum: [

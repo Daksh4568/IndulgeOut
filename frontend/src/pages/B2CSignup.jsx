@@ -99,7 +99,7 @@ const B2CSignup = () => {
         </div>
         {/* Glass Morphism Card */}
         <div
-          className="rounded-3xl p-8 border w-full"
+          className="rounded-3xl px-5 py-6 sm:p-8 border w-full overflow-hidden"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(10px)",
@@ -158,12 +158,12 @@ const B2CSignup = () => {
                   <label className="block text-white text-sm font-medium mb-1.5">
                     Phone Number
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 min-w-0">
                     <select
-                      className="px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent"
+                      className="flex-shrink-0 px-2 sm:px-3 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                       style={{ "--tw-ring-color": "#7878E9" }}
                     >
-                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+91">IN +91</option>
                     </select>
                     <input
                       type="tel"
@@ -171,7 +171,7 @@ const B2CSignup = () => {
                       value={formData.phoneNumber}
                       onChange={handleChange}
                       placeholder="Enter mobile number"
-                      className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      className="flex-1 min-w-0 px-3 sm:px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                       style={{ "--tw-ring-color": "#7878E9" }}
                     />
                   </div>

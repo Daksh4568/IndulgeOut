@@ -422,6 +422,28 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
       }
     }
 
+    // Archive current KYC details before overwriting (keep last 2)
+    if (user.payoutDetails && user.payoutDetails.accountHolderName) {
+      if (!user.kycHistory) user.kycHistory = [];
+      user.kycHistory.unshift({
+        accountHolderName: user.payoutDetails.accountHolderName,
+        accountNumber: user.payoutDetails.accountNumber,
+        ifscCode: user.payoutDetails.ifscCode,
+        billingAddress: user.payoutDetails.billingAddress,
+        upiId: user.payoutDetails.upiId,
+        gstNumber: user.payoutDetails.gstNumber,
+        idProofDocument: user.payoutDetails.idProofDocument,
+        isVerified: user.payoutDetails.isVerified,
+        verifiedAt: user.payoutDetails.verifiedAt,
+        lastUpdated: user.payoutDetails.lastUpdated,
+        archivedAt: new Date()
+      });
+      // Keep only last 2 entries
+      if (user.kycHistory.length > 2) {
+        user.kycHistory = user.kycHistory.slice(0, 2);
+      }
+    }
+
     // Update payout details
     user.payoutDetails = {
       accountHolderName,
@@ -450,6 +472,7 @@ router.put('/profile/payout', authenticateToken, upload.single('idProof'), async
     res.json({
       success: true,
       message: 'Payout details submitted successfully. Admin will verify shortly.',
+      user,
       payoutDetails: {
         accountHolderName: user.payoutDetails.accountHolderName,
         accountNumber: user.payoutDetails.accountNumber?.slice(-4), // Only last 4 digits

@@ -41,8 +41,7 @@ router.get('/events/:slugOrId', async (req, res) => {
     const description = event.description
       ? event.description.replace(/<[^>]*>/g, '').substring(0, 200)
       : 'Discover unique offline experiences on IndulgeOut';
-    const image = (event.images && event.images[0]) || `${frontendUrl}/images/LogoFinal2.jpg`;
-    const city = event.location?.city || '';
+    const locationText = event.location?.address || event.location?.city || '';
     const dateStr = event.date
       ? new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
       : '';
@@ -50,7 +49,11 @@ router.get('/events/:slugOrId', async (req, res) => {
       ? `₹${event.currentEffectivePrice ?? event.price.amount}`
       : 'FREE';
 
-    const ogDescription = [dateStr, city, price].filter(Boolean).join(' • ') + (description ? ` — ${description}` : '');
+    const ogDescription = [dateStr, locationText, price].filter(Boolean).join(' • ') + (description ? ` — ${description}` : '');
+
+    // Use event image if available; mark it as large image for proper preview
+    const hasEventImage = event.images && event.images.length > 0 && event.images[0];
+    const image = hasEventImage ? event.images[0] : `${frontendUrl}/images/LogoFinal2.jpg`;
 
     // Return minimal HTML with OG tags + instant redirect for real browsers
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -64,8 +67,7 @@ router.get('/events/:slugOrId', async (req, res) => {
 <meta property="og:title" content="${escapeHtml(title)}"/>
 <meta property="og:description" content="${escapeHtml(ogDescription)}"/>
 <meta property="og:image" content="${escapeHtml(image)}"/>
-<meta property="og:image:width" content="1200"/>
-<meta property="og:image:height" content="630"/>
+${hasEventImage ? '<meta property="og:image:width" content="1200"/>\n<meta property="og:image:height" content="630"/>' : ''}
 <meta property="og:url" content="${escapeHtml(canonicalUrl)}"/>
 <meta property="og:site_name" content="IndulgeOut"/>
 <meta name="twitter:card" content="summary_large_image"/>

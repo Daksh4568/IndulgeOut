@@ -85,8 +85,8 @@ const TimeInput = ({ name, value, onChange, required = false, label }) => {
         </label>
       )}
       
-      <div className="relative flex items-center gap-1 sm:gap-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 focus-within:ring-2 focus-within:ring-[#7878E9] focus-within:border-transparent transition-all">
-        <Clock className="h-4 w-4 text-[#7878E9] flex-shrink-0" />
+      <div className="relative flex items-center w-full px-2 sm:px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 focus-within:ring-2 focus-within:ring-[#7878E9] focus-within:border-transparent transition-all overflow-hidden">
+        <Clock className="h-4 w-4 text-[#7878E9] flex-shrink-0 mr-1" />
         
         {/* Hours Input */}
         <input
@@ -96,11 +96,11 @@ const TimeInput = ({ name, value, onChange, required = false, label }) => {
           placeholder="HH"
           maxLength="2"
           required={required}
-          className="w-10 sm:w-11 bg-transparent border-none text-white text-center placeholder-gray-500 focus:outline-none text-sm sm:text-base"
+          className="w-8 sm:w-11 bg-transparent border-none text-white text-center placeholder-gray-500 focus:outline-none text-sm sm:text-base flex-shrink-0"
         />
         
         {/* Colon Separator */}
-        <span className="text-white text-sm sm:text-base">:</span>
+        <span className="text-white text-sm sm:text-base flex-shrink-0">:</span>
         
         {/* Minutes Input */}
         <input
@@ -110,11 +110,11 @@ const TimeInput = ({ name, value, onChange, required = false, label }) => {
           placeholder="MM"
           maxLength="2"
           required={required}
-          className="w-10 sm:w-11 bg-transparent border-none text-white text-center placeholder-gray-500 focus:outline-none text-sm sm:text-base"
+          className="w-8 sm:w-11 bg-transparent border-none text-white text-center placeholder-gray-500 focus:outline-none text-sm sm:text-base flex-shrink-0"
         />
         
         {/* AM/PM Dropdown with Custom Arrow */}
-        <div className="relative flex items-center ml-1">
+        <div className="relative flex items-center ml-1 flex-shrink-0 min-w-0">
           <select
             value={period}
             onChange={handlePeriodChange}

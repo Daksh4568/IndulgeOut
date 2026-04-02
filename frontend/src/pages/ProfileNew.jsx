@@ -396,7 +396,11 @@ const ProfileNew = () => {
       }
       
       const response = await api.put('/users/profile', payload)
-      setProfileData(response.data.user)
+      if (response.data.user) {
+        setProfileData(response.data.user)
+      } else {
+        await fetchProfileData()
+      }
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Profile updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
@@ -418,7 +422,11 @@ const ProfileNew = () => {
         payload.typicalAudienceSize = hostingForm.averageEventSize;
       }
       const response = await api.put('/users/profile/hosting-preferences', payload)
-      setProfileData(response.data.user)
+      if (response.data.user) {
+        setProfileData(response.data.user)
+      } else {
+        await fetchProfileData()
+      }
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Hosting preferences updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
@@ -434,7 +442,11 @@ const ProfileNew = () => {
     try {
       const updatedInterests = profileData.interests.filter(i => i !== interestToRemove)
       const response = await api.put('/users/profile', { interests: updatedInterests })
-      setProfileData(response.data.user)
+      if (response.data.user) {
+        setProfileData(response.data.user)
+      } else {
+        await fetchProfileData()
+      }
       setMessage({ type: 'success', text: 'Interest removed!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 2000)
       refreshUser()
@@ -448,7 +460,12 @@ const ProfileNew = () => {
     try {
       setSaving(true)
       const response = await api.put('/users/profile/payout', payoutForm)
-      setProfileData(response.data.user)
+      if (response.data.user) {
+        setProfileData(response.data.user)
+      } else {
+        // Re-fetch full profile if user not returned
+        await fetchProfileData()
+      }
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Payout information updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
@@ -463,15 +480,20 @@ const ProfileNew = () => {
   const handleSaveVenueDetails = async () => {
     try {
       setSaving(true)
-      const response = await api.put('/users/profile/venue-details', {
+      const payload = {
         capacityRange: venueDetailsForm.capacityRange,
         rules: {
           alcoholAllowed: venueDetailsForm.alcoholAllowed,
           smokingAllowed: venueDetailsForm.smokingAllowed,
           ageLimit: venueDetailsForm.ageLimit
         }
-      })
-      setProfileData(response.data.user)
+      }
+      const response = await api.put('/users/profile/venue-details', payload)
+      if (response.data.user) {
+        setProfileData(response.data.user)
+      } else {
+        await fetchProfileData()
+      }
       setEditingSection(null)
       setMessage({ type: 'success', text: 'Venue details updated!' })
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
@@ -633,6 +655,11 @@ const ProfileNew = () => {
         fields.push({ name: 'Preferred Collaboration Types', value: profileData.brandProfile?.preferredCollaborationTypes?.length > 0 })
         fields.push({ name: 'Preferred Audience Types', value: profileData.brandProfile?.preferredAudienceTypes?.length > 0 })
       }
+    } else {
+      // B2C user additional fields
+      fields.push({ name: 'City', value: !!(profileData.location?.city || profileData.city) })
+      fields.push({ name: 'Gender', value: !!profileData.gender })
+      fields.push({ name: 'Interests', value: profileData.interests?.length > 0 })
     }
     
     const completed = fields.filter(f => f.value).length

@@ -294,9 +294,6 @@ router.post('/login/verify', async (req, res) => {
     user.lastLoginMethod = 'sms';
     if (!user.loginHistory) user.loginHistory = [];
     user.loginHistory.push({ timestamp: new Date(), method: 'sms' });
-    if (user.loginHistory.length > 365) {
-      user.loginHistory = user.loginHistory.slice(-365);
-    }
     await user.save();
 
     // Generate auth token

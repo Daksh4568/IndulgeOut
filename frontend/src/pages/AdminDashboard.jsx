@@ -15,9 +15,13 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [collabAnalytics, setCollabAnalytics] = useState(null);
   const [userAnalytics, setUserAnalytics] = useState(null);
-  const [userAnalyticsFilters, setUserAnalyticsFilters] = useState({ limit: 15, role: '', hostPartnerType: '' });
+  const [userAnalyticsFilters, setUserAnalyticsFilters] = useState({ limit: 15, role: '', hostPartnerType: '', days: '', month: '', year: '' });
   const [signupDaysFilter, setSignupDaysFilter] = useState(365);
+  const [signupMonthFilter, setSignupMonthFilter] = useState('');
+  const [signupYearFilter, setSignupYearFilter] = useState('');
   const [signupDateModal, setSignupDateModal] = useState({ open: false, date: '', users: [], loading: false });
+  const [loginHistoryModal, setLoginHistoryModal] = useState({ open: false, user: null });
+  const [kycHistoryModal, setKycHistoryModal] = useState({ open: false, history: [] });
   
   // Proposals state
   const [pendingProposals, setPendingProposals] = useState([]);
@@ -224,7 +228,17 @@ const AdminDashboard = () => {
       if (userAnalyticsFilters.limit) params.append('limit', userAnalyticsFilters.limit);
       if (userAnalyticsFilters.role) params.append('role', userAnalyticsFilters.role);
       if (userAnalyticsFilters.hostPartnerType) params.append('hostPartnerType', userAnalyticsFilters.hostPartnerType);
-      if (signupDaysFilter) params.append('signupDays', signupDaysFilter);
+      if (userAnalyticsFilters.days) params.append('activeDays', userAnalyticsFilters.days);
+      if (userAnalyticsFilters.month !== '') params.append('activeMonth', userAnalyticsFilters.month);
+      if (userAnalyticsFilters.year) params.append('activeYear', userAnalyticsFilters.year);
+      if (signupMonthFilter !== '' && signupYearFilter) {
+        params.append('signupMonth', signupMonthFilter);
+        params.append('signupYear', signupYearFilter);
+      } else if (signupYearFilter && signupMonthFilter === '') {
+        params.append('signupYear', signupYearFilter);
+      } else if (signupDaysFilter) {
+        params.append('signupDays', signupDaysFilter);
+      }
       const res = await api.get(`/admin/analytics/users?${params.toString()}`);
       setUserAnalytics(res.data.data || res.data);
     } catch (err) {
@@ -1939,19 +1953,18 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Daily Signups Table */}
-                {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 && (
-                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
+                <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Signups</h3>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-400">{userAnalytics.dailySignups.length} days &middot; {userAnalytics.dailySignups.reduce((sum, d) => sum + d.count, 0)} total</span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 && (
+                          <span className="text-xs text-gray-400">{userAnalytics.dailySignups.length} days &middot; {userAnalytics.dailySignups.reduce((sum, d) => sum + d.count, 0)} total</span>
+                        )}
                         <div className="flex items-center gap-2">
                           <label className="text-xs text-gray-400">Period</label>
                           <select
                             value={signupDaysFilter}
-                            onChange={(e) => {
-                              setSignupDaysFilter(Number(e.target.value));
-                            }}
+                            onChange={(e) => { setSignupDaysFilter(Number(e.target.value)); setSignupMonthFilter(''); setSignupYearFilter(''); }}
                             className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5 focus:ring-purple-500 focus:border-purple-500"
                           >
                             <option value={7}>Last 7 days</option>
@@ -1959,8 +1972,39 @@ const AdminDashboard = () => {
                             <option value={90}>Last 90 days</option>
                             <option value={180}>Last 180 days</option>
                             <option value={365}>Last 365 days</option>
+                            <option value={0}>Custom</option>
                           </select>
                         </div>
+                        {signupDaysFilter === 0 && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-gray-400">Month</label>
+                              <select
+                                value={signupMonthFilter}
+                                onChange={(e) => setSignupMonthFilter(e.target.value)}
+                                className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5"
+                              >
+                                <option value="">All</option>
+                                {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                                  <option key={i} value={i}>{m}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-gray-400">Year</label>
+                              <select
+                                value={signupYearFilter}
+                                onChange={(e) => setSignupYearFilter(e.target.value)}
+                                className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5"
+                              >
+                                <option value="">All</option>
+                                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                  <option key={y} value={y}>{y}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
                         <button
                           onClick={fetchUserAnalytics}
                           className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
@@ -1969,35 +2013,38 @@ const AdminDashboard = () => {
                         </button>
                       </div>
                     </div>
-                    <div className="overflow-auto max-h-[400px] border border-gray-800 rounded">
-                      <table className="min-w-full text-sm">
-                        <thead className="sticky top-0 bg-zinc-900 z-10">
-                          <tr className="border-b border-gray-700">
-                            <th className="text-left py-2 px-4 text-gray-400 font-medium">#</th>
-                            <th className="text-left py-2 px-4 text-gray-400 font-medium">Date</th>
-                            <th className="text-right py-2 px-4 text-gray-400 font-medium">Signups</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {userAnalytics.dailySignups.map((day, idx) => (
-                            <tr
-                              key={day._id}
-                              className="border-b border-gray-800 hover:bg-purple-900/20 cursor-pointer transition-colors"
-                              onClick={() => fetchSignupsByDate(day._id)}
-                              title={`Click to view users who signed up on ${day._id}`}
-                            >
-                              <td className="py-2 px-4 text-gray-500">{idx + 1}</td>
-                              <td className="py-2 px-4 text-gray-200">
-                                {new Date(day._id).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                              </td>
-                              <td className="py-2 px-4 text-right text-white font-semibold">{day.count}</td>
+                    {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 ? (
+                      <div className="overflow-auto max-h-[400px] border border-gray-800 rounded">
+                        <table className="min-w-full text-sm">
+                          <thead className="sticky top-0 bg-zinc-900 z-10">
+                            <tr className="border-b border-gray-700">
+                              <th className="text-left py-2 px-4 text-gray-400 font-medium">#</th>
+                              <th className="text-left py-2 px-4 text-gray-400 font-medium">Date</th>
+                              <th className="text-right py-2 px-4 text-gray-400 font-medium">Signups</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {userAnalytics.dailySignups.map((day, idx) => (
+                              <tr
+                                key={day._id}
+                                className="border-b border-gray-800 hover:bg-purple-900/20 cursor-pointer transition-colors"
+                                onClick={() => fetchSignupsByDate(day._id)}
+                                title={`Click to view users who signed up on ${day._id}`}
+                              >
+                                <td className="py-2 px-4 text-gray-500">{idx + 1}</td>
+                                <td className="py-2 px-4 text-gray-200">
+                                  {new Date(day._id).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                                </td>
+                                <td className="py-2 px-4 text-right text-white font-semibold">{day.count}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No signup data for the selected period</p>
+                    )}
                   </div>
-                )}
 
                 {/* Signup Date Detail Modal */}
                 {signupDateModal.open && (
@@ -2108,6 +2155,51 @@ const AdminDashboard = () => {
                           </select>
                         </div>
                       )}
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400">Days</label>
+                        <select
+                          value={userAnalyticsFilters.days}
+                          onChange={(e) => setUserAnalyticsFilters(f => ({ ...f, days: e.target.value, month: '', year: '' }))}
+                          className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5"
+                        >
+                          <option value="">All time</option>
+                          <option value="7">Last 7 days</option>
+                          <option value="30">Last 30 days</option>
+                          <option value="90">Last 90 days</option>
+                          <option value="180">Last 180 days</option>
+                          <option value="365">Last 365 days</option>
+                        </select>
+                      </div>
+                      {!userAnalyticsFilters.days && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-400">Month</label>
+                            <select
+                              value={userAnalyticsFilters.month}
+                              onChange={(e) => setUserAnalyticsFilters(f => ({ ...f, month: e.target.value }))}
+                              className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5"
+                            >
+                              <option value="">All</option>
+                              {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                                <option key={i} value={i}>{m}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-400">Year</label>
+                            <select
+                              value={userAnalyticsFilters.year}
+                              onChange={(e) => setUserAnalyticsFilters(f => ({ ...f, year: e.target.value }))}
+                              className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1.5"
+                            >
+                              <option value="">All</option>
+                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                <option key={y} value={y}>{y}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
                       <button
                         onClick={fetchUserAnalytics}
                         className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
@@ -2155,7 +2247,15 @@ const AdminDashboard = () => {
                                 </span>
                               </td>
                               <td className="py-2 px-3 text-gray-300">{u.city || '—'}</td>
-                              <td className="py-2 px-3 text-right text-white font-semibold">{u.loginCount}</td>
+                              <td className="py-2 px-3 text-right">
+                                <button
+                                  onClick={() => setLoginHistoryModal({ open: true, user: u })}
+                                  className="text-white font-semibold hover:text-purple-400 underline decoration-dotted cursor-pointer transition-colors"
+                                  title="Click to view login breakdown"
+                                >
+                                  {u.loginCount}
+                                </button>
+                              </td>
                               <td className="py-2 px-3 text-right">
                                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-900/40 text-purple-300">
                                   {u.emailLogins || 0}
@@ -2182,6 +2282,57 @@ const AdminDashboard = () => {
                     <p className="text-gray-500 text-center py-4">No login data recorded yet</p>
                   )}
                 </div>
+
+                {/* Login History Modal */}
+                {loginHistoryModal.open && loginHistoryModal.user && (
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setLoginHistoryModal({ open: false, user: null })}>
+                    <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between p-5 border-b border-gray-700">
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">Login Breakdown</h3>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {loginHistoryModal.user.name} &middot; {loginHistoryModal.user.email} &middot; {loginHistoryModal.user.loginCount} total logins
+                          </p>
+                        </div>
+                        <button onClick={() => setLoginHistoryModal({ open: false, user: null })} className="text-gray-400 hover:text-white text-xl leading-none px-2">&times;</button>
+                      </div>
+                      <div className="overflow-auto flex-1 p-5">
+                        {loginHistoryModal.user.loginHistory && loginHistoryModal.user.loginHistory.length > 0 ? (
+                          <table className="min-w-full text-sm">
+                            <thead className="sticky top-0 bg-zinc-900">
+                              <tr className="border-b border-gray-700">
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">#</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Date</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Time</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Method</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[...loginHistoryModal.user.loginHistory].reverse().map((entry, idx) => (
+                                <tr key={idx} className="border-b border-gray-800">
+                                  <td className="py-2 px-3 text-gray-500">{idx + 1}</td>
+                                  <td className="py-2 px-3 text-gray-200">
+                                    {new Date(entry.timestamp).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </td>
+                                  <td className="py-2 px-3 text-gray-200">
+                                    {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${entry.method === 'sms' ? 'bg-blue-900/40 text-blue-300' : 'bg-purple-900/40 text-purple-300'}`}>
+                                      {entry.method === 'sms' ? 'WhatsApp OTP' : 'Email OTP'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <p className="text-gray-500 text-center py-4">No login history recorded</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="text-center py-8">
@@ -2681,7 +2832,90 @@ const AdminDashboard = () => {
                       </div>
                     )}
                   </div>
+                  {selectedOrganizer.kycHistory && selectedOrganizer.kycHistory.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <button
+                        onClick={() => setKycHistoryModal({ open: true, history: selectedOrganizer.kycHistory })}
+                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-sm transition-colors"
+                      >
+                        View Old KYC Details ({selectedOrganizer.kycHistory.length})
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {/* KYC History Modal */}
+                {kycHistoryModal.open && (
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setKycHistoryModal({ open: false, history: [] })}>
+                    <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between p-5 border-b border-gray-700">
+                        <h3 className="text-lg font-semibold text-white">Previous KYC Details</h3>
+                        <button
+                          onClick={() => setKycHistoryModal({ open: false, history: [] })}
+                          className="text-gray-400 hover:text-white text-xl leading-none px-2"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <div className="overflow-auto flex-1 p-5 space-y-6">
+                        {kycHistoryModal.history.map((entry, idx) => (
+                          <div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-semibold text-purple-400">KYC Version {idx + 1}</span>
+                              <div className="flex items-center gap-3">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${entry.isVerified ? 'bg-green-900/40 text-green-300' : 'bg-yellow-900/40 text-yellow-300'}`}>
+                                  {entry.isVerified ? 'Was Verified' : 'Was Not Verified'}
+                                </span>
+                                {entry.archivedAt && (
+                                  <span className="text-xs text-gray-500">Archived: {new Date(entry.archivedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs text-gray-400">Account Holder Name</p>
+                                <p className="text-sm text-white">{entry.accountHolderName || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400">Account Number</p>
+                                <p className="text-sm text-white">{entry.accountNumber || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400">IFSC Code</p>
+                                <p className="text-sm text-white">{entry.ifscCode || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400">UPI ID</p>
+                                <p className="text-sm text-white">{entry.upiId || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400">GST Number</p>
+                                <p className="text-sm text-white">{entry.gstNumber || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400">Billing Address</p>
+                                <p className="text-sm text-white">{entry.billingAddress || 'Not provided'}</p>
+                              </div>
+                              {entry.idProofDocument && (
+                                <div className="col-span-2">
+                                  <p className="text-xs text-gray-400 mb-1">ID Proof Document</p>
+                                  <a
+                                    href={entry.idProofDocument}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-400 hover:text-purple-300 text-sm underline"
+                                  >
+                                    View Document →
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Community Profile */}
                 <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">

@@ -22,9 +22,9 @@ const ShareModal = ({ isOpen, onClose, event, onShare, onCopyLink }) => {
 
   const getLocation = () => {
     if (typeof event.location === 'string') {
-      return event.location.split(',')[0];
+      return event.location;
     }
-    return event.location?.city || 'Location TBA';
+    return event.location?.address || event.location?.city || 'Location TBA';
   };
 
   return (

@@ -156,24 +156,24 @@ const EventDetail = () => {
     const eventUrl = window.location.href;
     const eventTitle = event?.title || 'Check out this event';
     const eventDate = event?.date ? formatDate(event.date) : '';
-    const eventVenue = event?.venue || '';
     const eventCity = typeof event?.location === 'string'
       ? event.location.split(',')[0].trim()
       : (event?.location?.city || '');
     const eventAddress = typeof event?.location === 'string'
       ? event.location
-      : (event?.location?.address || event?.location?.city || '');
+      : (event?.location?.address || '');
     const eventPrice = (event?.currentEffectivePrice ?? event?.price?.amount) > 0 ? `₹${event.currentEffectivePrice ?? event.price.amount}` : 'FREE';
     
-    // Build venue line: "Venue Name, City" or just city
-    const venueLine = eventVenue
-      ? (eventCity && !eventVenue.includes(eventCity) ? `${eventVenue}, ${eventCity}` : eventVenue)
-      : eventAddress || eventCity;
+    // Location text: prefer full address, then city
+    const locationText = eventAddress || eventCity || '';
 
-    // Short readable location text for messages
-    const shortLocation = eventVenue
-      ? (eventCity ? `${eventVenue}, ${eventCity}` : eventVenue)
-      : eventCity || '';
+    // Short Google Maps link using coordinates when available, else address
+    const coords = event?.location?.coordinates;
+    const mapsUrl = coords?.latitude && coords?.longitude
+      ? `https://maps.google.com/?q=${coords.latitude},${coords.longitude}`
+      : locationText
+        ? `https://maps.google.com/?q=${encodeURIComponent(locationText)}`
+        : '';
 
     // Backend share URL for OG tags (Vercel backend serves OG meta + redirects to frontend)
     const eventSlug = event?.slug || id;
@@ -181,14 +181,18 @@ const EventDetail = () => {
     
     switch (platform) {
       case 'whatsapp': {
-        const waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${shortLocation}\n💰 ${eventPrice}\n\nBook now 👇\n${ogShareUrl}`;
+        let waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
+        if (mapsUrl) waText += `\n📌 ${mapsUrl}`;
+        waText += `\n\nBook now 👇\n${ogShareUrl}`;
         const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
         window.open(waUrl, '_blank');
         setShowShareModal(false);
         return;
       }
       case 'instagram': {
-        const igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${shortLocation}\n💰 ${eventPrice}\n\n${eventUrl}`;
+        let igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
+        if (mapsUrl) igText += `\n📌 ${mapsUrl}`;
+        igText += `\n\n${eventUrl}`;
         navigator.clipboard.writeText(igText).then(() => {
           toast?.success('Event details & link copied! Paste in your Instagram chat.');
         }).catch(() => {

@@ -1042,27 +1042,44 @@ const CommunityOrganizerDashboard = () => {
   const shareToSocial = (platform) => {
     if (!selectedEventForShare) return;
     
-    const eventUrl = `${window.location.origin}/events/${selectedEventForShare.slug || selectedEventForShare._id}`;
-    const eventTitle = selectedEventForShare.title;
-    const eventDate = new Date(selectedEventForShare.date).toLocaleDateString('en-IN', { 
+    const evt = selectedEventForShare;
+    const eventUrl = `${window.location.origin}/events/${evt.slug || evt._id}`;
+    const eventTitle = evt.title;
+    const eventDate = new Date(evt.date).toLocaleDateString('en-IN', { 
       day: 'numeric', 
       month: 'short', 
       year: 'numeric' 
     });
-    const shareText = `Check out ${eventTitle} on ${eventDate}! ${eventUrl}`;
+    const locationText = typeof evt.location === 'string'
+      ? evt.location
+      : (evt.location?.address || evt.location?.city || '');
+    const eventPrice = (evt.currentEffectivePrice ?? evt.price?.amount) > 0 
+      ? `₹${evt.currentEffectivePrice ?? evt.price.amount}` : 'FREE';
+    const coords = evt.location?.coordinates;
+    const mapsUrl = coords?.latitude && coords?.longitude
+      ? `https://maps.google.com/?q=${coords.latitude},${coords.longitude}`
+      : locationText ? `https://maps.google.com/?q=${encodeURIComponent(locationText)}` : '';
 
     let shareUrl = '';
     switch (platform) {
-      case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+      case 'whatsapp': {
+        let waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
+        if (mapsUrl) waText += `\n📌 ${mapsUrl}`;
+        waText += `\n\nBook now 👇\n${eventUrl}`;
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`;
         break;
+      }
       case 'facebook':
         shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
         break;
-      case 'instagram':
-        toast?.show({ message: 'Please share manually on Instagram', type: 'info' });
-        navigator.clipboard.writeText(eventUrl);
+      case 'instagram': {
+        let igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
+        if (mapsUrl) igText += `\n📌 ${mapsUrl}`;
+        igText += `\n\n${eventUrl}`;
+        navigator.clipboard.writeText(igText);
+        toast?.show({ message: 'Event details & link copied! Paste in your Instagram chat.', type: 'success' });
         return;
+      }
       case 'linkedin':
         shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
         break;

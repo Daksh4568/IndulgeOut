@@ -2008,7 +2008,7 @@ const EventCreation = () => {
                     )}
                     
                     <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Example: Early Bird till March 25 at ₹500, Regular till March 31 at ₹700, Last Minute till event day at ₹1000.
+                      💡 Example: Early Bird tickets till March 25 at ₹500, Regular tickets till March 31 at ₹700, Last Minute tickets till event day at ₹1000.
                     </p>
                   </div>
                 )}
