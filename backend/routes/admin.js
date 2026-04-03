@@ -42,7 +42,7 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
       totalRevenue
     ] = await Promise.all([
       User.countDocuments({ role: 'user' }),
-      User.countDocuments({ role: 'host_partner', hostPartnerType: 'community_organizer' }),
+      User.countDocuments({ role: 'host_partner', hostPartnerType: 'community_organizer', 'communityProfile.communityName': { $exists: true, $ne: '' } }),
       User.countDocuments({ role: 'host_partner', hostPartnerType: 'venue' }),
       User.countDocuments({ role: 'host_partner', hostPartnerType: 'brand_sponsor' }),
       Event.countDocuments(),
@@ -79,7 +79,7 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
     const [newUsersLast30Days, newEventsLast30Days, newCommunitiesLast30Days] = await Promise.all([
       User.countDocuments({ createdAt: { $gte: thirtyDaysAgo }, role: 'user' }),
       Event.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-      User.countDocuments({ createdAt: { $gte: thirtyDaysAgo }, hostPartnerType: 'community_organizer' })
+      User.countDocuments({ createdAt: { $gte: thirtyDaysAgo }, hostPartnerType: 'community_organizer', 'communityProfile.communityName': { $exists: true, $ne: '' } })
     ]);
 
     // Calculate growth percentages (comparing with previous 30 days)
@@ -94,7 +94,8 @@ router.get('/dashboard/stats', requirePermission('view_analytics'), async (req, 
       Event.countDocuments({ createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
       User.countDocuments({ 
         createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }, 
-        hostPartnerType: 'community_organizer' 
+        hostPartnerType: 'community_organizer',
+        'communityProfile.communityName': { $exists: true, $ne: '' }
       })
     ]);
 
@@ -3161,7 +3162,7 @@ router.get('/analytics/signups-by-date', requirePermission('view_analytics'), as
     const endOfDay = new Date(date + 'T23:59:59.999Z');
 
     const users = await User.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } })
-      .select('name email role hostPartnerType createdAt')
+      .select('name email phoneNumber role hostPartnerType createdAt')
       .sort({ createdAt: -1 })
       .lean();
 

@@ -95,8 +95,8 @@ const BrandSignup = () => {
       toast?.error("Instagram / social media link is required");
       return;
     }
-    if (!/^https?:\/\/(www\.)?instagram\.com\/.+/.test(formData.instagramLink.trim())) {
-      toast?.error("Please enter a valid Instagram URL (e.g., https://instagram.com/yourprofile)");
+    if (!/^https?:\/\/(www\.)?(instagram\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|youtube\.com)\/.+/.test(formData.instagramLink.trim())) {
+      toast?.error("Please enter a valid social media URL (e.g., https://www.instagram.com/yourprofile)");
       return;
     }
     // Validate photo sizes

@@ -22,6 +22,7 @@ const AdminDashboard = () => {
   const [signupDateModal, setSignupDateModal] = useState({ open: false, date: '', users: [], loading: false });
   const [loginHistoryModal, setLoginHistoryModal] = useState({ open: false, user: null });
   const [kycHistoryModal, setKycHistoryModal] = useState({ open: false, history: [] });
+  const [isReconciling, setIsReconciling] = useState(false);
   
   // Proposals state
   const [pendingProposals, setPendingProposals] = useState([]);
@@ -1071,7 +1072,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       {/* Header */}
-      <header className="bg-zinc-900 border-b border-gray-800 shadow-sm sticky top-0 z-10">
+      <header className="bg-zinc-900 border-b border-gray-800 shadow-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -1955,7 +1956,7 @@ const AdminDashboard = () => {
                 {/* Daily Signups Table */}
                 <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Signups</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily New Signups</h3>
                       <div className="flex flex-wrap items-center gap-3">
                         {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 && (
                           <span className="text-xs text-gray-400">{userAnalytics.dailySignups.length} days &middot; {userAnalytics.dailySignups.reduce((sum, d) => sum + d.count, 0)} total</span>
@@ -2011,6 +2012,59 @@ const AdminDashboard = () => {
                         >
                           Apply
                         </button>
+                        {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const csvRows = [];
+                                const dates = userAnalytics.dailySignups;
+                                for (const day of dates) {
+                                  const res = await api.get(`/admin/analytics/signups-by-date?date=${day._id}`);
+                                  const users = res.data.data || [];
+                                  const dateStr = new Date(day._id).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                                  if (users.length > 0) {
+                                    users.forEach((u, idx) => {
+                                      const roleLabel = u.role === 'host_partner'
+                                        ? (u.hostPartnerType === 'community_organizer' ? 'Organizer'
+                                          : u.hostPartnerType === 'venue' ? 'Venue'
+                                          : u.hostPartnerType === 'brand_sponsor' ? 'Brand' : 'Host')
+                                        : u.role === 'admin' ? 'Admin' : 'B2C User';
+                                      csvRows.push({
+                                        'Date': idx === 0 ? dateStr : '',
+                                        'Signups on Date': idx === 0 ? day.count : '',
+                                        '#': idx + 1,
+                                        'Name': u.name || '',
+                                        'Email': u.email || '',
+                                        'Phone': u.phoneNumber || '',
+                                        'Role': roleLabel,
+                                      });
+                                    });
+                                  } else {
+                                    csvRows.push({ 'Date': dateStr, 'Signups on Date': day.count, '#': '', 'Name': '', 'Email': '', 'Phone': '', 'Role': '' });
+                                  }
+                                }
+                                const total = dates.reduce((s, d) => s + d.count, 0);
+                                csvRows.push({ 'Date': 'TOTAL', 'Signups on Date': total, '#': '', 'Name': '', 'Email': '', 'Phone': '', 'Role': '' });
+                                const headers = ['Date', 'Signups on Date', '#', 'Name', 'Email', 'Phone', 'Role'];
+                                const csv = [headers.join(','), ...csvRows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+                                const blob = new Blob([csv], { type: 'text/csv' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `daily_new_signups_${new Date().toISOString().slice(0, 10)}.csv`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                              } catch (err) {
+                                console.error('Error exporting daily signups CSV:', err);
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                          >
+                            Export CSV
+                          </button>
+                        )}
                       </div>
                     </div>
                     {userAnalytics.dailySignups && userAnalytics.dailySignups.length > 0 ? (
@@ -2029,7 +2083,7 @@ const AdminDashboard = () => {
                                 key={day._id}
                                 className="border-b border-gray-800 hover:bg-purple-900/20 cursor-pointer transition-colors"
                                 onClick={() => fetchSignupsByDate(day._id)}
-                                title={`Click to view users who signed up on ${day._id}`}
+                                title={`Click to view new signups on ${day._id}`}
                               >
                                 <td className="py-2 px-4 text-gray-500">{idx + 1}</td>
                                 <td className="py-2 px-4 text-gray-200">
@@ -2052,8 +2106,8 @@ const AdminDashboard = () => {
                     <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between p-5 border-b border-gray-700">
                         <div>
-                          <h3 className="text-lg font-semibold text-white">Signups on {new Date(signupDateModal.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
-                          <p className="text-xs text-gray-400 mt-1">{signupDateModal.users.length} user(s) registered</p>
+                          <h3 className="text-lg font-semibold text-white">New Signups on {new Date(signupDateModal.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+                          <p className="text-xs text-gray-400 mt-1">{signupDateModal.users.length} new signup(s)</p>
                         </div>
                         <button
                           onClick={() => setSignupDateModal({ open: false, date: '', users: [], loading: false })}
@@ -2075,6 +2129,7 @@ const AdminDashboard = () => {
                                 <th className="text-left py-2 px-3 text-gray-400 font-medium">#</th>
                                 <th className="text-left py-2 px-3 text-gray-400 font-medium">Name</th>
                                 <th className="text-left py-2 px-3 text-gray-400 font-medium">Email</th>
+                                <th className="text-left py-2 px-3 text-gray-400 font-medium">Phone</th>
                                 <th className="text-left py-2 px-3 text-gray-400 font-medium">Role</th>
                               </tr>
                             </thead>
@@ -2084,6 +2139,7 @@ const AdminDashboard = () => {
                                   <td className="py-2 px-3 text-gray-500">{idx + 1}</td>
                                   <td className="py-2 px-3 text-white font-medium">{u.name}</td>
                                   <td className="py-2 px-3 text-gray-300">{u.email}</td>
+                                  <td className="py-2 px-3 text-gray-300">{u.phoneNumber || '—'}</td>
                                   <td className="py-2 px-3">
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                                       u.role === 'admin' ? 'bg-red-900/40 text-red-300' :
@@ -2206,6 +2262,46 @@ const AdminDashboard = () => {
                       >
                         Apply
                       </button>
+                      {userAnalytics.topActiveUsers && userAnalytics.topActiveUsers.length > 0 && (
+                        <button
+                          onClick={() => {
+                            const rows = userAnalytics.topActiveUsers.map((u, idx) => {
+                              const roleLabel = u.role === 'host_partner'
+                                ? (u.hostPartnerType === 'community_organizer' ? 'Organizer'
+                                  : u.hostPartnerType === 'venue' ? 'Venue'
+                                  : u.hostPartnerType === 'brand_sponsor' ? 'Brand' : 'Host')
+                                : u.role === 'admin' ? 'Admin' : 'B2C User';
+                              return {
+                                '#': idx + 1,
+                                'Name': u.name || '',
+                                'Email': u.email || '',
+                                'Role': roleLabel,
+                                'City': u.city || '',
+                                'Total Logins': u.loginCount || 0,
+                                'Email Logins': u.emailLogins || 0,
+                                'WhatsApp Logins': u.smsLogins || 0,
+                                'Last Method': u.lastLoginMethod === 'sms' ? 'WhatsApp' : u.lastLoginMethod || '',
+                                'Last Login': u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+                                'Joined': u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+                              };
+                            });
+                            const headers = Object.keys(rows[0]);
+                            const csv = [headers.join(','), ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `top_active_users_${new Date().toISOString().slice(0, 10)}.csv`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                        >
+                          Export CSV
+                        </button>
+                      )}
                     </div>
                   </div>
                   {userAnalytics.topActiveUsers && userAnalytics.topActiveUsers.length > 0 ? (
@@ -3237,48 +3333,95 @@ const AdminDashboard = () => {
                       </div>
                     )}
                     
-                    {/* Price Change History */}
+                    {/* Price Change History - Period-based like EventAnalytics */}
                     {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-gray-400 mb-3">Price Change History</h4>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-700">
-                            <thead className="bg-zinc-800">
-                              <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Date & Time</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Previous</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">New Price</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reason</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Spots at Prev</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-700">
-                              {eventDetails.priceChangeHistory.map((change, index) => (
-                                <tr key={index} className="hover:bg-zinc-800">
-                                  <td className="px-4 py-3 text-sm text-white">
-                                    {new Date(change.changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-300">₹{change.previousPrice}</td>
-                                  <td className="px-4 py-3 text-sm font-semibold text-white">
-                                    ₹{change.newPrice}
-                                    {change.newPrice > change.previousPrice ? ' ↑' : change.newPrice < change.previousPrice ? ' ↓' : ''}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm">
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                      change.reason === 'initial_creation' ? 'bg-blue-500/20 text-blue-400' :
-                                      change.reason === 'timeline_automatic' ? 'bg-purple-500/20 text-purple-400' :
-                                      'bg-yellow-500/20 text-yellow-400'
-                                    }`}>
-                                      {change.reason === 'initial_creation' ? 'Created' : 
-                                       change.reason === 'timeline_automatic' ? 'Auto (Timeline)' : 'Manual Edit'}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-300">{change.spotsBookedAtPrevPrice}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        {(() => {
+                          const history = eventDetails.priceChangeHistory;
+                          const totalSpots = eventDetails.attendees?.length || 0;
+                          
+                          // Build periods from price change entries
+                          const periods = [];
+                          
+                          // First period: from creation to first change
+                          if (history.length > 0) {
+                            periods.push({
+                              price: history[0].previousPrice,
+                              startLabel: 'Event created',
+                              endLabel: new Date(history[0].changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+                              spotsBooked: history[0].spotsBookedAtPrevPrice || 0,
+                              isActive: false,
+                              reason: history[0].reason === 'initial_creation' ? 'initial_creation' : 'manual_edit',
+                            });
+                          }
+                          
+                          for (let i = 0; i < history.length; i++) {
+                            const startTime = new Date(history[i].changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                            const endTime = i < history.length - 1 
+                              ? new Date(history[i + 1].changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
+                              : null;
+                            const spotsAtEnd = i < history.length - 1 
+                              ? (history[i + 1].spotsBookedAtPrevPrice || 0) 
+                              : totalSpots;
+                            const spotsAtStart = history[i].spotsBookedAtPrevPrice || 0;
+                            
+                            periods.push({
+                              price: history[i].newPrice,
+                              startLabel: startTime,
+                              endLabel: endTime,
+                              spotsBooked: spotsAtEnd - spotsAtStart,
+                              isActive: !endTime,
+                              reason: history[i].reason,
+                            });
+                          }
+                          
+                          // Filter out ₹0/0-spot noise periods
+                          const displayPeriods = periods.filter(p => !(p.price === 0 && p.spotsBooked === 0 && !p.isActive));
+                          
+                          return (
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-700">
+                                <thead className="bg-zinc-800">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Active Period</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Spots Sold</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Revenue</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-700">
+                                  {displayPeriods.map((period, index) => (
+                                    <tr key={index} className={`hover:bg-zinc-800 ${period.isActive ? 'bg-green-900/10' : ''}`}>
+                                      <td className={`px-4 py-3 text-sm font-semibold ${period.isActive ? 'text-green-400' : 'text-white'}`}>
+                                        ₹{period.price}
+                                      </td>
+                                      <td className="px-4 py-3 text-xs text-gray-400">
+                                        <div>{period.startLabel}</div>
+                                        <div>→ {period.endLabel || 'Now'}</div>
+                                      </td>
+                                      <td className={`px-4 py-3 text-sm text-center ${period.isActive ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
+                                        {period.spotsBooked}
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-right text-white">
+                                        ₹{(period.price * period.spotsBooked).toLocaleString('en-IN')}
+                                      </td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                          period.isActive ? 'bg-green-500/20 text-green-400' :
+                                          'bg-gray-600/20 text-gray-400'
+                                        }`}>
+                                          {period.isActive ? 'Active' : 'Ended'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -3316,42 +3459,88 @@ const AdminDashboard = () => {
                                   priceMap[perSpot].cfCharge += att.cashfreeServiceCharge || 0;
                                   priceMap[perSpot].cfTax += att.cashfreeServiceTax || 0;
                                 });
-                                return Object.entries(priceMap)
-                                  .sort(([a], [b]) => Number(a) - Number(b))
-                                  .map(([price, data]) => {
-                                    const ticketRevenue = data.totalBase;
-                                    const totalAmtPaid = data.totalPaid;
-                                    const ioFees = totalAmtPaid - ticketRevenue;
-                                    const cfCharge = data.cfCharge > 0 ? data.cfCharge : totalAmtPaid * 0.016;
-                                    const cfTax = data.cfTax > 0 ? data.cfTax : cfCharge * 0.18;
-                                    const cfTotal = cfCharge + cfTax;
-                                    const proceeds = totalAmtPaid - cfTotal;
-                                    const ioRevenueInclGST = proceeds - ticketRevenue;
-                                    const ioRevenueNet = ioRevenueInclGST / 1.18;
-                                    const pct = ticketRevenue > 0 ? (ioRevenueNet / ticketRevenue) * 100 : 0;
-                                    return (
-                                      <tr key={price} className="hover:bg-zinc-800">
-                                        <td className="px-3 py-3 text-white font-medium">₹{Number(price).toLocaleString('en-IN')}</td>
-                                        <td className="px-3 py-3 text-right text-gray-300">{data.spots}</td>
-                                        <td className="px-3 py-3 text-right text-white">₹{ticketRevenue.toFixed(2)}</td>
-                                        <td className="px-3 py-3 text-right text-white">₹{totalAmtPaid.toFixed(2)}</td>
-                                        <td className="px-3 py-3 text-right text-gray-300">₹{ioFees.toFixed(2)}</td>
+                                const sorted = Object.entries(priceMap).sort(([a], [b]) => Number(a) - Number(b));
+                                
+                                // Compute rows data for both rendering and totals
+                                const rows = sorted.map(([price, data]) => {
+                                  const ticketRevenue = data.totalBase;
+                                  const totalAmtPaid = data.totalPaid;
+                                  const ioFees = totalAmtPaid - ticketRevenue;
+                                  const cfCharge = data.cfCharge > 0 ? data.cfCharge : totalAmtPaid * 0.016;
+                                  const cfTax = data.cfTax > 0 ? data.cfTax : cfCharge * 0.18;
+                                  const cfTotal = cfCharge + cfTax;
+                                  const proceeds = totalAmtPaid - cfTotal;
+                                  const ioRevenueInclGST = proceeds - ticketRevenue;
+                                  const ioRevenueNet = ioRevenueInclGST / 1.18;
+                                  const pct = ticketRevenue > 0 ? (ioRevenueNet / ticketRevenue) * 100 : 0;
+                                  return { price: Number(price), spots: data.spots, ticketRevenue, totalAmtPaid, ioFees, cfCharge, cfTax, cfTotal, proceeds, ioRevenueInclGST, ioRevenueNet, pct };
+                                });
+                                
+                                // Totals for weighted average row
+                                const totSpots = rows.reduce((s, r) => s + r.spots, 0);
+                                const totTicketRev = rows.reduce((s, r) => s + r.ticketRevenue, 0);
+                                const totAmtPaid = rows.reduce((s, r) => s + r.totalAmtPaid, 0);
+                                const totIoFees = rows.reduce((s, r) => s + r.ioFees, 0);
+                                const totCfCharge = rows.reduce((s, r) => s + r.cfCharge, 0);
+                                const totCfTax = rows.reduce((s, r) => s + r.cfTax, 0);
+                                const totCfTotal = rows.reduce((s, r) => s + r.cfTotal, 0);
+                                const totProceeds = rows.reduce((s, r) => s + r.proceeds, 0);
+                                const totIoInclGST = rows.reduce((s, r) => s + r.ioRevenueInclGST, 0);
+                                const totIoNet = rows.reduce((s, r) => s + r.ioRevenueNet, 0);
+                                const wAvgPrice = totSpots > 0 ? totTicketRev / totSpots : 0;
+                                const wAvgPct = totTicketRev > 0 ? (totIoNet / totTicketRev) * 100 : 0;
+                                
+                                return (
+                                  <>
+                                    {rows.map((r) => (
+                                      <tr key={r.price} className="hover:bg-zinc-800">
+                                        <td className="px-3 py-3 text-white font-medium">₹{r.price.toLocaleString('en-IN')}</td>
+                                        <td className="px-3 py-3 text-right text-gray-300">{r.spots}</td>
+                                        <td className="px-3 py-3 text-right text-white">₹{r.ticketRevenue.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-white">₹{r.totalAmtPaid.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-gray-300">₹{r.ioFees.toFixed(2)}</td>
                                         <td className="px-3 py-3 text-right text-gray-300">
-                                          <div>₹{cfCharge.toFixed(2)}</div>
-                                          <div className="text-[9px] text-gray-500">(1.6% of ₹{totalAmtPaid.toFixed(2)})</div>
+                                          <div>₹{r.cfCharge.toFixed(2)}</div>
+                                          <div className="text-[9px] text-gray-500">(1.6% of ₹{r.totalAmtPaid.toFixed(2)})</div>
                                         </td>
                                         <td className="px-3 py-3 text-right text-gray-300">
-                                          <div>₹{cfTax.toFixed(2)}</div>
-                                          <div className="text-[9px] text-gray-500">(18% of ₹{cfCharge.toFixed(2)})</div>
+                                          <div>₹{r.cfTax.toFixed(2)}</div>
+                                          <div className="text-[9px] text-gray-500">(18% of ₹{r.cfCharge.toFixed(2)})</div>
                                         </td>
-                                        <td className="px-3 py-3 text-right text-red-400">₹{cfTotal.toFixed(2)}</td>
-                                        <td className="px-3 py-3 text-right text-white">₹{proceeds.toFixed(2)}</td>
-                                        <td className="px-3 py-3 text-right text-green-400">₹{ioRevenueInclGST.toFixed(2)}</td>
-                                        <td className="px-3 py-3 text-right text-green-400 font-medium">₹{ioRevenueNet.toFixed(2)}</td>
-                                        <td className="px-3 py-3 text-right text-purple-400 font-semibold">{pct.toFixed(1)}%</td>
+                                        <td className="px-3 py-3 text-right text-red-400">₹{r.cfTotal.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-white">₹{r.proceeds.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-green-400">₹{r.ioRevenueInclGST.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-green-400 font-medium">₹{r.ioRevenueNet.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-purple-400 font-semibold">{r.pct.toFixed(1)}%</td>
                                       </tr>
-                                    );
-                                  });
+                                    ))}
+                                    {rows.length > 1 && (
+                                      <tr className="bg-zinc-800/80 border-t-2 border-gray-600 font-semibold">
+                                        <td className="px-3 py-3 text-yellow-400">
+                                          <div>Weighted Avg</div>
+                                          <div className="text-[10px] font-normal text-gray-500">₹{wAvgPrice.toFixed(2)}</div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">{totSpots}</td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">₹{totTicketRev.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">₹{totAmtPaid.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">₹{totIoFees.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">
+                                          <div>₹{totCfCharge.toFixed(2)}</div>
+                                          <div className="text-[9px] font-normal text-gray-500">(1.6% of ₹{totAmtPaid.toFixed(2)})</div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">
+                                          <div>₹{totCfTax.toFixed(2)}</div>
+                                          <div className="text-[9px] font-normal text-gray-500">(18% of ₹{totCfCharge.toFixed(2)})</div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right text-red-400">₹{totCfTotal.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-yellow-400">₹{totProceeds.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-green-400">₹{totIoInclGST.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-green-400">₹{totIoNet.toFixed(2)}</td>
+                                        <td className="px-3 py-3 text-right text-purple-400">{wAvgPct.toFixed(1)}%</td>
+                                      </tr>
+                                    )}
+                                  </>
+                                );
                               })()}
                             </tbody>
                           </table>
@@ -3363,7 +3552,46 @@ const AdminDashboard = () => {
 
                 {/* Attendees List */}
                 <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6">
-                  <h3 className="text-lg font-bold text-white mb-4">Attendees ({eventDetails.attendees.length})</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-white">Attendees ({eventDetails.attendees.length})</h3>
+                    {eventDetails.attendees.some(a => a.reconciliationStatus === 'pending' || a.reconciliationStatus === 'manual_review') && (
+                      <button
+                        onClick={async () => {
+                          setIsReconciling(true);
+                          try {
+                            const res = await api.get('/cron/reconcile');
+                            if (res.data.success) {
+                              alert('Reconciliation completed. Refreshing data...');
+                              // Re-fetch event details
+                              const eventRes = await api.get(`/admin/events/${eventDetails._id || eventDetails.id}/complete-details`);
+                              setEventDetails(eventRes.data);
+                            }
+                          } catch (err) {
+                            console.error('Reconciliation error:', err);
+                            alert('Reconciliation failed: ' + (err.response?.data?.error || err.message));
+                          } finally {
+                            setIsReconciling(false);
+                          }
+                        }}
+                        disabled={isReconciling}
+                        className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5"
+                      >
+                        {isReconciling ? (
+                          <>
+                            <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
+                            Reconciling...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Run Reconciliation Now
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   {/* Top horizontal scrollbar */}
                   <div
                     ref={attendeesTopScrollRef}

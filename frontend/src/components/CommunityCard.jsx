@@ -41,19 +41,33 @@ const CommunityCard = ({ community, onFavorite, isLocked = false, defaultImageIn
   const CardContent = () => (
     <>
       {/* Image */}
-      <div className={`relative h-48 overflow-hidden bg-gray-700 flex-shrink-0 ${isLocked ? 'filter blur-sm' : ''}`}>
+      <div className={`relative h-48 overflow-hidden bg-gray-900 flex-shrink-0 ${isLocked ? 'filter blur-sm' : ''}`}>
         {(community.coverImage || (community.images && community.images.length > 0)) ? (
-          <img
-            src={community.coverImage || community.images[0]}
-            alt={community.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          />
+          <>
+            <img
+              src={community.coverImage || community.images[0]}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+            />
+            <img
+              src={community.coverImage || community.images[0]}
+              alt={community.name}
+              className="relative w-full h-full object-contain scale-[1.35] group-hover:scale-[1.4] transition-transform duration-300"
+            />
+          </>
         ) : (
-          <img
-            src={DEFAULT_COMMUNITY_IMAGES[defaultImageIndex % DEFAULT_COMMUNITY_IMAGES.length]}
-            alt={community.name || "Community poster"}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          />
+          <>
+            <img
+              src={DEFAULT_COMMUNITY_IMAGES[defaultImageIndex % DEFAULT_COMMUNITY_IMAGES.length]}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+            />
+            <img
+              src={DEFAULT_COMMUNITY_IMAGES[defaultImageIndex % DEFAULT_COMMUNITY_IMAGES.length]}
+              alt={community.name || "Community poster"}
+              className="relative w-full h-full object-contain scale-[1.35] group-hover:scale-[1.4] transition-transform duration-300"
+            />
+          </>
         )}
         
         {/* Lock Overlay */}

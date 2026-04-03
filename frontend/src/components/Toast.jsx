@@ -49,14 +49,14 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
     <div className={`fixed top-4 sm:top-20 right-2 left-2 sm:right-4 sm:left-auto sm:min-w-[320px] sm:max-w-md z-50 animate-slideInRight`}>
       <div className={`${config.bgColor} ${config.borderColor} border rounded-lg shadow-xl sm:shadow-lg p-2.5 sm:p-4`}>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${config.iconColor} flex-shrink-0`} />
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${config.iconColor} flex-shrink-0 ${type === 'error' ? 'hidden sm:block' : ''}`} />
           <div className="flex-1 min-w-0">
             <p className={`text-xs sm:text-sm font-medium ${config.textColor}`}>{message}</p>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className={`${config.textColor} hover:opacity-70 transition-opacity flex-shrink-0`}
+              className={`${config.textColor} flex-shrink-0 p-1 rounded-full bg-white/10 hover:bg-white/25 active:bg-white/30 transition-all`}
               aria-label="Close notification"
             >
               <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

@@ -1064,7 +1064,6 @@ const CommunityOrganizerDashboard = () => {
     switch (platform) {
       case 'whatsapp': {
         let waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
-        if (mapsUrl) waText += `\n📌 ${mapsUrl}`;
         waText += `\n\nBook now 👇\n${eventUrl}`;
         shareUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`;
         break;

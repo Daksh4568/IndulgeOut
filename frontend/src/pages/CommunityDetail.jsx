@@ -376,15 +376,22 @@ const CommunityDetail = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             {/* Community Image */}
-            <div className="relative w-full lg:w-[200px] h-[200px] rounded-xl overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
+            <div className="relative w-full lg:w-[200px] h-[200px] rounded-xl overflow-hidden flex-shrink-0 bg-gray-900">
               {community.coverImage ? (
-                <img
-                  src={community.coverImage}
-                  alt={community.name}
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <img
+                    src={community.coverImage}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+                  />
+                  <img
+                    src={community.coverImage}
+                    alt={community.name}
+                    className="relative w-full h-full object-contain"
+                  />
+                </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl">
+                <div className="w-full h-full flex items-center justify-center text-6xl" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
                   🌟
                 </div>
               )}
@@ -573,75 +580,27 @@ const CommunityDetail = () => {
                 </div>
               </div>
 
-              {/* Highlights Carousel */}
+              {/* Highlights Grid */}
               {community?.images && community.images.length > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
-                      Highlights
-                    </h2>
-                    <div className="flex items-center gap-3">
-                      {community.images.length > 1 && (
-                        <>
-                          <button 
-                            onClick={prevImage}
-                            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
-                            aria-label="Previous image"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </button>
-                          <div className="text-sm text-gray-400" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                            {currentImageIndex + 1} / {community.images.length}
-                          </div>
-                          <button 
-                            onClick={nextImage}
-                            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
-                            aria-label="Next image"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="relative group">
-                    {/* Main carousel image */}
-                    <div 
-                      className="relative w-full aspect-[16/9] md:aspect-[21/9] bg-gray-800 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
-                      onTouchStart={handleTouchStart}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      <img 
-                        src={community.images[currentImageIndex]}
-                        alt={`Community Highlight ${currentImageIndex + 1}`}
-                        className="w-full h-full object-cover transition-opacity duration-300 pointer-events-none select-none"
-                        draggable="false"
-                      />
-                    </div>
-                    
-                    {/* Dot indicators - hidden on mobile */}
-                    {community.images.length > 1 && (
-                      <div className="hidden md:flex justify-center gap-2 mt-4">
-                        {community.images.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => goToImage(index)}
-                            className={`transition-all duration-300 rounded-full ${
-                              index === currentImageIndex 
-                                ? 'w-8 h-2 bg-purple-500' 
-                                : 'w-2 h-2 bg-gray-600 hover:bg-gray-500'
-                            }`}
-                            aria-label={`Go to image ${index + 1}`}
-                          />
-                        ))}
+                  <h2 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Highlights
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {community.images.map((image, index) => (
+                      <div
+                        key={index}
+                        className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group"
+                        onClick={() => goToImage(index)}
+                      >
+                        <img
+                          src={image}
+                          alt={`Community Highlight ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}

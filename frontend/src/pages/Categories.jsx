@@ -232,11 +232,17 @@ const Categories = () => {
               {/* Card Content */}
               <div className="relative z-10 p-6 flex flex-col h-full">
                 {/* Top Section - Category Image */}
-                <div className="aspect-video mb-4 rounded-lg overflow-hidden relative bg-gray-800">
+                <div className="aspect-video mb-4 rounded-lg overflow-hidden relative bg-gray-900">
+                  <img 
+                    src={`/images/${category.slug}.jpg`}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover blur-lg scale-110 opacity-50"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
                   <img 
                     src={`/images/${category.slug}.jpg`}
                     alt={category.name}
-                    className="w-full h-full object-cover"
+                    className="relative w-full h-full object-contain"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.style.display = 'none';

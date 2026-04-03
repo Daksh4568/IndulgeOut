@@ -32,6 +32,7 @@ const ProfileNew = () => {
   const [supportModalOpen, setSupportModalOpen] = useState(false)
   const [cropperFile, setCropperFile] = useState(null)
   const [cropperMode, setCropperMode] = useState(null) // 'profile' or 'photo'
+  const [completionModalOpen, setCompletionModalOpen] = useState(false)
   
   // Section-based editing
   const [editingSection, setEditingSection] = useState(null)
@@ -660,6 +661,7 @@ const ProfileNew = () => {
       fields.push({ name: 'City', value: !!(profileData.location?.city || profileData.city) })
       fields.push({ name: 'Gender', value: !!profileData.gender })
       fields.push({ name: 'Interests', value: profileData.interests?.length > 0 })
+      fields.push({ name: 'Instagram', value: !!profileData.socialLinks?.instagram })
     }
     
     const completed = fields.filter(f => f.value).length
@@ -667,7 +669,7 @@ const ProfileNew = () => {
     const percentage = Math.round((completed / total) * 100)
     const missingFields = fields.filter(f => !f.value).map(f => f.name)
     
-    return { percentage, missingFields, completed, total }
+    return { percentage, missingFields, completed, total, fields }
   }
 
   // Wrapper for backward compatibility
@@ -1243,7 +1245,11 @@ const ProfileNew = () => {
               {(() => {
                 const { percentage, completed, total, missingFields } = getProfileCompletionDetails();
                 return (
-                  <div className="bg-[#171717] rounded-lg p-4 border border-gray-800 transition-card">
+                  <div
+                    className="bg-[#171717] rounded-lg p-4 border border-gray-800 transition-card cursor-pointer hover:border-gray-600"
+                    onClick={() => setCompletionModalOpen(true)}
+                    title="Click to see all profile fields"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {percentage === 100 ? (
@@ -2068,7 +2074,11 @@ const ProfileNew = () => {
               {(() => {
                 const { percentage, completed, total, missingFields } = getProfileCompletionDetails();
                 return (
-                  <div className="bg-[#171717] rounded-lg p-4 border border-gray-800 transition-card">
+                  <div
+                    className="bg-[#171717] rounded-lg p-4 border border-gray-800 transition-card cursor-pointer hover:border-gray-600"
+                    onClick={() => setCompletionModalOpen(true)}
+                    title="Click to see all profile fields"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {percentage === 100 ? (
@@ -2480,6 +2490,78 @@ const ProfileNew = () => {
           'Regular User'
         }
       />
+
+      {/* Profile Completion Modal */}
+      {completionModalOpen && (() => {
+        const { percentage, completed, total, fields } = getProfileCompletionDetails();
+        const completedFields = fields.filter(f => f.value);
+        const missingFields = fields.filter(f => !f.value);
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setCompletionModalOpen(false)}>
+            <div className="bg-zinc-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="p-5 border-b border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white">Profile Completion</h3>
+                  <button onClick={() => setCompletionModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm text-gray-400">{completed} of {total} fields completed</span>
+                    <span className={`text-sm font-bold ${percentage === 100 ? 'text-green-400' : 'text-[#7878E9]'}`}>{percentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-800 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${percentage === 100 ? 'bg-green-500' : ''}`}
+                      style={{ width: `${percentage}%`, ...(percentage < 100 ? { background: 'linear-gradient(90deg, #7878E9, #3D3DD4)' } : {}) }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-auto flex-1 p-5 space-y-4">
+                {missingFields.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">Missing Fields ({missingFields.length})</h4>
+                    <div className="space-y-1.5">
+                      {missingFields.map((field) => (
+                        <div key={field.name} className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-red-900/10 border border-red-900/20">
+                          <div className="h-4 w-4 rounded-full border-2 border-red-500/40 flex-shrink-0" />
+                          <span className="text-sm text-gray-300">{field.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {completedFields.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">Completed ({completedFields.length})</h4>
+                    <div className="space-y-1.5">
+                      {completedFields.map((field) => (
+                        <div key={field.name} className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-green-900/10 border border-green-900/20">
+                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          <span className="text-sm text-gray-400">{field.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {percentage < 100 && (
+                <div className="p-4 border-t border-gray-700">
+                  <button
+                    onClick={() => { setCompletionModalOpen(false); handleEditSection('profile'); }}
+                    className="w-full py-2.5 rounded-lg font-semibold text-sm text-white transition-colors"
+                    style={{ background: 'linear-gradient(90deg, #7878E9, #3D3DD4)' }}
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Image Cropper Modal */}
       {cropperFile && (

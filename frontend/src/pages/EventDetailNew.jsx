@@ -182,7 +182,6 @@ const EventDetail = () => {
     switch (platform) {
       case 'whatsapp': {
         let waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
-        if (mapsUrl) waText += `\n📌 ${mapsUrl}`;
         waText += `\n\nBook now 👇\n${ogShareUrl}`;
         const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
         window.open(waUrl, '_blank');
