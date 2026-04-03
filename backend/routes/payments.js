@@ -487,12 +487,15 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       try {
         const Ticket = require('../models/Ticket');
         const calculatedTotalPaid = totalAmount || (basePrice + (gstAndOtherCharges || 0) + (platformFees || 0));
+        const paymentMethod = typeof payment.payment_method === 'object' && payment.payment_method
+          ? Object.keys(payment.payment_method)[0] || 'unknown'
+          : (payment.payment_method || 'unknown');
         await Ticket.findByIdAndUpdate(ticket._id, {
           $set: {
             'metadata.totalPaid': calculatedTotalPaid,
             'gatewayResponse.paymentId': payment.cf_payment_id?.toString(),
             'gatewayResponse.paymentStatus': payment.payment_status,
-            'gatewayResponse.paymentMethod': payment.payment_method || 'unknown',
+            'gatewayResponse.paymentMethod': paymentMethod,
             settlementStatus: 'captured',
             reconciliationStatus: 'verified',
             lastReconciliationDate: new Date()
@@ -940,11 +943,14 @@ router.post('/webhook', async (req, res) => {
         // Update ticket with gateway response and reconciliation status
         try {
           const Ticket = require('../models/Ticket');
+          const webhookPaymentMethod = typeof payload.data?.payment?.payment_method === 'object' && payload.data?.payment?.payment_method
+            ? Object.keys(payload.data.payment.payment_method)[0] || 'unknown'
+            : (payload.data?.payment?.payment_method || 'unknown');
           await Ticket.findByIdAndUpdate(ticket._id, {
             $set: {
               'gatewayResponse.paymentId': cfPaymentId?.toString(),
               'gatewayResponse.paymentStatus': 'SUCCESS',
-              'gatewayResponse.paymentMethod': payload.data?.payment?.payment_method || 'unknown',
+              'gatewayResponse.paymentMethod': webhookPaymentMethod,
               settlementStatus: 'captured',
               reconciliationStatus: 'verified',
               lastReconciliationDate: new Date()

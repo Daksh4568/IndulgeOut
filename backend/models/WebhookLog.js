@@ -12,7 +12,7 @@ const WebhookLogSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['PAYMENT_SUCCESS_WEBHOOK', 'PAYMENT_FAILED_WEBHOOK', 'UNKNOWN']
+    enum: ['PAYMENT_SUCCESS_WEBHOOK', 'PAYMENT_FAILED_WEBHOOK', 'PAYMENT_USER_DROPPED_WEBHOOK', 'UNKNOWN']
   },
   orderId: {
     type: String,
@@ -26,7 +26,7 @@ const WebhookLogSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['success', 'failed', 'duplicate'],
+    enum: ['success', 'failed', 'duplicate', 'dropped'],
     index: true
   },
   processingTime: Number, // in milliseconds
