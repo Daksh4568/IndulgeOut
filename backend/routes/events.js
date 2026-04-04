@@ -1018,8 +1018,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     // Calculate total slots from ACTIVE tickets only (exclude cancelled)
     // This represents the actual number of attendees/spots booked
     const totalSlots = tickets
-      .filter(t => t.status !== 'cancelled')
+      .filter(t => t.status !== 'cancelled' && t.status !== 'refunded')
       .reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
+    const refunded = tickets.filter(t => t.status === 'refunded' || (t.refund && t.refund.status && t.refund.status !== 'none')).reduce((sum, t) => sum + (t.quantity || 1), 0);
     
     // Use totalSlots as the source of truth for analytics
     const totalRegistered = totalSlots;
@@ -1055,7 +1056,8 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           questionnaireResponses: questionnaireResponses,
           couponUsed: couponUsed, // Include coupon data if user applied one
           price: ticket.price, // Include price object
-          metadata: ticket.metadata // Include full metadata (basePrice, totalPaid, etc.)
+          metadata: ticket.metadata, // Include full metadata (basePrice, totalPaid, etc.)
+          refund: ticket.refund || null
         };
       });
     
@@ -1064,7 +1066,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     // Payment gateway (3%) and GST (2.6%) are added on top by frontend, not deducted here
     // Subtract coupon discounts from total revenue
     const totalRevenueBeforeDiscount = tickets
-      .filter(t => t.status !== 'cancelled')
+      .filter(t => t.status !== 'cancelled' && t.status !== 'refunded')
       .reduce((sum, ticket) => {
         // Use basePrice from metadata (organizer's revenue - ticket price only)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
@@ -1094,7 +1096,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     
     // First, build revenue map with base prices
     tickets.forEach(ticket => {
-      if (ticket.status !== 'cancelled') {
+      if (ticket.status !== 'cancelled' && ticket.status !== 'refunded') {
         const ticketType = ticket.metadata?.ticketType || 'general';
         if (!revenueByType[ticketType]) {
           revenueByType[ticketType] = { type: ticketType, count: 0, revenue: 0 };
@@ -1281,11 +1283,12 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         revenueByTicketType: Object.values(revenueByType)
       },
       attendance: {
-        ticketsSold: tickets.filter(t => t.status !== 'cancelled').length,
+        ticketsSold: tickets.filter(t => t.status !== 'cancelled' && t.status !== 'refunded').length,
         totalAttendees: totalRegistered,
         actualCheckIns: checkedIn,
         showUpRate: parseFloat(showUpRate),
-        noShows: noShows
+        noShows: noShows,
+        refunded: refunded
       },
       demandTiming,
       audienceQuality,

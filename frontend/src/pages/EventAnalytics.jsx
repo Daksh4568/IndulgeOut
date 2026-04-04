@@ -33,6 +33,7 @@ import {
   Tag,
   Ticket,
   CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 
 const EventAnalytics = () => {
@@ -87,6 +88,18 @@ const EventAnalytics = () => {
     }
   };
 
+  const handleRefundRespond = async (ticketId, action) => {
+    const reason = action === 'reject' ? prompt('Reason for rejection (optional):') : undefined;
+    if (action === 'reject' && reason === null) return; // User cancelled prompt
+    try {
+      await api.post(`/organizer/refund/${ticketId}/respond`, { action, reason: reason || '' });
+      fetchAnalytics(); // Refresh data
+    } catch (error) {
+      console.error('Error responding to refund:', error);
+      alert(error.response?.data?.message || 'Failed to process refund response');
+    }
+  };
+
   const fetchQuestionnaireSubmissions = async () => {
     try {
       setLoadingSubmissions(true);
@@ -107,7 +120,13 @@ const EventAnalytics = () => {
     let filtered = analytics.attendees;
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter((a) => a.status === statusFilter);
+      if (statusFilter === 'refund_requested') {
+        filtered = filtered.filter((a) => a.refund?.status === 'requested');
+      } else if (statusFilter === 'refunded') {
+        filtered = filtered.filter((a) => a.status === 'refunded' || ['approved', 'processing', 'processed'].includes(a.refund?.status));
+      } else {
+        filtered = filtered.filter((a) => a.status === statusFilter);
+      }
     }
 
     if (searchQuery.trim()) {
@@ -200,7 +219,25 @@ const EventAnalytics = () => {
     });
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, refund) => {
+    // Check refund status first
+    if (refund && refund.status && refund.status !== 'none') {
+      switch (refund.status) {
+        case 'requested':
+          return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+        case 'approved':
+          return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+        case 'processing':
+          return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+        case 'processed':
+          return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+        case 'rejected':
+          return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      }
+    }
+    if (status === 'refunded') {
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+    }
     switch (status) {
       case "checked_in":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
@@ -211,6 +248,20 @@ const EventAnalytics = () => {
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
     }
+  };
+
+  const getStatusLabel = (status, refund) => {
+    if (refund && refund.status && refund.status !== 'none') {
+      switch (refund.status) {
+        case 'requested': return 'Refund Requested';
+        case 'approved': return 'Refund Approved';
+        case 'processing': return 'Refund Processing';
+        case 'processed': return 'Refunded';
+        case 'rejected': return 'Refund Rejected';
+      }
+    }
+    if (status === 'refunded') return 'Refunded';
+    return status === 'checked_in' ? 'Checked In' : status === 'active' ? 'Not Checked In' : status;
   };
 
   const MetricCard = ({
@@ -501,6 +552,15 @@ const EventAnalytics = () => {
               subValue={`${(analytics.attendance?.totalAttendees || 0) - (analytics.attendance?.noShows || 0)} attended`}
               iconColor="text-orange-500"
             />
+            {(analytics.attendance?.refunded || 0) > 0 && (
+              <MetricCard
+                icon={RotateCcw}
+                label="Refunded"
+                value={analytics.attendance.refunded}
+                subValue="tickets refunded"
+                iconColor="text-red-500"
+              />
+            )}
           </div>
         </div>
 
@@ -1162,6 +1222,8 @@ const EventAnalytics = () => {
                 <option value="all">All Status</option>
                 <option value="checked_in">Checked In</option>
                 <option value="active">Not Checked In</option>
+                <option value="refund_requested">Refund Requested</option>
+                <option value="refunded">Refunded</option>
               </select>
 
               <select
@@ -1383,12 +1445,26 @@ const EventAnalytics = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(attendee.status)}`}
+                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(attendee.status, attendee.refund)}`}
                         >
-                          {attendee.status === "checked_in"
-                            ? "✅ Checked In"
-                            : "⏳ Not Checked In"}
+                          {getStatusLabel(attendee.status, attendee.refund)}
                         </span>
+                        {attendee.refund?.status === 'requested' && (
+                          <div className="flex gap-1 mt-2">
+                            <button
+                              onClick={() => handleRefundRespond(attendee.ticketId, 'approve')}
+                              className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRefundRespond(attendee.ticketId, 'reject')}
+                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                         {attendee.checkInTime ? (

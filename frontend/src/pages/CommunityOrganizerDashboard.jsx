@@ -5,7 +5,7 @@ import {
   Eye, Target, Clock, ChevronRight, Plus, Edit, Share2,
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   ArrowUpRight, ArrowDownRight, Filter, Download, Bell,
-  Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText, Layout
+  Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText, Layout, UserPlus, Check, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -170,10 +170,22 @@ const CommunityOrganizerDashboard = () => {
     const getActionIcon = (type) => {
       switch (type) {
         case 'collaboration_request': return <Users className="h-5 w-5" />;
+        case 'cohost_request': return <UserPlus className="h-5 w-5" />;
         case 'draft_event': return <AlertCircle className="h-5 w-5" />;
         case 'missing_kyc': return <AlertTriangle className="h-5 w-5" />;
         case 'low_fill': return <TrendingUp className="h-5 w-5" />;
         default: return <AlertCircle className="h-5 w-5" />;
+      }
+    };
+
+    const handleCoHostRespond = async (eventId, action) => {
+      try {
+        await api.post(`/organizer/co-host-request/${eventId}/respond`, { action });
+        toast?.success(action === 'accept' ? 'Co-host invitation accepted!' : 'Co-host invitation declined');
+        fetchDashboardData();
+      } catch (error) {
+        console.error('Error responding to co-host request:', error);
+        toast?.error('Failed to respond to co-host request');
       }
     };
 
@@ -225,8 +237,27 @@ const CommunityOrganizerDashboard = () => {
             )}
             {/* Spacer to push button to bottom */}
             <div className="flex-grow"></div>
-            {/* Hide button for low_fill (Promote Event) actions */}
-            {item.type !== 'low_fill' && (
+            {/* Co-host request: Accept/Decline buttons */}
+            {item.type === 'cohost_request' ? (
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => handleCoHostRespond(item.eventId, 'accept')}
+                  className="flex-1 flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-medium text-sm bg-green-600 hover:bg-green-700 text-white transition-colors"
+                >
+                  <Check className="h-4 w-4" />
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleCoHostRespond(item.eventId, 'decline')}
+                  className="flex-1 flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-medium text-sm bg-red-600 hover:bg-red-700 text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                  Decline
+                </button>
+              </div>
+            ) : (
+            /* Hide button for low_fill (Promote Event) actions */
+            item.type !== 'low_fill' && (
               <button
                 onClick={() => handleActionClick(item)}
                 className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors mt-4 ${
@@ -239,6 +270,7 @@ const CommunityOrganizerDashboard = () => {
               >
                 {item.ctaText || 'Fix Now'}
               </button>
+            )
             )}
           </div>
         ))}
@@ -442,10 +474,15 @@ const CommunityOrganizerDashboard = () => {
                             {event.title}
                           </h3>
                           <div className="flex items-center gap-2 ml-2">
+                            {event.isCoHost && (
+                              <span className="bg-[#7878E9]/30 text-[#7878E9] px-2 py-1 rounded text-xs font-medium flex-shrink-0">
+                                Co-Host
+                              </span>
+                            )}
                             <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
                               {statusBadge.text}
                             </span>
-                            {event.status !== 'completed' && (
+                            {event.status !== 'completed' && !event.isCoHost && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -585,10 +622,15 @@ const CommunityOrganizerDashboard = () => {
                             {event.title}
                           </h3>
                           <div className="flex items-center gap-2 ml-2">
+                            {event.isCoHost && (
+                              <span className="bg-[#7878E9]/30 text-[#7878E9] px-2 py-1 rounded text-xs font-medium flex-shrink-0">
+                                Co-Host
+                              </span>
+                            )}
                             <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
                               {statusBadge.text}
                             </span>
-                            {event.status !== 'completed' && (
+                            {event.status !== 'completed' && !event.isCoHost && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -745,10 +787,15 @@ const CommunityOrganizerDashboard = () => {
                           {event.title}
                         </h3>
                         <div className="flex items-center gap-2 ml-2">
+                          {event.isCoHost && (
+                            <span className="bg-[#7878E9]/30 text-[#7878E9] px-2 py-1 rounded text-xs font-medium flex-shrink-0">
+                              Co-Host
+                            </span>
+                          )}
                           <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
                             {statusBadge.text}
                           </span>
-                          {event.status !== 'completed' && (
+                          {event.status !== 'completed' && !event.isCoHost && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -889,10 +936,15 @@ const CommunityOrganizerDashboard = () => {
                             {event.title}
                           </h3>
                           <div className="flex items-center gap-2 ml-2">
+                            {event.isCoHost && (
+                              <span className="bg-[#7878E9]/30 text-[#7878E9] px-2 py-1 rounded text-xs font-medium flex-shrink-0">
+                                Co-Host
+                              </span>
+                            )}
                             <span className={`${statusBadge.bg} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
                               {statusBadge.text}
                             </span>
-                            {event.status !== 'completed' && (
+                            {event.status !== 'completed' && !event.isCoHost && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

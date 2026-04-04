@@ -2727,8 +2727,15 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       cashfreeServiceCharge: ticket.cashfreeServiceCharge || 0,
       cashfreeServiceTax: ticket.cashfreeServiceTax || 0,
       reconciliationStatus: ticket.reconciliationStatus,
-      lastReconciliationDate: ticket.lastReconciliationDate
+      lastReconciliationDate: ticket.lastReconciliationDate,
+      refund: ticket.refund || null
     }));
+
+    // Calculate total refund amount for this event
+    const totalRefundAmount = tickets
+      .filter(t => t.status === 'refunded' || (t.refund && ['approved', 'processing', 'processed'].includes(t.refund.status)))
+      .reduce((sum, t) => sum + (t.refund?.refundAmount || t.price?.amount || 0), 0);
+    const totalRefundedTickets = tickets.filter(t => t.status === 'refunded').length;
     
     const response = {
       event: {
@@ -2785,6 +2792,8 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
           serviceTax: parseFloat(totalCashfreeServiceTax.toFixed(2)),
           totalDeducted: parseFloat((totalCashfreeServiceCharge + totalCashfreeServiceTax).toFixed(2))
         },
+        totalRefundAmount,
+        totalRefundedTickets,
         settlementStats,
         reconciliationStats,
         paymentMethods,
@@ -3599,6 +3608,233 @@ router.post('/marketing/send', adminAuthMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error sending marketing messages:', error);
     res.status(500).json({ success: false, error: 'Failed to send marketing messages' });
+  }
+});
+
+// ==================== REFUND MANAGEMENT (Admin) ====================
+
+const Ticket = require('../models/Ticket');
+const Notification = require('../models/Notification');
+const axios = require('axios');
+
+// Cashfree config (same as payments.js)
+const CASHFREE_API_URL = process.env.CASHFREE_SECRET_KEY?.startsWith('cfsk_ma_prod_')
+  ? 'https://api.cashfree.com' : 'https://sandbox.cashfree.com';
+
+/**
+ * GET /api/admin/refunds
+ * List refund tickets by status filter
+ */
+router.get('/refunds', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { status } = req.query;
+    const filter = {};
+    if (status && status !== 'all') {
+      filter['refund.status'] = status;
+    } else {
+      filter['refund.status'] = { $in: ['requested', 'approved', 'processing', 'processed', 'rejected'] };
+    }
+
+    const tickets = await Ticket.find(filter)
+      .populate('user', 'name email phone')
+      .populate({
+        path: 'event',
+        select: 'title date startTime endTime host',
+        populate: { path: 'host', select: 'name communityProfile.communityName' }
+      })
+      .sort({ 'refund.requestedAt': -1 })
+      .lean();
+
+    // Calculate total refund amount per event
+    const refundTotalsByEvent = {};
+    tickets.forEach(t => {
+      const eid = t.event?._id?.toString();
+      if (eid) {
+        if (!refundTotalsByEvent[eid]) refundTotalsByEvent[eid] = 0;
+        const amt = t.refund?.refundAmount || t.price?.amount || t.metadata?.totalPaid || 0;
+        refundTotalsByEvent[eid] += amt;
+      }
+    });
+
+    const refunds = tickets.map(t => ({
+      ticketId: t._id,
+      ticketNumber: t.ticketNumber,
+      user: t.user,
+      event: t.event ? {
+        _id: t.event._id,
+        title: t.event.title,
+        date: t.event.date,
+        startTime: t.event.startTime,
+        endTime: t.event.endTime
+      } : null,
+      communityName: t.event?.host?.communityProfile?.communityName || t.event?.host?.name || 'N/A',
+      price: t.price,
+      metadata: {
+        orderId: t.metadata?.orderId,
+        basePrice: t.metadata?.basePrice,
+        totalPaid: t.metadata?.totalPaid,
+      },
+      refund: t.refund,
+      purchaseDate: t.purchaseDate,
+      eventTotalRefund: refundTotalsByEvent[t.event?._id?.toString()] || 0
+    }));
+
+    res.json({ success: true, data: refunds });
+  } catch (error) {
+    console.error('Error fetching refunds:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch refunds' });
+  }
+});
+
+/**
+ * POST /api/admin/refund/:ticketId/process
+ * Process a refund via Cashfree API
+ */
+router.post('/refund/:ticketId/process', requirePermission('manage_payouts'), async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const adminId = req.admin?._id || req.admin?.id;
+
+    const ticket = await Ticket.findById(ticketId).populate('event', 'title currentParticipants');
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+
+    if (!ticket.refund || ticket.refund.status !== 'approved') {
+      return res.status(400).json({ success: false, error: 'Only approved refund requests can be processed' });
+    }
+
+    const orderId = ticket.metadata?.orderId;
+    if (!orderId) {
+      return res.status(400).json({ success: false, error: 'No order ID found on ticket' });
+    }
+
+    const refundAmount = ticket.price?.amount || ticket.metadata?.totalPaid || 0;
+    if (refundAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid refund amount' });
+    }
+
+    const refundId = `REFUND_${Date.now()}_${ticketId}`;
+
+    // Call Cashfree Refund API
+    const cashfreeResponse = await axios.post(
+      `${CASHFREE_API_URL}/pg/orders/${orderId}/refunds`,
+      {
+        refund_id: refundId,
+        refund_amount: refundAmount,
+        refund_speed: 'STANDARD',
+        refund_note: `Refund for ticket ${ticket.ticketNumber} - ${ticket.event?.title || 'Event'}`
+      },
+      {
+        headers: {
+          'x-client-id': process.env.CASHFREE_APP_ID,
+          'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+          'x-api-version': '2023-08-01',
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    // Update ticket
+    ticket.refund.status = 'processing';
+    ticket.refund.processedAt = new Date();
+    ticket.refund.processedBy = adminId;
+    ticket.refund.cashfreeRefundId = refundId;
+    ticket.refund.refundAmount = refundAmount;
+    ticket.status = 'refunded';
+
+    // Decrement event participants
+    if (ticket.event?.currentParticipants > 0) {
+      await Event.findByIdAndUpdate(ticket.event._id, {
+        $inc: { currentParticipants: -(ticket.quantity || 1) }
+      });
+    }
+
+    await ticket.save();
+
+    // Notify user
+    await Notification.create({
+      recipient: ticket.user,
+      type: 'refund_processed',
+      category: 'status_update',
+      priority: 'high',
+      title: 'Refund Processed',
+      message: `Your refund of ₹${refundAmount} for "${ticket.event?.title}" is being processed. It will reflect in your account within 5-7 business days.`,
+      relatedEvent: ticket.event._id || ticket.event,
+      relatedTicket: ticket._id
+    });
+
+    res.json({
+      success: true,
+      message: 'Refund initiated successfully',
+      data: {
+        refundId,
+        refundAmount,
+        cashfreeStatus: cashfreeResponse.data?.refund_status || 'PENDING',
+        refundARN: cashfreeResponse.data?.refund_arn || null
+      }
+    });
+  } catch (error) {
+    console.error('Error processing refund:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process refund via Cashfree',
+      details: error.response?.data?.message || error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/refund/:ticketId/status
+ * Check refund status from Cashfree
+ */
+router.get('/refund/:ticketId/status', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const ticket = await Ticket.findById(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+
+    if (!ticket.refund?.cashfreeRefundId || !ticket.metadata?.orderId) {
+      return res.status(400).json({ success: false, error: 'No refund to check status for' });
+    }
+
+    const cfResponse = await axios.get(
+      `${CASHFREE_API_URL}/pg/orders/${ticket.metadata.orderId}/refunds/${ticket.refund.cashfreeRefundId}`,
+      {
+        headers: {
+          'x-client-id': process.env.CASHFREE_APP_ID,
+          'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+          'x-api-version': '2023-08-01'
+        }
+      }
+    );
+
+    const cfData = cfResponse.data;
+
+    // Update local record if Cashfree status changed
+    if (cfData.refund_status === 'SUCCESS' && ticket.refund.status !== 'processed') {
+      ticket.refund.status = 'processed';
+      ticket.refund.refundARN = cfData.refund_arn || ticket.refund.refundARN;
+      await ticket.save();
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ticketId: ticket._id,
+        refundId: ticket.refund.cashfreeRefundId,
+        localStatus: ticket.refund.status,
+        cashfreeStatus: cfData.refund_status,
+        refundARN: cfData.refund_arn,
+        refundAmount: cfData.refund_amount,
+        processedAt: cfData.processed_at
+      }
+    });
+  } catch (error) {
+    console.error('Error checking refund status:', error.response?.data || error.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch refund status' });
   }
 });
 

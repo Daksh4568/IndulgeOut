@@ -102,6 +102,12 @@ const EventCreation = () => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showCommunityDropdown, setShowCommunityDropdown] = useState(false);
   const [showCoHostDropdown, setShowCoHostDropdown] = useState(false);
+  const [coHostEnabled, setCoHostEnabled] = useState(false);
+  const [coHostSearchQuery, setCoHostSearchQuery] = useState("");
+  const [coHostSearchResults, setCoHostSearchResults] = useState([]);
+  const [isSearchingCoHosts, setIsSearchingCoHosts] = useState(false);
+  const [selectedCoHosts, setSelectedCoHosts] = useState([]);
+  const coHostSearchTimerRef = useRef(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   // const [cropperFile, setCropperFile] = useState(null);
@@ -1366,7 +1372,24 @@ const EventCreation = () => {
         // Create new event
         response = await api.post("/events", eventData);
         console.log("Event created successfully:", response.data);
-        toast.success("Event created successfully!");
+
+        // Send co-host requests if any selected
+        const createdEventId = response.data.event?._id;
+        if (createdEventId && selectedCoHosts.length > 0) {
+          for (const coHost of selectedCoHosts) {
+            try {
+              await api.post('/organizer/co-host-request', {
+                eventId: createdEventId,
+                coHostUserId: coHost._id
+              });
+            } catch (coHostErr) {
+              console.error(`Failed to send co-host request to ${coHost.name}:`, coHostErr);
+            }
+          }
+          toast.success("Event created and co-host requests sent!");
+        } else {
+          toast.success("Event created successfully!");
+        }
         
         // Small delay to ensure toast is visible before navigation
         setTimeout(() => {
@@ -2289,17 +2312,144 @@ const EventCreation = () => {
 
               {/* Co-host */}
               <div>
-                <label className="block text-white text-sm font-medium mb-2">
-                  Co-host (Optional)
+                <label className="flex items-center space-x-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={coHostEnabled}
+                    onChange={(e) => {
+                      setCoHostEnabled(e.target.checked);
+                      if (!e.target.checked) {
+                        setSelectedCoHosts([]);
+                        setCoHostSearchQuery("");
+                        setCoHostSearchResults([]);
+                        setShowCoHostDropdown(false);
+                      }
+                    }}
+                    className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#7878E9] focus:ring-[#7878E9] focus:ring-offset-0 cursor-pointer"
+                  />
+                  <span className="text-white text-sm font-medium">Add a Co-Host</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setShowCoHostDropdown(!showCoHostDropdown)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-left text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent flex items-center justify-between"
-                >
-                  <span>Select Co-host</span>
-                  <ChevronDown className="h-5 w-5" />
-                </button>
+
+                {coHostEnabled && (
+                  <div className="space-y-3">
+                    {/* Selected Co-Hosts */}
+                    {selectedCoHosts.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCoHosts.map((coHost) => (
+                          <div
+                            key={coHost._id}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#7878E9]/20 border border-[#7878E9]/30"
+                          >
+                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                              {coHost.profilePicture ? (
+                                <img src={coHost.profilePicture} alt={coHost.name} className="w-full h-full rounded-full object-cover" />
+                              ) : (
+                                <span className="text-[10px] text-white font-bold">{coHost.name?.charAt(0)}</span>
+                              )}
+                            </div>
+                            <span className="text-white text-xs font-medium">{coHost.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCoHosts(prev => prev.filter(c => c._id !== coHost._id))}
+                              className="text-gray-400 hover:text-white transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Search Input - hide when max reached */}
+                    {selectedCoHosts.length < 2 && (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={coHostSearchQuery}
+                          onChange={(e) => {
+                            const query = e.target.value;
+                            setCoHostSearchQuery(query);
+                            setShowCoHostDropdown(true);
+                            if (coHostSearchTimerRef.current) clearTimeout(coHostSearchTimerRef.current);
+                            if (query.trim().length >= 2) {
+                              setIsSearchingCoHosts(true);
+                              coHostSearchTimerRef.current = setTimeout(async () => {
+                                try {
+                                  const response = await api.get(`/organizer/search-organizers?q=${encodeURIComponent(query.trim())}`);
+                                  setCoHostSearchResults(response.data.data || []);
+                                } catch (err) {
+                                  console.error('Error searching organizers:', err);
+                                  setCoHostSearchResults([]);
+                                } finally {
+                                  setIsSearchingCoHosts(false);
+                                }
+                              }, 300);
+                            } else {
+                              setCoHostSearchResults([]);
+                              setIsSearchingCoHosts(false);
+                            }
+                          }}
+                          onFocus={() => setShowCoHostDropdown(true)}
+                          placeholder="Search community organizers..."
+                          className="w-full pl-9 pr-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent text-sm"
+                        />
+                      </div>
+
+                      {/* Dropdown Results */}
+                      {showCoHostDropdown && coHostSearchQuery.trim().length >= 2 && (
+                        <div className="absolute z-50 w-full mt-1 rounded-lg bg-zinc-900/95 border border-white/10 backdrop-blur-xl shadow-2xl max-h-60 overflow-y-auto">
+                          {isSearchingCoHosts ? (
+                            <div className="px-4 py-3 text-gray-400 text-sm text-center">Searching...</div>
+                          ) : coHostSearchResults.length === 0 ? (
+                            <div className="px-4 py-3 text-gray-400 text-sm text-center">No organizers found</div>
+                          ) : (
+                            coHostSearchResults
+                              .filter(org => !selectedCoHosts.some(s => s._id === org._id))
+                              .map((organizer) => (
+                                <button
+                                  key={organizer._id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedCoHosts.length >= 2) {
+                                      toast.error('Maximum 2 co-hosts allowed per event');
+                                      return;
+                                    }
+                                    setSelectedCoHosts(prev => [...prev, organizer]);
+                                    setCoHostSearchQuery("");
+                                    setCoHostSearchResults([]);
+                                    setShowCoHostDropdown(false);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                    {organizer.profilePicture ? (
+                                      <img src={organizer.profilePicture} alt={organizer.name} className="w-full h-full rounded-full object-cover" />
+                                    ) : (
+                                      <span className="text-xs text-white font-bold">{organizer.name?.charAt(0)}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white text-sm font-medium truncate">{organizer.name}</p>
+                                    <p className="text-gray-400 text-xs truncate">
+                                      {organizer.communityProfile?.communityName || organizer.email}
+                                    </p>
+                                  </div>
+                                  <UserPlus className="h-4 w-4 text-[#7878E9] flex-shrink-0" />
+                                </button>
+                              ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    )}
+
+                    <p className="text-xs text-gray-400 italic">
+                      💡 Co-hosts will receive a request and can accept or decline from their dashboard (max 2)
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Upload Photo - Moved to last */}

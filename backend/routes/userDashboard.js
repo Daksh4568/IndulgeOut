@@ -34,6 +34,15 @@ router.get('/my-events', authMiddleware, async (req, res) => {
     .populate('host', 'name')
     .sort({ date: 1 });
 
+    // Fetch tickets for this user to include refund info
+    const Ticket = require('../models/Ticket');
+    const userTickets = await Ticket.find({ user: userId }).lean();
+    const ticketsByEvent = {};
+    userTickets.forEach(t => {
+      const eid = t.event.toString();
+      ticketsByEvent[eid] = t;
+    });
+
     // Helper function to check if event has ended (considers end time)
     const hasEventEnded = (event) => {
       const eventDate = new Date(event.date);
@@ -84,7 +93,9 @@ router.get('/my-events', authMiddleware, async (req, res) => {
                 participant?.status === 'cancelled' ? 'Cancelled' : 'RSVP\'d',
         hostName: event.host?.name,
         categories: event.categories,
-        price: event.price?.amount || 0
+        price: event.price?.amount || 0,
+        ticketId: ticketsByEvent[event._id.toString()]?._id || null,
+        refundStatus: ticketsByEvent[event._id.toString()]?.refund?.status || 'none'
       };
 
       // Event is upcoming if it hasn't ended and user hasn't attended/cancelled

@@ -72,6 +72,17 @@ const notificationSchema = new mongoose.Schema({
       'collaboration_confirmed',
       'collaboration_declined',
       
+      // Co-Host Notifications
+      'cohost_request_received',
+      'cohost_request_accepted',
+      'cohost_request_declined',
+      
+      // Refund Notifications
+      'refund_requested',
+      'refund_approved',
+      'refund_processed',
+      'refund_rejected',
+      
       // Admin-specific
       'admin_review_required',
       'admin_counter_review_required',

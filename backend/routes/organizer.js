@@ -103,6 +103,33 @@ router.get('/action-required', authMiddleware, async (req, res) => {
     // 4. TODO: Check for pending collaboration requests (venues/brands)
     // This requires a Collaboration model to be created
 
+    // 5. Check for pending co-host requests
+    const coHostEvents = await Event.find({
+      'coHostRequests.user': userId,
+      'coHostRequests.status': 'pending'
+    }).select('title date coHostRequests host').populate('host', 'name');
+
+    coHostEvents.forEach(event => {
+      const request = event.coHostRequests.find(
+        r => r.user.toString() === userId && r.status === 'pending'
+      );
+      if (request) {
+        actionItems.push({
+          id: `cohost_${event._id}`,
+          type: 'cohost_request',
+          priority: 'high',
+          title: 'Co-Host Invitation',
+          description: `${event.host?.name || 'An organizer'} has invited you to co-host "${event.title}"`,
+          ctaText: 'Respond',
+          eventId: event._id,
+          metadata: {
+            eventName: event.title,
+            hostName: event.host?.name
+          }
+        });
+      }
+    });
+
     // Sort by priority: high -> medium -> low
     const priorityOrder = { high: 1, medium: 2, low: 3 };
     actionItems.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
@@ -306,6 +333,35 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         priority: notif.priority || 'medium'
       });
     });
+
+    // 6. Check for pending co-host requests
+    const coHostRequestEvents = await Event.find({
+      'coHostRequests.user': userId,
+      'coHostRequests.status': 'pending'
+    }).select('title date coHostRequests host').populate('host', 'name');
+
+    coHostRequestEvents.forEach(event => {
+      const request = event.coHostRequests.find(
+        r => r.user.toString() === userId && r.status === 'pending'
+      );
+      if (request) {
+        actionsRequired.push({
+          id: `cohost_${event._id}`,
+          type: 'cohost_request',
+          priority: 'high',
+          title: 'Co-Host Invitation',
+          description: `${event.host?.name || 'An organizer'} has invited you to co-host "${event.title}"`,
+          ctaText: 'Respond',
+          itemId: event._id,
+          eventId: event._id,
+          metadata: {
+            eventName: event.title,
+            hostName: event.host?.name,
+            requestedAt: request.requestedAt
+          }
+        });
+      }
+    });
     
     console.log(`✅ [Dashboard] Total action items: ${actionsRequired.length}`);
 
@@ -488,7 +544,7 @@ router.get('/events', authMiddleware, async (req, res) => {
         : 0;
       
       // Calculate revenue from actual tickets (using basePrice from metadata minus coupon discounts)
-      const tickets = await Ticket.find({ event: event._id, status: { $ne: 'cancelled' } });
+      const tickets = await Ticket.find({ event: event._id, status: { $nin: ['cancelled', 'refunded'] } });
       const revenueBeforeDiscount = tickets.reduce((sum, ticket) => {
         // Use basePrice from metadata (order amount without fees)
         const ticketRevenue = ticket.metadata?.basePrice || ticket.price?.amount || 0;
@@ -506,6 +562,7 @@ router.get('/events', authMiddleware, async (req, res) => {
       return {
         _id: event._id,
         title: event.title,
+        slug: event.slug,
         date: event.date,
         time: event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : 'TBD',
         startTime: event.startTime,
@@ -516,21 +573,46 @@ router.get('/events', authMiddleware, async (req, res) => {
         currentParticipants: event.currentParticipants || 0,
         maxParticipants: event.maxParticipants,
         fillPercentage,
-        revenue
+        revenue,
+        isCoHost: false
       };
     };
 
+    const enrichCoHostEvent = async (event) => {
+      const base = await enrichEvent(event);
+      return { ...base, isCoHost: true, slug: event.slug };
+    };
+
+    // Fetch co-hosted events (where user is in coHosts array)
+    const coHostedLive = (await Event.find({
+      coHosts: userId,
+      status: 'published'
+    }).sort({ date: 1 })).filter(event => {
+      const eventEndDateTime = parseEventEndTime(event);
+      return eventEndDateTime >= now;
+    });
+
+    const coHostedPast = (await Event.find({
+      coHosts: userId
+    }).sort({ date: -1 })).filter(event => {
+      if (event.status === 'draft') return false;
+      const eventEndDateTime = parseEventEndTime(event);
+      return eventEndDateTime < now;
+    });
+
     // Process events in parallel with Promise.all
-    const [enrichedDraft, enrichedLive, enrichedPast] = await Promise.all([
+    const [enrichedDraft, enrichedLive, enrichedPast, enrichedCoHostLive, enrichedCoHostPast] = await Promise.all([
       Promise.all(draftEvents.map(enrichEvent)),
       Promise.all(liveEvents.map(enrichEvent)),
-      Promise.all(pastEvents.map(enrichEvent))
+      Promise.all(pastEvents.map(enrichEvent)),
+      Promise.all(coHostedLive.map(enrichCoHostEvent)),
+      Promise.all(coHostedPast.map(enrichCoHostEvent))
     ]);
 
     res.json({
       draft: enrichedDraft,
-      live: enrichedLive,
-      past: enrichedPast
+      live: [...enrichedLive, ...enrichedCoHostLive],
+      past: [...enrichedPast, ...enrichedCoHostPast]
     });
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -1526,6 +1608,264 @@ router.get('/reports/monthly', authMiddleware, async (req, res) => {
       message: 'Failed to generate monthly report',
       error: error.message
     });
+  }
+});
+
+// ==================== CO-HOST MANAGEMENT ====================
+
+/**
+ * GET /api/organizer/search-organizers
+ * Search for community organizers to invite as co-host
+ */
+router.get('/search-organizers', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { q } = req.query;
+
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ message: 'Search query must be at least 2 characters' });
+    }
+
+    const searchRegex = new RegExp(q.trim(), 'i');
+
+    const organizers = await User.find({
+      _id: { $ne: userId },
+      role: 'host_partner',
+      hostPartnerType: 'community_organizer',
+      $or: [
+        { name: searchRegex },
+        { email: searchRegex },
+        { 'communityProfile.communityName': searchRegex }
+      ]
+    })
+    .select('name email profilePicture communityProfile.communityName')
+    .limit(10)
+    .lean();
+
+    res.json({ success: true, data: organizers });
+  } catch (error) {
+    console.error('Error searching organizers:', error);
+    res.status(500).json({ message: 'Server error searching organizers' });
+  }
+});
+
+/**
+ * POST /api/organizer/co-host-request
+ * Send a co-host request for an event
+ */
+router.post('/co-host-request', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { eventId, coHostUserId } = req.body;
+
+    if (!eventId || !coHostUserId) {
+      return res.status(400).json({ message: 'Event ID and co-host user ID are required' });
+    }
+
+    // Verify event exists and belongs to the requester
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    if (event.host.toString() !== userId) {
+      return res.status(403).json({ message: 'Only the event host can invite co-hosts' });
+    }
+
+    // Verify target user is a community organizer
+    const coHostUser = await User.findById(coHostUserId);
+    if (!coHostUser || coHostUser.role !== 'host_partner' || coHostUser.hostPartnerType !== 'community_organizer') {
+      return res.status(400).json({ message: 'Selected user is not a community organizer' });
+    }
+
+    // Check max co-host limit (2)
+    const currentCoHostCount = event.coHosts.length + event.coHostRequests.filter(r => r.status === 'pending').length;
+    if (currentCoHostCount >= 2) {
+      return res.status(400).json({ message: 'Maximum of 2 co-hosts allowed per event' });
+    }
+
+    // Check if already a co-host
+    if (event.coHosts.some(ch => ch.toString() === coHostUserId)) {
+      return res.status(400).json({ message: 'User is already a co-host for this event' });
+    }
+
+    // Check if request already exists
+    const existingRequest = event.coHostRequests.find(
+      r => r.user.toString() === coHostUserId && r.status === 'pending'
+    );
+    if (existingRequest) {
+      return res.status(400).json({ message: 'A pending co-host request already exists for this user' });
+    }
+
+    // Add co-host request
+    event.coHostRequests.push({
+      user: coHostUserId,
+      status: 'pending',
+      requestedAt: new Date()
+    });
+    await event.save();
+
+    // Create notification for the co-host
+    const hostUser = await User.findById(userId).select('name');
+    await Notification.create({
+      recipient: coHostUserId,
+      type: 'cohost_request_received',
+      category: 'action_required',
+      priority: 'high',
+      title: 'Co-Host Invitation',
+      message: `${hostUser.name} has invited you to co-host "${event.title}"`,
+      relatedEvent: event._id,
+      relatedUser: userId,
+      actionButton: {
+        text: 'View Request',
+        link: `/organizer/dashboard`
+      }
+    });
+
+    res.json({ success: true, message: 'Co-host request sent successfully' });
+  } catch (error) {
+    console.error('Error sending co-host request:', error);
+    res.status(500).json({ message: 'Server error sending co-host request' });
+  }
+});
+
+/**
+ * POST /api/organizer/co-host-request/:eventId/respond
+ * Accept or decline a co-host request
+ */
+router.post('/co-host-request/:eventId/respond', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { eventId } = req.params;
+    const { action } = req.body; // 'accept' or 'decline'
+
+    if (!['accept', 'decline'].includes(action)) {
+      return res.status(400).json({ message: 'Action must be accept or decline' });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Find the pending request for this user
+    const request = event.coHostRequests.find(
+      r => r.user.toString() === userId && r.status === 'pending'
+    );
+    if (!request) {
+      return res.status(404).json({ message: 'No pending co-host request found' });
+    }
+
+    request.status = action === 'accept' ? 'accepted' : 'declined';
+    request.respondedAt = new Date();
+
+    if (action === 'accept') {
+      // Add to coHosts array
+      if (!event.coHosts.some(ch => ch.toString() === userId)) {
+        event.coHosts.push(userId);
+      }
+    }
+
+    await event.save();
+
+    // Notify the host about the response
+    const respondingUser = await User.findById(userId).select('name');
+    const notificationType = action === 'accept' ? 'cohost_request_accepted' : 'cohost_request_declined';
+    await Notification.create({
+      recipient: event.host,
+      type: notificationType,
+      category: 'status_update',
+      priority: 'medium',
+      title: action === 'accept' ? 'Co-Host Request Accepted' : 'Co-Host Request Declined',
+      message: `${respondingUser.name} has ${action === 'accept' ? 'accepted' : 'declined'} your co-host invitation for "${event.title}"`,
+      relatedEvent: event._id,
+      relatedUser: userId
+    });
+
+    res.json({ 
+      success: true, 
+      message: `Co-host request ${action === 'accept' ? 'accepted' : 'declined'} successfully` 
+    });
+  } catch (error) {
+    console.error('Error responding to co-host request:', error);
+    res.status(500).json({ message: 'Server error responding to co-host request' });
+  }
+});
+
+// ==================== REFUND MANAGEMENT (Organizer) ====================
+
+/**
+ * POST /api/organizer/refund/:ticketId/respond
+ * Approve or reject a refund request
+ */
+router.post('/refund/:ticketId/respond', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { ticketId } = req.params;
+    const { action, reason } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'Action must be approve or reject' });
+    }
+
+    const Ticket = require('../models/Ticket');
+    const ticket = await Ticket.findById(ticketId).populate('event');
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+
+    // Verify organizer is the event host or co-host
+    const event = await Event.findById(ticket.event._id || ticket.event);
+    const isAuthorized = event.host.toString() === userId ||
+      (event.coHosts && event.coHosts.some(ch => ch.toString() === userId));
+    if (!isAuthorized) {
+      return res.status(403).json({ message: 'Only the event host can manage refund requests' });
+    }
+
+    if (!ticket.refund || ticket.refund.status !== 'requested') {
+      return res.status(400).json({ message: 'No pending refund request found' });
+    }
+
+    if (action === 'approve') {
+      ticket.refund.status = 'approved';
+      ticket.refund.approvedAt = new Date();
+      ticket.refund.approvedBy = userId;
+      await ticket.save();
+
+      // Notify user
+      await Notification.create({
+        recipient: ticket.user,
+        type: 'refund_approved',
+        category: 'status_update',
+        priority: 'medium',
+        title: 'Refund Approved',
+        message: `Your refund request for "${event.title}" has been approved. It will be processed shortly.`,
+        relatedEvent: event._id,
+        relatedTicket: ticket._id
+      });
+    } else {
+      ticket.refund.status = 'rejected';
+      ticket.refund.rejectedAt = new Date();
+      ticket.refund.rejectedBy = userId;
+      ticket.refund.rejectionReason = reason || '';
+      await ticket.save();
+
+      // Notify user
+      await Notification.create({
+        recipient: ticket.user,
+        type: 'refund_rejected',
+        category: 'status_update',
+        priority: 'medium',
+        title: 'Refund Request Declined',
+        message: `Your refund request for "${event.title}" has been declined.${reason ? ' Reason: ' + reason : ''}`,
+        relatedEvent: event._id,
+        relatedTicket: ticket._id
+      });
+    }
+
+    res.json({ success: true, message: `Refund ${action === 'approve' ? 'approved' : 'rejected'} successfully` });
+  } catch (error) {
+    console.error('Error responding to refund:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

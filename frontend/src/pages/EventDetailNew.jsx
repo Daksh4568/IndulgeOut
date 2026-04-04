@@ -436,8 +436,8 @@ const EventDetail = () => {
       <div className="min-h-screen bg-black">
       <NavigationBar />
 
-      {/* Back to Explore Navigation - hide for hosts/organizers */}
-      {!(user && event?.host?._id === user._id) && (
+      {/* Back to Explore Navigation - hide for hosts/organizers/co-hosts */}
+      {!(user && (event?.host?._id === user._id || event?.coHosts?.some(ch => ch._id === user._id))) && (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
         <button
           onClick={() => navigate('/explore')}
@@ -630,26 +630,54 @@ const EventDetail = () => {
             >
               Host
             </h2>
-            <div className="flex items-center gap-3 bg-zinc-900 rounded-xl px-3 py-2.5 border border-gray-800">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                {event.host?.profilePicture ? (
-                  <img 
-                    src={event.host.profilePicture} 
-                    alt={event.host.name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-sm text-white font-bold">
-                    {event.host?.name?.charAt(0) || 'H'}
-                  </span>
-                )}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 bg-zinc-900 rounded-xl px-3 py-2.5 border border-gray-800">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  {event.host?.profilePicture ? (
+                    <img 
+                      src={event.host.profilePicture} 
+                      alt={event.host.name}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm text-white font-bold">
+                      {event.host?.name?.charAt(0) || 'H'}
+                    </span>
+                  )}
+                </div>
+                <h3 
+                  className="text-sm font-bold text-white"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  {event.host?.name || 'Event Organizer'}
+                </h3>
               </div>
-              <h3 
-                className="text-sm font-bold text-white"
-                style={{ fontFamily: 'Oswald, sans-serif' }}
-              >
-                {event.host?.name || 'Event Organizer'}
-              </h3>
+              {event.coHosts && event.coHosts.length > 0 && event.coHosts.map((coHost) => (
+                <div key={coHost._id} className="flex items-center gap-3 bg-zinc-900 rounded-xl px-3 py-2.5 border border-gray-800">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center flex-shrink-0">
+                    {coHost.profilePicture ? (
+                      <img 
+                        src={coHost.profilePicture} 
+                        alt={coHost.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm text-white font-bold">
+                        {coHost.name?.charAt(0) || 'C'}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <h3 
+                      className="text-sm font-bold text-white"
+                      style={{ fontFamily: 'Oswald, sans-serif' }}
+                    >
+                      {coHost.name}
+                    </h3>
+                    <span className="text-xs text-gray-400">Co-Host</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -1013,26 +1041,54 @@ const EventDetail = () => {
               >
                 Host
               </h2>
-              <div className="flex items-center gap-3 bg-zinc-900 rounded-xl px-4 py-3 border border-gray-800">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  {event.host?.profilePicture ? (
-                    <img 
-                      src={event.host.profilePicture} 
-                      alt={event.host.name}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-lg text-white font-bold">
-                      {event.host?.name?.charAt(0) || 'H'}
-                    </span>
-                  )}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 bg-zinc-900 rounded-xl px-4 py-3 border border-gray-800">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    {event.host?.profilePicture ? (
+                      <img 
+                        src={event.host.profilePicture} 
+                        alt={event.host.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-lg text-white font-bold">
+                        {event.host?.name?.charAt(0) || 'H'}
+                      </span>
+                    )}
+                  </div>
+                  <h3 
+                    className="text-lg font-bold text-white"
+                    style={{ fontFamily: 'Oswald, sans-serif' }}
+                  >
+                    {event.host?.name || 'Event Organizer'}
+                  </h3>
                 </div>
-                <h3 
-                  className="text-lg font-bold text-white"
-                  style={{ fontFamily: 'Oswald, sans-serif' }}
-                >
-                  {event.host?.name || 'Event Organizer'}
-                </h3>
+                {event.coHosts && event.coHosts.length > 0 && event.coHosts.map((coHost) => (
+                  <div key={coHost._id} className="flex items-center gap-3 bg-zinc-900 rounded-xl px-4 py-3 border border-gray-800">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center flex-shrink-0">
+                      {coHost.profilePicture ? (
+                        <img 
+                          src={coHost.profilePicture} 
+                          alt={coHost.name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-lg text-white font-bold">
+                          {coHost.name?.charAt(0) || 'C'}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 
+                        className="text-lg font-bold text-white"
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                      >
+                        {coHost.name}
+                      </h3>
+                      <span className="text-sm text-gray-400">Co-Host</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
 

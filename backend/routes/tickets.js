@@ -405,4 +405,96 @@ router.put('/:ticketId/regenerate-qr', authMiddleware, async (req, res) => {
   }
 });
 
+// ==================== REFUND REQUEST (B2C User) ====================
+// @route   POST /api/tickets/:ticketId/refund-request
+// @desc    B2C user requests a refund for their ticket
+// @access  Private
+router.post('/:ticketId/refund-request', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { ticketId } = req.params;
+    const { reason } = req.body;
+
+    const ticket = await Ticket.findById(ticketId).populate('event');
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: 'Ticket not found' });
+    }
+
+    // Verify ownership
+    if (ticket.user.toString() !== userId) {
+      return res.status(403).json({ success: false, message: 'You can only request refund for your own ticket' });
+    }
+
+    // Check ticket status
+    if (ticket.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Only active tickets can be refunded' });
+    }
+
+    // Check if refund already requested
+    if (ticket.refund && ticket.refund.status !== 'none') {
+      return res.status(400).json({ success: false, message: `Refund already ${ticket.refund.status}` });
+    }
+
+    // Check if event hasn't passed (IST-aware)
+    const Event = require('../models/Event');
+    const event = await Event.findById(ticket.event._id || ticket.event);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    const eventDate = new Date(event.date);
+    if (event.endTime) {
+      const timeMatch = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const period = timeMatch[3].toUpperCase();
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        eventDate.setHours(hours, minutes, 0, 0);
+      }
+    } else {
+      eventDate.setHours(23, 59, 59, 999);
+    }
+
+    if (eventDate < new Date()) {
+      return res.status(400).json({ success: false, message: 'Cannot request refund for past events' });
+    }
+
+    // Check if this is a free ticket
+    if (!ticket.price?.amount || ticket.price.amount === 0) {
+      return res.status(400).json({ success: false, message: 'Free tickets do not require refund. Contact support to cancel.' });
+    }
+
+    // Update ticket refund status
+    ticket.refund = {
+      status: 'requested',
+      requestedAt: new Date(),
+      requestReason: reason || '',
+      refundAmount: ticket.metadata?.totalPaid || ticket.price?.amount || 0
+    };
+    await ticket.save();
+
+    // Notify event host
+    const Notification = require('../models/Notification');
+    const user = await require('../models/User').findById(userId).select('name');
+    await Notification.create({
+      recipient: event.host,
+      type: 'refund_requested',
+      category: 'action_required',
+      priority: 'high',
+      title: 'Refund Request Received',
+      message: `${user.name} has requested a refund for "${event.title}" (Ticket: ${ticket.ticketNumber})`,
+      relatedEvent: event._id,
+      relatedTicket: ticket._id,
+      relatedUser: userId
+    });
+
+    res.json({ success: true, message: 'Refund request submitted successfully' });
+  } catch (error) {
+    console.error('Error requesting refund:', error);
+    res.status(500).json({ success: false, message: 'Server error processing refund request' });
+  }
+});
+
 module.exports = router;

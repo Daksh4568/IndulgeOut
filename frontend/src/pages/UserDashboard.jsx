@@ -12,7 +12,7 @@ import {
   TrendingUp, Gift, Crown, Award, UserPlus, 
   MapPinned, MessageCircle, Ticket, ChevronRight,
   Sparkles, Trophy, Target, Lock, ChevronLeft,
-  LayoutDashboard, HelpCircle, BarChart3, Download, User, X
+  LayoutDashboard, HelpCircle, BarChart3, Download, User, X, RotateCcw
 } from 'lucide-react';
 
 const UserDashboard = () => {
@@ -35,6 +35,10 @@ const UserDashboard = () => {
   const [selectedEventParticipants, setSelectedEventParticipants] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundEvent, setRefundEvent] = useState(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundLoading, setRefundLoading] = useState(false);
   
   // Carousel refs
   const upcomingScrollRef = useRef(null);
@@ -172,6 +176,30 @@ const UserDashboard = () => {
     }
   };
 
+  // Handle refund request
+  const handleRefundRequest = async () => {
+    if (!refundEvent?.ticketId || !refundReason.trim()) return;
+    setRefundLoading(true);
+    try {
+      await api.post(`/tickets/${refundEvent.ticketId}/refund-request`, { reason: refundReason.trim() });
+      // Update local state
+      setMyEvents(prev => ({
+        ...prev,
+        upcoming: prev.upcoming.map(e => 
+          e._id === refundEvent._id ? { ...e, refundStatus: 'requested' } : e
+        )
+      }));
+      setShowRefundModal(false);
+      setRefundReason('');
+      setRefundEvent(null);
+    } catch (error) {
+      console.error('Error requesting refund:', error);
+      alert(error.response?.data?.message || 'Failed to submit refund request');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
   // ===== MY EVENTS SECTION =====
   const MyEventsSection = () => {
     const currentEvents = myEvents[activeTab] || [];
@@ -293,6 +321,25 @@ const UserDashboard = () => {
               </div>
             </div>
 
+            {/* Refund Status Badge */}
+            {event.refundStatus && event.refundStatus !== 'none' && (
+              <div className={`mb-2 text-xs font-semibold px-2 py-1 rounded text-center ${
+                event.refundStatus === 'requested' ? 'bg-yellow-500/20 text-yellow-400' :
+                event.refundStatus === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                event.refundStatus === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                event.refundStatus === 'processed' ? 'bg-green-500/20 text-green-400' :
+                event.refundStatus === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                'bg-gray-500/20 text-gray-400'
+              }`}>
+                {event.refundStatus === 'requested' ? 'Refund Requested' :
+                 event.refundStatus === 'approved' ? 'Refund Approved' :
+                 event.refundStatus === 'processing' ? 'Refund Processing' :
+                 event.refundStatus === 'processed' ? 'Refund Completed' :
+                 event.refundStatus === 'rejected' ? 'Refund Declined' :
+                 ''}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-2">
               {isUpcoming && (
@@ -307,6 +354,20 @@ const UserDashboard = () => {
                 >
                   <Ticket className="h-4 w-4" />
                   View Ticket
+                </button>
+              )}
+              {isUpcoming && event.ticketId && (!event.refundStatus || event.refundStatus === 'none') && event.price > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRefundEvent(event);
+                    setShowRefundModal(true);
+                  }}
+                  className="bg-red-500/20 text-red-400 px-3 py-2 rounded hover:bg-red-500/30 transition-colors text-sm font-semibold flex items-center justify-center gap-1"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                  title="Request Refund"
+                >
+                  <RotateCcw className="h-4 w-4" />
                 </button>
               )}
               {isPast && (
@@ -1249,6 +1310,69 @@ const UserDashboard = () => {
 
       {/* Participants Modal */}
       <ParticipantsModal />
+
+      {/* Refund Request Modal */}
+      {showRefundModal && refundEvent && (
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => { setShowRefundModal(false); setRefundReason(''); setRefundEvent(null); }}
+        >
+          <div 
+            className="bg-zinc-900 rounded-2xl max-w-md w-full border border-gray-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                  Request Refund
+                </h3>
+                <button
+                  onClick={() => { setShowRefundModal(false); setRefundReason(''); setRefundEvent(null); }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-zinc-800 rounded-lg p-4 border border-gray-700">
+                <p className="text-white font-semibold">{refundEvent.title}</p>
+                <p className="text-gray-400 text-sm mt-1">{formatDate(refundEvent.date)}</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">Reason for refund</label>
+                <textarea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Please tell us why you'd like a refund..."
+                  className="w-full bg-zinc-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none"
+                  rows={3}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Refund requests are reviewed by the event organizer. Standard refunds take 5-7 business days once approved.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowRefundModal(false); setRefundReason(''); setRefundEvent(null); }}
+                  className="flex-1 bg-zinc-800 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 transition-colors font-semibold"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRefundRequest}
+                  disabled={!refundReason.trim() || refundLoading}
+                  className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Oswald, sans-serif' }}
+                >
+                  {refundLoading ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

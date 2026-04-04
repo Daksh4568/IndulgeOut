@@ -88,6 +88,20 @@ const AdminDashboard = () => {
   const [marketingCity, setMarketingCity] = useState('');
   const [showSubFilters, setShowSubFilters] = useState(false);
 
+  // Refund state
+  const [refunds, setRefunds] = useState([]);
+  const [refundFilter, setRefundFilter] = useState('approved');
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [processingRefundId, setProcessingRefundId] = useState(null);
+  const [refundStatusModal, setRefundStatusModal] = useState(null);
+
+  // Fetch refunds when refunds tab is opened
+  useEffect(() => {
+    if (activeTab === 'refunds' && refunds.length === 0) {
+      fetchRefunds();
+    }
+  }, [activeTab]);
+
   // Close organizer dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -220,6 +234,45 @@ const AdminDashboard = () => {
       setCollabAnalytics(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching analytics:', err);
+    }
+  };
+
+  // Refund functions
+  const fetchRefunds = async (status) => {
+    setRefundLoading(true);
+    try {
+      const res = await api.get(`/admin/refunds?status=${status || refundFilter}`);
+      setRefunds(res.data.data || []);
+    } catch (err) {
+      console.error('Error fetching refunds:', err);
+      setRefunds([]);
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
+  const processRefund = async (ticketId) => {
+    if (!confirm('Are you sure you want to process this refund? This will initiate a refund via Cashfree.')) return;
+    setProcessingRefundId(ticketId);
+    try {
+      const res = await api.post(`/admin/refund/${ticketId}/process`);
+      alert(`Refund initiated. Refund ID: ${res.data.data?.refundId}. Status: ${res.data.data?.cashfreeStatus}`);
+      fetchRefunds();
+    } catch (err) {
+      console.error('Error processing refund:', err);
+      alert(err.response?.data?.error || 'Failed to process refund');
+    } finally {
+      setProcessingRefundId(null);
+    }
+  };
+
+  const checkRefundStatus = async (ticketId) => {
+    try {
+      const res = await api.get(`/admin/refund/${ticketId}/status`);
+      setRefundStatusModal(res.data.data);
+    } catch (err) {
+      console.error('Error checking refund status:', err);
+      alert(err.response?.data?.error || 'Failed to check status');
     }
   };
 
@@ -1102,7 +1155,8 @@ const AdminDashboard = () => {
                 { id: 'all-collaborations', label: 'All Collaborations', badge: null },
                 { id: 'flagged', label: 'Flagged Items', badge: flaggedProposals.length || null },
                 { id: 'analytics', label: 'Analytics', badge: null },
-                { id: 'marketing', label: 'Marketing', badge: null }
+                { id: 'marketing', label: 'Marketing', badge: null },
+                { id: 'refunds', label: 'Refunds', badge: null }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3234,6 +3288,23 @@ const AdminDashboard = () => {
                     </p>
                   </div>
                 </div>
+                {/* Refund Summary Card */}
+                {(eventDetails.analytics.totalRefundedTickets > 0 || eventDetails.analytics.totalRefundAmount > 0) && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-zinc-900/50 border border-red-800/50 rounded-lg shadow p-4">
+                      <p className="text-sm text-gray-400">Total Refunds</p>
+                      <p className="text-2xl font-bold text-red-400">₹{eventDetails.analytics.totalRefundAmount.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="bg-zinc-900/50 border border-red-800/50 rounded-lg shadow p-4">
+                      <p className="text-sm text-gray-400">Refunded Tickets</p>
+                      <p className="text-2xl font-bold text-red-400">{eventDetails.analytics.totalRefundedTickets}</p>
+                    </div>
+                    <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-4">
+                      <p className="text-sm text-gray-400">Net Revenue (after refunds)</p>
+                      <p className="text-2xl font-bold text-green-400">₹{(eventDetails.analytics.totalRevenue - eventDetails.analytics.totalRefundAmount).toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Ticket Status Breakdown */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -3721,12 +3792,23 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-4 py-3 text-sm">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                attendee.status === 'refunded' ? 'bg-purple-100 text-purple-800' :
                                 attendee.status === 'checked_in' ? 'bg-green-100 text-green-800' :
                                 attendee.status === 'active' ? 'bg-blue-100 text-blue-800' :
                                 'bg-gray-100 text-gray-800'
                               }`}>
                                 {attendee.status}
                               </span>
+                              {attendee.refund?.status && attendee.refund.status !== 'none' && attendee.status !== 'refunded' && (
+                                <span className={`ml-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                                  attendee.refund.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  attendee.refund.status === 'approved' ? 'bg-orange-500/20 text-orange-400' :
+                                  attendee.refund.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                                  'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  refund: {attendee.refund.status}
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -4364,6 +4446,160 @@ const AdminDashboard = () => {
                       📤 Send Now
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Refunds Tab */}
+        {activeTab === 'refunds' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">💰 Refund Management</h2>
+              <p className="text-gray-400">Review and process approved refund requests via Cashfree</p>
+            </div>
+
+            {/* Refund Filter */}
+            <div className="flex gap-2 mb-6">
+              {['approved', 'processing', 'processed', 'requested', 'rejected', 'all'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => {
+                    setRefundFilter(f);
+                    fetchRefunds(f);
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    refundFilter === f
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* Refund Table */}
+            {refundLoading ? (
+              <div className="text-center py-12 text-gray-400">Loading refunds...</div>
+            ) : refunds.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-400">No refunds found for this filter</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-gray-700">
+                <table className="min-w-full divide-y divide-gray-700">
+                  <thead className="bg-gray-800/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Event</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Community</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket #</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Amount</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Event Total Refund</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reason</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Requested</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {refunds.map(r => (
+                      <tr key={r.ticketId} className="hover:bg-gray-800/40">
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-white">{r.user?.name || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{r.user?.email}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-white max-w-[120px] truncate" title={r.event?.title}>{r.event?.title || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-purple-400 font-medium">{r.communityName || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-400 font-mono">{r.ticketNumber}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 font-mono max-w-[120px] truncate" title={r.metadata?.orderId}>{r.metadata?.orderId || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-green-400 font-semibold">₹{r.price?.amount || r.metadata?.totalPaid || 0}</td>
+                        <td className="px-4 py-3 text-sm text-orange-400 font-semibold">₹{r.eventTotalRefund || 0}</td>
+                        <td className="px-4 py-3 text-xs text-gray-400 max-w-[150px] truncate" title={r.refund?.requestReason}>
+                          {r.refund?.requestReason || '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                            r.refund?.status === 'approved' ? 'bg-orange-500/20 text-orange-400' :
+                            r.refund?.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                            r.refund?.status === 'processed' ? 'bg-green-500/20 text-green-400' :
+                            r.refund?.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' :
+                            r.refund?.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {r.refund?.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {r.refund?.requestedAt ? new Date(r.refund.requestedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {r.refund?.status === 'approved' && (
+                            <button
+                              onClick={() => processRefund(r.ticketId)}
+                              disabled={processingRefundId === r.ticketId}
+                              className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                            >
+                              {processingRefundId === r.ticketId ? 'Processing...' : 'Process Refund'}
+                            </button>
+                          )}
+                          {(r.refund?.status === 'processing' || r.refund?.status === 'processed') && (
+                            <button
+                              onClick={() => checkRefundStatus(r.ticketId)}
+                              className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              Check Status
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Refund Status Modal */}
+            {refundStatusModal && (
+              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setRefundStatusModal(null)}>
+                <div className="bg-zinc-900 rounded-xl max-w-md w-full border border-gray-700 p-6" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold text-white mb-4">Refund Status</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Refund ID</span>
+                      <span className="text-white font-mono text-xs">{refundStatusModal.refundId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Local Status</span>
+                      <span className="text-white">{refundStatusModal.localStatus}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Cashfree Status</span>
+                      <span className={`font-semibold ${
+                        refundStatusModal.cashfreeStatus === 'SUCCESS' ? 'text-green-400' :
+                        refundStatusModal.cashfreeStatus === 'PENDING' ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{refundStatusModal.cashfreeStatus}</span>
+                    </div>
+                    {refundStatusModal.refundARN && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">ARN</span>
+                        <span className="text-white font-mono text-xs">{refundStatusModal.refundARN}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Amount</span>
+                      <span className="text-green-400">₹{refundStatusModal.refundAmount}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setRefundStatusModal(null)}
+                    className="mt-6 w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             )}

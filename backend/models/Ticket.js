@@ -147,6 +147,38 @@ const ticketSchema = new mongoose.Schema({
   },
   reconciliationNotes: {
     type: String
+  },
+  refund: {
+    status: {
+      type: String,
+      enum: ['none', 'requested', 'approved', 'processing', 'processed', 'rejected'],
+      default: 'none'
+    },
+    requestedAt: Date,
+    requestReason: String,
+    approvedAt: Date,
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    processedAt: Date,
+    processedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    cashfreeRefundId: String,
+    refundARN: String,
+    refundAmount: Number,
+    refundSpeed: {
+      type: String,
+      default: 'STANDARD'
+    },
+    rejectedAt: Date,
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectionReason: String
   }
 }, {
   timestamps: true
@@ -158,6 +190,7 @@ ticketSchema.index({ ticketNumber: 1 });
 ticketSchema.index({ status: 1 });
 ticketSchema.index({ settlementStatus: 1 });
 ticketSchema.index({ reconciliationStatus: 1 });
+ticketSchema.index({ 'refund.status': 1 });
 ticketSchema.index({ purchaseDate: 1 });
 ticketSchema.index({ 'metadata.orderId': 1 });
 
