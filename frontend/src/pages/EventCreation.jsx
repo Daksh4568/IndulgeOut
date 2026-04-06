@@ -1898,7 +1898,7 @@ const EventCreation = () => {
                       <Tags className={`h-4 w-4 ${formData.genderPricing?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
                     </div>
                     <div>
-                      <span className="text-white text-sm font-medium">Set event prices through different categories</span>
+                      <span className="text-white text-sm font-medium">Smart Pricing</span>
                       <p className="text-[11px] text-gray-500">Set unique prices for Male & Female attendees</p>
                     </div>
                   </div>
