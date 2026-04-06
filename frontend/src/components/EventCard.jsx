@@ -197,7 +197,12 @@ const EventCard = ({ event, onFavorite, showLoginPrompt, isSaved = false }) => {
             <div className="flex items-center gap-2 text-gray-300">
               <IndianRupee className="h-4 w-4 sm:h-4 sm:w-4 text-[#7878E9] flex-shrink-0" />
               <span className="text-sm sm:text-sm font-medium" style={{ fontFamily: 'Source Serif Pro, serif' }}>
-                {(event.currentEffectivePrice ?? event.price.amount) === 0 ? 'FREE' : `₹${event.currentEffectivePrice ?? event.price.amount} onwards`}
+                {event.genderPricing?.enabled
+                  ? (() => {
+                      const gp = event.currentEffectiveGenderPrices || event.genderPricing;
+                      return `₹${Math.min(gp.malePrice, gp.femalePrice)} onwards`;
+                    })()
+                  : (event.currentEffectivePrice ?? event.price.amount) === 0 ? 'FREE' : `₹${event.currentEffectivePrice ?? event.price.amount} onwards`}
               </span>
             </div>
           )}

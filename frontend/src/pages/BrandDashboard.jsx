@@ -26,14 +26,21 @@ import {
   Users2,
   FileText,
   Layout,
+  Check,
+  X,
+  UserPlus,
+  Clock,
+  Share2,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import NavigationBar from "../components/NavigationBar";
 import { api } from "../config/api";
+import { useToast } from "../hooks/useToast";
 
 const BrandDashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
@@ -41,6 +48,9 @@ const BrandDashboard = () => {
   const [activeCollabTab, setActiveCollabTab] = useState('all');
   const [collabCarouselIndex, setCollabCarouselIndex] = useState(0);
   const [collaborations, setCollaborations] = useState({ all: [], upcoming: [], live: [], completed: [] });
+  const [coHostEvents, setCoHostEvents] = useState({ live: [], past: [] });
+  const [activeEventTab, setActiveEventTab] = useState('all');
+  const [eventCarouselIndex, setEventCarouselIndex] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -59,10 +69,11 @@ const BrandDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [dashboardRes, sentCollabsRes, receivedCollabsRes] = await Promise.all([
+      const [dashboardRes, sentCollabsRes, receivedCollabsRes, eventsRes] = await Promise.all([
         api.get("/brands/dashboard"),
         api.get("/collaborations/sent"),
-        api.get("/collaborations/received")
+        api.get("/collaborations/received"),
+        api.get("/organizer/events")
       ]);
       setDashboardData(dashboardRes.data);
       setError(null);
@@ -72,13 +83,30 @@ const BrandDashboard = () => {
       const upcoming = allCollabs.filter(c => ['submitted', 'admin_approved', 'pending', 'vendor_accepted', 'accepted'].includes(c.status));
       const liveCollabs = allCollabs.filter(c => ['confirmed', 'approved_delivered'].includes(c.status));
       const completed = allCollabs.filter(c => ['completed'].includes(c.status));
-
       setCollaborations({ all: allCollabs, upcoming, live: liveCollabs, completed });
+
+      // Co-host events
+      const evData = eventsRes.data;
+      setCoHostEvents({
+        live: (evData.live || []).filter(e => e.isCoHost),
+        past: (evData.past || []).filter(e => e.isCoHost)
+      });
     } catch (err) {
       console.error("Error fetching brand dashboard:", err);
       setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCoHostRespond = async (eventId, action) => {
+    try {
+      await api.post(`/organizer/co-host-request/${eventId}/respond`, { action });
+      toast?.success(action === 'accept' ? 'Co-host invitation accepted!' : 'Co-host invitation declined');
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error responding to co-host request:', error);
+      toast?.error('Failed to respond to co-host request');
     }
   };
 
@@ -92,6 +120,9 @@ const BrandDashboard = () => {
         break;
       case "collaboration_request":
         navigate(`/organizer/collaborations?id=${itemId}`);
+        break;
+      case "cohost_request":
+        // Handled by Accept/Decline buttons inline
         break;
       case "pending_approval":
         navigate(`/organizer/collaborations?id=${itemId}`);
@@ -617,6 +648,30 @@ const BrandDashboard = () => {
               <span className="text-xs font-medium">Collabs</span>
             </button>
 
+            {/* Events - only show after accepting at least one co-host request */}
+            {(coHostEvents.live.length > 0 || coHostEvents.past.length > 0) && (
+            <button
+              onClick={() => setActiveSidebarItem("events")}
+              className={`flex flex-col items-center space-y-1 p-3 rounded-lg transition-all ${
+                activeSidebarItem === "events"
+                  ? "text-white"
+                  : "text-gray-600 hover:text-gray-400"
+              }`}
+              style={
+                activeSidebarItem === "events"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)",
+                    }
+                  : {}
+              }
+              title="Events"
+            >
+              <Calendar className="h-6 w-6" />
+              <span className="text-xs font-medium">Events</span>
+            </button>
+            )}
+
             {/* Analytics */}
             <button
               onClick={() => setActiveSidebarItem("analytics")}
@@ -706,7 +761,11 @@ const BrandDashboard = () => {
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className={`p-2 rounded-lg ${iconStyles[priority] || iconStyles.low}`}>
-                            <AlertCircle className="h-5 w-5" />
+                            {action.type === 'cohost_request' ? (
+                              <UserPlus className="h-5 w-5" />
+                            ) : (
+                              <AlertCircle className="h-5 w-5" />
+                            )}
                           </div>
                           {action.priority === "high" && (
                             <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
@@ -721,6 +780,24 @@ const BrandDashboard = () => {
                           {action.description}
                         </p>
                         <div className="flex-grow"></div>
+                        {action.type === 'cohost_request' ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCoHostRespond(action.eventId, 'accept')}
+                              className="flex-1 flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-medium text-sm bg-green-600 hover:bg-green-700 text-white transition-colors"
+                            >
+                              <Check className="h-4 w-4" />
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleCoHostRespond(action.eventId, 'decline')}
+                              className="flex-1 flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-medium text-sm bg-red-600 hover:bg-red-700 text-white transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                              Decline
+                            </button>
+                          </div>
+                        ) : (
                         <button
                           onClick={() =>
                             handleActionClick(action.type, action.itemId)
@@ -729,6 +806,7 @@ const BrandDashboard = () => {
                         >
                           {action.ctaText || "Fix Now"}
                         </button>
+                        )}
                       </div>
                     );
                   })}
@@ -741,6 +819,141 @@ const BrandDashboard = () => {
                   </p>
                 </div>
               )}
+              </div>
+            )}
+
+            {/* Manage Events Section (Co-Hosted Events) - only show after accepting at least one co-host request */}
+            {(coHostEvents.live.length > 0 || coHostEvents.past.length > 0) && (activeSidebarItem === 'all' || activeSidebarItem === 'events') && (
+              <div className="mb-8">
+                <h2
+                  className="text-xl font-semibold text-white flex items-center mb-4"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
+                  <Calendar className="h-6 w-6 mr-2" />
+                  Manage Events
+                </h2>
+
+                {/* Tabs */}
+                <div className="flex space-x-2 mb-4">
+                  {[
+                    { key: 'all', label: 'All' },
+                    { key: 'live', label: `Live (${coHostEvents.live?.length || 0})` },
+                    { key: 'past', label: `Past (${coHostEvents.past?.length || 0})` }
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => { setActiveEventTab(tab.key); setEventCarouselIndex(0); }}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        activeEventTab === tab.key
+                          ? 'text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                      style={activeEventTab === tab.key ? {
+                        background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
+                      } : {}}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {(() => {
+                  const allCoHostEvents = [...(coHostEvents.live || []), ...(coHostEvents.past || [])];
+                  const currentEvents = activeEventTab === 'all' ? allCoHostEvents : (coHostEvents[activeEventTab] || []);
+
+                  if (currentEvents.length === 0) {
+                    return (
+                      <div className="bg-zinc-900 border border-gray-800 rounded-xl p-12 text-center">
+                        <Calendar className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-white mb-2">No co-hosted events</h3>
+                        <p className="text-gray-400">When you're invited as a co-host for an event, it will appear here.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {currentEvents.map((event) => {
+                        const fillPercentage = event.maxParticipants > 0
+                          ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
+                          : 0;
+                        const isPast = new Date(event.date) < new Date();
+                        return (
+                          <div
+                            key={event._id}
+                            onClick={() => navigate(`/events/${event.slug || event._id}`)}
+                            className="bg-zinc-900 rounded-xl overflow-hidden border border-gray-800 hover:border-purple-500/50 transition-all cursor-pointer flex flex-col"
+                          >
+                            <div className="p-4 flex flex-col flex-grow">
+                              <div className="flex items-start justify-between mb-3">
+                                <h3 className="font-bold text-white text-lg flex-1 line-clamp-2" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                                  {event.title}
+                                </h3>
+                                <div className="flex items-center gap-2 ml-2">
+                                  <span className="bg-[#7878E9]/30 text-[#7878E9] px-2 py-1 rounded text-xs font-medium flex-shrink-0">
+                                    Co-Host
+                                  </span>
+                                  <span className={`${isPast ? 'bg-gray-500' : 'bg-green-600'} text-white px-2 py-1 rounded text-xs font-medium flex-shrink-0`}>
+                                    {isPast ? 'Past' : 'Live'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2 mb-4">
+                                <div className="flex items-center text-sm text-gray-400">
+                                  <Calendar className="h-4 w-4 mr-2" />
+                                  <span>{new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                </div>
+                                <div className="flex items-center text-sm text-gray-400">
+                                  <Clock className="h-4 w-4 mr-2" />
+                                  <span>{event.time || 'TBD'}</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div>
+                                  <div className="flex items-center justify-between text-sm mb-2">
+                                    <span className="text-gray-400">Bookings</span>
+                                    <span className="text-white font-bold">{event.currentParticipants || 0}/{event.maxParticipants || 0}</span>
+                                  </div>
+                                  <div className="w-full bg-gray-800 rounded-full h-2">
+                                    <div
+                                      className={`${fillPercentage >= 80 ? 'bg-green-500' : fillPercentage >= 50 ? 'bg-yellow-500' : 'bg-orange-500'} h-2 rounded-full transition-all`}
+                                      style={{ width: `${Math.min(fillPercentage, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                                <div className="pt-3 border-t border-gray-800">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-400">Revenue</span>
+                                    <span className="text-lg font-bold text-white">₹{(event.revenue || 0).toLocaleString('en-IN')}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-3 border-t border-gray-800 mt-auto">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/organizer/events/${event.slug || event._id}/analytics`); }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm transition-colors"
+                                >
+                                  <BarChart3 className="h-4 w-4" />
+                                  <span>Analytics</span>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/scan-tickets?eventId=${event._id}`); }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm transition-colors"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  <span>Scan</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

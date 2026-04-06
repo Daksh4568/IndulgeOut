@@ -13,6 +13,10 @@ import {
   X,
   Image,
   Search,
+  Tags,
+  Layers,
+  Percent,
+  MessageSquare,
 } from "lucide-react";
 import NavigationBar from "../components/NavigationBar";
 import TimeInput from "../components/TimeInput";
@@ -81,6 +85,11 @@ const EventCreation = () => {
         { people: 0, price: "" },
       ],
     },
+    genderPricing: {
+      enabled: false,
+      malePrice: 0,
+      femalePrice: 0,
+    },
     questionnaire: {
       enabled: false,
       questions: [
@@ -107,6 +116,7 @@ const EventCreation = () => {
   const [coHostSearchResults, setCoHostSearchResults] = useState([]);
   const [isSearchingCoHosts, setIsSearchingCoHosts] = useState(false);
   const [selectedCoHosts, setSelectedCoHosts] = useState([]);
+  const [coHostFilterType, setCoHostFilterType] = useState('all');
   const coHostSearchTimerRef = useRef(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -326,12 +336,23 @@ const EventCreation = () => {
                   startDate: tier.startDate ? new Date(tier.startDate).toISOString().split('T')[0] : '',
                   endDate: tier.endDate ? new Date(tier.endDate).toISOString().split('T')[0] : '',
                   price: tier.price || 0,
+                  malePrice: tier.malePrice ?? '',
+                  femalePrice: tier.femalePrice ?? '',
                   label: tier.label || '',
                 }))
               : []
           } : {
             enabled: false,
             tiers: [],
+          },
+          genderPricing: event.genderPricing ? {
+            enabled: event.genderPricing.enabled || false,
+            malePrice: event.genderPricing.malePrice || 0,
+            femalePrice: event.genderPricing.femalePrice || 0,
+          } : {
+            enabled: false,
+            malePrice: 0,
+            femalePrice: 0,
           },
         });
 
@@ -620,6 +641,8 @@ const EventCreation = () => {
             startDate: "",
             endDate: "",
             price: "",
+            malePrice: "",
+            femalePrice: "",
             label: "",
           },
         ],
@@ -644,6 +667,15 @@ const EventCreation = () => {
       };
       if (field === 'price' && index === 0) {
         updates.price = { ...prev.price, amount: Number(value) || 0 };
+      }
+      // Sync gender prices from first tier when both features are enabled
+      if (index === 0 && prev.genderPricing?.enabled) {
+        if (field === 'malePrice') {
+          updates.genderPricing = { ...prev.genderPricing, malePrice: Number(value) || 0 };
+        }
+        if (field === 'femalePrice') {
+          updates.genderPricing = { ...prev.genderPricing, femalePrice: Number(value) || 0 };
+        }
       }
       return updates;
     });
@@ -1243,6 +1275,17 @@ const EventCreation = () => {
           toast.error(`Early Bird Tier ${i + 1}: Price cannot be negative`);
           return;
         }
+        // Validate gender prices in timeline tiers when gender pricing is enabled
+        if (formData.genderPricing?.enabled) {
+          if (tier.malePrice === '' || tier.malePrice == null || Number(tier.malePrice) < 0) {
+            toast.error(`Early Bird Tier ${i + 1}: Male Price is required and must be 0 or greater`);
+            return;
+          }
+          if (tier.femalePrice === '' || tier.femalePrice == null || Number(tier.femalePrice) < 0) {
+            toast.error(`Early Bird Tier ${i + 1}: Female Price is required and must be 0 or greater`);
+            return;
+          }
+        }
       }
       // Check for overlapping date ranges
       for (let i = 0; i < tiers.length; i++) {
@@ -1274,6 +1317,22 @@ const EventCreation = () => {
           toast.error(`Group Offer Tier ${i + 1}: Price cannot be negative`);
           return;
         }
+      }
+    }
+
+    // Validate gender-based pricing
+    if (formData.genderPricing?.enabled) {
+      if ((!formData.genderPricing.malePrice && formData.genderPricing.malePrice !== 0) || Number(formData.genderPricing.malePrice) < 0) {
+        toast.error("Gender Pricing: Male price must be 0 or greater");
+        return;
+      }
+      if ((!formData.genderPricing.femalePrice && formData.genderPricing.femalePrice !== 0) || Number(formData.genderPricing.femalePrice) < 0) {
+        toast.error("Gender Pricing: Female price must be 0 or greater");
+        return;
+      }
+      if (Number(formData.genderPricing.malePrice) === 0 && Number(formData.genderPricing.femalePrice) === 0) {
+        toast.error("Gender Pricing: At least one gender must have a price greater than 0");
+        return;
       }
     }
 
@@ -1353,7 +1412,9 @@ const EventCreation = () => {
       if (eventData.pricingTimeline?.enabled && eventData.pricingTimeline.tiers?.length > 0) {
         eventData.pricingTimeline.tiers = eventData.pricingTimeline.tiers.map(tier => ({
           ...tier,
-          price: tier.price !== '' && tier.price != null ? Number(tier.price) : 0
+          price: tier.price !== '' && tier.price != null ? Number(tier.price) : 0,
+          malePrice: tier.malePrice !== '' && tier.malePrice != null ? Number(tier.malePrice) : null,
+          femalePrice: tier.femalePrice !== '' && tier.femalePrice != null ? Number(tier.femalePrice) : null,
         }));
       }
 
@@ -1386,7 +1447,7 @@ const EventCreation = () => {
               console.error(`Failed to send co-host request to ${coHost.name}:`, coHostErr);
             }
           }
-          toast.success("Event created and co-host requests sent!");
+          toast.success("Event created successfullyand co-host request sent!");
         } else {
           toast.success("Event created successfully!");
         }
@@ -1809,31 +1870,182 @@ const EventCreation = () => {
                     placeholder="₹0"
                     min="0"
                     step="0.01"
-                    disabled={formData.pricingTimeline?.enabled}
-                    className={`w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${formData.pricingTimeline?.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={formData.pricingTimeline?.enabled || formData.genderPricing?.enabled}
+                    className={`w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${(formData.pricingTimeline?.enabled || formData.genderPricing?.enabled) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     required
                   />
                   {formData.pricingTimeline?.enabled && (
                     <p className="text-[10px] text-yellow-400/80 mt-1 italic">Price is set by Early Bird tiers</p>
                   )}
+                  {formData.genderPricing?.enabled && (
+                    <p className="text-[10px] text-yellow-400/80 mt-1 italic">Price is set by gender category</p>
+                  )}
                 </div>
+              </div>
+
+              {/* Category-Based Pricing */}
+              <div className="space-y-4">
+                <label
+                  htmlFor="categoryPricing"
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    formData.genderPricing?.enabled
+                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
+                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.genderPricing?.enabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <Tags className={`h-4 w-4 ${formData.genderPricing?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <span className="text-white text-sm font-medium">Set event prices through different categories</span>
+                      <p className="text-[11px] text-gray-500">Set unique prices for Male & Female attendees</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="categoryPricing"
+                      checked={formData.genderPricing?.enabled || false}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData((prev) => ({
+                          ...prev,
+                          genderPricing: {
+                            ...prev.genderPricing,
+                            enabled: checked,
+                            malePrice: checked ? prev.genderPricing.malePrice : 0,
+                            femalePrice: checked ? prev.genderPricing.femalePrice : 0,
+                          },
+                          // Only disable grouping offers when gender pricing is enabled
+                          ...(checked ? {
+                            groupingOffers: { ...prev.groupingOffers, enabled: false },
+                          } : {}),
+                        }));
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                  </div>
+                </label>
+
+                {formData.genderPricing?.enabled && (
+                  <div className="space-y-4 pl-6 border-l-2 border-white/10">
+                    {/* Age Category - Coming Soon */}
+                    <div className="flex items-center space-x-2 opacity-50">
+                      <input
+                        type="checkbox"
+                        disabled
+                        className="h-4 w-4 rounded border-white/10 bg-white/5"
+                      />
+                      <span className="text-gray-400 text-sm">Age Category</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium">
+                        Coming Soon
+                      </span>
+                    </div>
+
+                    {/* Gender Pricing */}
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="genderPricingActive"
+                          checked={true}
+                          disabled
+                          className="h-4 w-4 rounded border-white/10 bg-white/5"
+                          style={{ accentColor: '#7878E9' }}
+                        />
+                        <span className="text-white text-sm font-medium">Gender</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pl-6">
+                        <div>
+                          <label className="block text-gray-400 text-xs mb-1">
+                            Male Price (₹) <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.genderPricing.malePrice}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : Number(e.target.value);
+                              setFormData((prev) => ({
+                                ...prev,
+                                genderPricing: { ...prev.genderPricing, malePrice: val },
+                                price: { ...prev.price, amount: Math.min(val, prev.genderPricing.femalePrice || val) },
+                              }));
+                            }}
+                            placeholder="₹0"
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 text-xs mb-1">
+                            Female Price (₹) <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.genderPricing.femalePrice}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : Number(e.target.value);
+                              setFormData((prev) => ({
+                                ...prev,
+                                genderPricing: { ...prev.genderPricing, femalePrice: val },
+                                price: { ...prev.price, amount: Math.min(prev.genderPricing.malePrice || val, val) },
+                              }));
+                            }}
+                            placeholder="₹0"
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-400 italic pl-6">
+                        💡 Set different ticket prices for male and female attendees. Users will select their gender during checkout.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Grouping Offers */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="groupingOffers"
-                    checked={formData.groupingOffers?.enabled || false}
-                    onChange={(e) => handleGroupingOfferToggle(e.target.checked)}
-                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
-                    style={{ accentColor: '#7878E9' }}
-                  />
-                  <label htmlFor="groupingOffers" className="text-white text-sm font-medium cursor-pointer">
-                    Group Offers
-                  </label>
-                </div>
+                <label
+                  htmlFor="groupingOffers"
+                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                    formData.genderPricing?.enabled
+                      ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
+                      : formData.groupingOffers?.enabled
+                        ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
+                        : 'bg-white/[0.03] border-white/10 hover:border-white/20 cursor-pointer'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.groupingOffers?.enabled && !formData.genderPricing?.enabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <Layers className={`h-4 w-4 ${formData.groupingOffers?.enabled && !formData.genderPricing?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <span className="text-white text-sm font-medium">Group Offers</span>
+                      <p className="text-[11px] text-gray-500">Bulk discounts by group size</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="groupingOffers"
+                      checked={formData.groupingOffers?.enabled || false}
+                      onChange={(e) => handleGroupingOfferToggle(e.target.checked)}
+                      disabled={formData.genderPricing?.enabled}
+                      className="sr-only peer"
+                    />
+                    <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${formData.genderPricing?.enabled ? 'bg-white/5' : 'bg-white/10'}`}></div>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                  </div>
+                </label>
 
                 {formData.groupingOffers?.enabled && (
                   <div className="space-y-3 pl-6 border-l-2 border-white/10">
@@ -1925,19 +2137,35 @@ const EventCreation = () => {
 
               {/* Pricing Timeline */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="pricingTimeline"
-                    checked={formData.pricingTimeline?.enabled || false}
-                    onChange={(e) => handlePricingTimelineToggle(e.target.checked)}
-                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
-                    style={{ accentColor: '#7878E9' }}
-                  />
-                  <label htmlFor="pricingTimeline" className="text-white text-sm font-medium cursor-pointer">
-                    Early Bird
-                  </label>
-                </div>
+                <label
+                  htmlFor="pricingTimeline"
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    formData.pricingTimeline?.enabled
+                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
+                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.pricingTimeline?.enabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <Clock className={`h-4 w-4 ${formData.pricingTimeline?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <span className="text-white text-sm font-medium">Early Bird</span>
+                      <p className="text-[11px] text-gray-500">Time-based pricing tiers</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="pricingTimeline"
+                      checked={formData.pricingTimeline?.enabled || false}
+                      onChange={(e) => handlePricingTimelineToggle(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                  </div>
+                </label>
 
                 {formData.pricingTimeline?.enabled && (
                   <div className="space-y-4 pl-6 border-l-2 border-white/10">
@@ -2001,6 +2229,38 @@ const EventCreation = () => {
                         </div>
 
                         {/* Price */}
+                        {formData.genderPricing?.enabled ? (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-white text-xs font-medium mb-1">
+                                Male Price (₹) <span className="text-red-400">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={tier.malePrice}
+                                onChange={(e) => updatePricingTier(index, 'malePrice', e.target.value)}
+                                placeholder="₹0"
+                                min="0"
+                                step="0.01"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-white text-xs font-medium mb-1">
+                                Female Price (₹) <span className="text-red-400">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={tier.femalePrice}
+                                onChange={(e) => updatePricingTier(index, 'femalePrice', e.target.value)}
+                                placeholder="₹0"
+                                min="0"
+                                step="0.01"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </div>
+                          </div>
+                        ) : (
                         <div>
                           <label className="block text-white text-xs font-medium mb-1">
                             Price (₹) <span className="text-red-400">*</span>
@@ -2015,6 +2275,7 @@ const EventCreation = () => {
                             className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
+                        )}
                       </div>
                     ))}
                     
@@ -2039,19 +2300,35 @@ const EventCreation = () => {
 
               {/* Coupon Codes */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="coupons"
-                    checked={formData.coupons?.enabled || false}
-                    onChange={(e) => handleCouponToggle(e.target.checked)}
-                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
-                    style={{ accentColor: '#7878E9' }}
-                  />
-                  <label htmlFor="coupons" className="text-white text-sm font-medium cursor-pointer">
-                    Create Coupon Codes
-                  </label>
-                </div>
+                <label
+                  htmlFor="coupons"
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    formData.coupons?.enabled
+                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
+                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.coupons?.enabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <Percent className={`h-4 w-4 ${formData.coupons?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <span className="text-white text-sm font-medium">Create Coupon Codes</span>
+                      <p className="text-[11px] text-gray-500">Discount codes for special offers</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="coupons"
+                      checked={formData.coupons?.enabled || false}
+                      onChange={(e) => handleCouponToggle(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                  </div>
+                </label>
 
                 {formData.coupons?.enabled && (
                   <div className="space-y-4 pl-6 border-l-2 border-white/10">
@@ -2242,19 +2519,35 @@ const EventCreation = () => {
 
               {/* Questionnaire */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="questionnaire"
-                    checked={formData.questionnaire?.enabled || false}
-                    onChange={(e) => handleQuestionnaireToggle(e.target.checked)}
-                    className="h-4 w-4 rounded focus:ring-[#7878E9] border-white/10 bg-white/5"
-                    style={{ accentColor: '#7878E9' }}
-                  />
-                  <label htmlFor="questionnaire" className="text-white text-sm font-medium cursor-pointer">
-                    Questionnaire for Participants
-                  </label>
-                </div>
+                <label
+                  htmlFor="questionnaire"
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    formData.questionnaire?.enabled
+                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
+                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.questionnaire?.enabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <MessageSquare className={`h-4 w-4 ${formData.questionnaire?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <span className="text-white text-sm font-medium">Questionnaire for Participants</span>
+                      <p className="text-[11px] text-gray-500">Ask questions before booking</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="questionnaire"
+                      checked={formData.questionnaire?.enabled || false}
+                      onChange={(e) => handleQuestionnaireToggle(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                  </div>
+                </label>
 
                 {formData.questionnaire?.enabled && (
                   <div className="space-y-3 pl-6 border-l-2 border-white/10">
@@ -2312,22 +2605,42 @@ const EventCreation = () => {
 
               {/* Co-host */}
               <div>
-                <label className="flex items-center space-x-3 cursor-pointer mb-3">
-                  <input
-                    type="checkbox"
-                    checked={coHostEnabled}
-                    onChange={(e) => {
-                      setCoHostEnabled(e.target.checked);
-                      if (!e.target.checked) {
-                        setSelectedCoHosts([]);
-                        setCoHostSearchQuery("");
-                        setCoHostSearchResults([]);
-                        setShowCoHostDropdown(false);
-                      }
-                    }}
-                    className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#7878E9] focus:ring-[#7878E9] focus:ring-offset-0 cursor-pointer"
-                  />
-                  <span className="text-white text-sm font-medium">Add a Co-Host</span>
+                <label
+                  htmlFor="coHostToggle"
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all mb-3 ${
+                    coHostEnabled
+                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
+                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${coHostEnabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <UserPlus className={`h-4 w-4 ${coHostEnabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <span className="text-white text-sm font-medium">Add a Co-Host</span>
+                      <p className="text-[11px] text-gray-500">Invite partners to co-host</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="coHostToggle"
+                      checked={coHostEnabled}
+                      onChange={(e) => {
+                        setCoHostEnabled(e.target.checked);
+                        if (!e.target.checked) {
+                          setSelectedCoHosts([]);
+                          setCoHostSearchQuery("");
+                          setCoHostSearchResults([]);
+                          setShowCoHostDropdown(false);
+                        }
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                  </div>
                 </label>
 
                 {coHostEnabled && (
@@ -2347,7 +2660,18 @@ const EventCreation = () => {
                                 <span className="text-[10px] text-white font-bold">{coHost.name?.charAt(0)}</span>
                               )}
                             </div>
-                            <span className="text-white text-xs font-medium">{coHost.name}</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-white text-xs font-medium">{coHost.name}</span>
+                              {coHost.partnerType && (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                                  coHost.partnerType === 'community_organizer' ? 'bg-purple-500/20 text-purple-300' :
+                                  coHost.partnerType === 'venue' ? 'bg-blue-500/20 text-blue-300' :
+                                  'bg-orange-500/20 text-orange-300'
+                                }`}>
+                                  {coHost.partnerType === 'community_organizer' ? 'Community' : coHost.partnerType === 'venue' ? 'Venue' : 'Brand'}
+                                </span>
+                              )}
+                            </div>
                             <button
                               type="button"
                               onClick={() => setSelectedCoHosts(prev => prev.filter(c => c._id !== coHost._id))}
@@ -2359,6 +2683,41 @@ const EventCreation = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* Stakeholder Type Toggle */}
+                    <div className="flex gap-2">
+                      {[
+                        { key: 'all', label: 'All' },
+                        { key: 'community', label: 'Communities' },
+                        { key: 'venue', label: 'Venues' },
+                        { key: 'brand', label: 'Brands' }
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setCoHostFilterType(opt.key);
+                            setCoHostSearchResults([]);
+                            setShowCoHostDropdown(true);
+                            // Trigger search with current query and new filter
+                            setIsSearchingCoHosts(true);
+                            const typeParam = opt.key !== 'all' ? `&type=${opt.key}` : '';
+                            const qParam = coHostSearchQuery.trim().length >= 2 ? `q=${encodeURIComponent(coHostSearchQuery.trim())}` : 'q=';
+                            api.get(`/organizer/search-organizers?${qParam}${typeParam}`)
+                              .then(res => setCoHostSearchResults(res.data.data || []))
+                              .catch(() => setCoHostSearchResults([]))
+                              .finally(() => setIsSearchingCoHosts(false));
+                          }}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                            coHostFilterType === opt.key
+                              ? 'bg-[#7878E9] text-white'
+                              : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
 
                     {/* Search Input - hide when max reached */}
                     {selectedCoHosts.length < 2 && (
@@ -2373,37 +2732,46 @@ const EventCreation = () => {
                             setCoHostSearchQuery(query);
                             setShowCoHostDropdown(true);
                             if (coHostSearchTimerRef.current) clearTimeout(coHostSearchTimerRef.current);
-                            if (query.trim().length >= 2) {
+                            setIsSearchingCoHosts(true);
+                            coHostSearchTimerRef.current = setTimeout(async () => {
+                              try {
+                                const typeParam = coHostFilterType !== 'all' ? `&type=${coHostFilterType}` : '';
+                                const qParam = query.trim().length >= 2 ? `q=${encodeURIComponent(query.trim())}` : 'q=';
+                                const response = await api.get(`/organizer/search-organizers?${qParam}${typeParam}`);
+                                setCoHostSearchResults(response.data.data || []);
+                              } catch (err) {
+                                console.error('Error searching organizers:', err);
+                                setCoHostSearchResults([]);
+                              } finally {
+                                setIsSearchingCoHosts(false);
+                              }
+                            }, 300);
+                          }}
+                          onFocus={() => {
+                            setShowCoHostDropdown(true);
+                            // Load results on focus if empty
+                            if (coHostSearchResults.length === 0) {
                               setIsSearchingCoHosts(true);
-                              coHostSearchTimerRef.current = setTimeout(async () => {
-                                try {
-                                  const response = await api.get(`/organizer/search-organizers?q=${encodeURIComponent(query.trim())}`);
-                                  setCoHostSearchResults(response.data.data || []);
-                                } catch (err) {
-                                  console.error('Error searching organizers:', err);
-                                  setCoHostSearchResults([]);
-                                } finally {
-                                  setIsSearchingCoHosts(false);
-                                }
-                              }, 300);
-                            } else {
-                              setCoHostSearchResults([]);
-                              setIsSearchingCoHosts(false);
+                              const typeParam = coHostFilterType !== 'all' ? `&type=${coHostFilterType}` : '';
+                              const qParam = coHostSearchQuery.trim().length >= 2 ? `q=${encodeURIComponent(coHostSearchQuery.trim())}` : 'q=';
+                              api.get(`/organizer/search-organizers?${qParam}${typeParam}`)
+                                .then(res => setCoHostSearchResults(res.data.data || []))
+                                .catch(() => setCoHostSearchResults([]))
+                                .finally(() => setIsSearchingCoHosts(false));
                             }
                           }}
-                          onFocus={() => setShowCoHostDropdown(true)}
-                          placeholder="Search community organizers..."
+                          placeholder="Search co-hosts by name, email or organization..."
                           className="w-full pl-9 pr-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent text-sm"
                         />
                       </div>
 
                       {/* Dropdown Results */}
-                      {showCoHostDropdown && coHostSearchQuery.trim().length >= 2 && (
+                      {showCoHostDropdown && (
                         <div className="absolute z-50 w-full mt-1 rounded-lg bg-zinc-900/95 border border-white/10 backdrop-blur-xl shadow-2xl max-h-60 overflow-y-auto">
                           {isSearchingCoHosts ? (
                             <div className="px-4 py-3 text-gray-400 text-sm text-center">Searching...</div>
-                          ) : coHostSearchResults.length === 0 ? (
-                            <div className="px-4 py-3 text-gray-400 text-sm text-center">No organizers found</div>
+                          ) : coHostSearchResults.filter(org => !selectedCoHosts.some(s => s._id === org._id)).length === 0 ? (
+                            <div className="px-4 py-3 text-gray-400 text-sm text-center">No results found</div>
                           ) : (
                             coHostSearchResults
                               .filter(org => !selectedCoHosts.some(s => s._id === org._id))
@@ -2431,9 +2799,18 @@ const EventCreation = () => {
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-white text-sm font-medium truncate">{organizer.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-white text-sm font-medium truncate">{organizer.name}</p>
+                                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                                        organizer.partnerType === 'community_organizer' ? 'bg-purple-500/20 text-purple-300' :
+                                        organizer.partnerType === 'venue' ? 'bg-blue-500/20 text-blue-300' :
+                                        'bg-orange-500/20 text-orange-300'
+                                      }`}>
+                                        {organizer.partnerType === 'community_organizer' ? 'Community' : organizer.partnerType === 'venue' ? 'Venue' : 'Brand'}
+                                      </span>
+                                    </div>
                                     <p className="text-gray-400 text-xs truncate">
-                                      {organizer.communityProfile?.communityName || organizer.email}
+                                      {organizer.displayName || organizer.email}
                                     </p>
                                   </div>
                                   <UserPlus className="h-4 w-4 text-[#7878E9] flex-shrink-0" />
@@ -2446,7 +2823,7 @@ const EventCreation = () => {
                     )}
 
                     <p className="text-xs text-gray-400 italic">
-                      💡 Co-hosts will receive a request and can accept or decline from their dashboard (max 2)
+                      💡 Co-hosts will receive a request and can accept or decline from their dashboard. (Maximum 2 co-hosts can be added).
                     </p>
                   </div>
                 )}

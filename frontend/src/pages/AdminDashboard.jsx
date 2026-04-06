@@ -90,10 +90,14 @@ const AdminDashboard = () => {
 
   // Refund state
   const [refunds, setRefunds] = useState([]);
-  const [refundFilter, setRefundFilter] = useState('approved');
+  const [refundFilter, setRefundFilter] = useState('requested');
   const [refundLoading, setRefundLoading] = useState(false);
   const [processingRefundId, setProcessingRefundId] = useState(null);
   const [refundStatusModal, setRefundStatusModal] = useState(null);
+  const [showRefundConfirm, setShowRefundConfirm] = useState(null);
+  const [showRefundRejectModal, setShowRefundRejectModal] = useState(null);
+  const [refundRejectReason, setRefundRejectReason] = useState('');
+  const [rejectingRefundId, setRejectingRefundId] = useState(null);
 
   // Fetch refunds when refunds tab is opened
   useEffect(() => {
@@ -252,17 +256,44 @@ const AdminDashboard = () => {
   };
 
   const processRefund = async (ticketId) => {
-    if (!confirm('Are you sure you want to process this refund? This will initiate a refund via Cashfree.')) return;
     setProcessingRefundId(ticketId);
+    setShowRefundConfirm(null);
     try {
       const res = await api.post(`/admin/refund/${ticketId}/process`);
-      alert(`Refund initiated. Refund ID: ${res.data.data?.refundId}. Status: ${res.data.data?.cashfreeStatus}`);
+      // Show status modal with the result
+      setRefundStatusModal({
+        refundId: res.data.data?.refundId,
+        localStatus: 'processing',
+        cashfreeStatus: res.data.data?.cashfreeStatus || 'PENDING',
+        refundARN: res.data.data?.refundARN,
+        refundAmount: res.data.data?.refundAmount,
+        justProcessed: true
+      });
       fetchRefunds();
     } catch (err) {
       console.error('Error processing refund:', err);
       alert(err.response?.data?.error || 'Failed to process refund');
     } finally {
       setProcessingRefundId(null);
+    }
+  };
+
+  const rejectRefund = async (ticketId) => {
+    if (!refundRejectReason || refundRejectReason.trim().length < 5) {
+      alert('Please provide a rejection reason (min 5 characters)');
+      return;
+    }
+    setRejectingRefundId(ticketId);
+    try {
+      await api.post(`/admin/refund/${ticketId}/reject`, { reason: refundRejectReason.trim() });
+      setShowRefundRejectModal(null);
+      setRefundRejectReason('');
+      fetchRefunds();
+    } catch (err) {
+      console.error('Error rejecting refund:', err);
+      alert(err.response?.data?.error || 'Failed to reject refund');
+    } finally {
+      setRejectingRefundId(null);
     }
   };
 
@@ -3410,38 +3441,48 @@ const AdminDashboard = () => {
                         <h4 className="text-sm font-medium text-gray-400 mb-3">Price Change History</h4>
                         {(() => {
                           const history = eventDetails.priceChangeHistory;
-                          const totalSpots = eventDetails.attendees?.length || 0;
+                          const totalSpots = eventDetails.attendees?.reduce((sum, a) => sum + (a.quantity || 1), 0) || 0;
                           
                           // Build periods from price change entries
                           const periods = [];
                           
                           // First period: from creation to first change
                           if (history.length > 0) {
+                            const endDate = new Date(history[0].changedAt);
+                            const ticketsInPeriod = (eventDetails.attendees || []).filter(a => new Date(a.purchaseDate) < endDate).length;
                             periods.push({
                               price: history[0].previousPrice,
                               startLabel: 'Event created',
-                              endLabel: new Date(history[0].changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+                              endLabel: endDate.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
                               spotsBooked: history[0].spotsBookedAtPrevPrice || 0,
+                              ticketsSold: ticketsInPeriod,
                               isActive: false,
                               reason: history[0].reason === 'initial_creation' ? 'initial_creation' : 'manual_edit',
                             });
                           }
                           
                           for (let i = 0; i < history.length; i++) {
-                            const startTime = new Date(history[i].changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-                            const endTime = i < history.length - 1 
-                              ? new Date(history[i + 1].changedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
+                            const periodStart = new Date(history[i].changedAt);
+                            const periodEnd = i < history.length - 1 ? new Date(history[i + 1].changedAt) : null;
+                            const startTime = periodStart.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                            const endTime = periodEnd 
+                              ? periodEnd.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
                               : null;
                             const spotsAtEnd = i < history.length - 1 
                               ? (history[i + 1].spotsBookedAtPrevPrice || 0) 
                               : totalSpots;
                             const spotsAtStart = history[i].spotsBookedAtPrevPrice || 0;
+                            const ticketsInPeriod = (eventDetails.attendees || []).filter(a => {
+                              const d = new Date(a.purchaseDate);
+                              return d >= periodStart && (!periodEnd || d < periodEnd);
+                            }).length;
                             
                             periods.push({
                               price: history[i].newPrice,
                               startLabel: startTime,
                               endLabel: endTime,
                               spotsBooked: spotsAtEnd - spotsAtStart,
+                              ticketsSold: ticketsInPeriod,
                               isActive: !endTime,
                               reason: history[i].reason,
                             });
@@ -3458,6 +3499,7 @@ const AdminDashboard = () => {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket Price</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Active Period</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Spots Sold</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Tickets Sold</th>
                                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Revenue</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Status</th>
                                   </tr>
@@ -3474,6 +3516,9 @@ const AdminDashboard = () => {
                                       </td>
                                       <td className={`px-4 py-3 text-sm text-center ${period.isActive ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
                                         {period.spotsBooked}
+                                      </td>
+                                      <td className={`px-4 py-3 text-sm text-center ${period.isActive ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
+                                        {period.ticketsSold}
                                       </td>
                                       <td className="px-4 py-3 text-sm text-right text-white">
                                         ₹{(period.price * period.spotsBooked).toLocaleString('en-IN')}
@@ -3520,8 +3565,10 @@ const AdminDashboard = () => {
                             </thead>
                             <tbody className="divide-y divide-gray-700">
                               {(() => {
+                                const allAttendees = eventDetails.attendees || [];
+                                const allSettled = allAttendees.length > 0 && allAttendees.every(att => att.settlementStatus === 'settled');
                                 const priceMap = {};
-                                (eventDetails.attendees || []).forEach(att => {
+                                allAttendees.forEach(att => {
                                   const perSpot = att.priceAtPurchase || att.price || 0;
                                   if (!priceMap[perSpot]) priceMap[perSpot] = { spots: 0, totalBase: 0, totalPaid: 0, cfCharge: 0, cfTax: 0 };
                                   priceMap[perSpot].spots += (att.quantity || 1);
@@ -3533,18 +3580,19 @@ const AdminDashboard = () => {
                                 const sorted = Object.entries(priceMap).sort(([a], [b]) => Number(a) - Number(b));
                                 
                                 // Compute rows data for both rendering and totals
+                                // Use actual CF settlement data ONLY when ALL tickets are settled
                                 const rows = sorted.map(([price, data]) => {
                                   const ticketRevenue = data.totalBase;
                                   const totalAmtPaid = data.totalPaid;
                                   const ioFees = totalAmtPaid - ticketRevenue;
-                                  const cfCharge = data.cfCharge > 0 ? data.cfCharge : totalAmtPaid * 0.016;
-                                  const cfTax = data.cfTax > 0 ? data.cfTax : cfCharge * 0.18;
+                                  const cfCharge = allSettled && data.cfCharge > 0 ? data.cfCharge : totalAmtPaid * 0.016;
+                                  const cfTax = allSettled && data.cfTax > 0 ? data.cfTax : cfCharge * 0.18;
                                   const cfTotal = cfCharge + cfTax;
                                   const proceeds = totalAmtPaid - cfTotal;
                                   const ioRevenueInclGST = proceeds - ticketRevenue;
                                   const ioRevenueNet = ioRevenueInclGST / 1.18;
                                   const pct = ticketRevenue > 0 ? (ioRevenueNet / ticketRevenue) * 100 : 0;
-                                  return { price: Number(price), spots: data.spots, ticketRevenue, totalAmtPaid, ioFees, cfCharge, cfTax, cfTotal, proceeds, ioRevenueInclGST, ioRevenueNet, pct };
+                                  return { price: Number(price), spots: data.spots, ticketRevenue, totalAmtPaid, ioFees, cfCharge, cfTax, cfTotal, proceeds, ioRevenueInclGST, ioRevenueNet, pct, useActualCF: allSettled && data.cfCharge > 0 };
                                 });
                                 
                                 // Totals for weighted average row
@@ -3572,11 +3620,11 @@ const AdminDashboard = () => {
                                         <td className="px-3 py-3 text-right text-gray-300">₹{r.ioFees.toFixed(2)}</td>
                                         <td className="px-3 py-3 text-right text-gray-300">
                                           <div>₹{r.cfCharge.toFixed(2)}</div>
-                                          <div className="text-[9px] text-gray-500">(1.6% of ₹{r.totalAmtPaid.toFixed(2)})</div>
+                                          <div className="text-[9px] text-gray-500">{r.useActualCF ? '(Original CF settlement data)' : `(1.6% of ₹${r.totalAmtPaid.toFixed(2)})`}</div>
                                         </td>
                                         <td className="px-3 py-3 text-right text-gray-300">
                                           <div>₹{r.cfTax.toFixed(2)}</div>
-                                          <div className="text-[9px] text-gray-500">(18% of ₹{r.cfCharge.toFixed(2)})</div>
+                                          <div className="text-[9px] text-gray-500">{r.useActualCF ? '(Original CF settlement data)' : `(18% of ₹${r.cfCharge.toFixed(2)})`}</div>
                                         </td>
                                         <td className="px-3 py-3 text-right text-red-400">₹{r.cfTotal.toFixed(2)}</td>
                                         <td className="px-3 py-3 text-right text-white">₹{r.proceeds.toFixed(2)}</td>
@@ -3597,11 +3645,11 @@ const AdminDashboard = () => {
                                         <td className="px-3 py-3 text-right text-yellow-400">₹{totIoFees.toFixed(2)}</td>
                                         <td className="px-3 py-3 text-right text-yellow-400">
                                           <div>₹{totCfCharge.toFixed(2)}</div>
-                                          <div className="text-[9px] font-normal text-gray-500">(1.6% of ₹{totAmtPaid.toFixed(2)})</div>
+                                          <div className="text-[9px] font-normal text-gray-500">{allSettled ? '(Original CF settlement data)' : `(1.6% of ₹${totAmtPaid.toFixed(2)})`}</div>
                                         </td>
                                         <td className="px-3 py-3 text-right text-yellow-400">
                                           <div>₹{totCfTax.toFixed(2)}</div>
-                                          <div className="text-[9px] font-normal text-gray-500">(18% of ₹{totCfCharge.toFixed(2)})</div>
+                                          <div className="text-[9px] font-normal text-gray-500">{allSettled ? '(Original CF settlement data)' : `(18% of ₹${totCfCharge.toFixed(2)})`}</div>
                                         </td>
                                         <td className="px-3 py-3 text-right text-red-400">₹{totCfTotal.toFixed(2)}</td>
                                         <td className="px-3 py-3 text-right text-yellow-400">₹{totProceeds.toFixed(2)}</td>
@@ -3694,6 +3742,7 @@ const AdminDashboard = () => {
                     <table className="min-w-full divide-y divide-gray-700">
                       <thead className="bg-zinc-800">
                         <tr>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Sr No.</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket #</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Booking Date</th>
@@ -3713,8 +3762,9 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-700">
-                        {[...eventDetails.attendees].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)).map((attendee) => (
+                        {[...eventDetails.attendees].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)).map((attendee, index) => (
                           <tr key={attendee.ticketNumber} className="hover:bg-zinc-800">
+                            <td className="px-4 py-3 text-sm text-center text-gray-400">{index + 1}</td>
                             <td className="px-4 py-3 text-sm font-mono text-white">
                               {attendee.ticketNumber}
                               {attendee.quantity > 1 && (
@@ -3802,11 +3852,10 @@ const AdminDashboard = () => {
                               {attendee.refund?.status && attendee.refund.status !== 'none' && attendee.status !== 'refunded' && (
                                 <span className={`ml-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${
                                   attendee.refund.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  attendee.refund.status === 'approved' ? 'bg-orange-500/20 text-orange-400' :
                                   attendee.refund.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
                                   'bg-gray-500/20 text-gray-400'
                                 }`}>
-                                  refund: {attendee.refund.status}
+                                  refund: {attendee.refund.status === 'requested' ? 'pending' : attendee.refund.status}
                                 </span>
                               )}
                             </td>
@@ -4461,8 +4510,8 @@ const AdminDashboard = () => {
             </div>
 
             {/* Refund Filter */}
-            <div className="flex gap-2 mb-6">
-              {['approved', 'processing', 'processed', 'requested', 'rejected', 'all'].map(f => (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {['requested', 'processing', 'processed', 'rejected', 'all'].map(f => (
                 <button
                   key={f}
                   onClick={() => {
@@ -4475,7 +4524,7 @@ const AdminDashboard = () => {
                       : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                   }`}
                 >
-                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'all' ? 'All' : f === 'requested' ? 'Pending' : f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
             </div>
@@ -4496,9 +4545,7 @@ const AdminDashboard = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Event</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Community</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket #</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Event Total Refund</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Refund Amount</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reason</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Requested</th>
@@ -4515,43 +4562,54 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3 text-sm text-white max-w-[120px] truncate" title={r.event?.title}>{r.event?.title || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm text-purple-400 font-medium">{r.communityName || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm text-gray-400 font-mono">{r.ticketNumber}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500 font-mono max-w-[120px] truncate" title={r.metadata?.orderId}>{r.metadata?.orderId || '—'}</td>
-                        <td className="px-4 py-3 text-sm text-green-400 font-semibold">₹{r.price?.amount || r.metadata?.totalPaid || 0}</td>
-                        <td className="px-4 py-3 text-sm text-orange-400 font-semibold">₹{r.eventTotalRefund || 0}</td>
-                        <td className="px-4 py-3 text-xs text-gray-400 max-w-[150px] truncate" title={r.refund?.requestReason}>
-                          {r.refund?.requestReason || '—'}
+                        <td className="px-4 py-3 text-sm text-green-400 font-semibold">₹{r.refund?.refundAmount || r.price?.amount || r.metadata?.totalPaid || 0}</td>
+                        <td className="px-4 py-3 max-w-[200px]">
+                          <div className="text-xs text-white font-medium">{r.refund?.refundCategory || '—'}</div>
+                          {r.refund?.requestReason && (
+                            <div className="text-xs text-gray-500 mt-0.5 truncate" title={r.refund.requestReason}>{r.refund.requestReason}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
-                            r.refund?.status === 'approved' ? 'bg-orange-500/20 text-orange-400' :
+                            r.refund?.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' :
                             r.refund?.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
                             r.refund?.status === 'processed' ? 'bg-green-500/20 text-green-400' :
-                            r.refund?.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' :
                             r.refund?.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
                             'bg-gray-500/20 text-gray-400'
                           }`}>
-                            {r.refund?.status}
+                            {r.refund?.status === 'requested' ? 'Pending' : r.refund?.status === 'rejected' ? 'Rejected' : r.refund?.status}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-500">
                           {r.refund?.requestedAt ? new Date(r.refund.requestedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          {r.refund?.status === 'approved' && (
-                            <button
-                              onClick={() => processRefund(r.ticketId)}
-                              disabled={processingRefundId === r.ticketId}
-                              className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                            >
-                              {processingRefundId === r.ticketId ? 'Processing...' : 'Process Refund'}
-                            </button>
+                          {r.refund?.status === 'requested' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setShowRefundConfirm(r)}
+                                disabled={processingRefundId === r.ticketId}
+                                className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                              >
+                                {processingRefundId === r.ticketId ? 'Processing...' : 'Process'}
+                              </button>
+                              <button
+                                onClick={() => { setShowRefundRejectModal(r); setRefundRejectReason(''); }}
+                                className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                          {r.refund?.status === 'rejected' && (
+                            <span className="text-xs text-gray-500 italic">Rejected</span>
                           )}
                           {(r.refund?.status === 'processing' || r.refund?.status === 'processed') && (
                             <button
                               onClick={() => checkRefundStatus(r.ticketId)}
                               className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                             >
-                              Check Status
+                              Track Refund
                             </button>
                           )}
                         </td>
@@ -4562,44 +4620,221 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Refund Status Modal */}
-            {refundStatusModal && (
-              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setRefundStatusModal(null)}>
-                <div className="bg-zinc-900 rounded-xl max-w-md w-full border border-gray-700 p-6" onClick={e => e.stopPropagation()}>
-                  <h3 className="text-lg font-bold text-white mb-4">Refund Status</h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Refund ID</span>
-                      <span className="text-white font-mono text-xs">{refundStatusModal.refundId}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Local Status</span>
-                      <span className="text-white">{refundStatusModal.localStatus}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Cashfree Status</span>
-                      <span className={`font-semibold ${
-                        refundStatusModal.cashfreeStatus === 'SUCCESS' ? 'text-green-400' :
-                        refundStatusModal.cashfreeStatus === 'PENDING' ? 'text-yellow-400' : 'text-red-400'
-                      }`}>{refundStatusModal.cashfreeStatus}</span>
-                    </div>
-                    {refundStatusModal.refundARN && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">ARN</span>
-                        <span className="text-white font-mono text-xs">{refundStatusModal.refundARN}</span>
+            {/* Process Refund Confirmation Modal */}
+            {showRefundConfirm && (
+              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowRefundConfirm(null)}>
+                <div className="bg-zinc-900 rounded-xl max-w-md w-full border border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-gray-800">
+                    <h3 className="text-lg font-bold text-white">Confirm Refund Processing</h3>
+                    <p className="text-sm text-gray-400 mt-1">This will initiate a refund via Cashfree payment gateway.</p>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="bg-zinc-800 rounded-lg p-4 border border-gray-700 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">User</span>
+                        <span className="text-white font-medium">{showRefundConfirm.user?.name}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Amount</span>
-                      <span className="text-green-400">₹{refundStatusModal.refundAmount}</span>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Event</span>
+                        <span className="text-white">{showRefundConfirm.event?.title}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Ticket</span>
+                        <span className="text-gray-300 font-mono text-xs">{showRefundConfirm.ticketNumber}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Refund Amount</span>
+                        <span className="text-green-400 font-bold">₹{showRefundConfirm.refund?.refundAmount || showRefundConfirm.price?.amount || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Reason</span>
+                        <span className="text-white text-right text-xs max-w-[200px]">{showRefundConfirm.refund?.refundCategory || '—'}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-yellow-400">
+                      ⚠️ This action cannot be undone. The refund will be processed as STANDARD speed (5-7 business days).
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowRefundConfirm(null)}
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => processRefund(showRefundConfirm.ticketId)}
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm font-medium"
+                      >
+                        Confirm & Process
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setRefundStatusModal(null)}
-                    className="mt-6 w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm"
-                  >
-                    Close
-                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Reject Refund Confirmation Modal */}
+            {showRefundRejectModal && (
+              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowRefundRejectModal(null)}>
+                <div className="bg-zinc-900 rounded-xl max-w-md w-full border border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-gray-800">
+                    <h3 className="text-lg font-bold text-white">Reject Refund Request</h3>
+                    <p className="text-sm text-gray-400 mt-1">This will decline the user's refund request.</p>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="bg-zinc-800 rounded-lg p-4 border border-gray-700 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">User</span>
+                        <span className="text-white font-medium">{showRefundRejectModal.user?.name}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Event</span>
+                        <span className="text-white">{showRefundRejectModal.event?.title}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Amount</span>
+                        <span className="text-green-400 font-bold">₹{showRefundRejectModal.refund?.refundAmount || showRefundRejectModal.price?.amount || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Reason</span>
+                        <span className="text-white text-right text-xs max-w-[200px]">{showRefundRejectModal.refund?.refundCategory || '—'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Rejection Reason *</label>
+                      <textarea
+                        value={refundRejectReason}
+                        onChange={(e) => setRefundRejectReason(e.target.value)}
+                        placeholder="Explain why this refund is being rejected (min 5 characters)..."
+                        className="w-full px-3 py-2 bg-zinc-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowRefundRejectModal(null)}
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => rejectRefund(showRefundRejectModal.ticketId)}
+                        disabled={refundRejectReason.trim().length < 5 || rejectingRefundId}
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-medium disabled:opacity-50"
+                      >
+                        {rejectingRefundId ? 'Rejecting...' : 'Reject Refund'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Refund Tracker Modal */}
+            {refundStatusModal && (
+              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setRefundStatusModal(null)}>
+                <div className="bg-zinc-900 rounded-xl max-w-md w-full border border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-gray-800">
+                    <h3 className="text-lg font-bold text-white">Refund Tracker</h3>
+                    <p className="text-xs text-gray-400 mt-1 font-mono">{refundStatusModal.refundId}</p>
+                  </div>
+                  <div className="p-6">
+                    {/* Timeline */}
+                    <div className="relative pl-8 space-y-6 mb-6">
+                      {/* Transaction Success */}
+                      <div className="relative">
+                        <div className="absolute -left-8 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                          <span className="text-white text-xs">✓</span>
+                        </div>
+                        <div className="absolute -left-5 top-6 w-0.5 h-full bg-gray-700"></div>
+                        <div>
+                          <p className="text-sm font-medium text-green-400">Payment Captured</p>
+                          <p className="text-xs text-gray-500">Original payment was successful</p>
+                        </div>
+                      </div>
+                      {/* Refund Initiated */}
+                      <div className="relative">
+                        <div className={`absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center ${
+                          refundStatusModal.localStatus !== 'requested' ? 'bg-blue-500' : 'bg-gray-600'
+                        }`}>
+                          <span className="text-white text-xs">{refundStatusModal.localStatus !== 'requested' ? '✓' : '−'}</span>
+                        </div>
+                        <div className="absolute -left-5 top-6 w-0.5 h-full bg-gray-700"></div>
+                        <div>
+                          <p className={`text-sm font-medium ${refundStatusModal.localStatus !== 'requested' ? 'text-blue-400' : 'text-gray-500'}`}>
+                            Refund Initiated
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {refundStatusModal.localStatus !== 'requested' ? 'Sent to Cashfree for processing' : 'Waiting for admin to process'}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Refund Processed */}
+                      <div className="relative">
+                        <div className={`absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center ${
+                          refundStatusModal.cashfreeStatus === 'SUCCESS' ? 'bg-green-500' :
+                          refundStatusModal.cashfreeStatus === 'PENDING' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-600'
+                        }`}>
+                          <span className="text-white text-xs">
+                            {refundStatusModal.cashfreeStatus === 'SUCCESS' ? '✓' : refundStatusModal.cashfreeStatus === 'PENDING' ? '⏳' : '−'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            refundStatusModal.cashfreeStatus === 'SUCCESS' ? 'text-green-400' :
+                            refundStatusModal.cashfreeStatus === 'PENDING' ? 'text-yellow-400' : 'text-gray-500'
+                          }`}>
+                            {refundStatusModal.cashfreeStatus === 'SUCCESS' ? 'Refund Completed' :
+                             refundStatusModal.cashfreeStatus === 'PENDING' ? 'Refund In Progress' : 'Refund Pending'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {refundStatusModal.cashfreeStatus === 'SUCCESS' 
+                              ? 'Money has been credited to user\'s account'
+                              : 'Typically takes 5-7 business days'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="bg-zinc-800 rounded-lg p-4 space-y-3 text-sm border border-gray-700">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Refund Amount</span>
+                        <span className="text-green-400 font-bold">₹{refundStatusModal.refundAmount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Cashfree Status</span>
+                        <span className={`font-semibold ${
+                          refundStatusModal.cashfreeStatus === 'SUCCESS' ? 'text-green-400' :
+                          refundStatusModal.cashfreeStatus === 'PENDING' ? 'text-yellow-400' : 'text-red-400'
+                        }`}>{refundStatusModal.cashfreeStatus}</span>
+                      </div>
+                      {refundStatusModal.refundARN && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">ARN</span>
+                          <span className="text-white font-mono text-xs">{refundStatusModal.refundARN}</span>
+                        </div>
+                      )}
+                      {refundStatusModal.processedAt && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Processed At</span>
+                          <span className="text-gray-300 text-xs">{new Date(refundStatusModal.processedAt).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {refundStatusModal.justProcessed && (
+                        <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded text-xs text-green-400 text-center">
+                          ✓ Refund has been successfully initiated via Cashfree
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => setRefundStatusModal(null)}
+                      className="mt-4 w-full bg-gray-800 text-white py-2.5 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

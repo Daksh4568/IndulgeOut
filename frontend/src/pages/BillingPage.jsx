@@ -49,6 +49,10 @@ const BillingPage = () => {
   const [isCouponValidating, setIsCouponValidating] = useState(false);
   const [couponError, setCouponError] = useState('');
 
+  // Gender-based pricing
+  const [maleSpots, setMaleSpots] = useState(0);
+  const [femaleSpots, setFemaleSpots] = useState(0);
+
   useEffect(() => {
     // Allow non-logged-in users to view billing page and select tickets
     fetchEventDetails();
@@ -97,6 +101,8 @@ const BillingPage = () => {
         if (ticketData.additionalPerson) setAdditionalPerson(ticketData.additionalPerson);
         if (ticketData.couponCode) setCouponCode(ticketData.couponCode);
         if (ticketData.appliedCoupon) setAppliedCoupon(ticketData.appliedCoupon);
+        if (ticketData.maleSpots) setMaleSpots(ticketData.maleSpots);
+        if (ticketData.femaleSpots) setFemaleSpots(ticketData.femaleSpots);
         if (ticketData.questionnaireResponses && ticketData.questionnaireResponses.length > 0) {
           setQuestionnaireResponses(ticketData.questionnaireResponses);
           const allAnswered = ticketData.questionnaireResponses.every(r => r.answer && r.answer.trim() !== '');
@@ -171,7 +177,14 @@ const BillingPage = () => {
     let basePrice = 0;
     let numberOfPeople = 1;
 
-    if (event?.groupingOffers?.enabled && selectedTier) {
+    if (event?.genderPricing?.enabled) {
+      // Gender-based pricing — use effective gender prices (resolved from timeline tier if active)
+      const gp = event.currentEffectiveGenderPrices || event.genderPricing;
+      const malePrice = gp.malePrice || 0;
+      const femalePrice = gp.femalePrice || 0;
+      basePrice = (maleSpots * malePrice) + (femaleSpots * femalePrice);
+      numberOfPeople = maleSpots + femaleSpots;
+    } else if (event?.groupingOffers?.enabled && selectedTier) {
       basePrice = selectedTier.price;
       numberOfPeople = selectedTier.people;
     } else {
@@ -240,7 +253,9 @@ const BillingPage = () => {
         additionalPerson,
         couponCode: couponCode || '',
         appliedCoupon: appliedCoupon || null,
-        questionnaireResponses: questionnaireResponses.length > 0 ? questionnaireResponses : []
+        questionnaireResponses: questionnaireResponses.length > 0 ? questionnaireResponses : [],
+        maleSpots: maleSpots || 0,
+        femaleSpots: femaleSpots || 0,
       };
       console.log('💾 Saving ticket selection:', ticketData);
       sessionStorage.setItem('ticketSelection', JSON.stringify(ticketData));
@@ -298,6 +313,13 @@ const BillingPage = () => {
 
       const pricing = calculatePricing();
       
+      // Validate gender pricing requires at least 1 spot
+      if (event?.genderPricing?.enabled && (maleSpots + femaleSpots) < 1) {
+        toast.error('Please select at least 1 spot');
+        setIsProcessing(false);
+        return;
+      }
+      
       // Prepare billing data
       // Include questionnaire responses if they exist and have been filled out
       const validResponses = questionnaireResponses.filter(r => r.answer && r.answer.trim() !== '');
@@ -319,6 +341,14 @@ const BillingPage = () => {
         eventCity: event?.location?.city || 'Unknown',
         eventDate: event?.date,
       };
+
+      // Add gender breakdown if applicable
+      if (event?.genderPricing?.enabled) {
+        billingData.genderBreakdown = {
+          male: maleSpots,
+          female: femaleSpots
+        };
+      }
 
       // Add grouping offer details if applicable
       if (event?.groupingOffers?.enabled && selectedTier) {
@@ -348,6 +378,10 @@ const BillingPage = () => {
           registrationData.groupingOffer = billingData.groupingOffer;
         }
 
+        if (billingData.genderBreakdown) {
+          registrationData.genderBreakdown = billingData.genderBreakdown;
+        }
+
         const registerResponse = await api.post(`/events/${event.slug || event._id}/register`, registrationData);
         
         if (registerResponse.data.success || registerResponse.status === 200) {
@@ -368,7 +402,8 @@ const BillingPage = () => {
         questionnaireResponses: billingData.questionnaireResponses || [],
         groupingOffer: billingData.groupingOffer || null,
         additionalPersons: billingData.additionalPersons || [],
-        couponCode: billingData.couponCode || null // ✅ Add coupon code
+        couponCode: billingData.couponCode || null, // ✅ Add coupon code
+        genderBreakdown: billingData.genderBreakdown || null // ✅ Add gender breakdown
       });
 
       if (paymentResponse.data.success) {
@@ -534,7 +569,77 @@ const BillingPage = () => {
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-white mb-4">Choose your Ticket</h4>
 
-                {event.groupingOffers?.enabled && event.groupingOffers.tiers?.some(tier => tier.people > 0) ? (
+                {event.genderPricing?.enabled ? (
+                  // Gender-based pricing
+                  (() => {
+                    const gp = event.currentEffectiveGenderPrices || event.genderPricing;
+                    return (
+                  <div className="space-y-4">
+                    <p className="text-gray-400 text-sm mb-2">Select the number of spots per gender</p>
+                    
+                    {/* Male Spots */}
+                    <div className="bg-gray-800/50 rounded-xl p-4 border-2 border-gray-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h5 className="text-white font-semibold mb-1">Male Ticket</h5>
+                          <p className="text-gray-400 text-sm">₹{gp.malePrice} per person</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Spots</span>
+                        <div className="flex items-center space-x-4">
+                          <button
+                            onClick={() => setMaleSpots(Math.max(0, maleSpots - 1))}
+                            disabled={maleSpots <= 0}
+                            className="w-10 h-10 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors"
+                          >
+                            -
+                          </button>
+                          <span className="text-2xl font-bold text-white w-12 text-center">{maleSpots}</span>
+                          <button
+                            onClick={() => setMaleSpots(Math.min(spotsLeft - femaleSpots, maleSpots + 1))}
+                            disabled={maleSpots + femaleSpots >= spotsLeft}
+                            className="w-10 h-10 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Female Spots */}
+                    <div className="bg-gray-800/50 rounded-xl p-4 border-2 border-gray-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h5 className="text-white font-semibold mb-1">Female Ticket</h5>
+                          <p className="text-gray-400 text-sm">₹{gp.femalePrice} per person</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Spots</span>
+                        <div className="flex items-center space-x-4">
+                          <button
+                            onClick={() => setFemaleSpots(Math.max(0, femaleSpots - 1))}
+                            disabled={femaleSpots <= 0}
+                            className="w-10 h-10 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors"
+                          >
+                            -
+                          </button>
+                          <span className="text-2xl font-bold text-white w-12 text-center">{femaleSpots}</span>
+                          <button
+                            onClick={() => setFemaleSpots(Math.min(spotsLeft - maleSpots, femaleSpots + 1))}
+                            disabled={maleSpots + femaleSpots >= spotsLeft}
+                            className="w-10 h-10 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                    );
+                  })()
+                ) : event.groupingOffers?.enabled && event.groupingOffers.tiers?.some(tier => tier.people > 0) ? (
                   // Show grouping offers
                   <div className="space-y-3">
                     {event.groupingOffers.tiers
@@ -711,13 +816,34 @@ const BillingPage = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">Ticket Type</span>
                   <span className="text-white font-medium">
-                    {event.groupingOffers?.enabled && selectedTier ? selectedTier.label : 'Regular'}
+                    {event.genderPricing?.enabled ? 'Gender-Based' : (event.groupingOffers?.enabled && selectedTier ? selectedTier.label : 'Regular')}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Number of People</span>
-                  <span className="text-white font-medium">{pricing.numberOfPeople}</span>
-                </div>
+                {event.genderPricing?.enabled ? (
+                  <>
+                    {maleSpots > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Male Spots</span>
+                        <span className="text-white font-medium">{maleSpots} × ₹{(event.currentEffectiveGenderPrices || event.genderPricing).malePrice}</span>
+                      </div>
+                    )}
+                    {femaleSpots > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Female Spots</span>
+                        <span className="text-white font-medium">{femaleSpots} × ₹{(event.currentEffectiveGenderPrices || event.genderPricing).femalePrice}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Total People</span>
+                      <span className="text-white font-medium">{pricing.numberOfPeople}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Number of People</span>
+                    <span className="text-white font-medium">{pricing.numberOfPeople}</span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-gray-700 pt-4 mb-6">
@@ -817,7 +943,7 @@ const BillingPage = () => {
 
               <button
                 onClick={handleProceedToPayment}
-                disabled={isProcessing || spotsLeft <= 0}
+                disabled={isProcessing || spotsLeft <= 0 || (event?.genderPricing?.enabled && (maleSpots + femaleSpots) < 1)}
                 className="w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 style={{
                   background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',

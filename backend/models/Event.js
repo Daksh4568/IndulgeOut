@@ -125,6 +125,10 @@ const eventSchema = new mongoose.Schema({
       tierPeople: Number,
       tierPrice: Number
     },
+    genderBreakdown: {
+      male: { type: Number, default: 0 },
+      female: { type: Number, default: 0 }
+    },
     couponUsed: {
       code: String,
       discountType: String,
@@ -165,6 +169,16 @@ const eventSchema = new mongoose.Schema({
         type: Number,
         required: true,
         min: 0
+      },
+      malePrice: {
+        type: Number,
+        min: 0,
+        default: null
+      },
+      femalePrice: {
+        type: Number,
+        min: 0,
+        default: null
       },
       label: {
         type: String,
@@ -211,6 +225,23 @@ const eventSchema = new mongoose.Schema({
       }]
     }
   }],
+  // Gender-based pricing: host can set different prices for male and female
+  genderPricing: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    malePrice: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    femalePrice: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
+  },
   groupingOffers: {
     enabled: {
       type: Boolean,
@@ -541,6 +572,35 @@ eventSchema.methods.getCurrentPrice = function() {
   });
   
   return activeTier ? activeTier.price : (this.price?.amount || 0);
+};
+
+// Get current effective gender prices based on pricing timeline + gender pricing
+eventSchema.methods.getCurrentGenderPrices = function() {
+  const base = {
+    malePrice: this.genderPricing?.malePrice || 0,
+    femalePrice: this.genderPricing?.femalePrice || 0
+  };
+  
+  if (!this.genderPricing?.enabled) return null;
+  
+  // If pricing timeline is also enabled, find the active tier's gender prices
+  if (this.pricingTimeline?.enabled && this.pricingTimeline?.tiers?.length) {
+    const todayIST = getTodayIST();
+    const activeTier = this.pricingTimeline.tiers.find(tier => {
+      const startStr = toDateString(tier.startDate);
+      const endStr = toDateString(tier.endDate);
+      return todayIST >= startStr && todayIST <= endStr;
+    });
+    
+    if (activeTier && activeTier.malePrice != null && activeTier.femalePrice != null) {
+      return {
+        malePrice: activeTier.malePrice,
+        femalePrice: activeTier.femalePrice
+      };
+    }
+  }
+  
+  return base;
 };
 
 // Get price at a specific date

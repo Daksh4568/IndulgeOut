@@ -224,6 +224,33 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         priority: notif.priority || 'medium'
       });
     });
+
+    // 4. Check for pending co-host requests
+    const coHostEvents = await Event.find({
+      'coHostRequests.user': userId,
+      'coHostRequests.status': 'pending'
+    }).select('title date coHostRequests host').populate('host', 'name');
+
+    coHostEvents.forEach(event => {
+      const request = event.coHostRequests.find(
+        r => r.user.toString() === userId && r.status === 'pending'
+      );
+      if (request) {
+        actionsRequired.push({
+          id: `cohost_${event._id}`,
+          type: 'cohost_request',
+          priority: 'high',
+          title: 'Co-Host Invitation',
+          description: `${event.host?.name || 'An organizer'} has invited you to co-host "${event.title}"`,
+          ctaText: 'Respond',
+          eventId: event._id,
+          metadata: {
+            eventName: event.title,
+            hostName: event.host?.name
+          }
+        });
+      }
+    });
     
     console.log(`✅ [Venue Dashboard] Total action items: ${actionsRequired.length}`);
 

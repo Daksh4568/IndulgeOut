@@ -413,7 +413,11 @@ router.post('/:ticketId/refund-request', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { ticketId } = req.params;
-    const { reason } = req.body;
+    const { refundCategory, comments } = req.body;
+
+    if (!refundCategory) {
+      return res.status(400).json({ success: false, message: 'Please select a reason for refund' });
+    }
 
     const ticket = await Ticket.findById(ticketId).populate('event');
     if (!ticket) {
@@ -470,7 +474,8 @@ router.post('/:ticketId/refund-request', authMiddleware, async (req, res) => {
     ticket.refund = {
       status: 'requested',
       requestedAt: new Date(),
-      requestReason: reason || '',
+      refundCategory: refundCategory,
+      requestReason: comments || '',
       refundAmount: ticket.metadata?.totalPaid || ticket.price?.amount || 0
     };
     await ticket.save();
@@ -481,10 +486,10 @@ router.post('/:ticketId/refund-request', authMiddleware, async (req, res) => {
     await Notification.create({
       recipient: event.host,
       type: 'refund_requested',
-      category: 'action_required',
+      category: 'status_update',
       priority: 'high',
       title: 'Refund Request Received',
-      message: `${user.name} has requested a refund for "${event.title}" (Ticket: ${ticket.ticketNumber})`,
+      message: `${user.name} has requested a refund for "${event.title}" (Ticket: ${ticket.ticketNumber}). Reason: ${refundCategory}`,
       relatedEvent: event._id,
       relatedTicket: ticket._id,
       relatedUser: userId

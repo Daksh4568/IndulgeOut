@@ -58,7 +58,8 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       questionnaireResponses = [], 
       groupingOffer, 
       additionalPersons = [],
-      couponCode              // ✅ Receive coupon code
+      couponCode,              // ✅ Receive coupon code
+      genderBreakdown          // ✅ Receive gender breakdown
     } = req.body;
     const userId = req.user.userId || req.user.id;
 
@@ -186,6 +187,7 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       groupingOffer: groupingOffer || null,
       additionalPersons: additionalPersons || [],
       questionnaireResponses: questionnaireResponses || [],
+      genderBreakdown: genderBreakdown || null,
       createdAt: Date.now()
     };
 
@@ -256,6 +258,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
     const platformFees = req.body.platformFees || storedFees.platformFees || parseFloat((serverSideBasePrice * 0.03).toFixed(2));
     const totalAmount = req.body.totalAmount || (basePrice + gstAndOtherCharges + platformFees);
     const couponCode = req.body.couponCode || storedFees.couponCode || null;
+    const genderBreakdown = req.body.genderBreakdown || storedFees.genderBreakdown || null;
     
     // Clean up stored fees
     if (global.pendingPaymentFees?.[orderId]) {
@@ -383,6 +386,14 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       };
     }
 
+    // Add gender breakdown if applicable
+    if (genderBreakdown && (genderBreakdown.male > 0 || genderBreakdown.female > 0)) {
+      participantData.genderBreakdown = {
+        male: genderBreakdown.male || 0,
+        female: genderBreakdown.female || 0
+      };
+    }
+
     // Add coupon details if applicable
     if (couponData) {
       participantData.couponUsed = {
@@ -460,6 +471,14 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
       if (groupingOffer) {
         ticketMetadata.groupingOffer = groupingOffer.tierLabel;
         ticketMetadata.tierPeople = groupingOffer.tierPeople;
+      }
+      
+      // Add gender breakdown to ticket metadata
+      if (genderBreakdown && (genderBreakdown.male > 0 || genderBreakdown.female > 0)) {
+        ticketMetadata.genderBreakdown = {
+          male: genderBreakdown.male || 0,
+          female: genderBreakdown.female || 0
+        };
       }
       
       // Add coupon information to ticket metadata
@@ -839,6 +858,15 @@ router.post('/webhook', async (req, res) => {
         participantData.groupingOffer = groupingOffer;
       }
       
+      // Add gender breakdown if exists
+      const genderBreakdownWebhook = storedData?.genderBreakdown || null;
+      if (genderBreakdownWebhook && (genderBreakdownWebhook.male > 0 || genderBreakdownWebhook.female > 0)) {
+        participantData.genderBreakdown = {
+          male: genderBreakdownWebhook.male || 0,
+          female: genderBreakdownWebhook.female || 0
+        };
+      }
+      
       // Add coupon details if applicable
       if (couponData) {
         participantData.couponUsed = {
@@ -935,7 +963,12 @@ router.post('/webhook', async (req, res) => {
             couponDiscount: couponData?.discountApplied || 0,
             couponDiscountType: couponData?.discountType || null,
             couponDiscountValue: couponData?.discountValue || 0,
-            originalAmount: couponData ? (basePrice + (couponData.discountApplied || 0)) : null
+            originalAmount: couponData ? (basePrice + (couponData.discountApplied || 0)) : null,
+            // Gender breakdown
+            genderBreakdown: genderBreakdownWebhook && (genderBreakdownWebhook.male > 0 || genderBreakdownWebhook.female > 0) ? {
+              male: genderBreakdownWebhook.male || 0,
+              female: genderBreakdownWebhook.female || 0
+            } : undefined
           }
         });
         console.log('✅ [WEBHOOK] Ticket generated:', ticket.ticketNumber);

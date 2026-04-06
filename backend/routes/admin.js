@@ -2733,7 +2733,7 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
 
     // Calculate total refund amount for this event
     const totalRefundAmount = tickets
-      .filter(t => t.status === 'refunded' || (t.refund && ['approved', 'processing', 'processed'].includes(t.refund.status)))
+      .filter(t => t.status === 'refunded' || (t.refund && ['requested', 'processing', 'processed'].includes(t.refund.status)))
       .reduce((sum, t) => sum + (t.refund?.refundAmount || t.price?.amount || 0), 0);
     const totalRefundedTickets = tickets.filter(t => t.status === 'refunded').length;
     
@@ -3632,7 +3632,7 @@ router.get('/refunds', requirePermission('view_analytics'), async (req, res) => 
     if (status && status !== 'all') {
       filter['refund.status'] = status;
     } else {
-      filter['refund.status'] = { $in: ['requested', 'approved', 'processing', 'processed', 'rejected'] };
+      filter['refund.status'] = { $in: ['requested', 'processing', 'processed', 'rejected'] };
     }
 
     const tickets = await Ticket.find(filter)
@@ -3700,8 +3700,8 @@ router.post('/refund/:ticketId/process', requirePermission('manage_payouts'), as
       return res.status(404).json({ success: false, error: 'Ticket not found' });
     }
 
-    if (!ticket.refund || ticket.refund.status !== 'approved') {
-      return res.status(400).json({ success: false, error: 'Only approved refund requests can be processed' });
+    if (!ticket.refund || ticket.refund.status !== 'requested') {
+      return res.status(400).json({ success: false, error: 'Only pending refund requests can be processed' });
     }
 
     const orderId = ticket.metadata?.orderId;
@@ -3781,6 +3781,54 @@ router.post('/refund/:ticketId/process', requirePermission('manage_payouts'), as
       error: 'Failed to process refund via Cashfree',
       details: error.response?.data?.message || error.message
     });
+  }
+});
+
+/**
+ * POST /api/admin/refund/:ticketId/reject
+ * Reject a refund request
+ */
+router.post('/refund/:ticketId/reject', requirePermission('manage_payouts'), async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { reason } = req.body;
+    const adminId = req.admin?._id || req.admin?.id;
+
+    if (!reason || reason.trim().length < 5) {
+      return res.status(400).json({ success: false, error: 'Rejection reason is required (min 5 characters)' });
+    }
+
+    const ticket = await Ticket.findById(ticketId).populate('event', 'title');
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+
+    if (!ticket.refund || ticket.refund.status !== 'requested') {
+      return res.status(400).json({ success: false, error: 'Only pending refund requests can be rejected' });
+    }
+
+    ticket.refund.status = 'rejected';
+    ticket.refund.rejectedAt = new Date();
+    ticket.refund.rejectedBy = adminId;
+    ticket.refund.rejectionReason = reason.trim();
+    await ticket.save();
+
+    // Notify user
+    await Notification.create({
+      recipient: ticket.user,
+      type: 'refund_rejected',
+      category: 'status_update',
+      priority: 'medium',
+      title: 'Refund Request Declined',
+      message: `Your refund request for "${ticket.event?.title}" has been declined. Reason: ${reason.trim()}`,
+      relatedEvent: ticket.event._id || ticket.event,
+      relatedTicket: ticket._id
+    });
+
+    res.json({ success: true, message: 'Refund request rejected' });
+  } catch (error) {
+    console.error('Error rejecting refund:', error);
+    res.status(500).json({ success: false, error: 'Failed to reject refund' });
   }
 });
 

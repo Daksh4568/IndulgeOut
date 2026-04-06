@@ -1615,34 +1615,58 @@ router.get('/reports/monthly', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/organizer/search-organizers
- * Search for community organizers to invite as co-host
+ * Search for host partners (community organizers, venues, brands) to invite as co-host
  */
 router.get('/search-organizers', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const { q } = req.query;
+    const { q, type } = req.query;
 
-    if (!q || q.trim().length < 2) {
-      return res.status(400).json({ message: 'Search query must be at least 2 characters' });
-    }
-
-    const searchRegex = new RegExp(q.trim(), 'i');
-
-    const organizers = await User.find({
+    // Build base filter
+    const filter = {
       _id: { $ne: userId },
-      role: 'host_partner',
-      hostPartnerType: 'community_organizer',
-      $or: [
+      role: 'host_partner'
+    };
+
+    // Filter by stakeholder type if specified
+    if (type === 'community') {
+      filter.hostPartnerType = 'community_organizer';
+    } else if (type === 'venue') {
+      filter.hostPartnerType = 'venue';
+    } else if (type === 'brand') {
+      filter.hostPartnerType = 'brand_sponsor';
+    }
+    // If no type, return all host_partner types
+
+    // Build search conditions
+    if (q && q.trim().length >= 2) {
+      const searchRegex = new RegExp(q.trim(), 'i');
+      filter.$or = [
         { name: searchRegex },
         { email: searchRegex },
-        { 'communityProfile.communityName': searchRegex }
-      ]
-    })
-    .select('name email profilePicture communityProfile.communityName')
-    .limit(10)
-    .lean();
+        { 'communityProfile.communityName': searchRegex },
+        { 'venueProfile.venueName': searchRegex },
+        { 'brandProfile.brandName': searchRegex }
+      ];
+    }
 
-    res.json({ success: true, data: organizers });
+    const results = await User.find(filter)
+      .select('name email profilePicture hostPartnerType communityProfile.communityName venueProfile.venueName brandProfile.brandName')
+      .limit(10)
+      .lean();
+
+    // Add a display label for each result
+    const data = results.map(u => ({
+      ...u,
+      displayName: u.hostPartnerType === 'community_organizer'
+        ? (u.communityProfile?.communityName || u.name)
+        : u.hostPartnerType === 'venue'
+        ? (u.venueProfile?.venueName || u.name)
+        : (u.brandProfile?.brandName || u.name),
+      partnerType: u.hostPartnerType
+    }));
+
+    res.json({ success: true, data });
   } catch (error) {
     console.error('Error searching organizers:', error);
     res.status(500).json({ message: 'Server error searching organizers' });
@@ -1671,10 +1695,10 @@ router.post('/co-host-request', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only the event host can invite co-hosts' });
     }
 
-    // Verify target user is a community organizer
+    // Verify target user is a host partner
     const coHostUser = await User.findById(coHostUserId);
-    if (!coHostUser || coHostUser.role !== 'host_partner' || coHostUser.hostPartnerType !== 'community_organizer') {
-      return res.status(400).json({ message: 'Selected user is not a community organizer' });
+    if (!coHostUser || coHostUser.role !== 'host_partner') {
+      return res.status(400).json({ message: 'Selected user is not a valid host partner' });
     }
 
     // Check max co-host limit (2)
@@ -1706,6 +1730,15 @@ router.post('/co-host-request', authMiddleware, async (req, res) => {
 
     // Create notification for the co-host
     const hostUser = await User.findById(userId).select('name');
+    
+    // Determine dashboard link based on co-host user type
+    let dashboardLink = '/organizer/dashboard';
+    if (coHostUser.hostPartnerType === 'venue') {
+      dashboardLink = '/venue/dashboard';
+    } else if (coHostUser.hostPartnerType === 'brand_sponsor') {
+      dashboardLink = '/brand/dashboard';
+    }
+    
     await Notification.create({
       recipient: coHostUserId,
       type: 'cohost_request_received',
@@ -1717,7 +1750,7 @@ router.post('/co-host-request', authMiddleware, async (req, res) => {
       relatedUser: userId,
       actionButton: {
         text: 'View Request',
-        link: `/organizer/dashboard`
+        link: dashboardLink
       }
     });
 
@@ -1788,84 +1821,6 @@ router.post('/co-host-request/:eventId/respond', authMiddleware, async (req, res
   } catch (error) {
     console.error('Error responding to co-host request:', error);
     res.status(500).json({ message: 'Server error responding to co-host request' });
-  }
-});
-
-// ==================== REFUND MANAGEMENT (Organizer) ====================
-
-/**
- * POST /api/organizer/refund/:ticketId/respond
- * Approve or reject a refund request
- */
-router.post('/refund/:ticketId/respond', authMiddleware, async (req, res) => {
-  try {
-    const userId = req.user.userId || req.user.id;
-    const { ticketId } = req.params;
-    const { action, reason } = req.body;
-
-    if (!['approve', 'reject'].includes(action)) {
-      return res.status(400).json({ message: 'Action must be approve or reject' });
-    }
-
-    const Ticket = require('../models/Ticket');
-    const ticket = await Ticket.findById(ticketId).populate('event');
-    if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
-    }
-
-    // Verify organizer is the event host or co-host
-    const event = await Event.findById(ticket.event._id || ticket.event);
-    const isAuthorized = event.host.toString() === userId ||
-      (event.coHosts && event.coHosts.some(ch => ch.toString() === userId));
-    if (!isAuthorized) {
-      return res.status(403).json({ message: 'Only the event host can manage refund requests' });
-    }
-
-    if (!ticket.refund || ticket.refund.status !== 'requested') {
-      return res.status(400).json({ message: 'No pending refund request found' });
-    }
-
-    if (action === 'approve') {
-      ticket.refund.status = 'approved';
-      ticket.refund.approvedAt = new Date();
-      ticket.refund.approvedBy = userId;
-      await ticket.save();
-
-      // Notify user
-      await Notification.create({
-        recipient: ticket.user,
-        type: 'refund_approved',
-        category: 'status_update',
-        priority: 'medium',
-        title: 'Refund Approved',
-        message: `Your refund request for "${event.title}" has been approved. It will be processed shortly.`,
-        relatedEvent: event._id,
-        relatedTicket: ticket._id
-      });
-    } else {
-      ticket.refund.status = 'rejected';
-      ticket.refund.rejectedAt = new Date();
-      ticket.refund.rejectedBy = userId;
-      ticket.refund.rejectionReason = reason || '';
-      await ticket.save();
-
-      // Notify user
-      await Notification.create({
-        recipient: ticket.user,
-        type: 'refund_rejected',
-        category: 'status_update',
-        priority: 'medium',
-        title: 'Refund Request Declined',
-        message: `Your refund request for "${event.title}" has been declined.${reason ? ' Reason: ' + reason : ''}`,
-        relatedEvent: event._id,
-        relatedTicket: ticket._id
-      });
-    }
-
-    res.json({ success: true, message: `Refund ${action === 'approve' ? 'approved' : 'rejected'} successfully` });
-  } catch (error) {
-    console.error('Error responding to refund:', error);
-    res.status(500).json({ message: 'Server error' });
   }
 });
 

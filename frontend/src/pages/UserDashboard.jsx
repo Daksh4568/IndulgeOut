@@ -37,7 +37,8 @@ const UserDashboard = () => {
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundEvent, setRefundEvent] = useState(null);
-  const [refundReason, setRefundReason] = useState('');
+  const [refundCategory, setRefundCategory] = useState('');
+  const [refundComments, setRefundComments] = useState('');
   const [refundLoading, setRefundLoading] = useState(false);
   
   // Carousel refs
@@ -178,10 +179,13 @@ const UserDashboard = () => {
 
   // Handle refund request
   const handleRefundRequest = async () => {
-    if (!refundEvent?.ticketId || !refundReason.trim()) return;
+    if (!refundEvent?.ticketId || !refundCategory) return;
     setRefundLoading(true);
     try {
-      await api.post(`/tickets/${refundEvent.ticketId}/refund-request`, { reason: refundReason.trim() });
+      await api.post(`/tickets/${refundEvent.ticketId}/refund-request`, { 
+        refundCategory, 
+        comments: refundComments.trim() || '' 
+      });
       // Update local state
       setMyEvents(prev => ({
         ...prev,
@@ -190,7 +194,8 @@ const UserDashboard = () => {
         )
       }));
       setShowRefundModal(false);
-      setRefundReason('');
+      setRefundCategory('');
+      setRefundComments('');
       setRefundEvent(null);
     } catch (error) {
       console.error('Error requesting refund:', error);
@@ -1315,7 +1320,7 @@ const UserDashboard = () => {
       {showRefundModal && refundEvent && (
         <div 
           className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={() => { setShowRefundModal(false); setRefundReason(''); setRefundEvent(null); }}
+          onClick={() => { setShowRefundModal(false); setRefundCategory(''); setRefundComments(''); setRefundEvent(null); }}
         >
           <div 
             className="bg-zinc-900 rounded-2xl max-w-md w-full border border-gray-800"
@@ -1327,7 +1332,7 @@ const UserDashboard = () => {
                   Request Refund
                 </h3>
                 <button
-                  onClick={() => { setShowRefundModal(false); setRefundReason(''); setRefundEvent(null); }}
+                  onClick={() => { setShowRefundModal(false); setRefundCategory(''); setRefundComments(''); setRefundEvent(null); }}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
                   <X className="h-6 w-6" />
@@ -1339,22 +1344,72 @@ const UserDashboard = () => {
                 <p className="text-white font-semibold">{refundEvent.title}</p>
                 <p className="text-gray-400 text-sm mt-1">{formatDate(refundEvent.date)}</p>
               </div>
+
+              {/* Refund Reason Selection */}
               <div>
-                <label className="block text-sm text-gray-300 mb-2">Reason for refund</label>
+                <label className="block text-sm text-gray-300 mb-3">Select reason for refund</label>
+                <div className="space-y-3">
+                  <label 
+                    className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                      refundCategory === 'Event Cancelled by Organizer or IndulgeOut'
+                        ? 'border-purple-500 bg-purple-500/10' 
+                        : 'border-gray-700 bg-zinc-800 hover:border-gray-600'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="refundCategory"
+                      value="Event Cancelled by Organizer or IndulgeOut"
+                      checked={refundCategory === 'Event Cancelled by Organizer or IndulgeOut'}
+                      onChange={(e) => setRefundCategory(e.target.value)}
+                      className="mt-0.5 accent-purple-500"
+                    />
+                    <div>
+                      <p className="text-white font-semibold text-sm">Event was cancelled</p>
+                      <p className="text-gray-400 text-xs mt-1">The event has been cancelled by the organizer or IndulgeOut. You are eligible for a full refund including ticket price, platform fee, and applicable taxes.</p>
+                    </div>
+                  </label>
+                  <label 
+                    className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                      refundCategory === 'Removed from event by Organizer'
+                        ? 'border-purple-500 bg-purple-500/10' 
+                        : 'border-gray-700 bg-zinc-800 hover:border-gray-600'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="refundCategory"
+                      value="Removed from event by Organizer"
+                      checked={refundCategory === 'Removed from event by Organizer'}
+                      onChange={(e) => setRefundCategory(e.target.value)}
+                      className="mt-0.5 accent-purple-500"
+                    />
+                    <div>
+                      <p className="text-white font-semibold text-sm">I was removed from the event by the organizer</p>
+                      <p className="text-gray-400 text-xs mt-1">If you were removed from the guest list by the organizer, you are eligible for a full refund including ticket price, platform fee, and applicable taxes.</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Optional Comments */}
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">Comments (Optional)</label>
                 <textarea
-                  value={refundReason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                  placeholder="Please tell us why you'd like a refund..."
+                  value={refundComments}
+                  onChange={(e) => setRefundComments(e.target.value)}
+                  placeholder="Add any additional details..."
                   className="w-full bg-zinc-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none"
-                  rows={3}
+                  rows={2}
                 />
               </div>
+
               <p className="text-xs text-gray-500">
-                Refund requests are reviewed by the event organizer. Standard refunds take 5-7 business days once approved.
+                Refund requests are reviewed by IndulgeOut. Standard refunds take 5-7 business days once processed.
               </p>
               <div className="flex gap-3">
                 <button
-                  onClick={() => { setShowRefundModal(false); setRefundReason(''); setRefundEvent(null); }}
+                  onClick={() => { setShowRefundModal(false); setRefundCategory(''); setRefundComments(''); setRefundEvent(null); }}
                   className="flex-1 bg-zinc-800 text-white px-4 py-2.5 rounded-lg hover:bg-zinc-700 transition-colors font-semibold"
                   style={{ fontFamily: 'Oswald, sans-serif' }}
                 >
@@ -1362,7 +1417,7 @@ const UserDashboard = () => {
                 </button>
                 <button
                   onClick={handleRefundRequest}
-                  disabled={!refundReason.trim() || refundLoading}
+                  disabled={!refundCategory || refundLoading}
                   className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ fontFamily: 'Oswald, sans-serif' }}
                 >

@@ -138,6 +138,8 @@ router.get('/', async (req, res) => {
     const eventsWithPrice = events.map(e => {
       const obj = e.toObject();
       obj.currentEffectivePrice = e.getCurrentPrice();
+      const gp = e.getCurrentGenderPrices();
+      if (gp) obj.currentEffectiveGenderPrices = gp;
       return obj;
     });
     
@@ -234,6 +236,8 @@ router.get('/:id', async (req, res) => {
     // Add current effective price (based on pricing timeline if enabled)
     const eventObj = event.toObject();
     eventObj.currentEffectivePrice = event.getCurrentPrice();
+    const gp = event.getCurrentGenderPrices();
+    if (gp) eventObj.currentEffectiveGenderPrices = gp;
 
     res.json({ event: eventObj });
   } catch (error) {
@@ -349,7 +353,8 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       gstAndOtherCharges,
       platformFees,
       totalAmount,
-      couponCode // NEW: Coupon code from frontend
+      couponCode, // NEW: Coupon code from frontend
+      genderBreakdown // NEW: Gender breakdown from frontend
     } = req.body;
     
     // Check if user is allowed to register (only regular users, not host_partner or admin)
@@ -441,6 +446,14 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         tierLabel: groupingOffer.tierLabel,
         tierPeople: groupingOffer.tierPeople,
         tierPrice: groupingOffer.tierPrice
+      };
+    }
+    
+    // Add gender breakdown if applicable
+    if (genderBreakdown && (genderBreakdown.male > 0 || genderBreakdown.female > 0)) {
+      participantData.genderBreakdown = {
+        male: genderBreakdown.male || 0,
+        female: genderBreakdown.female || 0
       };
     }
     
@@ -553,6 +566,14 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
       if (groupingOffer) {
         ticketMetadata.groupingOffer = groupingOffer.tierLabel;
         ticketMetadata.tierPeople = groupingOffer.tierPeople;
+      }
+      
+      // Add gender breakdown to ticket metadata
+      if (genderBreakdown && (genderBreakdown.male > 0 || genderBreakdown.female > 0)) {
+        ticketMetadata.genderBreakdown = {
+          male: genderBreakdown.male || 0,
+          female: genderBreakdown.female || 0
+        };
       }
       
       // Add coupon information to ticket metadata
@@ -1020,7 +1041,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     const totalSlots = tickets
       .filter(t => t.status !== 'cancelled' && t.status !== 'refunded')
       .reduce((sum, ticket) => sum + (ticket.quantity || 1), 0);
-    const refunded = tickets.filter(t => t.status === 'refunded' || (t.refund && t.refund.status && t.refund.status !== 'none')).reduce((sum, t) => sum + (t.quantity || 1), 0);
+    const refunded = tickets.filter(t => t.status === 'refunded' || (t.refund && ['requested', 'processing', 'processed'].includes(t.refund.status))).reduce((sum, t) => sum + (t.quantity || 1), 0);
     
     // Use totalSlots as the source of truth for analytics
     const totalRegistered = totalSlots;

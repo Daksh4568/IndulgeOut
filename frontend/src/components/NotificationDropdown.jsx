@@ -64,6 +64,11 @@ export default function NotificationDropdown({ onClose }) {
       const eventId = notification.relatedEvent?._id || notification.relatedEvent;
       targetLink = eventId ? `/user/dashboard?eventId=${eventId}` : '/user/dashboard';
     }
+    // Handle refund request notifications - redirect organizer to analytics with refund modal
+    else if (notification.type === 'refund_requested') {
+      const eventId = notification.relatedEvent?.slug || notification.relatedEvent?._id || notification.relatedEvent;
+      targetLink = eventId ? `/organizer/events/${eventId}/analytics?refundModal=true` : '/organizer/dashboard';
+    }
     // Handle related event links if present
     else if (notification.relatedEvent?._id && targetLink && targetLink.includes('/events/')) {
       targetLink = `/events/${notification.relatedEvent.slug || notification.relatedEvent._id}`;

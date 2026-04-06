@@ -162,7 +162,12 @@ const EventDetail = () => {
     const eventAddress = typeof event?.location === 'string'
       ? event.location
       : (event?.location?.address || '');
-    const eventPrice = (event?.currentEffectivePrice ?? event?.price?.amount) > 0 ? `₹${event.currentEffectivePrice ?? event.price.amount}` : 'FREE';
+    const eventPrice = event?.genderPricing?.enabled
+      ? (() => {
+          const gp = event.currentEffectiveGenderPrices || event.genderPricing;
+          return `₹${Math.min(gp.malePrice, gp.femalePrice)} onwards`;
+        })()
+      : (event?.currentEffectivePrice ?? event?.price?.amount) > 0 ? `₹${event.currentEffectivePrice ?? event.price.amount}` : 'FREE';
     
     // Location text: prefer full address, then city
     const locationText = eventAddress || eventCity || '';
@@ -1438,7 +1443,24 @@ const EventDetail = () => {
                   >
                     Starting from
                   </p>
-                  {((event.currentEffectivePrice ?? event.price?.amount ?? 0) === 0) ? (
+                  {event.genderPricing?.enabled ? (
+                    (() => {
+                      const gp = event.currentEffectiveGenderPrices || event.genderPricing;
+                      return (
+                    <div>
+                      <p 
+                        className="text-2xl font-bold text-gray-900 dark:text-white"
+                        style={{ fontFamily: 'Oswald, sans-serif' }}
+                      >
+                        ₹{Math.min(gp.malePrice, gp.femalePrice)}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Male: ₹{gp.malePrice} | Female: ₹{gp.femalePrice}
+                      </p>
+                    </div>
+                      );
+                    })()
+                  ) : ((event.currentEffectivePrice ?? event.price?.amount ?? 0) === 0) ? (
                     <p 
                       className="text-2xl font-bold text-green-600"
                       style={{ fontFamily: 'Oswald, sans-serif' }}

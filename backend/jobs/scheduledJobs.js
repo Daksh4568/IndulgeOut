@@ -966,8 +966,15 @@ async function applyPricingTimelineChanges() {
       const currentStoredPrice = event.price?.amount || 0;
       const tierPrice = activeTier.price;
 
-      // Only log if the stored price differs from the active tier price
-      if (currentStoredPrice === tierPrice) continue;
+      // Check if gender pricing is also enabled — update gender prices from the tier
+      const hasGenderPricing = event.genderPricing?.enabled && activeTier.malePrice != null && activeTier.femalePrice != null;
+      const genderChanged = hasGenderPricing && (
+        event.genderPricing.malePrice !== activeTier.malePrice ||
+        event.genderPricing.femalePrice !== activeTier.femalePrice
+      );
+
+      // Only log if the stored price differs from the active tier price (or gender prices changed)
+      if (currentStoredPrice === tierPrice && !genderChanged) continue;
 
       // Check if we already logged this tier transition today
       const alreadyLogged = (event.priceChangeHistory || []).some(change => {
@@ -979,8 +986,15 @@ async function applyPricingTimelineChanges() {
       if (alreadyLogged) continue;
 
       // Push price change history entry and update stored price atomically
+      const updateFields = { 'price.amount': tierPrice };
+      // If gender pricing is enabled and the tier has gender prices, sync them
+      if (hasGenderPricing) {
+        updateFields['genderPricing.malePrice'] = activeTier.malePrice;
+        updateFields['genderPricing.femalePrice'] = activeTier.femalePrice;
+      }
+
       await Event.findByIdAndUpdate(event._id, {
-        $set: { 'price.amount': tierPrice },
+        $set: updateFields,
         $push: {
           priceChangeHistory: {
             previousPrice: currentStoredPrice,
@@ -1000,7 +1014,7 @@ async function applyPricingTimelineChanges() {
         }
       });
 
-      console.log(`  ✅ ${event.title}: ₹${currentStoredPrice} → ₹${tierPrice} (tier: ${activeTier.label || 'unnamed'})`);
+      console.log(`  ✅ ${event.title}: ₹${currentStoredPrice} → ₹${tierPrice} (tier: ${activeTier.label || 'unnamed'})${hasGenderPricing ? ` | Male: ₹${activeTier.malePrice}, Female: ₹${activeTier.femalePrice}` : ''}`);
       updated++;
     }
 

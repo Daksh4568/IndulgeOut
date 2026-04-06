@@ -105,7 +105,12 @@ const ticketSchema = new mongoose.Schema({
     originalAmount: Number,
     // Price timeline tracking - what price tier was active at purchase time
     priceAtPurchase: Number,
-    pricingTimelineTier: String // label of the timeline tier active at purchase
+    pricingTimelineTier: String, // label of the timeline tier active at purchase
+    // Gender-based pricing breakdown
+    genderBreakdown: {
+      male: { type: Number, default: 0 },
+      female: { type: Number, default: 0 }
+    }
   },
   // Settlement tracking fields
   settlementStatus: {
@@ -151,16 +156,12 @@ const ticketSchema = new mongoose.Schema({
   refund: {
     status: {
       type: String,
-      enum: ['none', 'requested', 'approved', 'processing', 'processed', 'rejected'],
+      enum: ['none', 'requested', 'processing', 'processed', 'rejected'],
       default: 'none'
     },
     requestedAt: Date,
+    refundCategory: String,
     requestReason: String,
-    approvedAt: Date,
-    approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
     processedAt: Date,
     processedBy: {
       type: mongoose.Schema.Types.ObjectId,

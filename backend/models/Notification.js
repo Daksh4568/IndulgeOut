@@ -79,7 +79,6 @@ const notificationSchema = new mongoose.Schema({
       
       // Refund Notifications
       'refund_requested',
-      'refund_approved',
       'refund_processed',
       'refund_rejected',
       

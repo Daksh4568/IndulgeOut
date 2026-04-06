@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../config/api";
 import { useAuth } from "../contexts/AuthContext";
 import NavigationBar from "../components/NavigationBar";
@@ -40,6 +40,7 @@ const EventAnalytics = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,6 +58,7 @@ const EventAnalytics = () => {
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
+  const [showRefundModal, setShowRefundModal] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
@@ -88,17 +90,15 @@ const EventAnalytics = () => {
     }
   };
 
-  const handleRefundRespond = async (ticketId, action) => {
-    const reason = action === 'reject' ? prompt('Reason for rejection (optional):') : undefined;
-    if (action === 'reject' && reason === null) return; // User cancelled prompt
-    try {
-      await api.post(`/organizer/refund/${ticketId}/respond`, { action, reason: reason || '' });
-      fetchAnalytics(); // Refresh data
-    } catch (error) {
-      console.error('Error responding to refund:', error);
-      alert(error.response?.data?.message || 'Failed to process refund response');
+  // Open refund modal from notification link
+  useEffect(() => {
+    if (searchParams.get('refundModal') === 'true' && analytics) {
+      setShowRefundModal(true);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('refundModal');
+      setSearchParams(newParams, { replace: true });
     }
-  };
+  }, [searchParams, analytics]);
 
   const fetchQuestionnaireSubmissions = async () => {
     try {
@@ -123,7 +123,7 @@ const EventAnalytics = () => {
       if (statusFilter === 'refund_requested') {
         filtered = filtered.filter((a) => a.refund?.status === 'requested');
       } else if (statusFilter === 'refunded') {
-        filtered = filtered.filter((a) => a.status === 'refunded' || ['approved', 'processing', 'processed'].includes(a.refund?.status));
+        filtered = filtered.filter((a) => a.status === 'refunded' || ['processing', 'processed'].includes(a.refund?.status));
       } else {
         filtered = filtered.filter((a) => a.status === statusFilter);
       }
@@ -220,13 +220,10 @@ const EventAnalytics = () => {
   };
 
   const getStatusBadge = (status, refund) => {
-    // Check refund status first
     if (refund && refund.status && refund.status !== 'none') {
       switch (refund.status) {
         case 'requested':
           return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-        case 'approved':
-          return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
         case 'processing':
           return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
         case 'processed':
@@ -254,7 +251,6 @@ const EventAnalytics = () => {
     if (refund && refund.status && refund.status !== 'none') {
       switch (refund.status) {
         case 'requested': return 'Refund Requested';
-        case 'approved': return 'Refund Approved';
         case 'processing': return 'Refund Processing';
         case 'processed': return 'Refunded';
         case 'rejected': return 'Refund Rejected';
@@ -1199,6 +1195,15 @@ const EventAnalytics = () => {
                 <UserCheck className="h-5 w-5 mr-2 text-green-500" />
                 Attendee Check-ins
               </h2>
+              {analytics?.attendees?.some(a => a.refund?.status && a.refund.status !== 'none') && (
+                <button
+                  onClick={() => setShowRefundModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/30 transition-colors text-sm font-semibold"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Refund Requests ({analytics.attendees.filter(a => a.refund?.status && a.refund.status !== 'none').length})
+                </button>
+              )}
             </div>
 
             {/* Search and Filters */}
@@ -1449,22 +1454,6 @@ const EventAnalytics = () => {
                         >
                           {getStatusLabel(attendee.status, attendee.refund)}
                         </span>
-                        {attendee.refund?.status === 'requested' && (
-                          <div className="flex gap-1 mt-2">
-                            <button
-                              onClick={() => handleRefundRespond(attendee.ticketId, 'approve')}
-                              className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleRefundRespond(attendee.ticketId, 'reject')}
-                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                         {attendee.checkInTime ? (
@@ -1806,6 +1795,91 @@ const EventAnalytics = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Requests Modal */}
+      {showRefundModal && (
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowRefundModal(false)}
+        >
+          <div 
+            className="bg-zinc-900 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-hidden border border-gray-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 sm:p-6 border-b border-gray-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>
+                    Refund Requests
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">{analytics?.eventTitle}</p>
+                </div>
+                <button
+                  onClick={() => setShowRefundModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(85vh-100px)]">
+              {(() => {
+                const refundAttendees = (analytics?.attendees || []).filter(a => a.refund?.status && a.refund.status !== 'none');
+                if (refundAttendees.length === 0) {
+                  return (
+                    <div className="p-8 text-center">
+                      <RotateCcw className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400">No refund requests for this event</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="p-3 sm:p-4 space-y-3">
+                    {refundAttendees.map((attendee, idx) => (
+                      <div key={attendee.ticketId || idx} className="bg-zinc-800 rounded-lg p-3 sm:p-4 border border-gray-700">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-semibold bg-indigo-500/25 text-sm">
+                              {attendee.name?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-white text-sm sm:text-base truncate">{attendee.name}</p>
+                              <p className="text-xs text-gray-500 truncate">{attendee.email}</p>
+                            </div>
+                          </div>
+                          <span className={`flex-shrink-0 px-2 py-1 text-[10px] sm:text-xs rounded-full font-semibold ${getStatusBadge(attendee.status, attendee.refund)}`}>
+                            {getStatusLabel(attendee.status, attendee.refund)}
+                          </span>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className="text-gray-400">Amount</span>
+                            <span className="text-green-400 font-semibold">₹{attendee.refund?.refundAmount || attendee.metadata?.totalPaid || attendee.price?.amount || 0}</span>
+                          </div>
+                          <div className="flex items-start justify-between text-xs sm:text-sm">
+                            <span className="text-gray-400 flex-shrink-0">Reason</span>
+                            <span className="text-white text-right ml-2">{attendee.refund?.refundCategory || '—'}</span>
+                          </div>
+                          {attendee.refund?.requestReason && (
+                            <div className="flex items-start justify-between text-xs sm:text-sm">
+                              <span className="text-gray-400 flex-shrink-0">Comments</span>
+                              <span className="text-gray-300 text-right ml-2">{attendee.refund.requestReason}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className="text-gray-400">Requested</span>
+                            <span className="text-gray-300">{attendee.refund?.requestedAt ? new Date(attendee.refund.requestedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

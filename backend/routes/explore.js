@@ -106,7 +106,7 @@ router.get('/events/search', async (req, res) => {
       // Boost for popular events
       score += (eventData.currentParticipants || 0) * 0.5;
       
-      return { ...eventData, _id: event._id, relevanceScore: score, currentEffectivePrice: event.getCurrentPrice() };
+      return { ...eventData, _id: event._id, relevanceScore: score, currentEffectivePrice: event.getCurrentPrice(), ...(event.getCurrentGenderPrices() ? { currentEffectiveGenderPrices: event.getCurrentGenderPrices() } : {}) };
     });
     
     // Sort by relevance and limit
@@ -179,6 +179,8 @@ router.get('/events/popular', async (req, res) => {
     const events = allEvents.map(e => {
       const obj = e.toObject();
       obj.currentEffectivePrice = e.getCurrentPrice();
+      const gp = e.getCurrentGenderPrices();
+      if (gp) obj.currentEffectiveGenderPrices = gp;
       return obj;
     });
     
@@ -242,6 +244,8 @@ router.get('/events/recommended', authMiddleware, async (req, res) => {
       const events = allEvents.map(e => {
         const obj = e.toObject();
         obj.currentEffectivePrice = e.getCurrentPrice();
+        const gp = e.getCurrentGenderPrices();
+        if (gp) obj.currentEffectiveGenderPrices = gp;
         return obj;
       });
       return res.json({ events, pagination: { page: parseInt(page), limit: parseInt(limit) } });
@@ -273,6 +277,8 @@ router.get('/events/recommended', authMiddleware, async (req, res) => {
     const events = allRecEvents.map(e => {
       const obj = e.toObject();
       obj.currentEffectivePrice = e.getCurrentPrice();
+      const gp = e.getCurrentGenderPrices();
+      if (gp) obj.currentEffectiveGenderPrices = gp;
       return obj;
     });
     const total = await Event.countDocuments({
@@ -346,14 +352,16 @@ router.get('/events/nearby', async (req, res) => {
         return {
           ...event.toObject(),
           distance: Math.round(distance * 10) / 10,
-          currentEffectivePrice: event.getCurrentPrice()
+          currentEffectivePrice: event.getCurrentPrice(),
+          ...(event.getCurrentGenderPrices() ? { currentEffectiveGenderPrices: event.getCurrentGenderPrices() } : {})
         };
       }
       
       return {
         ...event.toObject(),
         distance: null,
-        currentEffectivePrice: event.getCurrentPrice()
+        currentEffectivePrice: event.getCurrentPrice(),
+        ...(event.getCurrentGenderPrices() ? { currentEffectiveGenderPrices: event.getCurrentGenderPrices() } : {})
       };
     }).sort((a, b) => {
       if (a.distance === null) return 1;
