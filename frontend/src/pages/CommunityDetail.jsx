@@ -22,6 +22,13 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 
+const DEFAULT_COMMUNITY_IMAGES = [
+  '/images/BackgroundLogin.jpg',
+  '/images/communities2.jpg',
+  '/images/communities3.jpg',
+  '/images/communities4.jpg',
+];
+
 const CommunityDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -391,9 +398,18 @@ const CommunityDetail = () => {
                   />
                 </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
-                  🌟
-                </div>
+                <>
+                  <img
+                    src={DEFAULT_COMMUNITY_IMAGES[community.name ? community.name.length % DEFAULT_COMMUNITY_IMAGES.length : 0]}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+                  />
+                  <img
+                    src={DEFAULT_COMMUNITY_IMAGES[community.name ? community.name.length % DEFAULT_COMMUNITY_IMAGES.length : 0]}
+                    alt={community.name}
+                    className="relative w-full h-full object-contain scale-[1.35]"
+                  />
+                </>
               )}
             </div>
 

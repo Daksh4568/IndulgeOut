@@ -263,12 +263,13 @@ const BillingPage = () => {
       return;
     }
 
-    // Check if returning user is missing age, gender, or city
+    // Check if returning user is missing age, gender, city, or interests
     const hasPreviousBooking = (user.registeredEvents?.length || 0) > 0;
     const missingAge = !user.age;
     const missingGender = !user.gender;
     const missingCity = !user.location?.city;
-    if (hasPreviousBooking && (missingAge || missingGender || missingCity)) {
+    const missingInterests = !user.interests || user.interests.length === 0;
+    if (hasPreviousBooking && (missingAge || missingGender || missingCity || missingInterests)) {
       setShowUserDetailsModal(true);
       return;
     }
@@ -1058,6 +1059,7 @@ const BillingPage = () => {
         existingAge={user?.age}
         existingGender={user?.gender}
         existingCity={user?.location?.city}
+        existingInterests={user?.interests}
       />
     </div>
   );

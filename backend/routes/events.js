@@ -574,6 +574,14 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
           male: genderBreakdown.male || 0,
           female: genderBreakdown.female || 0
         };
+        // Store effective gender prices at time of purchase for revenue tracking
+        if (event.genderPricing?.enabled) {
+          const genderPrices = event.getCurrentGenderPrices ? event.getCurrentGenderPrices() : {
+            malePrice: event.genderPricing.malePrice,
+            femalePrice: event.genderPricing.femalePrice
+          };
+          ticketMetadata.genderPrices = genderPrices;
+        }
       }
       
       // Add coupon information to ticket metadata
@@ -1355,6 +1363,8 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
             startDate: tier.startDate,
             endDate: tier.endDate,
             price: tier.price,
+            malePrice: tier.malePrice || null,
+            femalePrice: tier.femalePrice || null,
             label: tier.label,
             ticketsBought: tickets.filter(tierFilter).length,
             spotsBought: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
@@ -1362,6 +1372,11 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           };
         })
       } : { enabled: false, tiers: [] },
+      genderPricing: event.genderPricing?.enabled ? {
+        enabled: true,
+        malePrice: event.genderPricing.malePrice,
+        femalePrice: event.genderPricing.femalePrice
+      } : { enabled: false },
       statistics: {
         totalTickets: totalRegistered,
         totalSlots,

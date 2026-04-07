@@ -28,6 +28,7 @@ async function fetchImageBuffer(url) {
  * @param {string} opts.eventTime     - Formatted time
  * @param {string} opts.venueName     - Venue address
  * @param {number|string} opts.spots  - Number of spots
+ * @param {object} [opts.genderBreakdown] - { male: number, female: number }
  * @param {string} opts.qrCodeUrl     - Hosted QR code image URL (S3/CloudFront)
  * @param {string} [opts.qrCodeBase64] - Base64 QR code (fallback)
  * @param {string} [opts.eventImageUrl] - Event poster URL
@@ -42,6 +43,7 @@ async function generateTicketPdf(opts) {
     eventTime,
     venueName,
     spots,
+    genderBreakdown,
     qrCodeUrl,
     qrCodeBase64,
     eventImageUrl,
@@ -132,21 +134,31 @@ async function generateTicketPdf(opts) {
       y += 15;
 
       // ── Ticket Details ──
+      // Build tickets value with gender breakdown if applicable
+      let ticketsValue = `${spots} ${Number(spots) === 1 ? 'Spot' : 'Spots'}`;
+      if (genderBreakdown && (genderBreakdown.male > 0 || genderBreakdown.female > 0)) {
+        const parts = [];
+        if (genderBreakdown.male > 0) parts.push(`Male: ${genderBreakdown.male}`);
+        if (genderBreakdown.female > 0) parts.push(`Female: ${genderBreakdown.female}`);
+        ticketsValue = `${spots} ${Number(spots) === 1 ? 'Spot' : 'Spots'} (${parts.join(', ')})`;
+      }
+
       const details = [
         { label: 'Attendee', value: userName },
         { label: 'Date', value: eventDate },
         { label: 'Time', value: eventTime },
         { label: 'Venue', value: venueName },
-        { label: 'Tickets', value: `${spots} ${Number(spots) === 1 ? 'Spot' : 'Spots'}` },
+        { label: 'Tickets', value: ticketsValue },
         { label: 'Booking ID', value: ticketNumber },
       ];
 
       for (const { label, value } of details) {
         doc.fill('#6b7280').fontSize(11).font('Helvetica')
           .text(label, 60, y, { width: 100 });
+        const textHeight = doc.heightOfString(value || 'N/A', { width: pageWidth - 130 });
         doc.fill('#111827').fontSize(12).font('Helvetica-Bold')
           .text(value || 'N/A', 170, y, { width: pageWidth - 130 });
-        y += 22;
+        y += Math.max(22, textHeight + 8);
       }
 
       y += 10;

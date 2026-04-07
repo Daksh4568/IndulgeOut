@@ -143,9 +143,9 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
         </p>
         ${ticket.metadata?.genderBreakdown && (ticket.metadata.genderBreakdown.male > 0 || ticket.metadata.genderBreakdown.female > 0) ? `
         <p style="color: #666; font-size: 14px; margin: 8px 0; background: #f3f4f6; padding: 8px 16px; border-radius: 6px; display: inline-block;">
-          ${ticket.metadata.genderBreakdown.male > 0 ? `👨 Male: ${ticket.metadata.genderBreakdown.male} spot${ticket.metadata.genderBreakdown.male > 1 ? 's' : ''}` : ''}
+          ${ticket.metadata.genderBreakdown.male > 0 ? `Male: ${ticket.metadata.genderBreakdown.male} spot${ticket.metadata.genderBreakdown.male > 1 ? 's' : ''}` : ''}
           ${ticket.metadata.genderBreakdown.male > 0 && ticket.metadata.genderBreakdown.female > 0 ? ' &nbsp;|&nbsp; ' : ''}
-          ${ticket.metadata.genderBreakdown.female > 0 ? `👩 Female: ${ticket.metadata.genderBreakdown.female} spot${ticket.metadata.genderBreakdown.female > 1 ? 's' : ''}` : ''}
+          ${ticket.metadata.genderBreakdown.female > 0 ? `Female: ${ticket.metadata.genderBreakdown.female} spot${ticket.metadata.genderBreakdown.female > 1 ? 's' : ''}` : ''}
         </p>
         ` : ''}
         <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
@@ -194,7 +194,6 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
               <p style="color: #666; margin: 5px 0;"><strong>📅 Date:</strong> ${eventDate}</p>
               <p style="color: #666; margin: 5px 0;"><strong>🕒 Time:</strong> ${event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : event.time || 'TBD'}</p>
               <p style="color: #666; margin: 5px 0;"><strong>📍 Location:</strong> ${event.location.address}, ${event.location.city}</p>
-              <p style="color: #666; margin: 5px 0;"><strong>👥 Current Attendees:</strong> ${event.currentParticipants}/${event.maxParticipants}</p>
             </div>
             
             <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -284,6 +283,7 @@ const sendWhatsAppTicketNotification = async (user, event, ticket) => {
         eventTime,
         venueName,
         spots: ticket?.quantity || 1,
+        genderBreakdown: ticket?.metadata?.genderBreakdown || null,
         qrCodeUrl: ticket?.qrCodeUrl || '',
         qrCodeBase64: ticket?.qrCode || '',
         eventImageUrl,

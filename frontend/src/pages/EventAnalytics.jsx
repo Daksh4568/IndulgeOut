@@ -161,32 +161,56 @@ const EventAnalytics = () => {
 
   const exportToCSV = () => {
     if (!analytics?.attendees) return;
+    const hasGenderPricing = analytics.genderPricing?.enabled;
     const headers = [
       "Name",
       "Email",
       "Phone",
       "Ticket Number",
       "Quantity",
+      ...(hasGenderPricing ? ["Male Spots", "Female Spots"] : []),
       "Ticket Type",
+      "Per Ticket Price",
+      "Total Ticket Price",
+      "Final Amount Paid",
       "Coupon Code",
       "Discount Applied",
       "Status",
       "Purchase Date",
       "Check-in Time",
     ];
-    const rows = analytics.attendees.map((a) => [
-      a.name,
-      a.email,
-      a.phoneNumber || "",
-      a.ticketNumber,
-      a.quantity || 1,
-      a.ticketType,
-      a.couponUsed?.code || "",
-      a.couponUsed?.discountApplied ? `₹${a.couponUsed.discountApplied}` : "",
-      a.status,
-      formatDate(a.purchaseDate),
-      a.checkInTime ? formatDateTime(a.checkInTime) : "",
-    ]);
+    const rows = analytics.attendees.map((a) => {
+      const gb = a.metadata?.genderBreakdown;
+      const hasGender = gb && (gb.male > 0 || gb.female > 0);
+      const csvStoredGp = a.metadata?.genderPrices;
+      const gp = (csvStoredGp && csvStoredGp.malePrice != null) ? csvStoredGp : (hasGender && hasGenderPricing ? analytics.genderPricing : null);
+      const perTicket = hasGender && gp && gp.malePrice != null
+        ? `Male: ₹${gp.malePrice} / Female: ₹${gp.femalePrice}`
+        : (a.metadata?.priceAtPurchase || (a.metadata?.basePrice ? Math.round(a.metadata.basePrice / (a.quantity || 1)) : a.price?.amount || 0));
+      const totalTicket = hasGender && gp && gp.malePrice != null
+        ? (a.metadata?.basePrice || ((gb.male * gp.malePrice) + (gb.female * gp.femalePrice)))
+        : (a.metadata?.basePrice || ((a.metadata?.priceAtPurchase || a.price?.amount || 0) * (a.quantity || 1)));
+      return [
+        a.name,
+        a.email,
+        a.phoneNumber || "",
+        a.ticketNumber,
+        a.quantity || 1,
+        ...(hasGenderPricing ? [
+          gb?.male || 0,
+          gb?.female || 0,
+        ] : []),
+        a.ticketType,
+        perTicket,
+        totalTicket,
+        a.metadata?.totalPaid || a.price?.amount || 0,
+        a.couponUsed?.code || "",
+        a.couponUsed?.discountApplied ? `₹${a.couponUsed.discountApplied}` : "",
+        a.status,
+        formatDate(a.purchaseDate),
+        a.checkInTime ? formatDateTime(a.checkInTime) : "",
+      ];
+    });
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
@@ -816,6 +840,13 @@ const EventAnalytics = () => {
                           </span>
                         </div>
                         <div className="text-2xl font-bold text-white mb-2">₹{tier.price}</div>
+                        {tier.malePrice != null && tier.femalePrice != null && (
+                          <div className="text-xs text-gray-400 mb-1">
+                            <span className="text-blue-300">M: ₹{tier.malePrice}</span>
+                            <span className="mx-1">|</span>
+                            <span className="text-pink-300">F: ₹{tier.femalePrice}</span>
+                          </div>
+                        )}
                         <div className="text-xs text-gray-400 mb-3">
                           {formatDate(tier.startDate)} → {formatDate(tier.endDate)}
                         </div>
@@ -841,9 +872,14 @@ const EventAnalytics = () => {
                   const currentPrice = analytics.currentPrice ?? history[history.length - 1]?.newPrice;
                   
                   const periods = [];
+                  const allAttendees = analytics.attendees || [];
                   
                   // First period: from event creation to first change
                   if (history.length > 0) {
+                    const endDate = new Date(history[0].changedAt);
+                    const periodRevenue = allAttendees
+                      .filter(a => new Date(a.purchaseDate) < endDate)
+                      .reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
                     periods.push({
                       price: history[0].previousPrice,
                       startLabel: 'Event created',
@@ -851,6 +887,7 @@ const EventAnalytics = () => {
                       spotsBooked: history[0].spotsBookedAtPrevPrice || 0,
                       isActive: false,
                       reason: 'initial_creation',
+                      actualRevenue: periodRevenue,
                     });
                   }
                   
@@ -862,6 +899,12 @@ const EventAnalytics = () => {
                       ? (history[i + 1].spotsBookedAtPrevPrice || 0) 
                       : totalSpots;
                     const spotsAtStart = history[i].spotsBookedAtPrevPrice || 0;
+                    const periodRevenue = allAttendees
+                      .filter(a => {
+                        const d = new Date(a.purchaseDate);
+                        return d >= new Date(startTime) && (!endTime || d < new Date(endTime));
+                      })
+                      .reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
                     
                     periods.push({
                       price: history[i].newPrice,
@@ -870,6 +913,7 @@ const EventAnalytics = () => {
                       spotsBooked: spotsAtEnd - spotsAtStart,
                       isActive: !endTime,
                       reason: history[i].reason,
+                      actualRevenue: periodRevenue,
                     });
                   }
 
@@ -915,6 +959,13 @@ const EventAnalytics = () => {
                                 <tr key={index} className={`border-b border-gray-700/30 last:border-b-0 ${period.isActive ? 'bg-green-900/10' : period.isTimelinePricing ? 'bg-blue-900/5' : 'hover:bg-white/5'}`}>
                                   <td className={`px-4 py-3 ${period.isActive ? 'text-green-400' : 'text-white'}`}>
                                     <div className="text-sm font-semibold">₹{period.price}</div>
+                                    {analytics.genderPricing?.enabled && (
+                                      <div className="text-[10px] mt-0.5 text-gray-400">
+                                        <span className="text-blue-300">M: ₹{analytics.genderPricing.malePrice}</span>
+                                        <span className="mx-0.5">|</span>
+                                        <span className="text-pink-300">F: ₹{analytics.genderPricing.femalePrice}</span>
+                                      </div>
+                                    )}
                                     {modeLabel && (
                                       <div className={`text-[10px] mt-0.5 ${modeLabel.color}`}>{modeLabel.text}</div>
                                     )}
@@ -930,7 +981,7 @@ const EventAnalytics = () => {
                                     {period.spotsBooked}
                                   </td>
                                   <td className={`px-4 py-3 text-sm font-medium ${period.isActive ? 'text-green-400' : 'text-white'}`}>
-                                    ₹{period.price * period.spotsBooked}
+                                    ₹{analytics.genderPricing?.enabled ? (period.actualRevenue ?? (period.price * period.spotsBooked)) : (period.price * period.spotsBooked)}
                                   </td>
                                   <td className="px-4 py-3">
                                     <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -1289,6 +1340,11 @@ const EventAnalytics = () => {
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Coupon Used
                     </th>
+                    {analytics.genderPricing?.enabled && (
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Gender Spots
+                      </th>
+                    )}
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Per Ticket Price
                     </th>
@@ -1420,28 +1476,81 @@ const EventAnalytics = () => {
                           <span className="text-gray-600 text-xs">—</span>
                         )}
                       </td>
+                      {analytics.genderPricing?.enabled && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {attendee.metadata?.genderBreakdown && (attendee.metadata.genderBreakdown.male > 0 || attendee.metadata.genderBreakdown.female > 0) ? (
+                            <div className="flex flex-col gap-0.5">
+                              {attendee.metadata.genderBreakdown.male > 0 && (
+                                <span className="text-xs text-blue-300">M: {attendee.metadata.genderBreakdown.male}</span>
+                              )}
+                              {attendee.metadata.genderBreakdown.female > 0 && (
+                                <span className="text-xs text-pink-300">F: {attendee.metadata.genderBreakdown.female}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-white">
-                          ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Per spot
-                        </div>
-                        {attendee.metadata?.pricingTimelineTier && (
-                          <div className="text-xs text-purple-400">
-                            {attendee.metadata.pricingTimelineTier}
-                          </div>
-                        )}
+                        {(() => {
+                          const gb = attendee.metadata?.genderBreakdown;
+                          const hasGender = gb && (gb.male > 0 || gb.female > 0);
+                          const storedGp = attendee.metadata?.genderPrices;
+                          const gp = (storedGp && storedGp.malePrice != null) ? storedGp : (hasGender && analytics.genderPricing?.enabled ? analytics.genderPricing : null);
+                          if (hasGender && gp && gp.malePrice != null) {
+                            return (
+                              <div>
+                                {gb.male > 0 && <div className="text-sm font-semibold text-white">M: ₹{gp.malePrice}</div>}
+                                {gb.female > 0 && <div className="text-sm font-semibold text-white">F: ₹{gp.femalePrice}</div>}
+                                <div className="text-xs text-gray-500">Per spot</div>
+                                {attendee.metadata?.pricingTimelineTier && <div className="text-xs text-purple-400">{attendee.metadata.pricingTimelineTier}</div>}
+                              </div>
+                            );
+                          }
+                          return (
+                            <div>
+                              <div className="text-sm font-semibold text-white">
+                                ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)}
+                              </div>
+                              <div className="text-xs text-gray-500">Per spot</div>
+                              {attendee.metadata?.pricingTimelineTier && <div className="text-xs text-purple-400">{attendee.metadata.pricingTimelineTier}</div>}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-white">
-                          ₹{attendee.metadata?.basePrice || ((attendee.metadata?.priceAtPurchase || attendee.price?.amount || 0) * (attendee.quantity || 1))}
-                        </div>
-                        {(attendee.quantity || 1) > 1 && (
-                          <div className="text-xs text-gray-500">
-                            ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)} × {attendee.quantity} spots
-                          </div>
-                        )}
+                        {(() => {
+                          const gb = attendee.metadata?.genderBreakdown;
+                          const hasGender = gb && (gb.male > 0 || gb.female > 0);
+                          const storedGp = attendee.metadata?.genderPrices;
+                          const gp = (storedGp && storedGp.malePrice != null) ? storedGp : (hasGender && analytics.genderPricing?.enabled ? analytics.genderPricing : null);
+                          if (hasGender && gp && gp.malePrice != null) {
+                            const total = (gb.male * gp.malePrice) + (gb.female * gp.femalePrice);
+                            return (
+                              <div>
+                                <div className="text-sm text-white">₹{attendee.metadata?.basePrice || total}</div>
+                                <div className="text-xs text-gray-500">
+                                  {gb.male > 0 && `M: ${gb.male} × ₹${gp.malePrice}`}
+                                  {gb.male > 0 && gb.female > 0 && ' + '}
+                                  {gb.female > 0 && `F: ${gb.female} × ₹${gp.femalePrice}`}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div>
+                              <div className="text-sm text-white">
+                                ₹{attendee.metadata?.basePrice || ((attendee.metadata?.priceAtPurchase || attendee.price?.amount || 0) * (attendee.quantity || 1))}
+                              </div>
+                              {(attendee.quantity || 1) > 1 && (
+                                <div className="text-xs text-gray-500">
+                                  ₹{attendee.metadata?.priceAtPurchase || (attendee.metadata?.basePrice ? Math.round(attendee.metadata.basePrice / (attendee.quantity || 1)) : attendee.price?.amount || 0)} × {attendee.quantity} spots
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-green-400">

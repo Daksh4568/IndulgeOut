@@ -3,12 +3,23 @@ import { X, User } from 'lucide-react';
 import { api } from '../config/api';
 import CityDropdown from './CityDropdown';
 
-const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender, existingCity }) => {
+const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender, existingCity, existingInterests }) => {
   const [age, setAge] = useState(existingAge || '');
   const [gender, setGender] = useState(existingGender || '');
   const [city, setCity] = useState(existingCity || '');
+  const [interests, setInterests] = useState(existingInterests || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [interestsDropdownOpen, setInterestsDropdownOpen] = useState(false);
+
+  const interestOptions = [
+    'Social Mixers',
+    'Wellness, Fitness & Sports',
+    'Art, Music & Dance',
+    'Immersive',
+    'Food & Beverage',
+    'Games'
+  ];
 
   if (!isOpen) return null;
 
@@ -16,6 +27,7 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
   const needsAge = !existingAge;
   const needsGender = !existingGender;
   const needsCity = !existingCity;
+  const needsInterests = !existingInterests || existingInterests.length === 0;
 
   const handleSubmit = async () => {
     setError('');
@@ -33,6 +45,10 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
       setError('Please enter your city');
       return;
     }
+    if (needsInterests && interests.length === 0) {
+      setError('Please select at least one interest');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -40,9 +56,10 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
       if (needsAge) updateData.age = parseInt(age, 10);
       if (needsGender) updateData.gender = gender;
       if (needsCity) updateData.location = { city: city.trim() };
+      if (needsInterests) updateData.interests = interests;
 
       await api.put('/users/profile', updateData);
-      onSave({ age: parseInt(age, 10) || existingAge, gender: gender || existingGender, city: city.trim() || existingCity });
+      onSave({ age: parseInt(age, 10) || existingAge, gender: gender || existingGender, city: city.trim() || existingCity, interests: interests.length > 0 ? interests : existingInterests });
     } catch (err) {
       console.error('Error updating user details:', err);
       setError('Failed to save details. Please try again.');
@@ -119,6 +136,65 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
                   onChange={(val) => setCity(val)}
                   placeholder="Select your city"
                 />
+              </div>
+            )}
+
+            {/* Interests */}
+            {needsInterests && (
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1.5">Interests</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setInterestsDropdownOpen(!interestsDropdownOpen)}
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-gray-700 text-sm text-left focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center justify-between"
+                  >
+                    <span className={interests.length > 0 ? 'text-white' : 'text-gray-500'}>
+                      {interests.length > 0 ? `${interests.length} interest${interests.length > 1 ? 's' : ''} selected` : 'Select interests'}
+                    </span>
+                    <svg className={`w-4 h-4 text-gray-400 transition-transform ${interestsDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {interestsDropdownOpen && (
+                    <div className="absolute z-20 w-full mt-1 bg-zinc-800 border border-gray-700 rounded-lg shadow-xl max-h-48 overflow-auto">
+                      {interestOptions.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-700 cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={interests.includes(opt)}
+                            onChange={() => {
+                              setInterests(prev =>
+                                prev.includes(opt) ? prev.filter(i => i !== opt) : [...prev, opt]
+                              );
+                            }}
+                            className="rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-zinc-900"
+                          />
+                          <span className="text-sm text-gray-200">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {interests.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {interests.map((interest) => (
+                      <span key={interest} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-900/30 text-purple-300 border border-purple-700/30">
+                        {interest}
+                        <button
+                          type="button"
+                          onClick={() => setInterests(prev => prev.filter(i => i !== interest))}
+                          className="hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

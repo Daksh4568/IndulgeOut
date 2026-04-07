@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../config/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -81,6 +81,16 @@ const ScanTickets = () => {
       setLoading(false);
     }
   };
+
+  // Stable callbacks for QRScanner (avoids re-render loops)
+  const handleScanError = useCallback((error) => {
+    console.error("Scan error:", error);
+    setCheckInResult({ type: "error", message: error });
+  }, []);
+
+  const handleCloseScanner = useCallback(() => {
+    setScannerActive(false);
+  }, []);
 
   // Handle QR code scan
   const handleScanSuccess = async (ticketData) => {
@@ -707,14 +717,8 @@ const ScanTickets = () => {
       {scannerActive && (
         <QRScanner
           onScanSuccess={handleScanSuccess}
-          onScanError={(error) => {
-            console.error("Scan error:", error);
-            setCheckInResult({
-              type: "error",
-              message: error,
-            });
-          }}
-          onClose={() => setScannerActive(false)}
+          onScanError={handleScanError}
+          onClose={handleCloseScanner}
           isScanning={scannerActive}
         />
       )}

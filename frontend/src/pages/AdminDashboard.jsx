@@ -3421,6 +3421,13 @@ const AdminDashboard = () => {
                                   </span>
                                 </div>
                                 <div className="text-xl font-bold text-white mb-1">₹{tier.price}</div>
+                                {tier.malePrice != null && tier.femalePrice != null && (
+                                  <div className="text-xs text-gray-400 mb-1">
+                                    <span className="text-blue-300">M: ₹{tier.malePrice}</span>
+                                    <span className="mx-1">|</span>
+                                    <span className="text-pink-300">F: ₹{tier.femalePrice}</span>
+                                  </div>
+                                )}
                                 <div className="text-xs text-gray-400 mb-2">
                                   {new Date(tier.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} → {new Date(tier.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </div>
@@ -3443,13 +3450,17 @@ const AdminDashboard = () => {
                           const history = eventDetails.priceChangeHistory;
                           const totalSpots = eventDetails.attendees?.reduce((sum, a) => sum + (a.quantity || 1), 0) || 0;
                           
+                          const allAttendees = eventDetails.attendees || [];
                           // Build periods from price change entries
                           const periods = [];
                           
                           // First period: from creation to first change
                           if (history.length > 0) {
                             const endDate = new Date(history[0].changedAt);
-                            const ticketsInPeriod = (eventDetails.attendees || []).filter(a => new Date(a.purchaseDate) < endDate).length;
+                            const ticketsInPeriod = allAttendees.filter(a => new Date(a.purchaseDate) < endDate).length;
+                            const periodRevenue = allAttendees
+                              .filter(a => new Date(a.purchaseDate) < endDate)
+                              .reduce((sum, a) => sum + (a.basePrice || ((a.priceAtPurchase || a.price || 0) * (a.quantity || 1))), 0);
                             periods.push({
                               price: history[0].previousPrice,
                               startLabel: 'Event created',
@@ -3458,6 +3469,7 @@ const AdminDashboard = () => {
                               ticketsSold: ticketsInPeriod,
                               isActive: false,
                               reason: history[0].reason === 'initial_creation' ? 'initial_creation' : 'manual_edit',
+                              actualRevenue: periodRevenue,
                             });
                           }
                           
@@ -3472,10 +3484,16 @@ const AdminDashboard = () => {
                               ? (history[i + 1].spotsBookedAtPrevPrice || 0) 
                               : totalSpots;
                             const spotsAtStart = history[i].spotsBookedAtPrevPrice || 0;
-                            const ticketsInPeriod = (eventDetails.attendees || []).filter(a => {
+                            const ticketsInPeriod = allAttendees.filter(a => {
                               const d = new Date(a.purchaseDate);
                               return d >= periodStart && (!periodEnd || d < periodEnd);
                             }).length;
+                            const periodRevenue = allAttendees
+                              .filter(a => {
+                                const d = new Date(a.purchaseDate);
+                                return d >= periodStart && (!periodEnd || d < periodEnd);
+                              })
+                              .reduce((sum, a) => sum + (a.basePrice || ((a.priceAtPurchase || a.price || 0) * (a.quantity || 1))), 0);
                             
                             periods.push({
                               price: history[i].newPrice,
@@ -3485,6 +3503,7 @@ const AdminDashboard = () => {
                               ticketsSold: ticketsInPeriod,
                               isActive: !endTime,
                               reason: history[i].reason,
+                              actualRevenue: periodRevenue,
                             });
                           }
                           
@@ -3508,7 +3527,14 @@ const AdminDashboard = () => {
                                   {displayPeriods.map((period, index) => (
                                     <tr key={index} className={`hover:bg-zinc-800 ${period.isActive ? 'bg-green-900/10' : ''}`}>
                                       <td className={`px-4 py-3 text-sm font-semibold ${period.isActive ? 'text-green-400' : 'text-white'}`}>
-                                        ₹{period.price}
+                                        <div>₹{period.price}</div>
+                                        {eventDetails.genderPricing?.enabled && (
+                                          <div className="text-[10px] mt-0.5 text-gray-400 font-normal">
+                                            <span className="text-blue-300">M: ₹{eventDetails.genderPricing.malePrice}</span>
+                                            <span className="mx-0.5">|</span>
+                                            <span className="text-pink-300">F: ₹{eventDetails.genderPricing.femalePrice}</span>
+                                          </div>
+                                        )}
                                       </td>
                                       <td className="px-4 py-3 text-xs text-gray-400">
                                         <div>{period.startLabel}</div>
@@ -3521,7 +3547,7 @@ const AdminDashboard = () => {
                                         {period.ticketsSold}
                                       </td>
                                       <td className="px-4 py-3 text-sm text-right text-white">
-                                        ₹{(period.price * period.spotsBooked).toLocaleString('en-IN')}
+                                        ₹{(eventDetails.genderPricing?.enabled ? (period.actualRevenue ?? (period.price * period.spotsBooked)) : (period.price * period.spotsBooked)).toLocaleString('en-IN')}
                                       </td>
                                       <td className="px-4 py-3 text-center">
                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -3749,6 +3775,9 @@ const AdminDashboard = () => {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order ID</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket Type</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Coupon Used</th>
+                          {eventDetails.genderPricing?.enabled && (
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Gender Spots</th>
+                          )}
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Per Ticket Price</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Total Ticket Price</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
@@ -3816,24 +3845,77 @@ const AdminDashboard = () => {
                                 <span className="text-gray-600 text-xs">—</span>
                               )}
                             </td>
+                            {eventDetails.genderPricing?.enabled && (
+                              <td className="px-4 py-3 text-sm">
+                                {attendee.genderBreakdown && (attendee.genderBreakdown.male > 0 || attendee.genderBreakdown.female > 0) ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {attendee.genderBreakdown.male > 0 && (
+                                      <span className="text-xs text-blue-300">M: {attendee.genderBreakdown.male}</span>
+                                    )}
+                                    {attendee.genderBreakdown.female > 0 && (
+                                      <span className="text-xs text-pink-300">F: {attendee.genderBreakdown.female}</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-600 text-xs">—</span>
+                                )}
+                              </td>
+                            )}
                             <td className="px-4 py-3 text-sm">
-                              <div className="font-semibold text-white">
-                                ₹{attendee.priceAtPurchase || attendee.price}
-                              </div>
-                              <div className="text-xs text-gray-500">Per spot</div>
-                              {attendee.pricingTimelineTier && (
-                                <div className="text-xs text-purple-400">{attendee.pricingTimelineTier}</div>
-                              )}
+                              {(() => {
+                                const gb = attendee.genderBreakdown;
+                                const hasGender = gb && (gb.male > 0 || gb.female > 0);
+                                const storedGp = attendee.genderPrices;
+                                const gp = (storedGp && storedGp.malePrice != null) ? storedGp : (hasGender && eventDetails.genderPricing?.enabled ? eventDetails.genderPricing : null);
+                                if (hasGender && gp && gp.malePrice != null) {
+                                  return (
+                                    <div>
+                                      {gb.male > 0 && <div className="font-semibold text-white">M: ₹{gp.malePrice}</div>}
+                                      {gb.female > 0 && <div className="font-semibold text-white">F: ₹{gp.femalePrice}</div>}
+                                      <div className="text-xs text-gray-500">Per spot</div>
+                                      {attendee.pricingTimelineTier && <div className="text-xs text-purple-400">{attendee.pricingTimelineTier}</div>}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div>
+                                    <div className="font-semibold text-white">₹{attendee.priceAtPurchase || attendee.price}</div>
+                                    <div className="text-xs text-gray-500">Per spot</div>
+                                    {attendee.pricingTimelineTier && <div className="text-xs text-purple-400">{attendee.pricingTimelineTier}</div>}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3 text-sm">
-                              <div className="text-white">
-                                ₹{attendee.basePrice || ((attendee.priceAtPurchase || attendee.price) * (attendee.quantity || 1))}
-                              </div>
-                              {(attendee.quantity || 1) > 1 && (
-                                <div className="text-xs text-gray-500">
-                                  ₹{attendee.priceAtPurchase || attendee.price} × {attendee.quantity} spots
-                                </div>
-                              )}
+                              {(() => {
+                                const gb = attendee.genderBreakdown;
+                                const hasGender = gb && (gb.male > 0 || gb.female > 0);
+                                const storedGp = attendee.genderPrices;
+                                const gp = (storedGp && storedGp.malePrice != null) ? storedGp : (hasGender && eventDetails.genderPricing?.enabled ? eventDetails.genderPricing : null);
+                                if (hasGender && gp && gp.malePrice != null) {
+                                  const total = (gb.male * gp.malePrice) + (gb.female * gp.femalePrice);
+                                  return (
+                                    <div>
+                                      <div className="text-white">₹{attendee.basePrice || total}</div>
+                                      <div className="text-xs text-gray-500">
+                                        {gb.male > 0 && `M: ${gb.male} × ₹${gp.malePrice}`}
+                                        {gb.male > 0 && gb.female > 0 && ' + '}
+                                        {gb.female > 0 && `F: ${gb.female} × ₹${gp.femalePrice}`}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div>
+                                    <div className="text-white">₹{attendee.basePrice || ((attendee.priceAtPurchase || attendee.price) * (attendee.quantity || 1))}</div>
+                                    {(attendee.quantity || 1) > 1 && (
+                                      <div className="text-xs text-gray-500">
+                                        ₹{attendee.priceAtPurchase || attendee.price} × {attendee.quantity} spots
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               <div className="font-semibold text-green-400">

@@ -138,6 +138,7 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
             <h1 style="margin: 0; color: #22c55e;">🎫 Event Ticket</h1>
             <p class="ticket-number">${ticket.ticketNumber}</p>
             <p style="color: #666; margin: 5px 0;">${ticket.metadata?.ticketType || 'General'} Admission${ticket.quantity > 1 ? ` × ${ticket.quantity} Spots` : ''}</p>
+            ${ticket.metadata?.genderBreakdown && (ticket.metadata.genderBreakdown.male > 0 || ticket.metadata.genderBreakdown.female > 0) ? `<p style="color: #666; margin: 5px 0; font-size: 13px;">${ticket.metadata.genderBreakdown.male > 0 ? `Male: ${ticket.metadata.genderBreakdown.male} spot${ticket.metadata.genderBreakdown.male > 1 ? 's' : ''}` : ''}${ticket.metadata.genderBreakdown.male > 0 && ticket.metadata.genderBreakdown.female > 0 ? '  |  ' : ''}${ticket.metadata.genderBreakdown.female > 0 ? `Female: ${ticket.metadata.genderBreakdown.female} spot${ticket.metadata.genderBreakdown.female > 1 ? 's' : ''}` : ''}</p>` : ''}
           </div>
           
           <div class="event-info">
@@ -292,10 +293,20 @@ const TicketViewer = ({ ticketId, eventId, onClose }) => {
 
           {/* Event Title */}
           <h2 className="text-2xl font-bold text-white mb-2">{ticket.event.title}</h2>
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-6">
+          <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
             {ticket.metadata?.ticketType || 'General'} Admission
             {ticket.quantity > 1 && ` × ${ticket.quantity} Spots`}
           </p>
+          {ticket.metadata?.genderBreakdown && (ticket.metadata.genderBreakdown.male > 0 || ticket.metadata.genderBreakdown.female > 0) && (
+            <p className="text-xs text-gray-400 mb-6">
+              {ticket.metadata.genderBreakdown.male > 0 && `Male: ${ticket.metadata.genderBreakdown.male} spot${ticket.metadata.genderBreakdown.male > 1 ? 's' : ''}`}
+              {ticket.metadata.genderBreakdown.male > 0 && ticket.metadata.genderBreakdown.female > 0 && '  |  '}
+              {ticket.metadata.genderBreakdown.female > 0 && `Female: ${ticket.metadata.genderBreakdown.female} spot${ticket.metadata.genderBreakdown.female > 1 ? 's' : ''}`}
+            </p>
+          )}
+          {!(ticket.metadata?.genderBreakdown && (ticket.metadata.genderBreakdown.male > 0 || ticket.metadata.genderBreakdown.female > 0)) && (
+            <div className="mb-4" />
+          )}
 
           {/* Event Details */}
           <div className="space-y-4 mb-8">

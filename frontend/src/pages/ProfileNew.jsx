@@ -635,6 +635,7 @@ const ProfileNew = () => {
         fields.push({ name: 'Preferred Categories', value: profileData.communityProfile?.preferredCategories?.length > 0 })
         fields.push({ name: 'Preferred Event Formats', value: profileData.communityProfile?.preferredEventFormats?.length > 0 })
         fields.push({ name: 'Preferred Audience Types', value: profileData.communityProfile?.preferredAudienceTypes?.length > 0 })
+        fields.push({ name: 'Instagram', value: !!profileData.socialLinks?.instagram })
       } else if (isVenue) {
         // Venue - profile fields
         fields.push({ name: 'Venue Name', value: !!profileData.venueProfile?.venueName })
@@ -645,6 +646,7 @@ const ProfileNew = () => {
         fields.push({ name: 'Preferred Categories', value: profileData.venueProfile?.preferredCategories?.length > 0 })
         fields.push({ name: 'Preferred Event Formats', value: profileData.venueProfile?.preferredEventFormats?.length > 0 })
         fields.push({ name: 'Preferred Audience Types', value: profileData.venueProfile?.preferredAudienceTypes?.length > 0 })
+        fields.push({ name: 'Instagram', value: !!profileData.socialLinks?.instagram })
       } else if (isBrandSponsor) {
         // Brand Sponsor - profile fields
         fields.push({ name: 'Brand Name', value: !!profileData.brandProfile?.brandName })
@@ -655,10 +657,12 @@ const ProfileNew = () => {
         fields.push({ name: 'Preferred Event Formats', value: profileData.brandProfile?.preferredEventFormats?.length > 0 })
         fields.push({ name: 'Preferred Collaboration Types', value: profileData.brandProfile?.preferredCollaborationTypes?.length > 0 })
         fields.push({ name: 'Preferred Audience Types', value: profileData.brandProfile?.preferredAudienceTypes?.length > 0 })
+        fields.push({ name: 'Instagram', value: !!profileData.socialLinks?.instagram })
       }
     } else {
       // B2C user additional fields
       fields.push({ name: 'City', value: !!(profileData.location?.city || profileData.city) })
+      fields.push({ name: 'Age', value: !!profileData.age })
       fields.push({ name: 'Gender', value: !!profileData.gender })
       fields.push({ name: 'Interests', value: profileData.interests?.length > 0 })
       fields.push({ name: 'Instagram', value: !!profileData.socialLinks?.instagram })
@@ -1293,7 +1297,7 @@ const ProfileNew = () => {
                     Interest
                   </h3>
                   <button 
-                    onClick={() => handleEditSection('interests')}
+                    onClick={() => navigate('/interests')}
                     className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors"
                   >
                     <Edit2 className="h-3.5 w-3.5 text-gray-400" />

@@ -1,10 +1,17 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
-import { Camera, X, CheckCircle, Loader, Zap, ZapOff, RefreshCw } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Camera, X, CheckCircle, Loader, Zap, ZapOff, RefreshCw, AlertTriangle } from 'lucide-react';
 
 /**
  * QR Scanner Component — fully custom UI using Html5Qrcode (low-level API)
- * Optimized for iOS Safari and Android mobile devices
+ * Optimized for fast scanning on iOS Safari and Android mobile devices.
+ *
+ * Key optimisations:
+ *  - formatsToSupport: QR_CODE only (constructor, not scan config)
+ *  - useBarCodeDetectorIfSupported: true → native HW decoder on iOS 17.2+/Chrome 83+
+ *  - 30 fps, disableFlip, no forced aspectRatio
+ *  - Higher-resolution camera request (1280×720 ideal)
+ *  - Callback refs to break React dependency chains and prevent re-init loops
  */
 const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) => {
   const html5QrRef = useRef(null);
@@ -13,16 +20,36 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
   const [torchSupported, setTorchSupported] = useState(false);
   const [cameras, setCameras] = useState([]);
   const [activeCameraIdx, setActiveCameraIdx] = useState(0);
+  const [scanSlow, setScanSlow] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
   const lastScannedRef = useRef(null);
   const lastScannedTimeRef = useRef(0);
   const mountedRef = useRef(true);
   const startingRef = useRef(false);
+  const slowTimerRef = useRef(null);
 
-  const isIOS = typeof navigator !== 'undefined' && (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  // ── Stable callback refs (prevents useEffect dependency chains) ──────
+  const onScanSuccessRef = useRef(onScanSuccess);
+  const onScanErrorRef = useRef(onScanError);
+  useEffect(() => {
+    onScanSuccessRef.current = onScanSuccess;
+    onScanErrorRef.current = onScanError;
+  });
 
+  // ── Slow-scan timer helpers ──────────────────────────────────────────
+  const clearSlowTimer = useCallback(() => {
+    if (slowTimerRef.current) { clearTimeout(slowTimerRef.current); slowTimerRef.current = null; }
+  }, []);
+
+  const startSlowTimer = useCallback(() => {
+    clearSlowTimer();
+    slowTimerRef.current = setTimeout(() => {
+      if (mountedRef.current) setScanSlow(true);
+    }, 12000);
+  }, [clearSlowTimer]);
+
+  // ── Decode success handler ───────────────────────────────────────────
   const handleSuccess = useCallback((decodedText) => {
     if (!decodedText || typeof decodedText !== 'string') return;
     const text = decodedText.trim();
@@ -32,6 +59,9 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
     if (text === lastScannedRef.current && now - lastScannedTimeRef.current < 3000) return;
     lastScannedRef.current = text;
     lastScannedTimeRef.current = now;
+
+    clearSlowTimer();
+    setScanSlow(false);
 
     if (navigator.vibrate) navigator.vibrate(100);
 
@@ -43,86 +73,91 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
     }
 
     if (!ticketData?.ticketNumber) {
-      onScanError?.('Invalid ticket QR code');
+      onScanErrorRef.current?.('Invalid ticket QR code');
       lastScannedRef.current = null;
       return;
     }
 
-    onScanSuccess(ticketData);
-  }, [onScanSuccess, onScanError]);
+    onScanSuccessRef.current(ticketData);
+  }, [clearSlowTimer]);
 
-  const scanConfig = useMemo(() => ({
-    fps: isIOS ? 15 : 20,
-    qrbox: (vw, vh) => {
-      const edge = Math.min(vw, vh);
-      if (edge < 100) return { width: 100, height: 100 };
-      const size = Math.floor(edge * 0.7);
-      return { width: size, height: size };
-    },
-    aspectRatio: 1.0,
-    disableFlip: false,
-    formatsToSupport: [0],
-  }), [isIOS]);
-
-  // Stop the running scanner instance safely
+  // ── Stop scanner safely ──────────────────────────────────────────────
   const stopScanner = useCallback(async () => {
     const inst = html5QrRef.current;
     if (!inst) return;
     try {
       const state = inst.getState?.();
-      if (state === 2 || state === 3) {
-        await inst.stop();
-      }
+      if (state === 2 || state === 3) await inst.stop();
     } catch {}
   }, []);
 
-  // Start scanner with a specific camera device ID
+  // ── Start scanner with camera deviceId ───────────────────────────────
   const startWithCamera = useCallback(async (deviceId) => {
     const inst = html5QrRef.current;
     if (!inst || !mountedRef.current || startingRef.current) return;
     startingRef.current = true;
 
-    try {
-      await inst.start(
-        { deviceId: { exact: deviceId } },
-        scanConfig,
-        handleSuccess,
-        () => {}
-      );
+    // Scan config — fps high, QR-only, no flip, no forced aspect ratio
+    const scanCfg = {
+      fps: 30,
+      qrbox: (vw, vh) => {
+        const size = Math.floor(Math.min(vw, vh) * 0.65);
+        return { width: Math.max(50, size), height: Math.max(50, size) };
+      },
+      disableFlip: true,
+    };
 
+    // html5-qrcode requires EXACTLY 1 key when passing an object as first arg.
+    // Pass deviceId as plain string; use facingMode object for fallback.
+
+    const onStarted = () => {
       if (!mountedRef.current) { inst.stop().catch(() => {}); return; }
-
       setScannerReady(true);
+      setCameraError('');
       setTorchOn(false);
       setTorchSupported(false);
+      setScanSlow(false);
+      startSlowTimer();
+
+      // Request higher resolution after camera starts (best-effort)
+      try {
+        const videoElem = document.querySelector('#qr-reader-live video');
+        const track = videoElem?.srcObject?.getVideoTracks?.()?.[0];
+        if (track) {
+          track.applyConstraints({
+            width: { min: 640, ideal: 1280 },
+            height: { min: 480, ideal: 720 },
+          }).catch(() => {});
+        }
+      } catch {}
 
       try {
         const capabilities = inst.getRunningTrackCameraCapabilities?.();
-        if (capabilities?.torchFeature?.()?.isSupported?.()) {
-          setTorchSupported(true);
-        }
+        if (capabilities?.torchFeature?.()?.isSupported?.()) setTorchSupported(true);
       } catch {}
+    };
+
+    try {
+      await inst.start(deviceId, scanCfg, handleSuccess, () => {});
+      onStarted();
     } catch (err) {
       console.error('Camera start error:', err);
-      // If deviceId fails, try facingMode fallback
+      // Fallback: facingMode instead of deviceId
       try {
-        await inst.start(
-          { facingMode: 'environment' },
-          scanConfig,
-          handleSuccess,
-          () => {}
-        );
-        if (mountedRef.current) setScannerReady(true);
+        await inst.start({ facingMode: 'environment' }, scanCfg, handleSuccess, () => {});
+        onStarted();
       } catch (err2) {
         console.error('Fallback camera error:', err2);
-        if (mountedRef.current) onScanError?.('Failed to start camera. Check permissions.');
+        if (mountedRef.current) {
+          setCameraError('Failed to start camera. Please check camera permissions and try again.');
+        }
       }
     } finally {
       startingRef.current = false;
     }
-  }, [scanConfig, handleSuccess, onScanError]);
+  }, [handleSuccess, startSlowTimer]);
 
-  // Initial setup: enumerate cameras, pick back camera, start
+  // ── Initialise on mount ──────────────────────────────────────────────
   useEffect(() => {
     if (!isScanning) return;
     mountedRef.current = true;
@@ -131,34 +166,38 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
 
     const init = async () => {
       try {
-        // Enumerate available cameras
         const devices = await Html5Qrcode.getCameras();
         if (!mountedRef.current) return;
 
         if (!devices || devices.length === 0) {
-          onScanError?.('No cameras found on this device.');
+          setCameraError('No cameras found on this device.');
           return;
         }
 
         setCameras(devices);
 
-        // Pick the back/environment camera by default
+        // Prefer back / environment camera
         let backIdx = devices.findIndex(d => {
           const label = (d.label || '').toLowerCase();
           return label.includes('back') || label.includes('rear') || label.includes('environment');
         });
         if (backIdx === -1) backIdx = devices.length > 1 ? devices.length - 1 : 0;
-
         setActiveCameraIdx(backIdx);
 
-        // Create scanner instance
-        const html5Qr = new Html5Qrcode(containerId, { verbose: false });
+        // Constructor: QR-only format + native BarcodeDetector when available
+        const html5Qr = new Html5Qrcode(containerId, {
+          verbose: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        });
         html5QrRef.current = html5Qr;
 
         await startWithCamera(devices[backIdx].id);
       } catch (err) {
         console.error('Scanner init error:', err);
-        if (mountedRef.current) onScanError?.('Failed to start camera. Check permissions.');
+        if (mountedRef.current) {
+          setCameraError('Failed to initialize camera. Please check permissions and reload.');
+        }
       }
     };
 
@@ -166,6 +205,7 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
 
     return () => {
       mountedRef.current = false;
+      clearSlowTimer();
       const inst = html5QrRef.current;
       html5QrRef.current = null;
       if (inst) {
@@ -180,14 +220,16 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
       setTorchOn(false);
       setTorchSupported(false);
     };
-  }, [isScanning, onScanError, startWithCamera]);
+  }, [isScanning, startWithCamera, clearSlowTimer]);
 
-  // Flip camera
+  // ── Flip camera ──────────────────────────────────────────────────────
   const flipCamera = async () => {
     if (cameras.length < 2 || !html5QrRef.current) return;
     const nextIdx = (activeCameraIdx + 1) % cameras.length;
     setActiveCameraIdx(nextIdx);
     setScannerReady(false);
+    setScanSlow(false);
+    clearSlowTimer();
     await stopScanner();
     await startWithCamera(cameras[nextIdx].id);
   };
@@ -256,7 +298,40 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
           </div>
         )}
 
-        {!scannerReady && (
+        {/* Slow-scan help banner */}
+        {scanSlow && scannerReady && (
+          <div className="absolute bottom-4 left-4 right-4 bg-yellow-900/90 backdrop-blur-sm rounded-xl p-3 pointer-events-none z-10">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-yellow-200 text-sm font-medium mb-1">Having trouble scanning?</p>
+                <ul className="text-yellow-300/80 text-xs space-y-0.5">
+                  <li>• Increase screen brightness on the ticket phone</li>
+                  <li>• Hold steady at 15–30 cm distance</li>
+                  <li>• Avoid direct light / glare on the screen</li>
+                  <li>• Close scanner &amp; enter ticket number manually</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Camera error overlay */}
+        {cameraError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 px-6 z-10">
+            <AlertTriangle className="h-10 w-10 text-red-400 mb-3" />
+            <p className="text-white text-sm font-medium text-center mb-4">{cameraError}</p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+            >
+              Close &amp; Enter Manually
+            </button>
+          </div>
+        )}
+
+        {/* Loading overlay */}
+        {!scannerReady && !cameraError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
             <Loader className="h-8 w-8 animate-spin text-purple-400 mb-3" />
             <p className="text-white text-sm font-medium">Starting camera...</p>
@@ -268,7 +343,12 @@ const QRScanner = ({ onScanSuccess, onScanError, onClose, isScanning = true }) =
       {/* Bottom tips */}
       <div className="px-4 py-3 bg-black/80 backdrop-blur-sm safe-area-bottom">
         <div className="flex items-center justify-center gap-2 mb-2">
-          {scannerReady ? (
+          {cameraError ? (
+            <>
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              <span className="text-red-400 text-xs font-medium">Camera error — enter ticket manually</span>
+            </>
+          ) : scannerReady ? (
             <>
               <CheckCircle className="h-4 w-4 text-green-400" />
               <span className="text-green-400 text-xs font-medium">Camera ready — point at QR code</span>

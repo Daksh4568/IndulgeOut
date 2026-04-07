@@ -195,7 +195,6 @@ const EventDetail = () => {
       }
       case 'instagram': {
         let igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
-        if (mapsUrl) igText += `\n📌 ${mapsUrl}`;
         igText += `\n\n${eventUrl}`;
         navigator.clipboard.writeText(igText).then(() => {
           toast?.success('Event details & link copied! Paste in your Instagram chat.');
@@ -223,7 +222,15 @@ const EventDetail = () => {
       }
       case 'linkedin': {
         const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogShareUrl)}`;
-        window.open(liUrl, '_blank', 'width=600,height=400');
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = `linkedin://sharing/share-offsite/?url=${encodeURIComponent(ogShareUrl)}`;
+          setTimeout(() => {
+            window.open(liUrl, '_blank');
+          }, 1500);
+        } else {
+          window.open(liUrl, '_blank', 'width=600,height=400');
+        }
         setShowShareModal(false);
         return;
       }

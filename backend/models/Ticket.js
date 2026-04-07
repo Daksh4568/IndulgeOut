@@ -110,6 +110,11 @@ const ticketSchema = new mongoose.Schema({
     genderBreakdown: {
       male: { type: Number, default: 0 },
       female: { type: Number, default: 0 }
+    },
+    // Gender prices at time of purchase (for revenue tracking)
+    genderPrices: {
+      malePrice: Number,
+      femalePrice: Number
     }
   },
   // Settlement tracking fields

@@ -1718,6 +1718,12 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
           discountApplied: t.metadata.couponDiscount || 0
         } : participantCouponMap[userId] || null;
         
+        // Gender breakdown
+        const gb = t.metadata?.genderBreakdown;
+        const hasGender = gb && (gb.male > 0 || gb.female > 0);
+        const storedGp = t.metadata?.genderPrices;
+        const gp = (storedGp && storedGp.malePrice != null) ? storedGp : (hasGender && event.genderPricing?.enabled ? event.genderPricing : null);
+        
         return {
         ticketNumber: t.ticketNumber,
         userName: t.user?.name || 'N/A',
@@ -1726,7 +1732,13 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         purchaseDate: t.purchaseDate,
         quantity: t.quantity || 1,
         ticketType: t.metadata?.ticketType || 'general',
-        perTicketPrice: t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0),
+        maleSpots: hasGender ? (gb.male || 0) : '',
+        femaleSpots: hasGender ? (gb.female || 0) : '',
+        malePricePerSpot: hasGender && gp && gp.malePrice != null ? gp.malePrice : '',
+        femalePricePerSpot: hasGender && gp && gp.femalePrice != null ? gp.femalePrice : '',
+        perTicketPrice: hasGender && gp && gp.malePrice != null
+          ? `M:${gp.malePrice}/F:${gp.femalePrice}`
+          : (t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0)),
         pricingTimelineTier: t.metadata?.pricingTimelineTier || '',
         groupingOffer: t.metadata?.groupingOffer || '',
         tierPeople: t.metadata?.tierPeople || '',
@@ -1793,7 +1805,7 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     if (format === 'csv') {
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'perTicketPrice', 'pricingTimelineTier',
+        'quantity', 'ticketType', 'maleSpots', 'femaleSpots', 'malePricePerSpot', 'femalePricePerSpot', 'perTicketPrice', 'pricingTimelineTier',
         'groupingOffer', 'tierPeople',
         'couponCode', 'couponDiscountType', 'couponDiscountApplied',
         'originalPriceBeforeCoupon', 'totalTicketPrice', 'gstAndOtherCharges', 'platformFees',
@@ -1850,9 +1862,11 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`#   - Time-Based Pricing: ${event.pricingTimeline?.enabled ? 'Enabled' : 'Disabled'}`);
       if (event.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length > 0) {
         event.pricingTimeline.tiers.forEach((tier, i) => {
-          csvRows.push(`#   - Tier ${i + 1}: ${tier.label || 'N/A'} - ₹${tier.price} (${new Date(tier.startDate).toLocaleDateString()} to ${new Date(tier.endDate).toLocaleDateString()})`);
+          const tierGender = tier.malePrice != null ? ` (M: ₹${tier.malePrice} / F: ₹${tier.femalePrice})` : '';
+          csvRows.push(`#   - Tier ${i + 1}: ${tier.label || 'N/A'} - ₹${tier.price}${tierGender} (${new Date(tier.startDate).toLocaleDateString()} to ${new Date(tier.endDate).toLocaleDateString()})`);
         });
       }
+      csvRows.push(`#   - Gender-Based Pricing: ${event.genderPricing?.enabled ? `Enabled (M: ₹${event.genderPricing.malePrice} / F: ₹${event.genderPricing.femalePrice})` : 'Disabled'}`);
       csvRows.push(`#`);
       csvRows.push(`# GROUPING OFFERS:`);
       csvRows.push(`#   - Grouping Offers: ${event.groupingOffers?.enabled ? 'Enabled' : 'Disabled'}`);
@@ -1869,7 +1883,11 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
       csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
       csvRows.push(`#   - totalTicketPrice: Total ticket price (per ticket × spots, organizer's share before gateway fees)`);
-      csvRows.push(`#   - perTicketPrice: Per ticket price at the time of purchase`);
+      csvRows.push(`#   - maleSpots: Number of male spots in this ticket (if gender pricing enabled)`);
+      csvRows.push(`#   - femaleSpots: Number of female spots in this ticket (if gender pricing enabled)`);
+      csvRows.push(`#   - malePricePerSpot: Price per male spot at time of purchase`);
+      csvRows.push(`#   - femalePricePerSpot: Price per female spot at time of purchase`);
+      csvRows.push(`#   - perTicketPrice: Per ticket price at the time of purchase (or M:price/F:price for gender pricing)`);
       csvRows.push(`#   - pricingTimelineTier: Which pricing timeline tier was active at purchase`);
       csvRows.push(`#   - groupingOffer: Group offer tier label (if applicable)`);
       csvRows.push(`#   - tierPeople: Number of people in the group tier`);
@@ -2716,6 +2734,8 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       totalPaid: ticket.metadata?.totalPaid || ticket.price?.amount || 0,
       gstCharges: ticket.metadata?.gstAndOtherCharges || 0,
       platformFees: ticket.metadata?.platformFees || 0,
+      genderBreakdown: ticket.metadata?.genderBreakdown || null,
+      genderPrices: ticket.metadata?.genderPrices || null,
       paymentId: ticket.paymentId,
       paymentMethod: ticket.gatewayResponse?.paymentMethod,
       status: ticket.status,
@@ -2830,6 +2850,8 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
             startDate: tier.startDate,
             endDate: tier.endDate,
             price: tier.price,
+            malePrice: tier.malePrice || null,
+            femalePrice: tier.femalePrice || null,
             label: tier.label,
             ticketsBought: tickets.filter(tierFilter).length,
             spotsBought: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
@@ -2839,6 +2861,12 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       } : { enabled: false, tiers: [] },
       // Grouping offers data
       groupingOffers: event.groupingOffers || { enabled: false, tiers: [] },
+      // Gender pricing data
+      genderPricing: event.genderPricing?.enabled ? {
+        enabled: true,
+        malePrice: event.genderPricing.malePrice,
+        femalePrice: event.genderPricing.femalePrice
+      } : { enabled: false },
       // Coupon data
       coupons: event.coupons || { enabled: false, codes: [] }
     };

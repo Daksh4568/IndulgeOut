@@ -70,24 +70,20 @@ const generateTicket = async ({ userId, eventId, amount, paymentId, ticketType =
     const ticketNumber = await Ticket.generateTicketNumber();
     console.log(`✅ [TicketService] Ticket number generated: ${ticketNumber}`);
 
-    // Create QR code data (JSON string with ticket info)
-    const qrData = JSON.stringify({
-      ticketNumber,
-      eventId: event._id.toString(),
-      userId: user._id.toString(),
-      eventName: event.title,
-      userName: user.name,
-      date: event.date,
-      checkInUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/check-in/${ticketNumber}`
-    });
+    // QR code encodes only the ticket number for fastest possible scanning.
+    // The scanner extracts this string and looks up full ticket details via API.
+    // Minimal data → smaller QR (version 2-3) → scans in 1-2s even through phone screens.
+    const qrData = ticketNumber;
 
     // Generate QR code as base64 image
+    // Error correction M (15%) is robust enough for screen-to-screen scanning
+    // while keeping the QR code simple and fast to decode.
     console.log(`🎫 [TicketService] Generating QR code...`);
     const qrCodeImage = await QRCode.toDataURL(qrData, {
-      errorCorrectionLevel: 'H',
+      errorCorrectionLevel: 'M',
       type: 'image/png',
       width: 300,
-      margin: 1,
+      margin: 2,
       color: {
         dark: '#000000',
         light: '#FFFFFF'
@@ -321,21 +317,14 @@ const regenerateQRCode = async (ticketId) => {
   try {
     const ticket = await getTicketDetails(ticketId);
 
-    const qrData = JSON.stringify({
-      ticketNumber: ticket.ticketNumber,
-      eventId: ticket.event._id.toString(),
-      userId: ticket.user._id.toString(),
-      eventName: ticket.event.title,
-      userName: ticket.user.name,
-      date: ticket.event.date,
-      checkInUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/check-in/${ticket.ticketNumber}`
-    });
+    // Encode only ticket number for fast scanning (matches new ticket generation)
+    const qrData = ticket.ticketNumber;
 
     const qrCodeImage = await QRCode.toDataURL(qrData, {
-      errorCorrectionLevel: 'H',
+      errorCorrectionLevel: 'M',
       type: 'image/png',
       width: 300,
-      margin: 1,
+      margin: 2,
       color: {
         dark: '#000000',
         light: '#FFFFFF'

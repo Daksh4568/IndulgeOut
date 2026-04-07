@@ -479,6 +479,14 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
           male: genderBreakdown.male || 0,
           female: genderBreakdown.female || 0
         };
+        // Store effective gender prices at time of purchase for revenue tracking
+        if (event.genderPricing?.enabled) {
+          const genderPrices = event.getCurrentGenderPrices ? event.getCurrentGenderPrices() : {
+            malePrice: event.genderPricing.malePrice,
+            femalePrice: event.genderPricing.femalePrice
+          };
+          ticketMetadata.genderPrices = genderPrices;
+        }
       }
       
       // Add coupon information to ticket metadata
@@ -968,6 +976,11 @@ router.post('/webhook', async (req, res) => {
             genderBreakdown: genderBreakdownWebhook && (genderBreakdownWebhook.male > 0 || genderBreakdownWebhook.female > 0) ? {
               male: genderBreakdownWebhook.male || 0,
               female: genderBreakdownWebhook.female || 0
+            } : undefined,
+            // Gender prices at time of purchase
+            genderPrices: (genderBreakdownWebhook && (genderBreakdownWebhook.male > 0 || genderBreakdownWebhook.female > 0) && event.genderPricing?.enabled) ? {
+              malePrice: event.getCurrentGenderPrices ? event.getCurrentGenderPrices()?.malePrice : event.genderPricing.malePrice,
+              femalePrice: event.getCurrentGenderPrices ? event.getCurrentGenderPrices()?.femalePrice : event.genderPricing.femalePrice
             } : undefined
           }
         });
