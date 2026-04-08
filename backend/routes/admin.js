@@ -1762,10 +1762,27 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         cashfreeServiceCharge: t.cashfreeServiceCharge || 0,
         cashfreeServiceTax: t.cashfreeServiceTax || 0,
         cashfreeTotalDeducted: (t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0),
-        proceedsAfterGateway: parseFloat((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))).toFixed(2)),
-        indulgeOutRevenueInclGST: parseFloat(((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))) - basePrice).toFixed(2)),
-        indulgeOutRevenueNetGST: parseFloat((((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))) - basePrice) / 1.18).toFixed(2)),
-        indulgeOutRevenuePercent: basePrice > 0 ? parseFloat(((((totalPaidByUser - ((t.cashfreeServiceCharge || 0) + (t.cashfreeServiceTax || 0))) - basePrice) / 1.18 / basePrice) * 100).toFixed(1)) : 0,
+        proceedsAfterGateway: (() => {
+          const cfCharge = t.cashfreeServiceCharge > 0 ? t.cashfreeServiceCharge : totalPaidByUser * 0.016;
+          const cfTax = t.cashfreeServiceTax > 0 ? t.cashfreeServiceTax : cfCharge * 0.18;
+          return parseFloat((totalPaidByUser - (cfCharge + cfTax)).toFixed(2));
+        })(),
+        indulgeOutRevenueInclGST: (() => {
+          const cfCharge = t.cashfreeServiceCharge > 0 ? t.cashfreeServiceCharge : totalPaidByUser * 0.016;
+          const cfTax = t.cashfreeServiceTax > 0 ? t.cashfreeServiceTax : cfCharge * 0.18;
+          return parseFloat(((totalPaidByUser - (cfCharge + cfTax)) - basePrice).toFixed(2));
+        })(),
+        indulgeOutRevenueNetGST: (() => {
+          const cfCharge = t.cashfreeServiceCharge > 0 ? t.cashfreeServiceCharge : totalPaidByUser * 0.016;
+          const cfTax = t.cashfreeServiceTax > 0 ? t.cashfreeServiceTax : cfCharge * 0.18;
+          return parseFloat((((totalPaidByUser - (cfCharge + cfTax)) - basePrice) / 1.18).toFixed(2));
+        })(),
+        indulgeOutRevenuePercent: (() => {
+          if (basePrice <= 0) return 0;
+          const cfCharge = t.cashfreeServiceCharge > 0 ? t.cashfreeServiceCharge : totalPaidByUser * 0.016;
+          const cfTax = t.cashfreeServiceTax > 0 ? t.cashfreeServiceTax : cfCharge * 0.18;
+          return parseFloat(((((totalPaidByUser - (cfCharge + cfTax)) - basePrice) / 1.18 / basePrice) * 100).toFixed(1));
+        })(),
         reconciliationStatus: t.reconciliationStatus,
         lastReconciliationDate: t.lastReconciliationDate,
         reconciliationNotes: t.reconciliationNotes,

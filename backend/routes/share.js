@@ -53,7 +53,7 @@ router.get('/events/:slugOrId', async (req, res) => {
 
     // Use event image if available; mark it as large image for proper preview
     const hasEventImage = event.images && event.images.length > 0 && event.images[0];
-    const image = hasEventImage ? event.images[0] : `${frontendUrl}/images/LogoFinal2.jpg`;
+    const image = hasEventImage ? event.images[0] : `${frontendUrl}/images/LogoOrbit.jpg`;
 
     // Return minimal HTML with OG tags + instant redirect for real browsers
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -67,7 +67,8 @@ router.get('/events/:slugOrId', async (req, res) => {
 <meta property="og:title" content="${escapeHtml(title)}"/>
 <meta property="og:description" content="${escapeHtml(ogDescription)}"/>
 <meta property="og:image" content="${escapeHtml(image)}"/>
-${hasEventImage ? '<meta property="og:image:width" content="1200"/>\n<meta property="og:image:height" content="630"/>' : ''}
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
 <meta property="og:url" content="${escapeHtml(canonicalUrl)}"/>
 <meta property="og:site_name" content="IndulgeOut"/>
 <meta name="twitter:card" content="summary_large_image"/>

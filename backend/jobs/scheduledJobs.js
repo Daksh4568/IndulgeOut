@@ -620,8 +620,36 @@ async function runDailyReconciliation() {
             if (!ticket.gatewayResponse) {
               ticket.gatewayResponse = {};
             }
-            ticket.gatewayResponse.paymentStatus = order.order_status;
-            ticket.gatewayResponse.paymentMethod = order.payment_method || 'unknown';
+            ticket.gatewayResponse.paymentStatus = 'SUCCESS'; // Normalize to match payment-level status
+            
+            // Fetch payment method from Payments API if not already set
+            if (!ticket.gatewayResponse.paymentMethod || ticket.gatewayResponse.paymentMethod === 'unknown') {
+              try {
+                const paymentsResponse = await axios.get(
+                  `${CASHFREE_API_URL}/pg/orders/${orderId}/payments`,
+                  {
+                    headers: {
+                      'x-client-id': process.env.CASHFREE_APP_ID,
+                      'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+                      'x-api-version': '2023-08-01'
+                    }
+                  }
+                );
+                const payments = paymentsResponse.data;
+                const successPayment = Array.isArray(payments) 
+                  ? payments.find(p => p.payment_status === 'SUCCESS') || payments[0]
+                  : null;
+                if (successPayment?.payment_method) {
+                  const pm = successPayment.payment_method;
+                  ticket.gatewayResponse.paymentMethod = typeof pm === 'object' && pm
+                    ? Object.keys(pm)[0] || 'unknown'
+                    : (pm || 'unknown');
+                }
+              } catch (pmError) {
+                // Non-critical - keep existing value or 'unknown'
+                console.warn(`⚠️ Could not fetch payment method for ${ticket.ticketNumber}: ${pmError.message}`);
+              }
+            }
             
             verified++;
             console.log(`✅ Verified: ${ticket.ticketNumber} (${orderId})`);
