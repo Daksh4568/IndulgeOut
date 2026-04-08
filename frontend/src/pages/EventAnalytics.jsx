@@ -170,6 +170,7 @@ const EventAnalytics = () => {
       "Quantity",
       ...(hasGenderPricing ? ["Male Spots", "Female Spots"] : []),
       "Ticket Type",
+      "Group Offer",
       "Per Ticket Price",
       "Total Ticket Price",
       "Final Amount Paid",
@@ -201,6 +202,7 @@ const EventAnalytics = () => {
           gb?.female || 0,
         ] : []),
         a.ticketType,
+        a.metadata?.groupingOffer || '',
         perTicket,
         totalTicket,
         a.metadata?.totalPaid || a.price?.amount || 0,
@@ -583,6 +585,103 @@ const EventAnalytics = () => {
             )}
           </div>
         </div>
+
+        {/* Group Offers Breakdown */}
+        {analytics.groupingOffers?.enabled && analytics.groupingOffers.tiers?.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <Users className="h-5 w-5 mr-2 text-indigo-500" />
+                Group Offers Breakdown
+              </h2>
+            </div>
+            {(() => {
+              const allAttendees = analytics.attendees || [];
+              const groupBookings = allAttendees.filter(a => a.metadata?.groupingOffer);
+              const regularBookings = allAttendees.filter(a => !a.metadata?.groupingOffer);
+              const groupSpots = groupBookings.reduce((sum, a) => sum + (a.quantity || 1), 0);
+              const regularSpots = regularBookings.reduce((sum, a) => sum + (a.quantity || 1), 0);
+              const groupRevenue = groupBookings.reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
+              const regularRevenue = regularBookings.reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
+              const totalSpots = groupSpots + regularSpots;
+
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div className="bg-gradient-to-br from-indigo-900/20 to-purple-900/20 backdrop-blur-sm rounded-xl p-6 border border-indigo-700/30">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Users className="h-5 w-5 text-indigo-500" />
+                        <span className="text-sm text-gray-400">Group Offer Bookings</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-1">
+                        {groupBookings.length}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {groupSpots} spots ({totalSpots > 0 ? ((groupSpots / totalSpots) * 100).toFixed(1) : 0}% of total)
+                      </div>
+                    </div>
+                    <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Users className="h-5 w-5 text-gray-400" />
+                        <span className="text-sm text-gray-400">Regular Bookings</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-1">
+                        {regularBookings.length}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {regularSpots} spots ({totalSpots > 0 ? ((regularSpots / totalSpots) * 100).toFixed(1) : 0}% of total)
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 backdrop-blur-sm rounded-xl p-6 border border-green-700/30">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <DollarSign className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-gray-400">Group Offer Revenue</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-1">
+                        ₹{groupRevenue.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        vs ₹{regularRevenue.toLocaleString()} regular
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Per-tier breakdown table */}
+                  <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-700/50">
+                            <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Tier</th>
+                            <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Price</th>
+                            <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Per Person</th>
+                            <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Tickets Sold</th>
+                            <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Spots</th>
+                            <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analytics.groupingOffers.tiers.map((tier, index) => (
+                            <tr key={index} className="border-b border-gray-700/30 last:border-b-0 hover:bg-white/5">
+                              <td className="px-4 py-3 text-sm text-white font-medium">
+                                {tier.label}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-white">₹{tier.price}</td>
+                              <td className="px-4 py-3 text-sm text-gray-400">₹{Math.round(tier.price / tier.people)}</td>
+                              <td className="px-4 py-3 text-sm text-white">{tier.ticketsBought}</td>
+                              <td className="px-4 py-3 text-sm text-white">{tier.spotsBought}</td>
+                              <td className="px-4 py-3 text-sm text-green-400 font-medium">₹{tier.revenue.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Coupon Usage Statistics */}
         {analytics.attendees && analytics.attendees.some(a => a.couponUsed) && (
@@ -981,7 +1080,7 @@ const EventAnalytics = () => {
                                     {period.spotsBooked}
                                   </td>
                                   <td className={`px-4 py-3 text-sm font-medium ${period.isActive ? 'text-green-400' : 'text-white'}`}>
-                                    ₹{analytics.genderPricing?.enabled ? (period.actualRevenue ?? (period.price * period.spotsBooked)) : (period.price * period.spotsBooked)}
+                                    ₹{period.actualRevenue ?? (period.price * period.spotsBooked)}
                                   </td>
                                   <td className="px-4 py-3">
                                     <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -1337,6 +1436,11 @@ const EventAnalytics = () => {
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Ticket Type
                     </th>
+                    {analytics.groupingOffers?.enabled && (
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Group Offer
+                      </th>
+                    )}
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Coupon Used
                     </th>
@@ -1459,6 +1563,22 @@ const EventAnalytics = () => {
                           {attendee.ticketType}
                         </span>
                       </td>
+                      {analytics.groupingOffers?.enabled && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {attendee.metadata?.groupingOffer ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="px-2 py-1 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-full inline-block w-fit">
+                                {attendee.metadata.groupingOffer}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ₹{attendee.metadata?.priceAtPurchase || Math.round((attendee.metadata?.basePrice || 0) / (attendee.quantity || 1))}/person
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500">Regular</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {attendee.couponUsed && attendee.couponUsed.code ? (
                           <div className="flex flex-col gap-1">

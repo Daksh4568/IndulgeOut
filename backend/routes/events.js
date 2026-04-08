@@ -538,14 +538,23 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
     let ticket = null;
     console.log(`🎫 [Ticket] Starting ticket generation for user ${userId}, event ${event._id}`);
     try {
+      // For group offers, use tierPrice as base price; otherwise use event price * quantity
+      const effectiveBasePrice = basePrice
+        || (groupingOffer?.tierPrice)
+        || (event.getCurrentPrice() * ticketQuantity);
+      const effectivePerTicketPrice = groupingOffer
+        ? Math.round(effectiveBasePrice / ticketQuantity)
+        : event.getCurrentPrice();
+      
       const ticketMetadata = {
         registrationSource: 'web',
         registeredAt: new Date(),
         slotsBooked: ticketQuantity,
-        basePrice: basePrice || event.getCurrentPrice() * ticketQuantity,
+        basePrice: effectiveBasePrice,
         gstAndOtherCharges: gstAndOtherCharges || 0,
         platformFees: platformFees || 0,
-        priceAtPurchase: event.getCurrentPrice()
+        priceAtPurchase: effectivePerTicketPrice,
+        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
       };
       
       // Track which pricing timeline tier was active at purchase time
@@ -1377,6 +1386,20 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         malePrice: event.genderPricing.malePrice,
         femalePrice: event.genderPricing.femalePrice
       } : { enabled: false },
+      groupingOffers: event.groupingOffers?.enabled ? {
+        enabled: true,
+        tiers: (event.groupingOffers.tiers || []).map(tier => {
+          const tierTickets = tickets.filter(t => t.metadata?.tierPeople === tier.people);
+          return {
+            people: tier.people,
+            price: tier.price,
+            label: tier.label || `${tier.people} ${tier.people === 1 ? 'Person' : 'People'}`,
+            ticketsBought: tierTickets.length,
+            spotsBought: tierTickets.reduce((sum, t) => sum + (t.quantity || 1), 0),
+            revenue: tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+          };
+        })
+      } : { enabled: false, tiers: [] },
       statistics: {
         totalTickets: totalRegistered,
         totalSlots,

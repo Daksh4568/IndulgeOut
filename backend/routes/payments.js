@@ -251,7 +251,10 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
     
     // Fetch event early so we can compute server-side price if needed
     let verifyEvent = await findEventByIdOrSlug(eventId);
-    const serverSideBasePrice = verifyEvent ? verifyEvent.getCurrentPrice() * (parseInt(quantity) || 1) : 0;
+    // Use groupingOffer.tierPrice when available — getCurrentPrice() * quantity is WRONG for group offers
+    const serverSideBasePrice = verifyEvent
+      ? (groupingOffer?.tierPrice || verifyEvent.getCurrentPrice() * (parseInt(quantity) || 1))
+      : 0;
     
     const basePrice = req.body.basePrice || storedFees.basePrice || serverSideBasePrice;
     const gstAndOtherCharges = req.body.gstAndOtherCharges || storedFees.gstAndOtherCharges || parseFloat((serverSideBasePrice * 0.026).toFixed(2));
@@ -444,16 +447,40 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
     let ticket = null;
     console.log(`🎫 [Payment Flow] Starting ticket generation for user ${userId}, event ${event._id}`);
     try {
+      // Per-ticket price: for group offers, divide total by people; otherwise use event price
+      const perTicketPrice = groupingOffer
+        ? Math.round(basePrice / ticketQuantity)
+        : (event.getCurrentPrice ? event.getCurrentPrice() : (event.price?.amount || 0));
+      
       const ticketMetadata = {
         registrationSource: 'payment',
         registeredAt: new Date(),
         slotsBooked: ticketQuantity,
         orderId: orderId,
         basePrice: basePrice || 0, // Base price from frontend (organizer's revenue - ticket price only)
+        priceAtPurchase: perTicketPrice, // Per-ticket price at purchase time
+        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
         gstAndOtherCharges: gstAndOtherCharges || 0,
         platformFees: platformFees || 0,
         totalPaid: totalAmount || (basePrice + (gstAndOtherCharges || 0) + (platformFees || 0)) // Total amount customer paid
       };
+      
+      // Track which pricing timeline tier was active at purchase time
+      if (event?.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length) {
+        const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+        const todayIST = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+        const activeTier = event.pricingTimeline.tiers.find(tier => {
+          const startStr = new Date(tier.startDate).toISOString().split('T')[0];
+          const endStr = new Date(tier.endDate).toISOString().split('T')[0];
+          return todayIST >= startStr && todayIST <= endStr;
+        });
+        if (activeTier) {
+          ticketMetadata.pricingTimelineTier = activeTier.label || `₹${activeTier.price}`;
+          if (!groupingOffer) {
+            ticketMetadata.priceAtPurchase = activeTier.price;
+          }
+        }
+      }
       
       // Validation: Ensure basePrice is properly set
       if (!basePrice || basePrice === 0) {
@@ -785,11 +812,13 @@ router.post('/webhook', async (req, res) => {
       
       const storedData = global.pendingPaymentFees?.[orderId];
       
-      // Calculate base price: prefer stored value (from create-order time), fallback to current price
-      const ticketPrice = storedData?.basePrice
-        ? storedData.basePrice / ticketQuantity  // Per-ticket price from stored total
-        : event.getCurrentPrice();
-      const basePrice = storedData?.basePrice || (ticketPrice * ticketQuantity);
+      // Calculate base price: prefer stored value (from create-order time)
+      // Fallback: reverse-engineer from paymentAmount (paymentAmount = basePrice * 1.056)
+      // Do NOT use getCurrentPrice() * quantity — it's wrong for group offers / coupons
+      const basePrice = storedData?.basePrice
+        || (storedData?.groupingOffer?.tierPrice)
+        || parseFloat((paymentAmount / 1.056).toFixed(2));
+      const ticketPrice = Math.round(basePrice / ticketQuantity);
       
       // Calculate fees from payment amount
       // Total paid = basePrice + GST (2.6%) + Platform Fee (3%)
@@ -949,12 +978,31 @@ router.post('/webhook', async (req, res) => {
       let ticket = null;
       console.log('🎫 [WEBHOOK] Generating ticket for user:', userId);
       try {
-        ticket = await ticketService.generateTicket({
+        // Determine active pricing timeline tier for metadata
+      let pricingTimelineTier = null;
+      if (event?.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length) {
+        const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+        const todayIST = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+        const activeTier = event.pricingTimeline.tiers.find(tier => {
+          const startStr = new Date(tier.startDate).toISOString().split('T')[0];
+          const endStr = new Date(tier.endDate).toISOString().split('T')[0];
+          return todayIST >= startStr && todayIST <= endStr;
+        });
+        if (activeTier) {
+          pricingTimelineTier = activeTier.label || `₹${activeTier.price}`;
+          if (!groupingOffer) {
+            // Override per-ticket price with timeline tier price (only if not using group offer)
+            // ticketPrice was already set from storedData or fallback above
+          }
+        }
+      }
+      
+      ticket = await ticketService.generateTicket({
           userId,
           eventId: event._id,
           amount: basePrice, // Use base price (revenue amount)
           paymentId: orderId,
-          ticketType: ticketQuantity > 1 ? 'group' : 'general',
+          ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
           quantity: ticketQuantity,
           metadata: {
             registrationSource: 'webhook',
@@ -962,10 +1010,16 @@ router.post('/webhook', async (req, res) => {
             slotsBooked: ticketQuantity,
             orderId: orderId,
             basePrice: basePrice,                     // ✅ Organizer revenue
+            priceAtPurchase: ticketPrice,             // ✅ Per-ticket price at purchase
+            pricingTimelineTier: pricingTimelineTier, // ✅ Active tier label
+            ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
             gstAndOtherCharges: gstAndOtherCharges,   // ✅ GST breakdown
             platformFees: platformFees,               // ✅ Platform fee breakdown
             totalPaid: paymentAmount,                 // ✅ Total customer paid
-            ticketPrice: ticketPrice,                 // Per-ticket price
+            ticketPrice: ticketPrice,                 // Per-ticket price (legacy)
+            // Grouping offer details
+            groupingOffer: groupingOffer?.tierLabel || null,
+            tierPeople: groupingOffer?.tierPeople || null,
             // Coupon information
             couponCode: couponData?.code || null,
             couponDiscount: couponData?.discountApplied || 0,

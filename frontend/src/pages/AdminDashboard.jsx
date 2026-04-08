@@ -2159,7 +2159,7 @@ const AdminDashboard = () => {
                             <tr className="border-b border-gray-700">
                               <th className="text-left py-2 px-4 text-gray-400 font-medium">#</th>
                               <th className="text-left py-2 px-4 text-gray-400 font-medium">Date</th>
-                              <th className="text-right py-2 px-4 text-gray-400 font-medium">Signups</th>
+                              <th className="text-right py-2 px-4 text-gray-400 font-medium">New Signups</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2254,7 +2254,7 @@ const AdminDashboard = () => {
                 {/* Top Active Users */}
                 <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-8">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Active Users</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Login Tracker</h3>
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-gray-400">Show</label>
@@ -3547,7 +3547,7 @@ const AdminDashboard = () => {
                                         {period.ticketsSold}
                                       </td>
                                       <td className="px-4 py-3 text-sm text-right text-white">
-                                        ₹{(eventDetails.genderPricing?.enabled ? (period.actualRevenue ?? (period.price * period.spotsBooked)) : (period.price * period.spotsBooked)).toLocaleString('en-IN')}
+                                        ₹{(period.actualRevenue ?? (period.price * period.spotsBooked)).toLocaleString('en-IN')}
                                       </td>
                                       <td className="px-4 py-3 text-center">
                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -3774,6 +3774,9 @@ const AdminDashboard = () => {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Booking Date</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order ID</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ticket Type</th>
+                          {eventDetails.groupingOffers?.enabled && (
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Group Offer</th>
+                          )}
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Coupon Used</th>
                           {eventDetails.genderPricing?.enabled && (
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Gender Spots</th>
@@ -3830,6 +3833,22 @@ const AdminDashboard = () => {
                                 {attendee.ticketType}
                               </span>
                             </td>
+                            {eventDetails.groupingOffers?.enabled && (
+                              <td className="px-4 py-3 text-sm">
+                                {attendee.groupingOffer ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="px-2 py-0.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-full inline-block w-fit">
+                                      {attendee.groupingOffer}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      ₹{attendee.priceAtPurchase || Math.round((attendee.basePrice || 0) / (attendee.quantity || 1))}/person
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-500">Regular</span>
+                                )}
+                              </td>
+                            )}
                             <td className="px-4 py-3 text-sm">
                               {attendee.couponCode ? (
                                 <div className="flex flex-col gap-0.5">
@@ -3972,6 +3991,20 @@ const AdminDashboard = () => {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="border-t-2 border-gray-600 bg-zinc-800/80">
+                        <tr>
+                          <td colSpan={eventDetails.genderPricing?.enabled ? 9 : 8} className="px-4 py-3 text-sm font-bold text-yellow-400 text-right">
+                            Total ({eventDetails.attendees.length} tickets)
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold text-yellow-400">
+                            ₹{eventDetails.attendees.reduce((sum, a) => sum + (a.basePrice || ((a.priceAtPurchase || a.price) * (a.quantity || 1))), 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold text-yellow-400">
+                            ₹{eventDetails.attendees.reduce((sum, a) => sum + (a.totalPaid || a.price || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td colSpan={4}></td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>
