@@ -67,11 +67,10 @@ router.get('/events/:slugOrId', async (req, res) => {
 <meta property="og:title" content="${escapeHtml(title)}"/>
 <meta property="og:description" content="${escapeHtml(ogDescription)}"/>
 <meta property="og:image" content="${escapeHtml(image)}"/>
-<meta property="og:image:width" content="1200"/>
-<meta property="og:image:height" content="630"/>
+${hasEventImage ? '<meta property="og:image:width" content="1200"/>\n<meta property="og:image:height" content="630"/>' : ''}
 <meta property="og:url" content="${escapeHtml(canonicalUrl)}"/>
 <meta property="og:site_name" content="IndulgeOut"/>
-<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:card" content="${hasEventImage ? 'summary_large_image' : 'summary'}"/>
 <meta name="twitter:title" content="${escapeHtml(title)}"/>
 <meta name="twitter:description" content="${escapeHtml(ogDescription)}"/>
 <meta name="twitter:image" content="${escapeHtml(image)}"/>

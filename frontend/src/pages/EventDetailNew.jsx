@@ -195,19 +195,27 @@ const EventDetail = () => {
       }
       case 'instagram': {
         let igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
-        igText += `\n\n${eventUrl}`;
-        navigator.clipboard.writeText(igText).then(() => {
-          toast?.success('Event details & link copied! Paste in your Instagram chat.');
-        }).catch(() => {
-          toast?.info('Copy the event link and share it on Instagram');
-        });
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          window.location.href = 'instagram://direct-inbox';
-          setTimeout(() => {
-            window.open('https://www.instagram.com/direct/inbox/', '_blank');
-          }, 1500);
+        // On mobile, use native share sheet for best experience
+        if (isMobile && navigator.share) {
+          navigator.share({
+            title: eventTitle,
+            text: igText,
+            url: ogShareUrl
+          }).catch(() => {
+            // Fallback: copy to clipboard
+            navigator.clipboard.writeText(igText + `\n\n${ogShareUrl}`).then(() => {
+              toast?.success('Event details copied! Paste in your Instagram chat.');
+            });
+          });
         } else {
+          // Desktop: copy to clipboard and open Instagram DMs
+          igText += `\n\n${ogShareUrl}`;
+          navigator.clipboard.writeText(igText).then(() => {
+            toast?.success('Event details & link copied! Paste in your Instagram chat.');
+          }).catch(() => {
+            toast?.info('Copy the event link and share it on Instagram');
+          });
           window.open('https://www.instagram.com/direct/inbox/', '_blank');
         }
         setShowShareModal(false);
