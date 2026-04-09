@@ -11,7 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
 import NavigationBar from '../components/NavigationBar';
 import ShareModal from '../components/ShareModal';
-import { api } from '../config/api';
+import { api, API_URL } from '../config/api';
 import { CATEGORY_ICONS } from '../constants/eventConstants';
 import { convert24To12Hour } from '../utils/timeUtils';
 
@@ -1251,8 +1251,9 @@ const CommunityOrganizerDashboard = () => {
     if (!selectedEventForShare) return;
     
     const evt = selectedEventForShare;
-    const eventUrl = `${window.location.origin}/events/${evt.slug || evt._id}`;
-    const eventTitle = evt.title;
+    const eventSlug = evt.slug || evt._id;
+    const ogShareUrl = `${API_URL}/share/events/${eventSlug}`;
+    const eventTitle = evt.title || 'Check out this event';
     const eventDate = new Date(evt.date).toLocaleDateString('en-IN', { 
       day: 'numeric', 
       month: 'short', 
@@ -1264,56 +1265,83 @@ const CommunityOrganizerDashboard = () => {
     const genderEnabled = evt.genderPricing?.enabled;
     const basePrice = evt.currentEffectivePrice ?? evt.price?.amount ?? 0;
     const eventPrice = genderEnabled
-      ? `₹${evt.genderPricing.malePrice} (M) / ₹${evt.genderPricing.femalePrice} (F)`
+      ? (() => {
+          const gp = evt.genderPricing;
+          return `₹${Math.min(gp.malePrice, gp.femalePrice)} onwards`;
+        })()
       : basePrice > 0 ? `₹${basePrice}` : 'FREE';
-    const coords = evt.location?.coordinates;
-    const mapsUrl = coords?.latitude && coords?.longitude
-      ? `https://maps.google.com/?q=${coords.latitude},${coords.longitude}`
-      : locationText ? `https://maps.google.com/?q=${encodeURIComponent(locationText)}` : '';
 
-    let shareUrl = '';
     switch (platform) {
       case 'whatsapp': {
         let waText = `🎉 *${eventTitle}*\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
-        waText += `\n\nBook now 👇\n${eventUrl}`;
-        shareUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`;
-        break;
+        waText += `\n\nBook now 👇\n${ogShareUrl}`;
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
+        window.open(waUrl, '_blank');
+        setShowShareModal(false);
+        return;
       }
-      case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
-        break;
       case 'instagram': {
         let igText = `${eventTitle}\n📅 ${eventDate}\n📍 ${locationText}\n💰 ${eventPrice}`;
-        if (mapsUrl) igText += `\n📌 ${mapsUrl}`;
-        igText += `\n\n${eventUrl}`;
-        navigator.clipboard.writeText(igText);
-        toast?.show({ message: 'Event details & link copied! Paste in your Instagram chat.', type: 'success' });
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile && navigator.share) {
+          navigator.share({
+            title: eventTitle,
+            text: igText,
+            url: ogShareUrl
+          }).catch(() => {
+            navigator.clipboard.writeText(igText + `\n\n${ogShareUrl}`).then(() => {
+              toast?.success('Event details copied! Paste in your Instagram chat.');
+            });
+          });
+        } else {
+          igText += `\n\n${ogShareUrl}`;
+          navigator.clipboard.writeText(igText).then(() => {
+            toast?.success('Event details & link copied! Paste in your Instagram chat.');
+          }).catch(() => {
+            toast?.info('Copy the event link and share it on Instagram');
+          });
+          window.open('https://www.instagram.com/direct/inbox/', '_blank');
+        }
+        setShowShareModal(false);
         return;
       }
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
-        break;
+      case 'x': {
+        const xText = `${eventTitle} — ${eventDate} | ${eventPrice}`;
+        const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(ogShareUrl)}`;
+        window.open(xUrl, '_blank', 'width=600,height=400');
+        setShowShareModal(false);
+        return;
+      }
+      case 'linkedin': {
+        const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogShareUrl)}`;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = `linkedin://sharing/share-offsite/?url=${encodeURIComponent(ogShareUrl)}`;
+          setTimeout(() => {
+            window.open(liUrl, '_blank');
+          }, 1500);
+        } else {
+          window.open(liUrl, '_blank', 'width=600,height=400');
+        }
+        setShowShareModal(false);
+        return;
+      }
       default:
         return;
-    }
-
-    if (shareUrl) {
-      window.open(shareUrl, '_blank');
     }
   };
 
   const copyEventLink = async () => {
     if (!selectedEventForShare) return;
     
-    try {
-      const eventUrl = `${window.location.origin}/events/${selectedEventForShare.slug || selectedEventForShare._id}`;
-      await navigator.clipboard.writeText(eventUrl);
-      toast?.show({ message: 'Event link copied to clipboard!', type: 'success' });
+    const eventUrl = `${window.location.origin}/events/${selectedEventForShare.slug || selectedEventForShare._id}`;
+    navigator.clipboard.writeText(eventUrl).then(() => {
+      toast?.success('Link copied!');
       setShowShareModal(false);
-    } catch (error) {
-      console.error('Error copying event link:', error);
-      toast?.show({ message: 'Failed to copy link', type: 'error' });
-    }
+    }).catch(err => {
+      console.error('Failed to copy link:', err);
+      toast?.error('Failed to copy link');
+    });
   };
 
   // ==================== MANAGE COLLABORATIONS SECTION ====================
