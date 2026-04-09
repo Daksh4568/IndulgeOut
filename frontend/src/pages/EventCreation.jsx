@@ -1723,7 +1723,7 @@ const EventCreation = () => {
                     type="text"
                     value={locationQuery || formData.location.address || ""}
                     onChange={handleLocationSearch}
-                    placeholder="Search cafe, venue, or area in Bangalore... (e.g., 'Third Wave Coffee' or 'Indiranagar')"
+                    placeholder="Search cafe, venue, or area (e.g., 'Third Wave Coffee' or 'Koramangala, Bangalore')"
                     className="w-full px-4 py-3 pr-32 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                   />
                   <button

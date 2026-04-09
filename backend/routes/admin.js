@@ -1684,7 +1684,15 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
           mismatches: mismatchCount,
           pending: tickets.length - verifiedCount - mismatchCount,
           verifiedPercentage: tickets.length > 0 ? parseFloat(((verifiedCount / tickets.length) * 100).toFixed(1)) : 0
-        }
+        },
+        groupingOffers: event.groupingOffers?.enabled ? {
+          enabled: true,
+          totalGroupTickets: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).length,
+          totalGroupSpots: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
+          totalGroupRevenue: parseFloat(tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2)),
+          regularTickets: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).length,
+          groupOfferPercentage: tickets.length > 0 ? parseFloat(((tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).length / tickets.length) * 100).toFixed(1)) : 0
+        } : { enabled: false }
       },
       tickets: tickets.map(t => {
         const basePrice = t.metadata?.basePrice || 0;
@@ -1812,11 +1820,28 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
     
     report.groupingOffers = event.groupingOffers?.enabled ? {
       enabled: true,
-      tiers: (event.groupingOffers.tiers || []).map(t => ({
-        people: t.people,
-        price: t.price,
-        label: t.label || ''
-      }))
+      tiers: (event.groupingOffers.tiers || []).map(tier => {
+        const tierLabel = tier.label || `${tier.people} people`;
+        const tierTickets = tickets.filter(t => t.metadata?.groupingOffer === tierLabel || t.metadata?.tierPeople === tier.people);
+        const ticketsBought = tierTickets.length;
+        const spotsBought = tierTickets.reduce((sum, t) => sum + (t.quantity || 1), 0);
+        const revenue = tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0);
+        return {
+          people: tier.people,
+          price: tier.price,
+          perPerson: Math.round(tier.price / tier.people),
+          label: tierLabel,
+          ticketsBought,
+          spotsBought,
+          revenue: parseFloat(revenue.toFixed(2))
+        };
+      }),
+      totalGroupTickets: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).length,
+      totalGroupSpots: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
+      totalGroupRevenue: parseFloat(tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2)),
+      regularTickets: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).length,
+      regularSpots: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
+      regularRevenue: parseFloat(tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2))
     } : { enabled: false };
     
     if (format === 'csv') {
@@ -1888,11 +1913,16 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`# GROUPING OFFERS:`);
       csvRows.push(`#   - Grouping Offers: ${event.groupingOffers?.enabled ? 'Enabled' : 'Disabled'}`);
       if (event.groupingOffers?.enabled && event.groupingOffers.tiers?.length > 0) {
-        const groupTickets = report.tickets.filter(t => t.groupingOffer);
-        csvRows.push(`#   - Tickets with Group Offers: ${groupTickets.length}`);
-        event.groupingOffers.tiers.forEach((tier, i) => {
-          const tierTickets = groupTickets.filter(t => t.groupingOffer === (tier.label || `${tier.people} people`));
-          csvRows.push(`#   - Tier ${i + 1}: ${tier.people} people at ₹${tier.price} (${tierTickets.length} tickets)`);
+        const go = report.groupingOffers;
+        csvRows.push(`#   - Total Group Offer Tickets: ${go.totalGroupTickets}`);
+        csvRows.push(`#   - Total Group Offer Spots: ${go.totalGroupSpots}`);
+        csvRows.push(`#   - Total Group Offer Revenue (Base): ₹${go.totalGroupRevenue.toFixed(2)}`);
+        csvRows.push(`#   - Regular Tickets (No Group Offer): ${go.regularTickets}`);
+        csvRows.push(`#   - Regular Spots: ${go.regularSpots}`);
+        csvRows.push(`#   - Regular Revenue (Base): ₹${go.regularRevenue.toFixed(2)}`);
+        csvRows.push(`#   - Group Offer % of Total Tickets: ${tickets.length > 0 ? ((go.totalGroupTickets / tickets.length) * 100).toFixed(1) : 0}%`);
+        go.tiers.forEach((tier, i) => {
+          csvRows.push(`#   - Tier ${i + 1}: ${tier.label} — ${tier.people} people at ₹${tier.price} (₹${tier.perPerson}/person) — ${tier.ticketsBought} tickets, ${tier.spotsBought} spots, ₹${tier.revenue.toFixed(2)} revenue`);
         });
       }
       csvRows.push(`#`);

@@ -597,8 +597,8 @@ const EventAnalytics = () => {
             </div>
             {(() => {
               const allAttendees = analytics.attendees || [];
-              const groupBookings = allAttendees.filter(a => a.metadata?.groupingOffer);
-              const regularBookings = allAttendees.filter(a => !a.metadata?.groupingOffer);
+              const groupBookings = allAttendees.filter(a => a.metadata?.groupingOffer && (a.metadata?.tierPeople || 0) > 1);
+              const regularBookings = allAttendees.filter(a => !a.metadata?.groupingOffer || (a.metadata?.tierPeople || 0) <= 1);
               const groupSpots = groupBookings.reduce((sum, a) => sum + (a.quantity || 1), 0);
               const regularSpots = regularBookings.reduce((sum, a) => sum + (a.quantity || 1), 0);
               const groupRevenue = groupBookings.reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
@@ -635,13 +635,13 @@ const EventAnalytics = () => {
                     <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 backdrop-blur-sm rounded-xl p-6 border border-green-700/30">
                       <div className="flex items-center space-x-2 mb-3">
                         <DollarSign className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-400">Group Offer Revenue</span>
+                        <span className="text-sm text-gray-400">Total Revenue</span>
                       </div>
                       <div className="text-3xl font-bold text-white mb-1">
-                        ₹{groupRevenue.toLocaleString()}
+                        ₹{(groupRevenue + regularRevenue).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500">
-                        vs ₹{regularRevenue.toLocaleString()} regular
+                        ₹{groupRevenue.toLocaleString()} group + ₹{regularRevenue.toLocaleString()} regular
                       </div>
                     </div>
                   </div>
@@ -1565,7 +1565,7 @@ const EventAnalytics = () => {
                       </td>
                       {analytics.groupingOffers?.enabled && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {attendee.metadata?.groupingOffer ? (
+                          {attendee.metadata?.groupingOffer && (attendee.metadata?.tierPeople || 0) > 1 ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="px-2 py-1 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-full inline-block w-fit">
                                 {attendee.metadata.groupingOffer}

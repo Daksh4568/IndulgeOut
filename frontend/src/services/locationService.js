@@ -218,17 +218,8 @@ class LocationService {
     }
 
     try {
-      // Smart query enhancement - default to Bangalore if no city context
-      const hasCityContext = this.hasCityInQuery(query);
-      const hasIndiaContext = query.toLowerCase().includes('india');
-
-      let searchQuery;
-      if (hasIndiaContext || hasCityContext) {
-        searchQuery = query;
-      } else {
-        // Default to Bangalore for our primary audience
-        searchQuery = `${query} Bangalore`;
-      }
+      // Search across India - no city defaulting
+      const searchQuery = query;
 
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=20&addressdetails=1&countrycodes=in`,
@@ -251,16 +242,8 @@ class LocationService {
         return country === 'india' || country === 'भारत';
       });
 
-      // Sort results to prioritize Bangalore locations
+      // Sort results by importance/relevance
       const sortedResults = indianResults.sort((a, b) => {
-        const aIsBangalore = this.isBangaloreLocation(a.address);
-        const bIsBangalore = this.isBangaloreLocation(b.address);
-
-        // Bangalore locations come first
-        if (aIsBangalore && !bIsBangalore) return -1;
-        if (!aIsBangalore && bIsBangalore) return 1;
-
-        // Then sort by importance
         return (b.importance || 0) - (a.importance || 0);
       });
 

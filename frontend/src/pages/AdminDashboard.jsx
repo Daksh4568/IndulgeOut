@@ -3835,7 +3835,7 @@ const AdminDashboard = () => {
                             </td>
                             {eventDetails.groupingOffers?.enabled && (
                               <td className="px-4 py-3 text-sm">
-                                {attendee.groupingOffer ? (
+                                {attendee.groupingOffer && (attendee.tierPeople || 0) > 1 ? (
                                   <div className="flex flex-col gap-0.5">
                                     <span className="px-2 py-0.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-full inline-block w-fit">
                                       {attendee.groupingOffer}

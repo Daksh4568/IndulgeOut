@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../config/api';
 import {
   Search, Filter, Building2, Target, TrendingUp,
-  ArrowRight, X, Sparkles, Users, MapPin, Globe, ChevronLeft, ChevronRight, FileText
+  ArrowRight, X, Sparkles, Users, MapPin, Globe, ChevronLeft, ChevronRight, FileText, Image, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NavigationBar from '../components/NavigationBar';
@@ -31,6 +31,7 @@ const BrowseSponsors = () => {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState({});
+  const [modalTab, setModalTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -221,6 +222,7 @@ const BrowseSponsors = () => {
   const openBrandModal = (brand) => {
     setSelectedBrand(brand);
     setCurrentImageIndex(0);
+    setModalTab('overview');
   };
 
   const closeBrandModal = () => {
@@ -498,102 +500,81 @@ const BrowseSponsors = () => {
       {/* Brand Detail Modal */}
       {selectedBrand && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={closeBrandModal}>
-          <div className="bg-black rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-800">
-              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Oswald, sans-serif' }}>Brand Overview</h2>
-              <button
-                onClick={closeBrandModal}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                <X className="h-6 w-6 text-gray-400" />
+          <div className="bg-zinc-950 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-800/50" onClick={(e) => e.stopPropagation()}>
+            {/* Hero Banner */}
+            <div className="relative h-48 sm:h-56 overflow-hidden">
+              {selectedBrand.productPhotos && selectedBrand.productPhotos.length > 0 ? (
+                <img
+                  src={selectedBrand.productPhotos[0]}
+                  alt={selectedBrand.brandName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-7xl" style={{ background: 'linear-gradient(135deg, #7878E9 0%, #3D3DD4 50%, #6C3CE0 100%)' }}>
+                  {getBrandCategoryIcon(selectedBrand.brandCategory)}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+              {/* Close Button */}
+              <button onClick={closeBrandModal} className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full transition-colors">
+                <X className="h-5 w-5 text-white" />
               </button>
+              {/* Brand Logo */}
+              {selectedBrand.logo && (
+                <div className="absolute bottom-4 left-6 w-16 h-16 bg-white rounded-xl flex items-center justify-center shadow-xl border-2 border-white/20">
+                  <img src={selectedBrand.logo} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                </div>
+              )}
             </div>
 
-            {/* Modal Content */}
-            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-              <div className="grid md:grid-cols-2 gap-8 p-6">
-                {/* Left Column - Image Carousel */}
-                <div className="space-y-4">
-                  {/* Main Image */}
-                  <div className="relative h-80 rounded-xl overflow-hidden">
-                    {selectedBrand.productPhotos && selectedBrand.productPhotos.length > 0 ? (
-                      <>
-                        <img
-                          src={selectedBrand.productPhotos[currentImageIndex]}
-                          alt={selectedBrand.brandName}
-                          className="w-full h-full object-cover"
-                        />
-                        {selectedBrand.productPhotos.length > 1 && (
-                          <>
-                            <button
-                              onClick={prevImage}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-                            >
-                              <ChevronLeft className="h-6 w-6 text-white" />
-                            </button>
-                            <button
-                              onClick={nextImage}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-                            >
-                              <ChevronRight className="h-6 w-6 text-white" />
-                            </button>
-                            {/* Image Counter */}
-                            <div className="absolute top-3 right-3 px-3 py-1 bg-black/70 rounded-full text-white text-sm">
-                              {currentImageIndex + 1} / {selectedBrand.productPhotos.length}
-                            </div>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <div 
-                        className="w-full h-full flex items-center justify-center text-6xl"
-                        style={{
-                          background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                        }}
-                      >
-                        {getBrandCategoryIcon(selectedBrand.brandCategory)}
-                      </div>
-                    )}
-                  </div>
+            {/* Brand Name & Description */}
+            <div className="px-6 pt-3 pb-2">
+              <h3 className="text-2xl font-bold text-white mb-1" style={{ fontFamily: 'Oswald, sans-serif' }}>{selectedBrand.brandName}</h3>
+              <p className="text-gray-400 text-sm line-clamp-2">{selectedBrand.brandDescription || 'Discover collaboration opportunities'}</p>
+            </div>
 
-                  {/* Thumbnail Images */}
-                  {selectedBrand.productPhotos && selectedBrand.productPhotos.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto">
-                      {selectedBrand.productPhotos.map((image, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentImageIndex(idx)}
-                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                            idx === currentImageIndex ? 'border-purple-500' : 'border-transparent'
-                          }`}
-                        >
-                          <img src={image} alt="" className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {/* Toggle Tabs */}
+            <div className="px-6 pt-2 pb-1">
+              <div className="flex gap-1 p-1 bg-zinc-900 rounded-xl border border-gray-800/50">
+                <button
+                  onClick={() => setModalTab('overview')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                    modalTab === 'overview'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
+                      : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Overview
+                </button>
+                <button
+                  onClick={() => setModalTab('gallery')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                    modalTab === 'gallery'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
+                      : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                >
+                  <Image className="h-4 w-4" />
+                  Gallery {selectedBrand.productPhotos?.length > 0 && `(${selectedBrand.productPhotos.length})`}
+                </button>
+              </div>
+            </div>
 
-                {/* Right Column - Brand Details */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Oswald, sans-serif' }}>{selectedBrand.brandName}</h3>
-                    <p className="text-gray-400">{selectedBrand.brandDescription || 'Discover collaboration opportunities'}</p>
-                  </div>
-
+            {/* Tab Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-340px)] px-6 py-4">
+              {modalTab === 'overview' ? (
+                <div className="grid sm:grid-cols-2 gap-3">
                   {/* Preferred Cities */}
                   {selectedBrand.preferredCities && selectedBrand.preferredCities.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Cities</h4>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="bg-zinc-900/80 p-4 rounded-xl border border-gray-800/50 hover:border-purple-500/30 transition-all">
+                      <div className="flex items-center gap-2 mb-3">
+                        <MapPin className="h-4 w-4 text-purple-400" />
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cities</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         {selectedBrand.preferredCities.map((city, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
-                          >
-                            {city}
-                          </span>
+                          <span key={idx} className="px-2.5 py-1 rounded-lg text-white text-xs font-medium bg-purple-500/15 border border-purple-500/20">{city}</span>
                         ))}
                       </div>
                     </div>
@@ -601,16 +582,14 @@ const BrowseSponsors = () => {
 
                   {/* Preferred Categories */}
                   {selectedBrand.preferredCategories && selectedBrand.preferredCategories.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Categories</h4>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="bg-zinc-900/80 p-4 rounded-xl border border-gray-800/50 hover:border-purple-500/30 transition-all">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="h-4 w-4 text-purple-400" />
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Categories</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         {selectedBrand.preferredCategories.map((cat, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
-                          >
-                            {cat}
-                          </span>
+                          <span key={idx} className="px-2.5 py-1 rounded-lg text-white text-xs font-medium bg-purple-500/15 border border-purple-500/20">{cat}</span>
                         ))}
                       </div>
                     </div>
@@ -618,16 +597,14 @@ const BrowseSponsors = () => {
 
                   {/* Preferred Event Formats */}
                   {selectedBrand.preferredEventFormats && selectedBrand.preferredEventFormats.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Event Formats</h4>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="bg-zinc-900/80 p-4 rounded-xl border border-gray-800/50 hover:border-purple-500/30 transition-all">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Target className="h-4 w-4 text-purple-400" />
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Event Formats</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         {selectedBrand.preferredEventFormats.map((format, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
-                          >
-                            {format}
-                          </span>
+                          <span key={idx} className="px-2.5 py-1 rounded-lg text-white text-xs font-medium bg-purple-500/15 border border-purple-500/20">{format}</span>
                         ))}
                       </div>
                     </div>
@@ -635,16 +612,14 @@ const BrowseSponsors = () => {
 
                   {/* Preferred Collaboration Types */}
                   {selectedBrand.preferredCollaborationTypes && selectedBrand.preferredCollaborationTypes.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Collaboration Types</h4>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="bg-zinc-900/80 p-4 rounded-xl border border-gray-800/50 hover:border-purple-500/30 transition-all">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Users className="h-4 w-4 text-purple-400" />
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Collaboration Types</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         {selectedBrand.preferredCollaborationTypes.map((type, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
-                          >
-                            {type}
-                          </span>
+                          <span key={idx} className="px-2.5 py-1 rounded-lg text-white text-xs font-medium bg-purple-500/15 border border-purple-500/20">{type}</span>
                         ))}
                       </div>
                     </div>
@@ -652,16 +627,14 @@ const BrowseSponsors = () => {
 
                   {/* Preferred Audience Types */}
                   {selectedBrand.preferredAudienceTypes && selectedBrand.preferredAudienceTypes.length > 0 && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Preferred Audience Types</h4>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="bg-zinc-900/80 p-4 rounded-xl border border-gray-800/50 hover:border-purple-500/30 transition-all sm:col-span-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Users className="h-4 w-4 text-purple-400" />
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Audience Types</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         {selectedBrand.preferredAudienceTypes.map((audience, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1.5 rounded-lg text-white text-sm font-medium bg-indigo-500 bg-opacity-25"
-                          >
-                            {audience}
-                          </span>
+                          <span key={idx} className="px-2.5 py-1 rounded-lg text-white text-xs font-medium bg-purple-500/15 border border-purple-500/20">{audience}</span>
                         ))}
                       </div>
                     </div>
@@ -669,24 +642,78 @@ const BrowseSponsors = () => {
 
                   {/* Niche Community Description */}
                   {selectedBrand.nicheCommunityDescription && (
-                    <div className="bg-zinc-900 p-4 rounded-lg border border-transparent hover:border-[#7878E9]/50 hover:bg-gradient-to-r hover:from-[#7878E9]/20 hover:to-[#3D3DD4]/10 transition-all duration-300 cursor-pointer">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Niche Community</h4>
-                      <p className="text-white">{selectedBrand.nicheCommunityDescription}</p>
+                    <div className="bg-zinc-900/80 p-4 rounded-xl border border-gray-800/50 hover:border-purple-500/30 transition-all sm:col-span-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="h-4 w-4 text-purple-400" />
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Niche Community</h4>
+                      </div>
+                      <p className="text-gray-300 text-sm">{selectedBrand.nicheCommunityDescription}</p>
                     </div>
                   )}
-
-                  {/* Propose Campaign Button */}
-                  <button
-                    onClick={() => handleProposeCollaboration(selectedBrand._id)}
-                    className="w-full py-3 rounded-lg font-semibold text-white transition-all text-lg"
-                    style={{
-                      background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
-                    }}
-                  >
-                    Propose Campaign
-                  </button>
                 </div>
-              </div>
+              ) : (
+                /* Gallery Tab */
+                <div>
+                  {selectedBrand.productPhotos && selectedBrand.productPhotos.length > 0 ? (
+                    <div className="space-y-4">
+                      {/* Main Image */}
+                      <div className="relative rounded-xl overflow-hidden aspect-video">
+                        <img
+                          src={selectedBrand.productPhotos[currentImageIndex]}
+                          alt={selectedBrand.brandName}
+                          className="w-full h-full object-cover"
+                        />
+                        {selectedBrand.productPhotos.length > 1 && (
+                          <>
+                            <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full transition-colors">
+                              <ChevronLeft className="h-5 w-5 text-white" />
+                            </button>
+                            <button onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full transition-colors">
+                              <ChevronRight className="h-5 w-5 text-white" />
+                            </button>
+                            <div className="absolute bottom-3 right-3 px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                              {currentImageIndex + 1} / {selectedBrand.productPhotos.length}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {/* Thumbnails */}
+                      {selectedBrand.productPhotos.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {selectedBrand.productPhotos.map((image, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setCurrentImageIndex(idx)}
+                              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                                idx === currentImageIndex ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-gray-700 hover:border-gray-500'
+                              }`}
+                            >
+                              <img src={image} alt="" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                      <Image className="h-16 w-16 mb-4 opacity-30" />
+                      <p className="text-lg font-medium">No photos uploaded yet</p>
+                      <p className="text-sm mt-1">This brand hasn't added any product photos</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer CTA */}
+            <div className="p-4 border-t border-gray-800/50">
+              <button
+                onClick={() => handleProposeCollaboration(selectedBrand._id)}
+                className="w-full py-3 rounded-xl font-semibold text-white transition-all text-base hover:shadow-lg hover:shadow-purple-500/20"
+                style={{ background: 'linear-gradient(135deg, #7878E9 0%, #3D3DD4 100%)' }}
+              >
+                Propose Campaign
+              </button>
             </div>
           </div>
         </div>
