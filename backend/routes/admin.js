@@ -2656,6 +2656,94 @@ router.get('/organizers/:organizerId/events', requirePermission('view_analytics'
 });
 
 /**
+ * PATCH /api/admin/events/:eventId/toggle-status
+ * Admin can toggle event status between draft and published
+ */
+router.patch('/events/:eventId/toggle-status', requirePermission('manage_events'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    if (event.status === 'published') {
+      if ((event.currentParticipants || 0) > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Cannot unpublish an event with existing bookings. Cancel or refund all tickets first.' 
+        });
+      }
+      event.status = 'draft';
+    } else if (event.status === 'draft') {
+      event.status = 'published';
+    } else {
+      return res.status(400).json({ success: false, message: `Cannot change status of ${event.status} event` });
+    }
+
+    await event.save();
+
+    res.json({ 
+      success: true, 
+      message: `Event ${event.status === 'published' ? 'published' : 'unpublished'} successfully`,
+      status: event.status 
+    });
+  } catch (error) {
+    console.error('Admin toggle event status error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/admin/events/:eventId
+ * Admin can delete an event (only when 0 bookings)
+ */
+router.delete('/events/:eventId', requirePermission('manage_events'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const event = await Event.findById(eventId).populate('host', 'name email');
+    
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    if ((event.currentParticipants || 0) > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot delete an event with existing bookings' 
+      });
+    }
+
+    // Store deletion log before deleting
+    const deletionLog = {
+      eventId: event._id,
+      title: event.title,
+      date: event.date,
+      status: event.status,
+      organizerId: event.host._id,
+      organizerName: event.host.name,
+      organizerEmail: event.host.email,
+      deletedBy: req.user.id,
+      deletedAt: new Date(),
+      maxParticipants: event.maxParticipants,
+      price: event.price
+    };
+
+    await Event.findByIdAndDelete(event._id);
+
+    res.json({ 
+      success: true, 
+      message: 'Event deleted successfully',
+      deletionLog 
+    });
+  } catch (error) {
+    console.error('Admin delete event error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/admin/events/:eventId/complete-details
  * Get complete event details with tickets, analytics, and audit data
  */

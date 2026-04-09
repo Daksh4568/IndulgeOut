@@ -70,9 +70,9 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 rounded-2xl max-w-md w-full shadow-2xl animate-fade-in">
+      <div className="bg-zinc-900 rounded-2xl max-w-md w-full shadow-2xl animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-xl font-bold text-white">Complete Your Profile</h2>
           <button
             onClick={onClose}
@@ -83,7 +83,7 @@ const UserDetailsModal = ({ isOpen, onClose, onSave, existingAge, existingGender
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           <div className="h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}>
             <User className="h-7 w-7 text-white" />
           </div>

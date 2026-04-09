@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { ToastContext } from '../App';
 import CityDropdown from '../components/CityDropdown';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, loading: authLoading } = useAuth();
+  const toast = useContext(ToastContext);
   
   // State management
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,8 @@ const AdminDashboard = () => {
   const [organizerPagination, setOrganizerPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [selectedOrganizer, setSelectedOrganizer] = useState(null);
   const [organizerEvents, setOrganizerEvents] = useState([]);
+  const [deletedEventsLog, setDeletedEventsLog] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null, variant: 'default' });
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventDetails, setEventDetails] = useState(null);
   const [ticketCalcModal, setTicketCalcModal] = useState({ open: false, attendee: null });
@@ -467,6 +471,58 @@ const AdminDashboard = () => {
     setCurrentView('organizer-details');
     setSelectedEvent(null);
     setEventDetails(null);
+  };
+
+  const handleAdminToggleEventStatus = async (eventId, currentStatus) => {
+    const action = currentStatus === 'published' ? 'unpublish' : 'publish';
+    setConfirmModal({
+      open: true,
+      title: `${action.charAt(0).toUpperCase() + action.slice(1)} Event`,
+      message: `Are you sure you want to ${action} this event?${currentStatus === 'published' ? ' It will no longer be visible to users on the explore page.' : ' It will become visible to users on the explore page.'}`,
+      variant: currentStatus === 'published' ? 'warning' : 'success',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, open: false }));
+        try {
+          const res = await api.patch(`/admin/events/${eventId}/toggle-status`);
+          if (res.data.success) {
+            toast.success(res.data.message);
+            if (selectedOrganizer) {
+              const eventsResponse = await api.get(`/admin/organizers/${selectedOrganizer.organizer._id}/events`);
+              setOrganizerEvents(eventsResponse.data.events || []);
+            }
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || `Failed to ${action} event`);
+        }
+      }
+    });
+  };
+
+  const handleAdminDeleteEvent = async (eventId, eventTitle) => {
+    setConfirmModal({
+      open: true,
+      title: 'Delete Event Permanently',
+      message: `Are you sure you want to permanently delete "${eventTitle}"? This action cannot be undone and all event data will be lost.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, open: false }));
+        try {
+          const res = await api.delete(`/admin/events/${eventId}`);
+          if (res.data.success) {
+            toast.success(res.data.message);
+            if (res.data.deletionLog) {
+              setDeletedEventsLog(prev => [res.data.deletionLog, ...prev]);
+            }
+            if (selectedOrganizer) {
+              const eventsResponse = await api.get(`/admin/organizers/${selectedOrganizer.organizer._id}/events`);
+              setOrganizerEvents(eventsResponse.data.events || []);
+            }
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to delete event');
+        }
+      }
+    });
   };
 
   // ==================== MARKETING FUNCTIONS ====================
@@ -3210,13 +3266,47 @@ const AdminDashboard = () => {
                                 <span>✅ {event.revenue?.checkedInTickets || 0} checked-in</span>
                               </div>
                             </div>
-                            <button
-                              onClick={() => fetchEventDetails(event._id)}
-                              className="ml-4 px-4 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
-                              style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
-                            >
-                              View Details →
-                            </button>
+                            <div className="ml-4 flex flex-col gap-2 flex-shrink-0">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => fetchEventDetails(event._id)}
+                                  className="px-4 py-2 text-white rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+                                  style={{ background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)' }}
+                                >
+                                  View Details →
+                                </button>
+                                <button
+                                  onClick={() => navigate(`/edit-event/${event._id}`)}
+                                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 border border-purple-600/30 transition-all"
+                                >
+                                  Edit
+                                </button>
+                              </div>
+                              {new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (
+                                <div className="flex gap-2">
+                                  {(event.status === 'published' || event.status === 'draft') && (event.currentParticipants || 0) === 0 && (
+                                    <button
+                                      onClick={() => handleAdminToggleEventStatus(event._id, event.status)}
+                                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                                        event.status === 'published' 
+                                          ? 'bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 border border-yellow-600/30' 
+                                          : 'bg-green-600/20 text-green-400 hover:bg-green-600/30 border border-green-600/30'
+                                      }`}
+                                    >
+                                      {event.status === 'published' ? 'Unpublish' : 'Publish'}
+                                    </button>
+                                  )}
+                                  {(event.currentParticipants || 0) === 0 && (
+                                    <button
+                                      onClick={() => handleAdminDeleteEvent(event._id, event.title)}
+                                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-600/30 transition-all"
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -3225,6 +3315,26 @@ const AdminDashboard = () => {
                     <p className="text-gray-400 text-center py-4">No events found</p>
                   )}
                 </div>
+
+                {/* Deleted Events Log */}
+                {deletedEventsLog.length > 0 && (
+                  <div className="bg-zinc-900/50 border border-red-800/30 rounded-lg shadow p-6 mt-6">
+                    <h3 className="text-lg font-bold text-red-400 mb-4">Deleted Events Log</h3>
+                    <div className="space-y-3">
+                      {deletedEventsLog.map((log, idx) => (
+                        <div key={idx} className="p-3 bg-red-900/10 border border-red-800/20 rounded-lg text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-white font-medium">{log.title}</span>
+                            <span className="text-gray-500 text-xs">{new Date(log.deletedAt).toLocaleString()}</span>
+                          </div>
+                          <div className="text-gray-400 text-xs mt-1">
+                            Date: {new Date(log.date).toLocaleDateString()} | Status: {log.status} | Max Spots: {log.maxParticipants} | Price: ₹{log.price?.amount || 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -5903,6 +6013,41 @@ const AdminDashboard = () => {
                 className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
               >
                 {actionLoading ? 'Flagging...' : 'Flag for Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <h3 className={`text-lg font-bold mb-3 ${
+              confirmModal.variant === 'danger' ? 'text-red-400' : 
+              confirmModal.variant === 'warning' ? 'text-yellow-400' : 
+              confirmModal.variant === 'success' ? 'text-green-400' : 'text-white'
+            }`}>
+              {confirmModal.title}
+            </h3>
+            <p className="text-gray-300 text-sm mb-6">{confirmModal.message}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+                className="px-4 py-2 text-sm font-medium text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  confirmModal.variant === 'danger' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                  confirmModal.variant === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' :
+                  confirmModal.variant === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                  'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+              >
+                Confirm
               </button>
             </div>
           </div>

@@ -99,6 +99,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
       phoneNumber,
       age,
       gender,
+      interests,
       communityProfile,
       venueProfile,
       brandProfile,
@@ -128,6 +129,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
     
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
+    if (interests !== undefined && Array.isArray(interests)) updateData.interests = interests;
 
     // For profile objects - allow updates even after onboarding
     // This enables profile page edits to work properly
@@ -170,6 +172,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
     // Apply other updates
     Object.assign(user, updateData);
+    if (updateData.interests) user.markModified('interests');
     await user.save();
 
     // If createCommunity flag is true, create a Community document

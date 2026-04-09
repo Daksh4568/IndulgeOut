@@ -221,9 +221,9 @@ const EventCreation = () => {
 
         if (eventDate < now) {
           toast.error(
-            "❌ Cannot edit past events. This event has already occurred.",
+            "Cannot edit past events. This event has already occurred.",
           );
-          navigate("/organizer/dashboard");
+          navigate(user?.role === 'admin' ? "/admin/dashboard" : "/organizer/dashboard");
           return;
         }
 
@@ -380,7 +380,7 @@ const EventCreation = () => {
       } catch (error) {
         console.error("Error fetching event:", error);
         toast.error("Failed to load event data");
-        navigate("/organizer/dashboard");
+        navigate(user?.role === 'admin' ? "/admin/dashboard" : "/organizer/dashboard");
       } finally {
         setIsLoading(false);
       }
@@ -1427,7 +1427,7 @@ const EventCreation = () => {
         
         // Small delay to ensure toast is visible before navigation
         setTimeout(() => {
-          navigate("/organizer/dashboard");
+          navigate(user?.role === 'admin' ? "/admin/dashboard" : "/organizer/dashboard");
         }, 500);
       } else {
         // Create new event
@@ -1454,7 +1454,7 @@ const EventCreation = () => {
         
         // Small delay to ensure toast is visible before navigation
         setTimeout(() => {
-          navigate("/organizer/dashboard");
+          navigate(user?.role === 'admin' ? "/admin/dashboard" : "/organizer/dashboard");
         }, 500);
       }
     } catch (error) {

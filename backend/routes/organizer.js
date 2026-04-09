@@ -574,6 +574,9 @@ router.get('/events', authMiddleware, async (req, res) => {
         maxParticipants: event.maxParticipants,
         fillPercentage,
         revenue,
+        price: event.price,
+        genderPricing: event.genderPricing,
+        currentEffectivePrice: event.getCurrentPrice ? event.getCurrentPrice() : (event.price?.amount || 0),
         isCoHost: false
       };
     };

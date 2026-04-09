@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, TrendingUp, AlertCircle, DollarSign, Users, 
-  Eye, Target, Clock, ChevronRight, Plus, Edit, Share2,
+  Eye, EyeOff, Trash2, Target, Clock, ChevronRight, Plus, Edit, Share2,
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   ArrowUpRight, ArrowDownRight, Filter, Download, Bell,
   Building2, Sparkles, QrCode, Grid, Settings, HelpCircle, ChevronLeft, Users2, FileText, Layout, UserPlus, Check, X
@@ -28,6 +28,7 @@ const CommunityOrganizerDashboard = () => {
   const [collabCarouselIndex, setCollabCarouselIndex] = useState(0);
   const carouselRef = useRef(null);
   const mobileScrollRef = useRef(null);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null, variant: 'default' });
   
   // Dashboard Data States
   const [actionItems, setActionItems] = useState([]);
@@ -71,6 +72,50 @@ const CommunityOrganizerDashboard = () => {
     if (checkKYCComplete()) {
       navigate('/create-event');
     }
+  };
+
+  const handleToggleEventStatus = async (eventId, currentStatus) => {
+    const action = currentStatus === 'published' ? 'move to draft' : 'publish';
+    const isDrafting = currentStatus === 'published';
+    setConfirmModal({
+      open: true,
+      title: isDrafting ? 'Move Event to Draft' : 'Publish Event',
+      message: isDrafting 
+        ? 'Are you sure you want to move this event to draft? It will no longer be visible to users on the explore page.'
+        : 'Are you sure you want to publish this event? It will become visible to users on the explore page.',
+      variant: isDrafting ? 'warning' : 'success',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, open: false }));
+        try {
+          const res = await api.patch(`/events/${eventId}/toggle-status`);
+          if (res.data.success) {
+            toast.success(res.data.message);
+            fetchDashboardData();
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || `Failed to ${action} event`);
+        }
+      }
+    });
+  };
+
+  const handleDeleteEvent = (eventId, eventTitle) => {
+    setConfirmModal({
+      open: true,
+      title: 'Delete Event',
+      message: `Are you sure you want to permanently delete "${eventTitle}"? This action cannot be undone.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, open: false }));
+        try {
+          const res = await api.delete(`/events/${eventId}`);
+          toast.success(res.data.message || 'Event deleted successfully');
+          fetchDashboardData();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to delete event');
+        }
+      }
+    });
   };
 
   // Reset collaboration carousel when tab changes
@@ -317,25 +362,24 @@ const CommunityOrganizerDashboard = () => {
       setCarouselIndex(prev => Math.min(maxIndex, prev + 1));
     };
 
-    const getStatusBadge = (eventDate) => {
-      // Determine status based purely on date since there's no status field
+    const getStatusBadge = (event) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const evDate = new Date(eventDate);
+      const evDate = new Date(event.date || event);
       evDate.setHours(0, 0, 0, 0);
       
-      let actualStatus = 'draft';
+      // Use event.status field if available
+      const eventStatus = event.status || (typeof event === 'string' ? null : null);
       
-      // If event date has passed, it's past
+      if (eventStatus === 'draft') {
+        return { bg: 'bg-gray-600', text: 'Draft' };
+      }
+      
+      let actualStatus = 'live';
       if (evDate < today) {
         actualStatus = 'past';
       }
-      // If event date is today or in future, it's live
-      else if (evDate >= today) {
-        actualStatus = 'live';
-      }
       
-      // Map status to badge styles
       const statusMap = {
         'draft': { bg: 'bg-gray-600', text: 'Draft' },
         'live': { bg: 'bg-green-600', text: 'Live' },
@@ -403,13 +447,13 @@ const CommunityOrganizerDashboard = () => {
             )}
             <button
               onClick={handleCreateEvent}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 text-white px-6 py-2 rounded-md font-medium transition-all hover:opacity-90"
+              className="w-full sm:w-auto flex items-center justify-center space-x-1.5 text-white px-4 py-1.5 rounded-md font-medium text-sm transition-all hover:opacity-90"
               style={{ 
                 fontFamily: 'Oswald, sans-serif',
                 background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)'
               }}
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
               <span>Create Event</span>
             </button>
           </div>
@@ -455,7 +499,7 @@ const CommunityOrganizerDashboard = () => {
                       const fillPercentage = event.maxParticipants > 0 
                         ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                         : 0;
-                      const statusBadge = getStatusBadge(event.date);
+                      const statusBadge = getStatusBadge(event);
                       const revenueValue = event.revenue || 0;
 
                       return (
@@ -579,6 +623,34 @@ const CommunityOrganizerDashboard = () => {
                           >
                             <Share2 className="h-4 w-4" />
                           </button>
+
+                          {/* Draft/Publish Toggle */}
+                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleEventStatus(event._id, event.status);
+                              }}
+                              className={`p-2 ${event.status === 'draft' ? 'bg-green-900/50 hover:bg-green-800/50' : 'bg-gray-900 hover:bg-gray-800'} text-white rounded-lg transition-colors`}
+                              title={event.status === 'draft' ? 'Publish Event' : 'Move to Draft'}
+                            >
+                              {event.status === 'draft' ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-gray-400" />}
+                            </button>
+                          )}
+
+                          {/* Delete Button */}
+                          {!event.isCoHost && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event._id, event.title);
+                              }}
+                              className="p-2 bg-gray-900 hover:bg-red-900/50 text-white rounded-lg transition-colors"
+                              title="Delete Event"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-400" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -603,7 +675,7 @@ const CommunityOrganizerDashboard = () => {
                         const fillPercentage = event.maxParticipants > 0 
                           ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                           : 0;
-                        const statusBadge = getStatusBadge(event.date);
+                        const statusBadge = getStatusBadge(event);
                         const revenueValue = event.revenue || 0;
 
                         return (
@@ -727,6 +799,34 @@ const CommunityOrganizerDashboard = () => {
                           >
                             <Share2 className="h-4 w-4" />
                           </button>
+
+                          {/* Draft/Publish Toggle */}
+                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleEventStatus(event._id, event.status);
+                              }}
+                              className={`p-2 ${event.status === 'draft' ? 'bg-green-900/50 hover:bg-green-800/50' : 'bg-gray-900 hover:bg-gray-800'} text-white rounded-lg transition-colors`}
+                              title={event.status === 'draft' ? 'Publish Event' : 'Move to Draft'}
+                            >
+                              {event.status === 'draft' ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-gray-400" />}
+                            </button>
+                          )}
+
+                          {/* Delete Button */}
+                          {!event.isCoHost && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event._id, event.title);
+                              }}
+                              className="p-2 bg-gray-900 hover:bg-red-900/50 text-white rounded-lg transition-colors"
+                              title="Delete Event"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-400" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -768,7 +868,7 @@ const CommunityOrganizerDashboard = () => {
                 const fillPercentage = event.maxParticipants > 0 
                   ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                   : 0;
-                const statusBadge = getStatusBadge(event.date);
+                const statusBadge = getStatusBadge(event);
                 const revenueValue = event.revenue || 0;
 
                 return (
@@ -892,6 +992,34 @@ const CommunityOrganizerDashboard = () => {
                         >
                           <Share2 className="h-4 w-4" />
                         </button>
+
+                        {/* Draft/Publish Toggle */}
+                        {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleEventStatus(event._id, event.status);
+                            }}
+                            className={`p-2 ${event.status === 'draft' ? 'bg-green-900/50 hover:bg-green-800/50' : 'bg-gray-900 hover:bg-gray-800'} text-white rounded-lg transition-colors`}
+                            title={event.status === 'draft' ? 'Publish Event' : 'Move to Draft'}
+                          >
+                            {event.status === 'draft' ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-gray-400" />}
+                          </button>
+                        )}
+
+                        {/* Delete Button */}
+                        {!event.isCoHost && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEvent(event._id, event.title);
+                            }}
+                            className="p-2 bg-gray-900 hover:bg-red-900/50 text-white rounded-lg transition-colors"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -916,7 +1044,7 @@ const CommunityOrganizerDashboard = () => {
                       const fillPercentage = event.maxParticipants > 0 
                         ? Math.round(((event.currentParticipants || 0) / event.maxParticipants) * 100)
                         : 0;
-                      const statusBadge = getStatusBadge(event.date);
+                      const statusBadge = getStatusBadge(event);
 
                       const revenueValue = event.revenue || 0;
 
@@ -1041,6 +1169,34 @@ const CommunityOrganizerDashboard = () => {
                           >
                             <Share2 className="h-4 w-4" />
                           </button>
+
+                          {/* Draft/Publish Toggle */}
+                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleEventStatus(event._id, event.status);
+                              }}
+                              className={`p-2 ${event.status === 'draft' ? 'bg-green-900/50 hover:bg-green-800/50' : 'bg-gray-900 hover:bg-gray-800'} text-white rounded-lg transition-colors`}
+                              title={event.status === 'draft' ? 'Publish Event' : 'Move to Draft'}
+                            >
+                              {event.status === 'draft' ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-gray-400" />}
+                            </button>
+                          )}
+
+                          {/* Delete Button */}
+                          {!event.isCoHost && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event._id, event.title);
+                              }}
+                              className="p-2 bg-gray-900 hover:bg-red-900/50 text-white rounded-lg transition-colors"
+                              title="Delete Event"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-400" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1105,8 +1261,11 @@ const CommunityOrganizerDashboard = () => {
     const locationText = typeof evt.location === 'string'
       ? evt.location
       : (evt.location?.address || evt.location?.city || '');
-    const eventPrice = (evt.currentEffectivePrice ?? evt.price?.amount) > 0 
-      ? `₹${evt.currentEffectivePrice ?? evt.price.amount}` : 'FREE';
+    const genderEnabled = evt.genderPricing?.enabled;
+    const basePrice = evt.currentEffectivePrice ?? evt.price?.amount ?? 0;
+    const eventPrice = genderEnabled
+      ? `₹${evt.genderPricing.malePrice} (M) / ₹${evt.genderPricing.femalePrice} (F)`
+      : basePrice > 0 ? `₹${basePrice}` : 'FREE';
     const coords = evt.location?.coordinates;
     const mapsUrl = coords?.latitude && coords?.longitude
       ? `https://maps.google.com/?q=${coords.latitude},${coords.longitude}`
@@ -2234,6 +2393,41 @@ const CommunityOrganizerDashboard = () => {
         onShare={shareToSocial}
         onCopyLink={copyEventLink}
       />
+
+      {/* Confirmation Modal */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-gray-700 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <h3 className={`text-lg font-bold mb-3 ${
+              confirmModal.variant === 'danger' ? 'text-red-400' : 
+              confirmModal.variant === 'warning' ? 'text-yellow-400' : 
+              confirmModal.variant === 'success' ? 'text-green-400' : 'text-white'
+            }`}>
+              {confirmModal.title}
+            </h3>
+            <p className="text-gray-300 text-sm mb-6">{confirmModal.message}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+                className="px-4 py-2 text-sm font-medium text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  confirmModal.variant === 'danger' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                  confirmModal.variant === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' :
+                  confirmModal.variant === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                  'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

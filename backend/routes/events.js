@@ -762,9 +762,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Check if user is the host
-    if (event.host.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Only event host can update this event' });
+    // Check if user is the host or an admin
+    const isHost = event.host.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isHost && !isAdmin) {
+      return res.status(403).json({ message: 'Only event host or admin can update this event' });
     }
 
     // Prevent editing past events (compare in IST)
@@ -853,6 +855,47 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Toggle event status between draft and published (host only)
+router.patch('/:id/toggle-status', authMiddleware, async (req, res) => {
+  try {
+    const event = await findEventByIdOrSlug(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    if (event.host.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Only event host can change event status' });
+    }
+
+    if (event.status === 'published') {
+      // Can only unpublish if 0 bookings
+      if ((event.currentParticipants || 0) > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Cannot draft an event with existing bookings. Cancel or refund all tickets first.' 
+        });
+      }
+      event.status = 'draft';
+    } else if (event.status === 'draft') {
+      event.status = 'published';
+    } else {
+      return res.status(400).json({ success: false, message: `Cannot change status of ${event.status} event` });
+    }
+
+    await event.save();
+
+    res.json({ 
+      success: true, 
+      message: `Event ${event.status === 'published' ? 'published' : 'moved to draft'} successfully`,
+      status: event.status 
+    });
+  } catch (error) {
+    console.error('Toggle event status error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // Delete event (host only)
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
@@ -865,6 +908,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     // Check if user is the host
     if (event.host.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Only event host can delete this event' });
+    }
+
+    // Cannot delete if there are bookings
+    if ((event.currentParticipants || 0) > 0) {
+      return res.status(400).json({ message: 'Cannot delete an event with existing bookings' });
     }
 
     await Event.findByIdAndDelete(event._id);

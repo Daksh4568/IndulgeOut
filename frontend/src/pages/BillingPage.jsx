@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastContext } from '../App';
@@ -16,6 +16,7 @@ const BillingPage = () => {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const toast = useContext(ToastContext);
+  const profileJustSaved = useRef(false);
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -269,10 +270,11 @@ const BillingPage = () => {
     const missingGender = !user.gender;
     const missingCity = !user.location?.city;
     const missingInterests = !user.interests || user.interests.length === 0;
-    if (hasPreviousBooking && (missingAge || missingGender || missingCity || missingInterests)) {
+    if (!profileJustSaved.current && hasPreviousBooking && (missingAge || missingGender || missingCity || missingInterests)) {
       setShowUserDetailsModal(true);
       return;
     }
+    profileJustSaved.current = false;
 
     try {
       // Check if questionnaire needs to be answered first
@@ -310,16 +312,15 @@ const BillingPage = () => {
         }
       }
 
-      setIsProcessing(true);
-
-      const pricing = calculatePricing();
-      
       // Validate gender pricing requires at least 1 spot
       if (event?.genderPricing?.enabled && (maleSpots + femaleSpots) < 1) {
         toast.error('Please select at least 1 spot');
-        setIsProcessing(false);
         return;
       }
+
+      setIsProcessing(true);
+
+      const pricing = calculatePricing();
       
       // Prepare billing data
       // Include questionnaire responses if they exist and have been filled out
@@ -943,8 +944,9 @@ const BillingPage = () => {
               </div>
 
               <button
+                id="checkout-btn"
                 onClick={handleProceedToPayment}
-                disabled={isProcessing || spotsLeft <= 0 || (event?.genderPricing?.enabled && (maleSpots + femaleSpots) < 1)}
+                disabled={isProcessing || spotsLeft <= 0}
                 className="w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 style={{
                   background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
@@ -1054,7 +1056,12 @@ const BillingPage = () => {
         onSave={async () => {
           setShowUserDetailsModal(false);
           await refreshUser();
-          toast.success('Details saved! You can now proceed.');
+          profileJustSaved.current = true;
+          toast.success('Details saved! Proceeding to checkout...');
+          // Auto-proceed to checkout after a brief delay
+          setTimeout(() => {
+            document.getElementById('checkout-btn')?.click();
+          }, 300);
         }}
         existingAge={user?.age}
         existingGender={user?.gender}
