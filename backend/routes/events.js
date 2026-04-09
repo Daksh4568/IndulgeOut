@@ -1406,7 +1406,7 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
       })),
       pricingTimeline: event.pricingTimeline?.enabled ? {
         enabled: true,
-        tiers: (event.pricingTimeline.tiers || []).map(tier => {
+        tiers: (event.pricingTimeline.tiers || []).map((tier, tierIndex, allTiers) => {
           // Use IST-aware date comparison since events are India-based
           const IST_OFFSET = 5.5 * 60 * 60 * 1000;
           const toISTDateStr = (d) => new Date(new Date(d).getTime() + IST_OFFSET).toISOString().split('T')[0];
@@ -1414,6 +1414,11 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           const endStr = toISTDateStr(tier.endDate);
           const tierFilter = t => {
             const purchaseStr = toISTDateStr(t.purchaseDate);
+            // For the first tier, also include tickets bought before its start date
+            // (price from creation is set by the first tier)
+            if (tierIndex === 0) {
+              return purchaseStr <= endStr;
+            }
             return purchaseStr >= startStr && purchaseStr <= endStr;
           };
           return {

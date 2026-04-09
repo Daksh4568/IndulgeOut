@@ -970,7 +970,7 @@ const EventAnalytics = () => {
                   const totalSpots = analytics.attendance?.totalAttendees || 0;
                   const currentPrice = analytics.currentPrice ?? history[history.length - 1]?.newPrice;
                   
-                  const periods = [];
+                  const rawPeriods = [];
                   const allAttendees = analytics.attendees || [];
                   
                   // First period: from event creation to first change
@@ -979,7 +979,7 @@ const EventAnalytics = () => {
                     const periodRevenue = allAttendees
                       .filter(a => new Date(a.purchaseDate) < endDate)
                       .reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
-                    periods.push({
+                    rawPeriods.push({
                       price: history[0].previousPrice,
                       startLabel: 'Event created',
                       endLabel: formatDateTime(history[0].changedAt),
@@ -1005,7 +1005,7 @@ const EventAnalytics = () => {
                       })
                       .reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
                     
-                    periods.push({
+                    rawPeriods.push({
                       price: history[i].newPrice,
                       startLabel: formatDateTime(startTime),
                       endLabel: endTime ? formatDateTime(endTime) : null,
@@ -1014,6 +1014,25 @@ const EventAnalytics = () => {
                       reason: history[i].reason,
                       actualRevenue: periodRevenue,
                     });
+                  }
+
+                  // Merge consecutive periods with the same price (e.g., initial_creation + mode_switch_to_timeline at same price)
+                  const periods = [];
+                  for (const p of rawPeriods) {
+                    const prev = periods[periods.length - 1];
+                    if (prev && prev.price === p.price && !prev.isActive) {
+                      // Merge into previous period
+                      prev.endLabel = p.endLabel;
+                      prev.spotsBooked += p.spotsBooked;
+                      prev.actualRevenue = (prev.actualRevenue || 0) + (p.actualRevenue || 0);
+                      prev.isActive = p.isActive;
+                      // Keep the more descriptive reason
+                      if (p.reason === 'mode_switch_to_timeline' || p.reason === 'timeline_automatic') {
+                        prev.reason = p.reason;
+                      }
+                    } else {
+                      periods.push({ ...p });
+                    }
                   }
 
                   // Filter out ₹0 periods with 0 spots (initial creation noise)
