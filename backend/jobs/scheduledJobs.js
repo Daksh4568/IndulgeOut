@@ -1021,6 +1021,14 @@ async function applyPricingTimelineChanges() {
         updateFields['genderPricing.femalePrice'] = activeTier.femalePrice;
       }
 
+      // If group offers are enabled, sync the 1-person tier price with the timeline price
+      if (event.groupingOffers?.enabled && event.groupingOffers.tiers?.length) {
+        const singleTierIndex = event.groupingOffers.tiers.findIndex(t => t.people === 1);
+        if (singleTierIndex !== -1) {
+          updateFields[`groupingOffers.tiers.${singleTierIndex}.price`] = tierPrice;
+        }
+      }
+
       await Event.findByIdAndUpdate(event._id, {
         $set: updateFields,
         $push: {

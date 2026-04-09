@@ -25,6 +25,7 @@ const BillingPage = () => {
   // Ticket selection
   const [selectedTier, setSelectedTier] = useState(null); // For grouping offers
   const [quantity, setQuantity] = useState(1); // For non-grouping events
+  const [customSpots, setCustomSpots] = useState(0); // Custom spots with group offers
 
   // Additional person details (only 1 person allowed)
   const [addAnotherPerson, setAddAnotherPerson] = useState(false);
@@ -98,6 +99,7 @@ const BillingPage = () => {
         
         // Restore other selections
         if (ticketData.quantity) setQuantity(ticketData.quantity);
+        if (ticketData.customSpots) { setCustomSpots(ticketData.customSpots); setSelectedTier(null); }
         if (ticketData.addAnotherPerson) setAddAnotherPerson(ticketData.addAnotherPerson);
         if (ticketData.additionalPerson) setAdditionalPerson(ticketData.additionalPerson);
         if (ticketData.couponCode) setCouponCode(ticketData.couponCode);
@@ -174,6 +176,15 @@ const BillingPage = () => {
     toast.info('Coupon removed');
   };
 
+  // Get effective price for a group offer tier, syncing 1-person tier with pricing timeline
+  const getEffectiveTierPrice = (tier) => {
+    if (!tier) return 0;
+    if (tier.people === 1 && event?.pricingTimeline?.enabled) {
+      return event.currentEffectivePrice ?? event.price?.amount ?? tier.price;
+    }
+    return tier.price;
+  };
+
   const calculatePricing = () => {
     let basePrice = 0;
     let numberOfPeople = 1;
@@ -186,8 +197,14 @@ const BillingPage = () => {
       basePrice = (maleSpots * malePrice) + (femaleSpots * femalePrice);
       numberOfPeople = maleSpots + femaleSpots;
     } else if (event?.groupingOffers?.enabled && selectedTier) {
-      basePrice = selectedTier.price;
+      basePrice = getEffectiveTierPrice(selectedTier);
       numberOfPeople = selectedTier.people;
+    } else if (event?.groupingOffers?.enabled && customSpots > 0) {
+      // Custom spots: use effective 1-person price (synced with timeline)
+      const singleTier = event.groupingOffers.tiers.find(t => t.people === 1);
+      const perPersonPrice = singleTier ? getEffectiveTierPrice(singleTier) : (event.currentEffectivePrice ?? event.price?.amount ?? 0);
+      basePrice = perPersonPrice * customSpots;
+      numberOfPeople = customSpots;
     } else {
       const effectivePrice = event?.currentEffectivePrice ?? event?.price?.amount ?? 0;
       basePrice = effectivePrice * quantity;
@@ -250,6 +267,7 @@ const BillingPage = () => {
       const ticketData = {
         selectedTierPeople: selectedTier?.people, // Store people count as identifier
         quantity,
+        customSpots,
         addAnotherPerson,
         additionalPerson,
         couponCode: couponCode || '',
@@ -318,6 +336,12 @@ const BillingPage = () => {
         return;
       }
 
+      // Validate group offers: either a tier or custom spots must be selected
+      if (event?.groupingOffers?.enabled && !event?.genderPricing?.enabled && !selectedTier && customSpots < 1) {
+        toast.error('Please select a ticket option or add custom spots');
+        return;
+      }
+
       setIsProcessing(true);
 
       const pricing = calculatePricing();
@@ -357,7 +381,15 @@ const BillingPage = () => {
         billingData.groupingOffer = {
           tierLabel: `${selectedTier.people} ${selectedTier.people === 1 ? 'Person' : 'People'}`,
           tierPeople: selectedTier.people,
-          tierPrice: selectedTier.price
+          tierPrice: getEffectiveTierPrice(selectedTier)
+        };
+      } else if (event?.groupingOffers?.enabled && customSpots > 0) {
+        const singleTier = event.groupingOffers.tiers.find(t => t.people === 1);
+        const perPersonPrice = singleTier ? getEffectiveTierPrice(singleTier) : (event.currentEffectivePrice ?? event.price?.amount ?? 0);
+        billingData.groupingOffer = {
+          tierLabel: `${customSpots} ${customSpots === 1 ? 'Person' : 'People'} (Custom)`,
+          tierPeople: customSpots,
+          tierPrice: perPersonPrice * customSpots
         };
       }
 
@@ -642,20 +674,20 @@ const BillingPage = () => {
                     );
                   })()
                 ) : event.groupingOffers?.enabled && event.groupingOffers.tiers?.some(tier => tier.people > 0) ? (
-                  // Show grouping offers
+                  // Show grouping offers + custom spots
                   <div className="space-y-3">
                     {event.groupingOffers.tiers
                       .filter(tier => tier.people > 0) // Only show valid tiers
                       .map((tier, index) => (
                         <div
                           key={index}
-                          onClick={() => setSelectedTier(tier)}
+                          onClick={() => { setSelectedTier(tier); setCustomSpots(0); }}
                           className={`rounded-xl p-4 cursor-pointer transition-all border-2 ${
-                            selectedTier === tier
+                            selectedTier === tier && customSpots === 0
                               ? 'border-transparent'
                               : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
                           }`}
-                          style={selectedTier === tier ? {
+                          style={selectedTier === tier && customSpots === 0 ? {
                             background: 'linear-gradient(180deg, #7878E9 11%, #3D3DD4 146%)',
                             backgroundClip: 'padding-box'
                           } : {}}
@@ -670,16 +702,67 @@ const BillingPage = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-2xl font-bold text-white">₹{tier.price}</p>
+                              <p className="text-2xl font-bold text-white">₹{getEffectiveTierPrice(tier)}</p>
                               {tier.people > 1 && (
-                                <p className={`text-xs ${selectedTier === tier ? 'text-white/70' : 'text-gray-400'}`}>
-                                  ₹{(tier.price / tier.people).toFixed(2)} per person
+                                <p className={`text-xs ${selectedTier === tier && customSpots === 0 ? 'text-white/70' : 'text-gray-400'}`}>
+                                  ₹{(getEffectiveTierPrice(tier) / tier.people).toFixed(2)} per person
                                 </p>
                               )}
                             </div>
                           </div>
                         </div>
                       ))}
+
+                    {/* Custom Spots Selector */}
+                    {(() => {
+                      const singleTier = event.groupingOffers.tiers.find(t => t.people === 1);
+                      const perPersonPrice = singleTier ? getEffectiveTierPrice(singleTier) : (event.currentEffectivePrice ?? event.price?.amount ?? 0);
+                      return (
+                        <div
+                          onClick={() => { if (customSpots === 0) { setCustomSpots(1); setSelectedTier(null); } }}
+                          className={`rounded-xl p-4 cursor-pointer transition-all border-2 ${
+                            customSpots > 0
+                              ? 'border-purple-500 bg-gray-800/80'
+                              : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Users className="h-5 w-5 text-purple-400" />
+                                <span className="text-white font-semibold">Custom Spots</span>
+                              </div>
+                              <p className="text-xs text-gray-400">₹{perPersonPrice} per person</p>
+                            </div>
+                            {customSpots > 0 ? (
+                              <div className="flex items-center space-x-3">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); const newVal = customSpots - 1; if (newVal === 0) { setCustomSpots(0); const firstTier = event.groupingOffers.tiers.find(t => t.people > 0); if (firstTier) setSelectedTier(firstTier); } else { setCustomSpots(newVal); } }}
+                                  className="w-9 h-9 rounded-lg bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-white transition-colors"
+                                >
+                                  -
+                                </button>
+                                <span className="text-xl font-bold text-white w-10 text-center">{customSpots}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setCustomSpots(Math.min(spotsLeft, customSpots + 1)); }}
+                                  disabled={customSpots >= spotsLeft}
+                                  className="w-9 h-9 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-400">Select</p>
+                            )}
+                          </div>
+                          {customSpots > 0 && (
+                            <div className="mt-2 text-right">
+                              <p className="text-lg font-bold text-white">₹{perPersonPrice * customSpots}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   // Show quantity selector for regular tickets
@@ -818,7 +901,7 @@ const BillingPage = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">Ticket Type</span>
                   <span className="text-white font-medium">
-                    {event.genderPricing?.enabled ? 'Gender-Based' : (event.groupingOffers?.enabled && selectedTier ? selectedTier.label : 'Regular')}
+                    {event.genderPricing?.enabled ? 'Gender-Based' : (event.groupingOffers?.enabled && selectedTier ? selectedTier.label : (event.groupingOffers?.enabled && customSpots > 0 ? 'Custom Spots' : 'Regular'))}
                   </span>
                 </div>
                 {event.genderPricing?.enabled ? (

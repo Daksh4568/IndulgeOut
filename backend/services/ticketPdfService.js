@@ -110,24 +110,24 @@ async function generateTicketPdf(opts) {
       // ── Event Poster ──
       if (posterBuffer) {
         try {
-          const posterWidth = Math.min(pageWidth, 400);
+          const posterWidth = Math.min(pageWidth, 350);
           const posterX = (doc.page.width - posterWidth) / 2;
           doc.image(posterBuffer, posterX, y, {
             width: posterWidth,
-            height: 200,
-            fit: [posterWidth, 200],
+            height: 150,
+            fit: [posterWidth, 150],
             align: 'center',
           });
-          y += 210;
+          y += 158;
         } catch {
           // skip poster if format unsupported
         }
       }
 
       // ── Event Title ──
-      doc.fill('#111827').fontSize(22).font('Helvetica-Bold')
+      doc.fill('#111827').fontSize(20).font('Helvetica-Bold')
         .text(eventName, 40, y, { width: pageWidth, align: 'center' });
-      y += 35;
+      y += 30;
 
       // ── Divider ──
       doc.moveTo(40, y).lineTo(doc.page.width - 40, y).lineWidth(1).strokeColor('#d1d5db').stroke();
@@ -158,21 +158,21 @@ async function generateTicketPdf(opts) {
         const textHeight = doc.heightOfString(value || 'N/A', { width: pageWidth - 130 });
         doc.fill('#111827').fontSize(12).font('Helvetica-Bold')
           .text(value || 'N/A', 170, y, { width: pageWidth - 130 });
-        y += Math.max(22, textHeight + 8);
+        y += Math.max(20, textHeight + 6);
       }
 
-      y += 10;
+      y += 5;
       // ── Divider ──
       doc.moveTo(40, y).lineTo(doc.page.width - 40, y).lineWidth(1).strokeColor('#d1d5db').stroke();
       y += 20;
 
       // ── QR Code ──
       if (qrImageBuffer) {
-        const qrSize = 160;
+        const qrSize = 120;
         const qrX = (doc.page.width - qrSize) / 2;
         try {
           doc.image(qrImageBuffer, qrX, y, { width: qrSize, height: qrSize });
-          y += qrSize + 10;
+          y += qrSize + 8;
         } catch {
           // skip QR if format issue
         }
@@ -180,11 +180,11 @@ async function generateTicketPdf(opts) {
 
       doc.fill('#6b7280').fontSize(10).font('Helvetica')
         .text('Scan this QR code at the venue for entry', 40, y, { width: pageWidth, align: 'center' });
-      y += 25;
+      y += 20;
 
       // ── Footer ──
       doc.moveTo(40, y).lineTo(doc.page.width - 40, y).lineWidth(0.5).strokeColor('#e5e7eb').stroke();
-      y += 12;
+      y += 10;
 
       doc.fill('#9ca3af').fontSize(9).font('Helvetica')
         .text('This ticket is valid for the number of spots shown above.', 40, y, { width: pageWidth, align: 'center' });
@@ -203,7 +203,7 @@ async function generateTicketPdf(opts) {
         underline: true,
       });
       y += 14;
-      doc.fill('#9ca3af').text('© 2025 IndulgeOut. All rights reserved.', 40, y, { width: pageWidth, align: 'center' });
+      doc.fill('#9ca3af').text('© 2026 IndulgeOut. All rights reserved.', 40, y, { width: pageWidth, align: 'center' });
 
       doc.end();
     } catch (err) {
