@@ -1710,11 +1710,11 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         },
         groupingOffers: event.groupingOffers?.enabled ? {
           enabled: true,
-          totalGroupTickets: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).length,
-          totalGroupSpots: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
-          totalGroupRevenue: parseFloat(tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2)),
-          regularTickets: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).length,
-          groupOfferPercentage: tickets.length > 0 ? parseFloat(((tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).length / tickets.length) * 100).toFixed(1)) : 0
+          totalGroupTickets: tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).length,
+          totalGroupSpots: tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).reduce((sum, t) => sum + (t.quantity || 1), 0),
+          totalGroupRevenue: parseFloat(tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2)),
+          regularTickets: tickets.filter(t => !t.metadata?.groupingOffer && !(t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).length,
+          groupOfferPercentage: tickets.length > 0 ? parseFloat(((tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).length / tickets.length) * 100).toFixed(1)) : 0
         } : { enabled: false }
       },
       tickets: tickets.map(t => {
@@ -1850,7 +1850,19 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       enabled: true,
       tiers: (event.groupingOffers.tiers || []).map(tier => {
         const tierLabel = tier.label || `${tier.people} people`;
-        const tierTickets = tickets.filter(t => t.metadata?.groupingOffer === tierLabel || t.metadata?.tierPeople === tier.people);
+        const tierPeople = Number(tier.people);
+        const tierTickets = tickets.filter(t => {
+          const metaTierPeople = Number(t.metadata?.tierPeople);
+          // Primary match: metadata.tierPeople matches tier people count
+          if (metaTierPeople === tierPeople) return true;
+          // Match by groupingOffer label
+          if (t.metadata?.groupingOffer === tierLabel) return true;
+          // Fallback for tickets with missing tierPeople: match by quantity + basePrice
+          if (!t.metadata?.tierPeople && t.metadata?.ticketType === 'group' && t.quantity === tierPeople && Number(t.metadata?.basePrice) === Number(tier.price)) return true;
+          // Fallback for tickets bought before group offers were enabled: match by quantity + basePrice
+          if (!t.metadata?.groupingOffer && !t.metadata?.tierPeople && (t.quantity || 1) === tierPeople && Number(t.metadata?.basePrice) === Number(tier.price)) return true;
+          return false;
+        });
         const ticketsBought = tierTickets.length;
         const spotsBought = tierTickets.reduce((sum, t) => sum + (t.quantity || 1), 0);
         const revenue = tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0);
@@ -1864,12 +1876,12 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
           revenue: parseFloat(revenue.toFixed(2))
         };
       }),
-      totalGroupTickets: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).length,
-      totalGroupSpots: tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
-      totalGroupRevenue: parseFloat(tickets.filter(t => t.metadata?.groupingOffer && (t.metadata?.tierPeople || 0) > 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2)),
-      regularTickets: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).length,
-      regularSpots: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
-      regularRevenue: parseFloat(tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2))
+      totalGroupTickets: tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).length,
+      totalGroupSpots: tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).reduce((sum, t) => sum + (t.quantity || 1), 0),
+      totalGroupRevenue: parseFloat(tickets.filter(t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2)),
+      regularTickets: tickets.filter(t => !t.metadata?.groupingOffer && !(t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).length,
+      regularSpots: tickets.filter(t => !t.metadata?.groupingOffer && !(t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).reduce((sum, t) => sum + (t.quantity || 1), 0),
+      regularRevenue: parseFloat(tickets.filter(t => !t.metadata?.groupingOffer && !(t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1)).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2))
     } : { enabled: false };
 
     report.spotsPricing = event.spotsPricing?.enabled ? {
@@ -3124,8 +3136,41 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
           };
         })
       } : { enabled: false, tiers: [] },
-      // Grouping offers data
-      groupingOffers: event.groupingOffers || { enabled: false, tiers: [] },
+      // Grouping offers data with per-tier stats
+      groupingOffers: event.groupingOffers?.enabled ? (() => {
+        const tiers = (event.groupingOffers.tiers || []).map(tier => {
+          const tierPeople = Number(tier.people);
+          const tierLabel = tier.label || `${tier.people} ${tier.people === 1 ? 'Person' : 'People'}`;
+          const tierTickets = tickets.filter(t => {
+            const metaTierPeople = Number(t.metadata?.tierPeople);
+            if (metaTierPeople === tierPeople) return true;
+            if (t.metadata?.groupingOffer === tierLabel) return true;
+            if (!t.metadata?.tierPeople && t.metadata?.ticketType === 'group' && t.quantity === tierPeople && Number(t.metadata?.basePrice) === Number(tier.price)) return true;
+            if (!t.metadata?.groupingOffer && !t.metadata?.tierPeople && (t.quantity || 1) === tierPeople && Number(t.metadata?.basePrice) === Number(tier.price)) return true;
+            return false;
+          });
+          return {
+            people: tier.people,
+            price: tier.price,
+            perPerson: tier.people > 0 ? Math.round(tier.price / tier.people) : tier.price,
+            label: tierLabel,
+            ticketsBought: tierTickets.length,
+            spotsBought: tierTickets.reduce((sum, t) => sum + (t.quantity || 1), 0),
+            revenue: tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+          };
+        });
+        const groupFilter = t => t.metadata?.groupingOffer || (t.metadata?.ticketType === 'group' && (t.quantity || 1) > 1);
+        return {
+          enabled: true,
+          tiers,
+          totalGroupTickets: tickets.filter(groupFilter).length,
+          totalGroupSpots: tickets.filter(groupFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
+          totalGroupRevenue: tickets.filter(groupFilter).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0),
+          regularTickets: tickets.filter(t => !groupFilter(t)).length,
+          regularSpots: tickets.filter(t => !groupFilter(t)).reduce((sum, t) => sum + (t.quantity || 1), 0),
+          regularRevenue: tickets.filter(t => !groupFilter(t)).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+        };
+      })() : { enabled: false, tiers: [] },
       // Spots-based pricing with per-tier stats
       spotsPricing: event.spotsPricing?.enabled ? (() => {
         const tierStats = (event.spotsPricing.tiers || []).map(tier => ({

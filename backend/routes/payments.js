@@ -73,7 +73,12 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     let event = await findEventByIdOrSlug(eventId);
     if (!event) {
       console.log('Event not found:', eventId);
-      return res.status(404).json({ message: 'Event not found' });
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    // Block payments for draft events
+    if (event.status === 'draft') {
+      return res.status(400).json({ success: false, message: 'This event is not currently accepting bookings' });
     }
     
     // Populate host after finding

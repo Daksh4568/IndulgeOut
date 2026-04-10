@@ -226,6 +226,24 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
+    // Block draft events for non-owners
+    if (event.status === 'draft') {
+      // Check if requester is the host (optional auth — check Authorization header)
+      const authHeader = req.headers.authorization;
+      let isOwner = false;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+          const requesterId = decoded.userId || decoded.id;
+          isOwner = event.host?.toString() === requesterId || event.organizer?.toString() === requesterId;
+        } catch (e) { /* token invalid — not owner */ }
+      }
+      if (!isOwner) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+    }
+
     // Populate relations after finding
     await event.populate([
       { path: 'host', select: 'name email bio profilePicture' },
@@ -386,6 +404,11 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
     
     if (!existingEvent) {
       return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Block registration for draft events
+    if (existingEvent.status === 'draft') {
+      return res.status(400).json({ message: 'This event is not currently accepting registrations' });
     }
     
     // Store the actual ObjectId for later use in queries
@@ -1483,6 +1506,16 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
             }
             return purchaseStr >= startStr && purchaseStr <= endStr;
           };
+          // When group offers are enabled, only count tickets whose per-person price
+          // matches this timeline tier price (exclude multi-person group offer tickets)
+          const timelineTickets = event.groupingOffers?.enabled
+            ? tickets.filter(t => {
+                const qty = t.quantity || 1;
+                const bp = Number(t.metadata?.basePrice || 0);
+                const perPerson = qty > 0 ? Math.round(bp / qty) : 0;
+                return perPerson === tier.price;
+              })
+            : tickets;
           return {
             startDate: tier.startDate,
             endDate: tier.endDate,
@@ -1490,9 +1523,9 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
             malePrice: tier.malePrice || null,
             femalePrice: tier.femalePrice || null,
             label: tier.label,
-            ticketsBought: tickets.filter(tierFilter).length,
-            spotsBought: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
-            revenue: tickets.filter(tierFilter).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
+            ticketsBought: timelineTickets.filter(tierFilter).length,
+            spotsBought: timelineTickets.filter(tierFilter).reduce((sum, t) => sum + (t.quantity || 1), 0),
+            revenue: timelineTickets.filter(tierFilter).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
           };
         })
       } : { enabled: false, tiers: [] },
@@ -1501,10 +1534,42 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
         malePrice: event.genderPricing.malePrice,
         femalePrice: event.genderPricing.femalePrice
       } : { enabled: false },
-      groupingOffers: event.groupingOffers?.enabled ? {
+      groupingOffers: event.groupingOffers?.enabled ? (() => {
+        // Debug: log group offer ticket metadata for troubleshooting
+        const groupTickets = tickets.filter(t => t.metadata?.groupingOffer || t.metadata?.ticketType === 'group');
+        if (groupTickets.length > 0) {
+          console.log('📊 [GroupOffers Debug] Group tickets found:', groupTickets.map(t => ({
+            id: t._id,
+            quantity: t.quantity,
+            tierPeople: t.metadata?.tierPeople,
+            tierPeopleType: typeof t.metadata?.tierPeople,
+            groupingOffer: t.metadata?.groupingOffer,
+            ticketType: t.metadata?.ticketType,
+            basePrice: t.metadata?.basePrice
+          })));
+          console.log('📊 [GroupOffers Debug] Event tiers:', event.groupingOffers.tiers.map(t => ({
+            people: t.people,
+            peopleType: typeof t.people,
+            price: t.price,
+            label: t.label
+          })));
+        }
+        return {
         enabled: true,
         tiers: (event.groupingOffers.tiers || []).map(tier => {
-          const tierTickets = tickets.filter(t => t.metadata?.tierPeople === tier.people);
+          const tierPeople = Number(tier.people);
+          const tierTickets = tickets.filter(t => {
+            const metaTierPeople = Number(t.metadata?.tierPeople);
+            // Primary match: metadata.tierPeople matches tier people count
+            if (metaTierPeople === tierPeople) return true;
+            // Fallback for tickets with missing tierPeople: match by quantity + basePrice
+            if (!t.metadata?.tierPeople && t.metadata?.ticketType === 'group' && t.quantity === tierPeople && Number(t.metadata?.basePrice) === Number(tier.price)) return true;
+            // Fallback: ticket quantity matches AND it's a group ticket with matching groupingOffer label
+            if (t.quantity === tierPeople && t.metadata?.groupingOffer && tier.label && t.metadata.groupingOffer === tier.label) return true;
+            // Fallback for tickets bought before group offers were enabled: match by quantity + basePrice
+            if (!t.metadata?.groupingOffer && !t.metadata?.tierPeople && (t.quantity || 1) === tierPeople && Number(t.metadata?.basePrice) === Number(tier.price)) return true;
+            return false;
+          });
           return {
             people: tier.people,
             price: tier.price,
@@ -1514,7 +1579,8 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
             revenue: tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
           };
         })
-      } : { enabled: false, tiers: [] },
+      };
+      })() : { enabled: false, tiers: [] },
       spotsPricing: event.spotsPricing?.enabled ? {
         enabled: true,
         tiers: (() => {

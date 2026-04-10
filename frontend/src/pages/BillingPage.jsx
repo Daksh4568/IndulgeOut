@@ -77,6 +77,14 @@ const BillingPage = () => {
       const eventData = response.data.event || response.data;
       console.log('📊 Event Data:', eventData);
       console.log('📊 Grouping Offers:', eventData.groupingOffers);
+      
+      // Block draft events — user shouldn't be able to buy tickets
+      if (eventData.status === 'draft') {
+        toast.error('This event is not currently accepting registrations');
+        navigate('/explore');
+        return;
+      }
+      
       setEvent(eventData);
 
       // Check if there's saved ticket selection data (user returning after signup)
@@ -386,34 +394,50 @@ const BillingPage = () => {
 
       setIsProcessing(true);
 
-      // Re-fetch event to get latest currentParticipants before pricing
-      // This prevents stale data if another user booked between page load and payment
-      if (event?.spotsPricing?.enabled) {
-        try {
-          const freshRes = await api.get(`/events/${eventId}`);
-          const freshEvent = freshRes.data.event || freshRes.data;
+      // Re-fetch event to check real-time status (draft, spots, etc.)
+      try {
+        const freshRes = await api.get(`/events/${eventId}`);
+        const freshEvent = freshRes.data.event || freshRes.data;
+        
+        // Check if event was moved to draft since page loaded
+        if (freshEvent.status === 'draft') {
+          toast.error('This event is no longer accepting registrations');
+          setIsProcessing(false);
+          navigate('/explore');
+          return;
+        }
+
+        // Update spots data if spots pricing is enabled
+        if (event?.spotsPricing?.enabled) {
           const freshBooked = freshEvent.currentParticipants || 0;
           const staleBooked = event.currentParticipants || 0;
           if (freshBooked !== staleBooked) {
             console.log(`🔄 [Spots] currentParticipants changed: ${staleBooked} → ${freshBooked}`);
-            // Update event state so calculatePricing uses fresh data
-            // We must update synchronously before calling calculatePricing
             event.currentParticipants = freshBooked;
             setEvent({ ...freshEvent });
           }
-          // Also check if spots are still available
-          const spotsAvail = freshEvent.maxParticipants - freshBooked;
-          const needed = event?.genderPricing?.enabled ? (maleSpots + femaleSpots)
-            : event?.groupingOffers?.enabled ? (selectedTier ? selectedTier.people : customSpots)
-            : quantity;
-          if (needed > spotsAvail) {
-            toast.error(`Only ${spotsAvail} spot(s) available now. Please reduce quantity.`);
-            setIsProcessing(false);
-            return;
-          }
-        } catch (err) {
-          console.warn('⚠️ Failed to refresh event spots, proceeding with cached data:', err.message);
         }
+
+        // Check if spots are still available
+        const freshBooked = freshEvent.currentParticipants || 0;
+        const spotsAvail = freshEvent.maxParticipants - freshBooked;
+        const needed = event?.genderPricing?.enabled ? (maleSpots + femaleSpots)
+          : event?.groupingOffers?.enabled ? (selectedTier ? selectedTier.people : customSpots)
+          : quantity;
+        if (needed > spotsAvail) {
+          toast.error(`Only ${spotsAvail} spot(s) available now. Please reduce quantity.`);
+          setIsProcessing(false);
+          return;
+        }
+      } catch (err) {
+        // If 404, event was drafted or deleted
+        if (err.response?.status === 404) {
+          toast.error('This event is no longer available');
+          setIsProcessing(false);
+          navigate('/explore');
+          return;
+        }
+        console.warn('⚠️ Failed to refresh event data, proceeding with cached data:', err.message);
       }
 
       const pricing = calculatePricing();

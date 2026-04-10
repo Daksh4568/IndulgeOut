@@ -79,9 +79,9 @@ const CommunityOrganizerDashboard = () => {
     const isDrafting = currentStatus === 'published';
     setConfirmModal({
       open: true,
-      title: isDrafting ? 'Move Event to Draft' : 'Publish Event',
+      title: isDrafting ? 'Move Event to Drafts' : 'Publish Event',
       message: isDrafting 
-        ? 'Are you sure you want to move this event to draft? It will no longer be visible to users on the explore page.'
+        ? 'Are you sure you want to move this event to drafts? It will no longer be visible to users on the explore page.'
         : 'Are you sure you want to publish this event? It will become visible to users on the explore page.',
       variant: isDrafting ? 'warning' : 'success',
       onConfirm: async () => {
@@ -625,7 +625,7 @@ const CommunityOrganizerDashboard = () => {
                           </button>
 
                           {/* Draft/Publish Toggle */}
-                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.status === 'draft' || (event.currentParticipants || 0) === 0) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -801,7 +801,7 @@ const CommunityOrganizerDashboard = () => {
                           </button>
 
                           {/* Draft/Publish Toggle */}
-                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.status === 'draft' || (event.currentParticipants || 0) === 0) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -994,7 +994,7 @@ const CommunityOrganizerDashboard = () => {
                         </button>
 
                         {/* Draft/Publish Toggle */}
-                        {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                        {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.status === 'draft' || (event.currentParticipants || 0) === 0) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1171,7 +1171,7 @@ const CommunityOrganizerDashboard = () => {
                           </button>
 
                           {/* Draft/Publish Toggle */}
-                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.currentParticipants || 0) === 0 && (
+                          {!event.isCoHost && event.status !== 'completed' && new Date(event.date) >= new Date(new Date().setHours(0,0,0,0)) && (event.status === 'draft' || (event.currentParticipants || 0) === 0) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

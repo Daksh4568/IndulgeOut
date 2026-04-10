@@ -125,6 +125,11 @@ const EventCreation = () => {
   const [isSearchingCoHosts, setIsSearchingCoHosts] = useState(false);
   const [selectedCoHosts, setSelectedCoHosts] = useState([]);
   const [coHostFilterType, setCoHostFilterType] = useState('all');
+  // Track which pricing feature was originally enabled (edit mode lock)
+  // 'groupingOffers' | 'earlyBird' | 'genderPricing' | 'none'
+  const [originalPricingFeature, setOriginalPricingFeature] = useState('none');
+  // Track original early bird sub-mode: 'time' | 'spots' | null
+  const [originalEarlyBirdMode, setOriginalEarlyBirdMode] = useState(null);
   const coHostSearchTimerRef = useRef(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -385,6 +390,18 @@ const EventCreation = () => {
           setEarlyBirdMode('time');
         }
 
+        // Track original pricing feature for edit mode lock
+        if (event.groupingOffers?.enabled) {
+          setOriginalPricingFeature('groupingOffers');
+        } else if (event.pricingTimeline?.enabled || event.spotsPricing?.enabled) {
+          setOriginalPricingFeature('earlyBird');
+          setOriginalEarlyBirdMode(event.spotsPricing?.enabled ? 'spots' : 'time');
+        } else if (event.genderPricing?.enabled) {
+          setOriginalPricingFeature('genderPricing');
+        } else {
+          setOriginalPricingFeature('none');
+        }
+
         // Set location query for display
         if (event.location?.address) {
           setLocationQuery(event.location.address);
@@ -467,6 +484,16 @@ const EventCreation = () => {
   };
 
   const handleGroupingOfferToggle = (checked) => {
+    // In edit mode, don't allow switching to group offers if another feature was originally enabled
+    if (isEditMode && checked && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing')) {
+      toast.error('Cannot switch pricing feature on an existing event. You can only edit within the current pricing type.');
+      return;
+    }
+    // In edit mode, don't allow disabling group offers if it was the original feature
+    if (isEditMode && !checked && originalPricingFeature === 'groupingOffers') {
+      toast.error('Cannot disable the pricing feature on an existing event with bookings.');
+      return;
+    }
     setFormData((prev) => {
       const tiers = [...prev.groupingOffers.tiers];
       // Ensure first tier always has people: 1 and price synced with main price
@@ -481,6 +508,11 @@ const EventCreation = () => {
           enabled: checked,
           tiers: tiers,
         },
+        // Disable early bird when enabling group offers
+        ...(checked ? {
+          pricingTimeline: { ...prev.pricingTimeline, enabled: false, tiers: [] },
+          spotsPricing: { ...prev.spotsPricing, enabled: false, tiers: [] },
+        } : {}),
       };
     });
   };
@@ -649,22 +681,34 @@ const EventCreation = () => {
 
   // Pricing Timeline handlers
   const handleEarlyBirdToggle = (checked) => {
+    // In edit mode, don't allow switching to early bird if another feature was originally enabled
+    if (isEditMode && checked && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing')) {
+      toast.error('Cannot switch pricing feature on an existing event. You can only edit within the current pricing type.');
+      return;
+    }
     if (checked) {
-      // Enable whichever mode is currently selected
+      // Enable whichever mode is currently selected, and disable group offers
       if (earlyBirdMode === 'time') {
         setFormData((prev) => ({
           ...prev,
           pricingTimeline: { ...prev.pricingTimeline, enabled: true },
           spotsPricing: { ...prev.spotsPricing, enabled: false, tiers: [] },
+          groupingOffers: { ...prev.groupingOffers, enabled: false },
         }));
       } else {
         setFormData((prev) => ({
           ...prev,
           spotsPricing: { ...prev.spotsPricing, enabled: true },
           pricingTimeline: { ...prev.pricingTimeline, enabled: false, tiers: [] },
+          groupingOffers: { ...prev.groupingOffers, enabled: false },
         }));
       }
     } else {
+      // In edit mode, don't allow disabling if this was the original feature
+      if (isEditMode && originalPricingFeature === 'earlyBird') {
+        toast.error('Cannot disable the pricing feature on an existing event with bookings.');
+        return;
+      }
       // Disable both
       setFormData((prev) => ({
         ...prev,
@@ -675,6 +719,11 @@ const EventCreation = () => {
   };
 
   const handleEarlyBirdModeChange = (mode) => {
+    // In edit mode, don't allow switching between time and spots if one was originally set
+    if (isEditMode && originalEarlyBirdMode && mode !== originalEarlyBirdMode) {
+      toast.error(`Cannot switch from ${originalEarlyBirdMode === 'time' ? 'Time-Based' : 'Spots-Based'} to ${mode === 'time' ? 'Time-Based' : 'Spots-Based'} pricing on an existing event.`);
+      return;
+    }
     setEarlyBirdMode(mode);
     if (mode === 'time') {
       setFormData((prev) => ({
@@ -718,6 +767,27 @@ const EventCreation = () => {
         ...newTiers[index],
         [field]: value,
       };
+      
+      // Check for date overlap with other tiers when setting dates
+      if (field === 'startDate' || field === 'endDate') {
+        const currentTier = newTiers[index];
+        const start = currentTier.startDate;
+        const end = currentTier.endDate;
+        if (start && end) {
+          for (let i = 0; i < newTiers.length; i++) {
+            if (i === index) continue;
+            const other = newTiers[i];
+            if (!other.startDate || !other.endDate) continue;
+            // Overlap exists if one tier starts before the other ends and vice versa
+            if (start <= other.endDate && end >= other.startDate) {
+              toast.error(`Tier ${index + 1} dates overlap with Tier ${i + 1} (${other.startDate} to ${other.endDate}). Please choose non-overlapping date ranges.`);
+              // Revert the change
+              return prev;
+            }
+          }
+        }
+      }
+
       // Sync price.amount with the first tier's price so backend always has a valid price
       const updates = {
         ...prev,
@@ -1403,6 +1473,16 @@ const EventCreation = () => {
         if (eventDate && tier.endDate > eventDate) {
           toast.error(`Early Bird Tier ${i + 1}: End Date cannot be after the event date (${eventDate})`);
           return;
+        }
+        // Check for overlap with other tiers
+        for (let j = 0; j < tiers.length; j++) {
+          if (j === i) continue;
+          const other = tiers[j];
+          if (!other.startDate || !other.endDate) continue;
+          if (tier.startDate <= other.endDate && tier.endDate >= other.startDate) {
+            toast.error(`Early Bird Tier ${i + 1} dates overlap with Tier ${j + 1}. Each tier must have a unique, non-overlapping date range.`);
+            return;
+          }
         }
         if (!tier.price && tier.price !== 0) {
           toast.error(`Early Bird Tier ${i + 1}: Price is required`);
@@ -2103,10 +2183,12 @@ const EventCreation = () => {
               <div className="space-y-4">
                 <label
                   htmlFor="categoryPricing"
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    formData.genderPricing?.enabled
-                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
-                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                    (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled) || (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing')
+                      ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
+                      : formData.genderPricing?.enabled
+                        ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
+                        : 'bg-white/[0.03] border-white/10 hover:border-white/20 cursor-pointer'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -2115,7 +2197,15 @@ const EventCreation = () => {
                     </div>
                     <div>
                       <span className="text-white text-sm font-medium">Smart Pricing</span>
-                      <p className="text-[11px] text-gray-500">Set unique prices for Male & Female attendees</p>
+                      <p className="text-[11px] text-gray-500">
+                        {isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing'
+                          ? `Cannot switch — ${originalPricingFeature === 'groupingOffers' ? 'Group Offers' : 'Early Bird'} is already active`
+                          : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
+                            ? 'Disable Early Bird first to use Smart Pricing'
+                            : formData.groupingOffers?.enabled
+                              ? 'Disable Group Offers first to use Smart Pricing'
+                              : 'Set unique prices for Male & Female attendees'}
+                      </p>
                     </div>
                   </div>
                   <div className="relative">
@@ -2123,8 +2213,14 @@ const EventCreation = () => {
                       type="checkbox"
                       id="categoryPricing"
                       checked={formData.genderPricing?.enabled || false}
+                      disabled={(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled) || (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing')}
                       onChange={(e) => {
                         const checked = e.target.checked;
+                        // In edit mode, don't allow disabling if it was the original feature
+                        if (isEditMode && !checked && originalPricingFeature === 'genderPricing') {
+                          toast.error('Cannot disable the pricing feature on an existing event.');
+                          return;
+                        }
                         setFormData((prev) => ({
                           ...prev,
                           genderPricing: {
@@ -2133,15 +2229,17 @@ const EventCreation = () => {
                             malePrice: checked ? prev.genderPricing.malePrice : 0,
                             femalePrice: checked ? prev.genderPricing.femalePrice : 0,
                           },
-                          // Only disable grouping offers when gender pricing is enabled
+                          // Disable grouping offers and early bird when gender pricing is enabled
                           ...(checked ? {
                             groupingOffers: { ...prev.groupingOffers, enabled: false },
+                            pricingTimeline: { ...prev.pricingTimeline, enabled: false, tiers: [] },
+                            spotsPricing: { ...prev.spotsPricing, enabled: false, tiers: [] },
                           } : {}),
                         }));
                       }}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled) ? 'bg-white/5' : 'bg-white/10'}`}></div>
                     <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
                   </div>
                 </label>
@@ -2233,7 +2331,7 @@ const EventCreation = () => {
                 <label
                   htmlFor="groupingOffers"
                   className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                    formData.genderPricing?.enabled
+                    formData.genderPricing?.enabled || (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) || (isEditMode && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing'))
                       ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
                       : formData.groupingOffers?.enabled
                         ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
@@ -2246,7 +2344,13 @@ const EventCreation = () => {
                     </div>
                     <div>
                       <span className="text-white text-sm font-medium">Group Offers</span>
-                      <p className="text-[11px] text-gray-500">Bulk discounts by group size</p>
+                      <p className="text-[11px] text-gray-500">
+                        {isEditMode && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing')
+                          ? `Cannot switch — ${originalPricingFeature === 'earlyBird' ? 'Early Bird' : 'Smart Pricing'} is already active on this event`
+                          : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
+                            ? 'Disable Early Bird first to use Group Offers'
+                            : 'Bulk discounts by group size'}
+                      </p>
                     </div>
                   </div>
                   <div className="relative">
@@ -2255,10 +2359,10 @@ const EventCreation = () => {
                       id="groupingOffers"
                       checked={formData.groupingOffers?.enabled || false}
                       onChange={(e) => handleGroupingOfferToggle(e.target.checked)}
-                      disabled={formData.genderPricing?.enabled}
+                      disabled={formData.genderPricing?.enabled || (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) || (isEditMode && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing'))}
                       className="sr-only peer"
                     />
-                    <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${formData.genderPricing?.enabled ? 'bg-white/5' : 'bg-white/10'}`}></div>
+                    <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${(formData.genderPricing?.enabled || formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) ? 'bg-white/5' : 'bg-white/10'}`}></div>
                     <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
                   </div>
                 </label>
@@ -2355,10 +2459,12 @@ const EventCreation = () => {
               <div className="space-y-4">
                 <label
                   htmlFor="earlyBird"
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
-                      ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
-                      : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                    formData.groupingOffers?.enabled || formData.genderPricing?.enabled || (isEditMode && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing'))
+                      ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
+                      : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
+                        ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
+                        : 'bg-white/[0.03] border-white/10 hover:border-white/20 cursor-pointer'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -2367,7 +2473,15 @@ const EventCreation = () => {
                     </div>
                     <div>
                       <span className="text-white text-sm font-medium">Early Bird</span>
-                      <p className="text-[11px] text-gray-500">Time-based or spots-based pricing tiers</p>
+                      <p className="text-[11px] text-gray-500">
+                        {isEditMode && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing')
+                          ? `Cannot switch — ${originalPricingFeature === 'groupingOffers' ? 'Group Offers' : 'Smart Pricing'} is already active on this event`
+                          : formData.groupingOffers?.enabled
+                            ? 'Disable Group Offers first to use Early Bird'
+                            : formData.genderPricing?.enabled
+                              ? 'Disable Smart Pricing first to use Early Bird'
+                              : 'Time-based or spots-based pricing tiers'}
+                      </p>
                     </div>
                   </div>
                   <div className="relative">
@@ -2376,9 +2490,10 @@ const EventCreation = () => {
                       id="earlyBird"
                       checked={formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || false}
                       onChange={(e) => handleEarlyBirdToggle(e.target.checked)}
+                      disabled={formData.groupingOffers?.enabled || formData.genderPricing?.enabled || (isEditMode && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing'))}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
+                    <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${(formData.groupingOffers?.enabled || formData.genderPricing?.enabled) ? 'bg-white/5' : 'bg-white/10'}`}></div>
                     <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4"></div>
                   </div>
                 </label>
@@ -2664,7 +2779,7 @@ const EventCreation = () => {
                         )}
                         
                         <p className="text-xs text-gray-400 italic mt-2">
-                          💡 Example: First 50 spots at ₹100, spots 51-100 at ₹150, spots 101-200 at ₹200.
+                          💡 Example: First 50 spots booked at ₹100, spots 51-100 at ₹150, and spots 101-200 at ₹200.
                         </p>
                       </div>
                     )}

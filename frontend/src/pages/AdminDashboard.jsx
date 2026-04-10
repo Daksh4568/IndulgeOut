@@ -3494,8 +3494,66 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Price Change Timeline */}
-                {((eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0) || 
+                {/* Group Offers Breakdown */}
+                {eventDetails.groupingOffers?.enabled && eventDetails.groupingOffers.tiers?.length > 0 && (
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h3 className="text-lg font-bold text-white mb-4">👥 Group Offers Breakdown</h3>
+                    {(() => {
+                      const go = eventDetails.groupingOffers;
+                      const totalSpots = (go.totalGroupSpots || 0) + (go.regularSpots || 0);
+                      return (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-gradient-to-br from-indigo-900/20 to-purple-900/20 rounded-xl p-4 border border-indigo-700/30">
+                              <span className="text-sm text-gray-400">Group Offer Bookings</span>
+                              <div className="text-2xl font-bold text-white mt-1">{go.totalGroupTickets || 0}</div>
+                              <div className="text-xs text-gray-500">{go.totalGroupSpots || 0} spots ({totalSpots > 0 ? ((go.totalGroupSpots / totalSpots) * 100).toFixed(1) : 0}% of total)</div>
+                            </div>
+                            <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50">
+                              <span className="text-sm text-gray-400">Regular Bookings</span>
+                              <div className="text-2xl font-bold text-white mt-1">{go.regularTickets || 0}</div>
+                              <div className="text-xs text-gray-500">{go.regularSpots || 0} spots ({totalSpots > 0 ? ((go.regularSpots / totalSpots) * 100).toFixed(1) : 0}% of total)</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 rounded-xl p-4 border border-green-700/30">
+                              <span className="text-sm text-gray-400">Total Revenue</span>
+                              <div className="text-2xl font-bold text-white mt-1">₹{((go.totalGroupRevenue || 0) + (go.regularRevenue || 0)).toLocaleString('en-IN')}</div>
+                              <div className="text-xs text-gray-500">₹{(go.totalGroupRevenue || 0).toLocaleString('en-IN')} group + ₹{(go.regularRevenue || 0).toLocaleString('en-IN')} regular</div>
+                            </div>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-700 text-sm">
+                              <thead className="bg-zinc-800">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Tier</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Price</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Per Person</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Tickets Sold</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Spots</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Revenue</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-700">
+                                {go.tiers.map((tier, idx) => (
+                                  <tr key={idx} className="hover:bg-zinc-800">
+                                    <td className="px-4 py-3 text-white font-medium">{tier.label}</td>
+                                    <td className="px-4 py-3 text-right text-white">₹{tier.price}</td>
+                                    <td className="px-4 py-3 text-right text-gray-400">₹{tier.perPerson}</td>
+                                    <td className="px-4 py-3 text-right text-white">{tier.ticketsBought}</td>
+                                    <td className="px-4 py-3 text-right text-white">{tier.spotsBought}</td>
+                                    <td className="px-4 py-3 text-right text-green-400 font-semibold">₹{tier.revenue.toLocaleString('en-IN')}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Price Change Timeline - hidden when group offers is enabled */}
+                {!eventDetails.groupingOffers?.enabled && ((eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0) || 
                   (eventDetails.pricingTimeline && eventDetails.pricingTimeline.enabled)) && (
                   <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
                     <h3 className="text-lg font-bold text-white mb-4">💰 Price Change Timeline</h3>
@@ -3676,11 +3734,13 @@ const AdminDashboard = () => {
                         })()}
                       </div>
                     )}
+                  </div>
+                )}
 
-                    {/* Revenue Calculation per Price Tier */}
-                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && !eventDetails.spotsPricing?.enabled && (
-                      <div className="mt-6">
-                        <h4 className="text-sm font-medium text-gray-400 mb-3">Revenue Calculation per Price Tier</h4>
+                {/* Revenue Calculation per Price Tier — always shown independently */}
+                {eventDetails.attendees?.length > 0 && !eventDetails.spotsPricing?.enabled && (
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h4 className="text-sm font-medium text-gray-400 mb-3">Revenue Calculation per Price Tier</h4>
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-700 text-sm">
                             <thead className="bg-zinc-800">
@@ -3800,8 +3860,6 @@ const AdminDashboard = () => {
                             </tbody>
                           </table>
                         </div>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -4171,7 +4229,7 @@ const AdminDashboard = () => {
                             </td>
                             {eventDetails.groupingOffers?.enabled && (
                               <td className="px-4 py-3 text-sm">
-                                {attendee.groupingOffer && (attendee.tierPeople || 0) > 1 ? (
+                                {attendee.groupingOffer ? (
                                   <div className="flex flex-col gap-0.5">
                                     <span className="px-2 py-0.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-full inline-block w-fit">
                                       {attendee.groupingOffer}

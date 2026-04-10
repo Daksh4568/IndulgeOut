@@ -601,8 +601,14 @@ const EventAnalytics = () => {
             </div>
             {(() => {
               const allAttendees = analytics.attendees || [];
-              const groupBookings = allAttendees.filter(a => a.metadata?.groupingOffer && (a.metadata?.tierPeople || 0) > 1);
-              const regularBookings = allAttendees.filter(a => !a.metadata?.groupingOffer || (a.metadata?.tierPeople || 0) <= 1);
+              const tiers = analytics.groupingOffers?.tiers || [];
+              const matchesTier = (a) => {
+                const qty = a.quantity || 1;
+                const bp = Number(a.metadata?.basePrice || 0);
+                return tiers.some(tier => qty === tier.people && bp === tier.price);
+              };
+              const groupBookings = allAttendees.filter(a => a.metadata?.groupingOffer || (a.metadata?.ticketType === 'group' && (a.quantity || 1) > 1) || matchesTier(a));
+              const regularBookings = allAttendees.filter(a => !a.metadata?.groupingOffer && !(a.metadata?.ticketType === 'group' && (a.quantity || 1) > 1) && !matchesTier(a));
               const groupSpots = groupBookings.reduce((sum, a) => sum + (a.quantity || 1), 0);
               const regularSpots = regularBookings.reduce((sum, a) => sum + (a.quantity || 1), 0);
               const groupRevenue = groupBookings.reduce((sum, a) => sum + (a.metadata?.basePrice || a.price?.amount || 0), 0);
@@ -986,8 +992,8 @@ const EventAnalytics = () => {
           </div>
         )}
 
-        {/* Price Change Timeline */}
-        {((analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0) || 
+        {/* Price Change Timeline - hidden when group offers is enabled (pricing timeline data is misleading with mixed group/individual prices) */}
+        {!analytics.groupingOffers?.enabled && ((analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0) || 
           (analytics.pricingTimeline && analytics.pricingTimeline.enabled)) && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
