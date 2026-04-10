@@ -940,10 +940,12 @@ const BillingPage = () => {
                     <div className="space-y-2">
                       {event.spotsPricing.tiers.map((tier, idx) => {
                         const booked = event.currentParticipants || 0;
-                        const isActive = booked >= tier.minSpots && booked <= tier.maxSpots;
-                        const isUpcoming = booked < tier.minSpots;
+                        const nextSpot = booked + 1;
+                        const isActive = nextSpot >= tier.minSpots && nextSpot <= tier.maxSpots;
+                        const isCompleted = nextSpot > tier.maxSpots;
+                        const isUpcoming = nextSpot < tier.minSpots;
                         return (
-                          <div key={idx} className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${isActive ? 'bg-green-500/10 border border-green-500/30' : isUpcoming ? 'bg-gray-800/50' : 'bg-gray-800/30 opacity-60'}`}>
+                          <div key={idx} className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${isActive ? 'bg-green-500/10 border border-green-500/30' : isCompleted ? 'bg-gray-800/30 opacity-60' : 'bg-gray-800/50'}`}>
                             <div>
                               <span className={`font-medium ${isActive ? 'text-green-400' : 'text-gray-300'}`}>{tier.label || `Spots ${tier.minSpots}-${tier.maxSpots}`}</span>
                               <span className="text-gray-500 ml-2">({tier.minSpots}-{tier.maxSpots} spots)</span>
