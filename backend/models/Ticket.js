@@ -106,6 +106,7 @@ const ticketSchema = new mongoose.Schema({
     // Price timeline tracking - what price tier was active at purchase time
     priceAtPurchase: Number,
     pricingTimelineTier: String, // label of the timeline tier active at purchase
+    spotsPricingTier: String, // label of the spots/demand pricing tier active at purchase
     // Gender-based pricing breakdown
     genderBreakdown: {
       male: { type: Number, default: 0 },

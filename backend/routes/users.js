@@ -118,7 +118,16 @@ router.put('/profile', authenticateToken, async (req, res) => {
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (bio !== undefined) updateData.bio = bio;
-    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (phoneNumber !== undefined) {
+      // Check for duplicate phone number (skip if same as current)
+      if (phoneNumber && phoneNumber !== user.phoneNumber) {
+        const phoneExists = await User.findOne({ phoneNumber, _id: { $ne: user._id } });
+        if (phoneExists) {
+          return res.status(409).json({ message: 'This phone number is already registered with another account' });
+        }
+      }
+      updateData.phoneNumber = phoneNumber;
+    }
     if (location !== undefined) updateData.location = location;
     if (age !== undefined) updateData.age = age;
     

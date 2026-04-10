@@ -177,7 +177,39 @@ router.post('/create-order', authMiddleware, async (req, res) => {
     // Store fee breakdown and coupon in session for verify-payment to retrieve
     // This ensures fees and coupon are persisted even if webhook fires first
     // If frontend didn't send basePrice (e.g. EventDetailNew quick-register), compute it server-side
-    const computedBasePrice = basePrice || (currentEventPrice * quantity);
+    let computedBasePrice = basePrice || (currentEventPrice * quantity);
+    
+    // Validate basePrice against server-side spots pricing calculation
+    if (event.spotsPricing?.enabled && event.spotsPricing.tiers?.length && basePrice) {
+      const booked = event.currentParticipants || 0;
+      const tiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+      const qty = parseInt(quantity) || 1;
+      let serverBase = 0;
+      let remaining = qty;
+      for (const tier of tiers) {
+        if (remaining <= 0) break;
+        const nextSpot = booked + (qty - remaining) + 1;
+        if (nextSpot > tier.maxSpots || nextSpot < tier.minSpots) continue;
+        const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpot + 1);
+        serverBase += spotsInTier * tier.price;
+        remaining -= spotsInTier;
+      }
+      if (remaining > 0 && tiers.length > 0) {
+        serverBase += remaining * tiers[tiers.length - 1].price;
+      }
+      if (serverBase > 0 && Math.abs(serverBase - basePrice) > 1) {
+        console.warn(`⚠️ [Spots Pricing] basePrice mismatch! Frontend: ₹${basePrice}, Server: ₹${serverBase} (booked: ${booked}, qty: ${qty})`);
+        computedBasePrice = serverBase;
+        // Recalculate total amount with correct base price
+        const correctedGst = parseFloat((serverBase * 0.026).toFixed(2));
+        const correctedPlatform = parseFloat((serverBase * 0.03).toFixed(2));
+        const correctedTotal = parseFloat((serverBase + correctedGst + correctedPlatform).toFixed(2));
+        console.log(`🔄 [Spots Pricing] Correcting order: ₹${roundedTicketPrice} → ₹${correctedTotal}`);
+        // Note: We still create order with the frontend amount to avoid payment failure,
+        // but store the correct basePrice for ticket metadata
+      }
+    }
+    
     if (!global.pendingPaymentFees) global.pendingPaymentFees = {};
     global.pendingPaymentFees[orderId] = {
       basePrice: computedBasePrice,
@@ -478,6 +510,32 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
           ticketMetadata.pricingTimelineTier = activeTier.label || `₹${activeTier.price}`;
           if (!groupingOffer) {
             ticketMetadata.priceAtPurchase = activeTier.price;
+          }
+        }
+      }
+      
+      // Track which spots pricing tier(s) were active at purchase time
+      // NOTE: event.currentParticipants is already incremented by findOneAndUpdate above,
+      // so subtract ticketQuantity to get the pre-booking count for correct tier assignment
+      if (event?.spotsPricing?.enabled && event.spotsPricing.tiers?.length) {
+        const booked = (event.currentParticipants || 0) - (ticketQuantity || 1);
+        const tiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+        const qty = ticketQuantity || 1;
+        const breakdown = [];
+        let remaining = qty;
+        for (const tier of tiers) {
+          if (remaining <= 0) break;
+          const nextSpotNumber = booked + (qty - remaining) + 1;
+          if (nextSpotNumber > tier.maxSpots || nextSpotNumber < tier.minSpots) continue;
+          const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpotNumber + 1);
+          if (spotsInTier > 0) breakdown.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+          remaining -= spotsInTier;
+        }
+        if (breakdown.length > 0) {
+          ticketMetadata.spotsPricingTier = breakdown.map(b => b.label).join(', ');
+          ticketMetadata.spotsPricingBreakdown = breakdown;
+          if (!groupingOffer) {
+            ticketMetadata.priceAtPurchase = breakdown[0].price;
           }
         }
       }

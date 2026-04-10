@@ -187,10 +187,14 @@ const EventAnalytics = () => {
       const gp = (csvStoredGp && csvStoredGp.malePrice != null) ? csvStoredGp : (hasGender && hasGenderPricing ? analytics.genderPricing : null);
       const perTicket = hasGender && gp && gp.malePrice != null
         ? `Male: ₹${gp.malePrice} / Female: ₹${gp.femalePrice}`
-        : (a.metadata?.priceAtPurchase || (a.metadata?.basePrice ? Math.round(a.metadata.basePrice / (a.quantity || 1)) : a.price?.amount || 0));
+        : a.metadata?.spotsPricingBreakdown?.length > 1
+          ? a.metadata.spotsPricingBreakdown.map(b => `${b.count}×₹${b.price}(${b.label})`).join(' + ')
+          : (a.metadata?.priceAtPurchase || (a.metadata?.basePrice ? Math.round(a.metadata.basePrice / (a.quantity || 1)) : a.price?.amount || 0));
       const totalTicket = hasGender && gp && gp.malePrice != null
         ? (a.metadata?.basePrice || ((gb.male * gp.malePrice) + (gb.female * gp.femalePrice)))
-        : (a.metadata?.basePrice || ((a.metadata?.priceAtPurchase || a.price?.amount || 0) * (a.quantity || 1)));
+        : a.metadata?.spotsPricingBreakdown?.length > 1
+          ? (a.metadata?.basePrice || a.metadata.spotsPricingBreakdown.reduce((sum, b) => sum + (b.count * b.price), 0))
+          : (a.metadata?.basePrice || ((a.metadata?.priceAtPurchase || a.price?.amount || 0) * (a.quantity || 1)));
       return [
         a.name,
         a.email,
@@ -683,6 +687,101 @@ const EventAnalytics = () => {
           </div>
         )}
 
+        {/* Spots-Based Pricing Breakdown */}
+        {analytics.spotsPricing?.enabled && analytics.spotsPricing.tiers?.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-orange-500" />
+                Demand Pricing Breakdown
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gradient-to-br from-orange-900/20 to-amber-900/20 backdrop-blur-sm rounded-xl p-6 border border-orange-700/30">
+                <div className="flex items-center space-x-2 mb-3">
+                  <TrendingUp className="h-5 w-5 text-orange-500" />
+                  <span className="text-sm text-gray-400">Current Price Tier</span>
+                </div>
+                {(() => {
+                  const booked = analytics.attendance?.totalAttendees || 0;
+                  const nextSpot = booked + 1;
+                  const activeTier = analytics.spotsPricing.tiers.find(t => nextSpot >= t.minSpots && nextSpot <= t.maxSpots);
+                  return (
+                    <div className="text-2xl font-bold text-white">
+                      {activeTier ? `₹${activeTier.price}` : 'N/A'}
+                      <span className="text-sm text-gray-400 ml-2 font-normal">{activeTier?.label || ''}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="bg-gradient-to-br from-orange-900/20 to-amber-900/20 backdrop-blur-sm rounded-xl p-6 border border-orange-700/30">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Users className="h-5 w-5 text-orange-500" />
+                  <span className="text-sm text-gray-400">Spots Booked</span>
+                </div>
+                <div className="text-2xl font-bold text-white">{analytics.attendance?.totalAttendees || 0}</div>
+              </div>
+              <div className="bg-gradient-to-br from-orange-900/20 to-amber-900/20 backdrop-blur-sm rounded-xl p-6 border border-orange-700/30">
+                <div className="flex items-center space-x-2 mb-3">
+                  <DollarSign className="h-5 w-5 text-orange-500" />
+                  <span className="text-sm text-gray-400">Total Revenue</span>
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  ₹{analytics.spotsPricing.tiers.reduce((sum, t) => sum + (t.revenue || 0), 0).toLocaleString()}
+                </div>
+                <div className="mt-2 space-y-1">
+                  {analytics.spotsPricing.tiers.filter(t => t.revenue > 0).map((t, i) => (
+                    <div key={i} className="flex justify-between text-xs">
+                      <span className="text-gray-400">{t.label} ({t.spotsBought} spots × ₹{t.price})</span>
+                      <span className="text-orange-400">₹{t.revenue.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700/50">
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Tier</th>
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Spot Range</th>
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Price</th>
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Tickets</th>
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Spots</th>
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Revenue</th>
+                      <th className="text-left text-xs font-medium text-gray-400 px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.spotsPricing.tiers.map((tier, index) => {
+                      const booked = analytics.attendance?.totalAttendees || 0;
+                      const nextSpot = booked + 1;
+                      const isActive = nextSpot >= tier.minSpots && nextSpot <= tier.maxSpots;
+                      const isPast = nextSpot > tier.maxSpots;
+                      return (
+                        <tr key={index} className={`border-b border-gray-700/30 last:border-b-0 ${isActive ? 'bg-green-900/10' : 'hover:bg-white/5'}`}>
+                          <td className="px-4 py-3 text-sm text-white font-medium">{tier.label}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400">{tier.minSpots} - {tier.maxSpots}</td>
+                          <td className="px-4 py-3 text-sm text-white">₹{tier.price}</td>
+                          <td className="px-4 py-3 text-sm text-white">{tier.ticketsBought}</td>
+                          <td className="px-4 py-3 text-sm text-white">{tier.spotsBought}</td>
+                          <td className="px-4 py-3 text-sm text-green-400 font-medium">₹{(tier.revenue || 0).toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-green-500/20 text-green-400' : isPast ? 'bg-gray-600/20 text-gray-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                              {isActive ? 'Active' : isPast ? 'Completed' : 'Upcoming'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Coupon Usage Statistics */}
         {analytics.attendees && analytics.attendees.some(a => a.couponUsed) && (
           <div className="mb-8">
@@ -960,8 +1059,8 @@ const EventAnalytics = () => {
               </div>
             )}
 
-            {/* Price Change History Log */}
-            {analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0 && (
+            {/* Price Change History Log - hide when spotsPricing is active since Demand Pricing Breakdown shows correct tier data */}
+            {analytics.priceChangeHistory && analytics.priceChangeHistory.length > 0 && !analytics.spotsPricing?.enabled && (
               <div>
                 <h3 className="text-sm font-medium text-gray-400 mb-3">Pricing Breakdown</h3>
                 {(() => {
@@ -1647,6 +1746,17 @@ const EventAnalytics = () => {
                               </div>
                             );
                           }
+                          // Split-tier breakdown for spots pricing
+                          if (attendee.metadata?.spotsPricingBreakdown?.length > 1) {
+                            return (
+                              <div>
+                                {attendee.metadata.spotsPricingBreakdown.map((b, i) => (
+                                  <div key={i} className="text-xs text-white">₹{b.price} <span className="text-gray-500">({b.label})</span></div>
+                                ))}
+                                <div className="text-xs text-gray-500">Per spot (split)</div>
+                              </div>
+                            );
+                          }
                           return (
                             <div>
                               <div className="text-sm font-semibold text-white">
@@ -1654,6 +1764,7 @@ const EventAnalytics = () => {
                               </div>
                               <div className="text-xs text-gray-500">Per spot</div>
                               {attendee.metadata?.pricingTimelineTier && <div className="text-xs text-purple-400">{attendee.metadata.pricingTimelineTier}</div>}
+                              {attendee.metadata?.spotsPricingTier && <div className="text-xs text-orange-400">{attendee.metadata.spotsPricingTier}</div>}
                             </div>
                           );
                         })()}
@@ -1674,6 +1785,18 @@ const EventAnalytics = () => {
                                   {gb.male > 0 && gb.female > 0 && ' + '}
                                   {gb.female > 0 && `F: ${gb.female} × ₹${gp.femalePrice}`}
                                 </div>
+                              </div>
+                            );
+                          }
+                          // Split-tier breakdown for spots pricing
+                          if (attendee.metadata?.spotsPricingBreakdown?.length > 1) {
+                            const total = attendee.metadata.spotsPricingBreakdown.reduce((sum, b) => sum + (b.count * b.price), 0);
+                            return (
+                              <div>
+                                <div className="text-sm text-white">₹{attendee.metadata?.basePrice || total}</div>
+                                {attendee.metadata.spotsPricingBreakdown.map((b, i) => (
+                                  <div key={i} className="text-xs text-gray-500">{b.count} × ₹{b.price} ({b.label})</div>
+                                ))}
                               </div>
                             );
                           }

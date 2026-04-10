@@ -16,6 +16,7 @@ import {
   Tags,
   Layers,
   Percent,
+  TrendingUp,
   MessageSquare,
 } from "lucide-react";
 import NavigationBar from "../components/NavigationBar";
@@ -104,7 +105,14 @@ const EventCreation = () => {
       enabled: false,
       tiers: [],
     },
+    spotsPricing: {
+      enabled: false,
+      tiers: [],
+    },
   });
+
+  // 'time' = Time-Based Pricing, 'spots' = Spots-Based Pricing
+  const [earlyBirdMode, setEarlyBirdMode] = useState('time');
 
   const [isLoading, setIsLoading] = useState(false);
   const [showEndDate, setShowEndDate] = useState(false);
@@ -345,6 +353,20 @@ const EventCreation = () => {
             enabled: false,
             tiers: [],
           },
+          spotsPricing: event.spotsPricing ? {
+            enabled: event.spotsPricing.enabled || false,
+            tiers: event.spotsPricing.tiers?.length > 0
+              ? event.spotsPricing.tiers.map(tier => ({
+                  minSpots: tier.minSpots || 1,
+                  maxSpots: tier.maxSpots || 0,
+                  price: tier.price || 0,
+                  label: tier.label || '',
+                }))
+              : []
+          } : {
+            enabled: false,
+            tiers: [],
+          },
           genderPricing: event.genderPricing ? {
             enabled: event.genderPricing.enabled || false,
             malePrice: event.genderPricing.malePrice || 0,
@@ -355,6 +377,13 @@ const EventCreation = () => {
             femalePrice: 0,
           },
         });
+
+        // Set early bird mode based on which pricing type was enabled
+        if (event.spotsPricing?.enabled) {
+          setEarlyBirdMode('spots');
+        } else {
+          setEarlyBirdMode('time');
+        }
 
         // Set location query for display
         if (event.location?.address) {
@@ -619,15 +648,47 @@ const EventCreation = () => {
   };
 
   // Pricing Timeline handlers
-  const handlePricingTimelineToggle = (checked) => {
-    setFormData((prev) => ({
-      ...prev,
-      pricingTimeline: {
-        ...prev.pricingTimeline,
-        enabled: checked,
-        tiers: checked ? prev.pricingTimeline.tiers : [],
-      },
-    }));
+  const handleEarlyBirdToggle = (checked) => {
+    if (checked) {
+      // Enable whichever mode is currently selected
+      if (earlyBirdMode === 'time') {
+        setFormData((prev) => ({
+          ...prev,
+          pricingTimeline: { ...prev.pricingTimeline, enabled: true },
+          spotsPricing: { ...prev.spotsPricing, enabled: false, tiers: [] },
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          spotsPricing: { ...prev.spotsPricing, enabled: true },
+          pricingTimeline: { ...prev.pricingTimeline, enabled: false, tiers: [] },
+        }));
+      }
+    } else {
+      // Disable both
+      setFormData((prev) => ({
+        ...prev,
+        pricingTimeline: { ...prev.pricingTimeline, enabled: false, tiers: [] },
+        spotsPricing: { ...prev.spotsPricing, enabled: false, tiers: [] },
+      }));
+    }
+  };
+
+  const handleEarlyBirdModeChange = (mode) => {
+    setEarlyBirdMode(mode);
+    if (mode === 'time') {
+      setFormData((prev) => ({
+        ...prev,
+        pricingTimeline: { ...prev.pricingTimeline, enabled: true },
+        spotsPricing: { ...prev.spotsPricing, enabled: false, tiers: [] },
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        spotsPricing: { ...prev.spotsPricing, enabled: true },
+        pricingTimeline: { ...prev.pricingTimeline, enabled: false, tiers: [] },
+      }));
+    }
   };
 
   const addPricingTier = () => {
@@ -687,6 +748,65 @@ const EventCreation = () => {
       pricingTimeline: {
         ...prev.pricingTimeline,
         tiers: prev.pricingTimeline.tiers.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  // Spots-based pricing handlers
+
+  const addSpotsPricingTier = () => {
+    setFormData((prev) => {
+      const tiers = prev.spotsPricing.tiers;
+      const lastMax = tiers.length > 0 ? tiers[tiers.length - 1].maxSpots : 0;
+      return {
+        ...prev,
+        spotsPricing: {
+          ...prev.spotsPricing,
+          tiers: [
+            ...tiers,
+            {
+              minSpots: lastMax + 1,
+              maxSpots: '',
+              price: '',
+              label: '',
+            },
+          ],
+        },
+      };
+    });
+  };
+
+  const updateSpotsPricingTier = (index, field, value) => {
+    setFormData((prev) => {
+      const newTiers = [...prev.spotsPricing.tiers];
+      let val = value;
+      // Clamp maxSpots to maxParticipants
+      if (field === 'maxSpots') {
+        const maxP = Number(prev.maxParticipants) || 0;
+        if (maxP > 0 && Number(val) > maxP) {
+          val = maxP;
+        }
+      }
+      newTiers[index] = { ...newTiers[index], [field]: val };
+      // Auto-set next tier's minSpots
+      if (field === 'maxSpots' && index < newTiers.length - 1) {
+        newTiers[index + 1] = { ...newTiers[index + 1], minSpots: (Number(value) || 0) + 1 };
+      }
+      // Sync price.amount with the first tier's price
+      const updates = { ...prev, spotsPricing: { ...prev.spotsPricing, tiers: newTiers } };
+      if (field === 'price' && index === 0) {
+        updates.price = { ...prev.price, amount: Number(value) || 0 };
+      }
+      return updates;
+    });
+  };
+
+  const removeSpotsPricingTier = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      spotsPricing: {
+        ...prev.spotsPricing,
+        tiers: prev.spotsPricing.tiers.filter((_, i) => i !== index),
       },
     }));
   };
@@ -1236,6 +1356,13 @@ const EventCreation = () => {
       return;
     }
 
+    // Validate event date is not in the past
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (formData.date && formData.date < todayStr) {
+      toast.error("Event date cannot be in the past");
+      return;
+    }
+
     // Validate multi-day end date
     if (showEndDate && !formData.endDate) {
       toast.error("Multi-day event is enabled but End Date is not set. Please add an End Date or uncheck the option.");
@@ -1253,6 +1380,8 @@ const EventCreation = () => {
         toast.error("Early Bird is enabled but no price tiers added. Please add at least one tier or disable Early Bird.");
         return;
       }
+      const today = new Date().toISOString().split('T')[0];
+      const eventDate = formData.date || '';
       for (let i = 0; i < tiers.length; i++) {
         const tier = tiers[i];
         if (!tier.startDate) {
@@ -1263,8 +1392,16 @@ const EventCreation = () => {
           toast.error(`Early Bird Tier ${i + 1}: End Date is required`);
           return;
         }
+        if (tier.startDate < today) {
+          toast.error(`Early Bird Tier ${i + 1}: Start Date cannot be before today (${today})`);
+          return;
+        }
         if (new Date(tier.endDate) < new Date(tier.startDate)) {
           toast.error(`Early Bird Tier ${i + 1}: End Date cannot be before Start Date`);
+          return;
+        }
+        if (eventDate && tier.endDate > eventDate) {
+          toast.error(`Early Bird Tier ${i + 1}: End Date cannot be after the event date (${eventDate})`);
           return;
         }
         if (!tier.price && tier.price !== 0) {
@@ -1296,6 +1433,55 @@ const EventCreation = () => {
               toast.error(`Early Bird Tier ${i + 1} and Tier ${j + 1} have overlapping date ranges`);
               return;
             }
+          }
+        }
+      }
+    }
+
+    // Validate spots-based pricing
+    if (formData.spotsPricing?.enabled) {
+      const tiers = formData.spotsPricing.tiers || [];
+      if (tiers.length === 0) {
+        toast.error("Demand Pricing is enabled but no tiers added. Please add at least one tier or disable it.");
+        return;
+      }
+      for (let i = 0; i < tiers.length; i++) {
+        const tier = tiers[i];
+        if (tier.minSpots === '' || tier.minSpots == null) {
+          toast.error(`Demand Pricing Tier ${i + 1}: From Spot is required`);
+          return;
+        }
+        if (!tier.maxSpots) {
+          toast.error(`Demand Pricing Tier ${i + 1}: To Spot is required`);
+          return;
+        }
+        if (Number(tier.maxSpots) <= Number(tier.minSpots)) {
+          toast.error(`Demand Pricing Tier ${i + 1}: To Spot must be greater than From Spot`);
+          return;
+        }
+        if (!tier.price && tier.price !== 0) {
+          toast.error(`Demand Pricing Tier ${i + 1}: Price is required`);
+          return;
+        }
+        if (Number(tier.price) < 0) {
+          toast.error(`Demand Pricing Tier ${i + 1}: Price cannot be negative`);
+          return;
+        }
+      }
+      // Check that ranges are continuous and don't overlap
+      for (let i = 1; i < tiers.length; i++) {
+        if (Number(tiers[i].minSpots) !== Number(tiers[i - 1].maxSpots) + 1) {
+          toast.error(`Demand Pricing: Tier ${i + 1} should start from spot ${Number(tiers[i - 1].maxSpots) + 1}`);
+          return;
+        }
+      }
+      // Check that no tier exceeds maxParticipants
+      const maxP = Number(formData.maxParticipants) || 0;
+      if (maxP > 0) {
+        for (let i = 0; i < tiers.length; i++) {
+          if (Number(tiers[i].maxSpots) > maxP) {
+            toast.error(`Demand Pricing Tier ${i + 1}: To Spot (${tiers[i].maxSpots}) cannot exceed max participants (${maxP})`);
+            return;
           }
         }
       }
@@ -1357,6 +1543,22 @@ const EventCreation = () => {
           return;
         }
       }
+      // Validate coupon expiry dates
+      const todayDate = new Date().toISOString().split('T')[0];
+      const eventDateStr = formData.date || '';
+      for (let i = 0; i < codes.length; i++) {
+        if (codes[i].expiryDate) {
+          const expiryStr = new Date(codes[i].expiryDate).toISOString().split('T')[0];
+          if (expiryStr < todayDate) {
+            toast.error(`Coupon ${i + 1}: Expiry date cannot be in the past`);
+            return;
+          }
+          if (eventDateStr && expiryStr > eventDateStr) {
+            toast.error(`Coupon ${i + 1}: Expiry date cannot be after the event date (${eventDateStr})`);
+            return;
+          }
+        }
+      }
       // Check for duplicate coupon codes
       const codeSet = new Set();
       for (const c of codes) {
@@ -1415,6 +1617,16 @@ const EventCreation = () => {
           price: tier.price !== '' && tier.price != null ? Number(tier.price) : 0,
           malePrice: tier.malePrice !== '' && tier.malePrice != null ? Number(tier.malePrice) : null,
           femalePrice: tier.femalePrice !== '' && tier.femalePrice != null ? Number(tier.femalePrice) : null,
+        }));
+      }
+
+      // Convert spots pricing tier values to numbers
+      if (eventData.spotsPricing?.enabled && eventData.spotsPricing.tiers?.length > 0) {
+        eventData.spotsPricing.tiers = eventData.spotsPricing.tiers.map(tier => ({
+          ...tier,
+          minSpots: Number(tier.minSpots) || 0,
+          maxSpots: Number(tier.maxSpots) || 0,
+          price: tier.price !== '' && tier.price != null ? Number(tier.price) : 0,
         }));
       }
 
@@ -1656,6 +1868,7 @@ const EventCreation = () => {
                     name="date"
                     value={formData.date}
                     onChange={handleInputChange}
+                    min={new Date().toISOString().split('T')[0]}
                     className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                     required
                   />
@@ -1870,11 +2083,14 @@ const EventCreation = () => {
                     placeholder="₹0"
                     min="0"
                     step="0.01"
-                    disabled={formData.pricingTimeline?.enabled || formData.genderPricing?.enabled}
-                    className={`w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${(formData.pricingTimeline?.enabled || formData.genderPricing?.enabled) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={formData.pricingTimeline?.enabled || formData.genderPricing?.enabled || formData.spotsPricing?.enabled}
+                    className={`w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${(formData.pricingTimeline?.enabled || formData.genderPricing?.enabled || formData.spotsPricing?.enabled) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     required
                   />
                   {formData.pricingTimeline?.enabled && (
+                    <p className="text-[10px] text-yellow-400/80 mt-1 italic">Price is set by Early Bird tiers</p>
+                  )}
+                  {formData.spotsPricing?.enabled && (
                     <p className="text-[10px] text-yellow-400/80 mt-1 italic">Price is set by Early Bird tiers</p>
                   )}
                   {formData.genderPricing?.enabled && (
@@ -2135,31 +2351,31 @@ const EventCreation = () => {
                 )}
               </div>
 
-              {/* Pricing Timeline */}
+              {/* Early Bird Pricing */}
               <div className="space-y-4">
                 <label
-                  htmlFor="pricingTimeline"
+                  htmlFor="earlyBird"
                   className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    formData.pricingTimeline?.enabled
+                    (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
                       ? 'bg-[#7878E9]/10 border-[#7878E9]/40'
                       : 'bg-white/[0.03] border-white/10 hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.pricingTimeline?.enabled ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
-                      <Clock className={`h-4 w-4 ${formData.pricingTimeline?.enabled ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) ? 'bg-[#7878E9]/20' : 'bg-white/5'}`}>
+                      <Clock className={`h-4 w-4 ${(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) ? 'text-[#7878E9]' : 'text-gray-400'}`} />
                     </div>
                     <div>
                       <span className="text-white text-sm font-medium">Early Bird</span>
-                      <p className="text-[11px] text-gray-500">Time-based pricing tiers</p>
+                      <p className="text-[11px] text-gray-500">Time-based or spots-based pricing tiers</p>
                     </div>
                   </div>
                   <div className="relative">
                     <input
                       type="checkbox"
-                      id="pricingTimeline"
-                      checked={formData.pricingTimeline?.enabled || false}
-                      onChange={(e) => handlePricingTimelineToggle(e.target.checked)}
+                      id="earlyBird"
+                      checked={formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || false}
+                      onChange={(e) => handleEarlyBirdToggle(e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#7878E9] transition-colors"></div>
@@ -2167,133 +2383,291 @@ const EventCreation = () => {
                   </div>
                 </label>
 
-                {formData.pricingTimeline?.enabled && (
+                {(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) && (
                   <div className="space-y-4 pl-6 border-l-2 border-white/10">
-                    <p className="text-xs text-gray-400">
-                      Set different prices for different date ranges leading up to your event. The ticket price will automatically change based on the current date.
-                    </p>
-                    
-                    {formData.pricingTimeline.tiers?.map((tier, index) => (
-                      <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
-                        <div className="flex items-center justify-between">
-                          <span className="text-white text-sm font-medium">
-                            Price Tier {index + 1}
-                          </span>
+                    {/* Mode Selection - Radio buttons */}
+                    <div className="space-y-2">
+                      <label
+                        className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-all ${
+                          earlyBirdMode === 'time' ? 'bg-[#7878E9]/10 border border-[#7878E9]/40' : 'bg-white/[0.03] border border-white/10 hover:border-white/20'
+                        }`}
+                        onClick={() => handleEarlyBirdModeChange('time')}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${earlyBirdMode === 'time' ? 'border-[#7878E9]' : 'border-gray-500'}`}>
+                          {earlyBirdMode === 'time' && <div className="w-2 h-2 rounded-full bg-[#7878E9]" />}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Clock className={`h-3.5 w-3.5 ${earlyBirdMode === 'time' ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                          <div>
+                            <span className={`text-sm font-medium ${earlyBirdMode === 'time' ? 'text-white' : 'text-gray-400'}`}>Time-Based Pricing Tiers</span>
+                            <p className="text-[10px] text-gray-500">Price changes based on date ranges</p>
+                          </div>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-all ${
+                          earlyBirdMode === 'spots' ? 'bg-[#7878E9]/10 border border-[#7878E9]/40' : 'bg-white/[0.03] border border-white/10 hover:border-white/20'
+                        }`}
+                        onClick={() => handleEarlyBirdModeChange('spots')}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${earlyBirdMode === 'spots' ? 'border-[#7878E9]' : 'border-gray-500'}`}>
+                          {earlyBirdMode === 'spots' && <div className="w-2 h-2 rounded-full bg-[#7878E9]" />}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <TrendingUp className={`h-3.5 w-3.5 ${earlyBirdMode === 'spots' ? 'text-[#7878E9]' : 'text-gray-400'}`} />
+                          <div>
+                            <span className={`text-sm font-medium ${earlyBirdMode === 'spots' ? 'text-white' : 'text-gray-400'}`}>Spots-Based Pricing Tiers</span>
+                            <p className="text-[10px] text-gray-500">Price changes based on spots booked</p>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Time-Based Tiers */}
+                    {earlyBirdMode === 'time' && formData.pricingTimeline?.enabled && (
+                      <div className="space-y-4">
+                        <p className="text-xs text-gray-400">
+                          Set different prices for different date ranges leading up to your event. The ticket price will automatically change based on the current date.
+                        </p>
+                        
+                        {formData.pricingTimeline.tiers?.map((tier, index) => (
+                          <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                            <div className="flex items-center justify-between">
+                              <span className="text-white text-sm font-medium">
+                                Price Tier {index + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removePricingTier(index)}
+                                className="text-red-400 hover:text-red-300 text-xs"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            {/* Label */}
+                            <div>
+                              <label className="block text-white text-xs font-medium mb-1">
+                                Label (Optional)
+                              </label>
+                              <input
+                                type="text"
+                                value={tier.label}
+                                onChange={(e) => updatePricingTier(index, 'label', e.target.value)}
+                                placeholder="e.g., Early Bird, Regular, Last Minute"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                              />
+                            </div>
+
+                            {/* Date Range */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-white text-xs font-medium mb-1">
+                                  Start Date <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                  type="date"
+                                  value={tier.startDate ? tier.startDate.split('T')[0] : ''}
+                                  onChange={(e) => updatePricingTier(index, 'startDate', e.target.value)}
+                                  min={new Date().toISOString().split('T')[0]}
+                                  max={formData.date || undefined}
+                                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-white text-xs font-medium mb-1">
+                                  End Date <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                  type="date"
+                                  value={tier.endDate ? tier.endDate.split('T')[0] : ''}
+                                  onChange={(e) => updatePricingTier(index, 'endDate', e.target.value)}
+                                  min={tier.startDate || new Date().toISOString().split('T')[0]}
+                                  max={formData.date || undefined}
+                                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Price */}
+                            {formData.genderPricing?.enabled ? (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-white text-xs font-medium mb-1">
+                                    Male Price (₹) <span className="text-red-400">*</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={tier.malePrice}
+                                    onChange={(e) => updatePricingTier(index, 'malePrice', e.target.value)}
+                                    placeholder="₹0"
+                                    min="0"
+                                    step="0.01"
+                                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-white text-xs font-medium mb-1">
+                                    Female Price (₹) <span className="text-red-400">*</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={tier.femalePrice}
+                                    onChange={(e) => updatePricingTier(index, 'femalePrice', e.target.value)}
+                                    placeholder="₹0"
+                                    min="0"
+                                    step="0.01"
+                                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                            <div>
+                              <label className="block text-white text-xs font-medium mb-1">
+                                Price (₹) <span className="text-red-400">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={tier.price}
+                                onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
+                                placeholder="₹0"
+                                min="0"
+                                step="0.01"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </div>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {/* Add Tier Button */}
+                        {(formData.pricingTimeline.tiers?.length || 0) < 5 && (
                           <button
                             type="button"
-                            onClick={() => removePricingTier(index)}
-                            className="text-red-400 hover:text-red-300 text-xs"
+                            onClick={addPricingTier}
+                            className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
                           >
-                            <X className="h-4 w-4" />
+                            <span className="text-lg">+</span>
+                            <span>Add Price Tier</span>
                           </button>
-                        </div>
-
-                        {/* Label */}
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-1">
-                            Label (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            value={tier.label}
-                            onChange={(e) => updatePricingTier(index, 'label', e.target.value)}
-                            placeholder="e.g., Early Bird, Regular, Last Minute"
-                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                          />
-                        </div>
-
-                        {/* Date Range */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-white text-xs font-medium mb-1">
-                              Start Date <span className="text-red-400">*</span>
-                            </label>
-                            <input
-                              type="date"
-                              value={tier.startDate ? tier.startDate.split('T')[0] : ''}
-                              onChange={(e) => updatePricingTier(index, 'startDate', e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white text-xs font-medium mb-1">
-                              End Date <span className="text-red-400">*</span>
-                            </label>
-                            <input
-                              type="date"
-                              value={tier.endDate ? tier.endDate.split('T')[0] : ''}
-                              onChange={(e) => updatePricingTier(index, 'endDate', e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Price */}
-                        {formData.genderPricing?.enabled ? (
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-white text-xs font-medium mb-1">
-                                Male Price (₹) <span className="text-red-400">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                value={tier.malePrice}
-                                onChange={(e) => updatePricingTier(index, 'malePrice', e.target.value)}
-                                placeholder="₹0"
-                                min="0"
-                                step="0.01"
-                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-white text-xs font-medium mb-1">
-                                Female Price (₹) <span className="text-red-400">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                value={tier.femalePrice}
-                                onChange={(e) => updatePricingTier(index, 'femalePrice', e.target.value)}
-                                placeholder="₹0"
-                                min="0"
-                                step="0.01"
-                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-1">
-                            Price (₹) <span className="text-red-400">*</span>
-                          </label>
-                          <input
-                            type="number"
-                            value={tier.price}
-                            onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
-                            placeholder="₹0"
-                            min="0"
-                            step="0.01"
-                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                        </div>
                         )}
+                        
+                        <p className="text-xs text-gray-400 italic mt-2">
+                          💡 Example: Early Bird tickets till March 25 at ₹500, Regular tickets till March 31 at ₹700, Last Minute tickets till event day at ₹1000.
+                        </p>
                       </div>
-                    ))}
-                    
-                    {/* Add Tier Button */}
-                    {(formData.pricingTimeline.tiers?.length || 0) < 5 && (
-                      <button
-                        type="button"
-                        onClick={addPricingTier}
-                        className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
-                      >
-                        <span className="text-lg">+</span>
-                        <span>Add Price Tier</span>
-                      </button>
                     )}
-                    
-                    <p className="text-xs text-gray-400 italic mt-2">
-                      💡 Example: Early Bird tickets till March 25 at ₹500, Regular tickets till March 31 at ₹700, Last Minute tickets till event day at ₹1000.
-                    </p>
+
+                    {/* Spots-Based Tiers */}
+                    {earlyBirdMode === 'spots' && formData.spotsPricing?.enabled && (
+                      <div className="space-y-4">
+                        <p className="text-xs text-gray-400">
+                          Set different prices based on how many spots are booked. Price increases as more people book.
+                          {formData.maxParticipants ? ` Max spots: ${formData.maxParticipants}` : ''}
+                        </p>
+                        
+                        {formData.spotsPricing.tiers?.map((tier, index) => (
+                          <div key={index} className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                            <div className="flex items-center justify-between">
+                              <span className="text-white text-sm font-medium">
+                                Price Tier {index + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeSpotsPricingTier(index)}
+                                className="text-red-400 hover:text-red-300 text-xs"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            {/* Label */}
+                            <div>
+                              <label className="block text-white text-xs font-medium mb-1">
+                                Label (Optional)
+                              </label>
+                              <input
+                                type="text"
+                                value={tier.label}
+                                onChange={(e) => updateSpotsPricingTier(index, 'label', e.target.value)}
+                                placeholder="e.g., Early Bird, Regular, Premium"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
+                              />
+                            </div>
+
+                            {/* Spot Range */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-white text-xs font-medium mb-1">
+                                  From Spot <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  value={tier.minSpots}
+                                  onChange={(e) => updateSpotsPricingTier(index, 'minSpots', Number(e.target.value))}
+                                  min="1"
+                                  disabled={index > 0}
+                                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-white text-xs font-medium mb-1">
+                                  To Spot <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  value={tier.maxSpots}
+                                  onChange={(e) => updateSpotsPricingTier(index, 'maxSpots', Number(e.target.value))}
+                                  min={tier.minSpots + 1}
+                                  max={formData.maxParticipants || undefined}
+                                  placeholder={`Max ${formData.maxParticipants || ''}`}
+                                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                {formData.maxParticipants && Number(tier.maxSpots) > Number(formData.maxParticipants) && (
+                                  <p className="text-[10px] text-red-400 mt-1">Cannot exceed {formData.maxParticipants} participants</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Price */}
+                            <div>
+                              <label className="block text-white text-xs font-medium mb-1">
+                                Price (₹) <span className="text-red-400">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={tier.price}
+                                onChange={(e) => updateSpotsPricingTier(index, 'price', e.target.value)}
+                                placeholder="₹0"
+                                min="0"
+                                step="0.01"
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              {index === 0 && (
+                                <p className="text-[10px] text-gray-500 mt-1 italic">Auto-synced with main price</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {/* Add Tier Button */}
+                        {(formData.spotsPricing.tiers?.length || 0) < 5 && (
+                          <button
+                            type="button"
+                            onClick={addSpotsPricingTier}
+                            className="flex items-center space-x-2 text-[#7878E9] hover:text-[#5a5abf] text-sm font-medium transition-colors"
+                          >
+                            <span className="text-lg">+</span>
+                            <span>Add Price Tier</span>
+                          </button>
+                        )}
+                        
+                        <p className="text-xs text-gray-400 italic mt-2">
+                          💡 Example: First 50 spots at ₹100, spots 51-100 at ₹150, spots 101-200 at ₹200.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2456,6 +2830,8 @@ const EventCreation = () => {
                                 updateCoupon(index, 'expiryDate', null);
                               }
                             }}
+                            min={(() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`; })()}
+                            max={formData.date ? `${formData.date}T23:59` : undefined}
                             className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7878E9] focus:border-transparent"
                           />
                         </div>

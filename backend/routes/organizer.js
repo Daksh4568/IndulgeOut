@@ -1283,9 +1283,35 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
           pending: tickets.length - verifiedCount - mismatchCount,
           verifiedPercentage: tickets.length > 0 ? parseFloat(((verifiedCount / tickets.length) * 100).toFixed(1)) : 0
         }
-      },
-      tickets: tickets.map(t => {
+      }
+    };
+
+    // Recalculate per-ticket spots pricing breakdown for organizer audit report
+    const orgSpotsBreakdownMap = new Map();
+    if (event.spotsPricing?.enabled && event.spotsPricing.tiers?.length) {
+      const sortedTix = [...tickets].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const sortedTiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+      let runningBooked = 0;
+      for (const t of sortedTix) {
+        const qty = t.quantity || 1;
+        const bd = [];
+        let remaining = qty;
+        for (const tier of sortedTiers) {
+          if (remaining <= 0) break;
+          const nextSpot = runningBooked + (qty - remaining) + 1;
+          if (nextSpot > tier.maxSpots || nextSpot < tier.minSpots) continue;
+          const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpot + 1);
+          if (spotsInTier > 0) bd.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+          remaining -= spotsInTier;
+        }
+        orgSpotsBreakdownMap.set(t._id.toString(), bd);
+        runningBooked += qty;
+      }
+    }
+
+    report.tickets = tickets.map(t => {
         const basePrice = t.metadata?.basePrice || 0;
+        const spotsBd = orgSpotsBreakdownMap.get(t._id.toString());
         
         // Get stored fee values if they exist
         let gstCharges = t.metadata?.gstAndOtherCharges || 0;
@@ -1315,7 +1341,10 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
         purchaseDate: t.purchaseDate,
         quantity: t.quantity || 1,
         ticketType: t.metadata?.ticketType || 'general',
-        perTicketPrice: t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0),
+        perTicketPrice: (spotsBd?.length || t.metadata?.spotsPricingBreakdown?.length)
+          ? (spotsBd || t.metadata.spotsPricingBreakdown).map(b => `${b.count}×₹${b.price}`).join(' + ')
+          : (t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0)),
+        spotsPricingTier: spotsBd?.length ? spotsBd.map(b => b.label).join(', ') : (t.metadata?.spotsPricingTier || ''),
         pricingTimelineTier: t.metadata?.pricingTimelineTier || '',
         groupingOffer: t.metadata?.groupingOffer || '',
         tierPeople: t.metadata?.tierPeople || '',
@@ -1339,8 +1368,7 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
         reconciliationNotes: t.reconciliationNotes,
         checkInStatus: t.status,
         checkInTime: t.checkInTime
-      };})
-    };
+      };});
     
     // Add price change history to report
     report.priceChangeHistory = (event.priceChangeHistory || []).map(change => ({
@@ -1356,7 +1384,7 @@ router.get('/reports/event/:eventId', authMiddleware, async (req, res) => {
       // Convert to CSV
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'perTicketPrice', 'pricingTimelineTier',
+        'quantity', 'ticketType', 'perTicketPrice', 'spotsPricingTier', 'pricingTimelineTier',
         'groupingOffer', 'tierPeople', 'couponCode', 'couponDiscount',
         'totalTicketPrice', 'gstAndOtherCharges', 'platformFees',
         'totalPaidByUser', 'orderId', 'paymentId', 'paymentMethod', 'paymentStatus',

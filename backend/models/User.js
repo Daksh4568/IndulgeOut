@@ -90,6 +90,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
     trim: true,
+    sparse: true,
+    unique: true,
     validate: {
       validator: function(v) {
         // Only validate if phoneNumber is provided
@@ -500,5 +502,8 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Ensure sparse unique index on phoneNumber (handles null/empty values)
+userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true, background: true });
 
 module.exports = mongoose.model('User', userSchema);

@@ -3552,8 +3552,8 @@ const AdminDashboard = () => {
                       </div>
                     )}
                     
-                    {/* Price Change History - Period-based like EventAnalytics */}
-                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && (
+                    {/* Price Change History - hide when spotsPricing is active since tier table shows correct data */}
+                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && !eventDetails.spotsPricing?.enabled && (
                       <div>
                         <h4 className="text-sm font-medium text-gray-400 mb-3">Price Change History</h4>
                         {(() => {
@@ -3678,7 +3678,7 @@ const AdminDashboard = () => {
                     )}
 
                     {/* Revenue Calculation per Price Tier */}
-                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && (
+                    {eventDetails.priceChangeHistory && eventDetails.priceChangeHistory.length > 0 && !eventDetails.spotsPricing?.enabled && (
                       <div className="mt-6">
                         <h4 className="text-sm font-medium text-gray-400 mb-3">Revenue Calculation per Price Tier</h4>
                         <div className="overflow-x-auto">
@@ -3802,6 +3802,232 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Spots-Based Pricing Breakdown & Revenue Calculation */}
+                {eventDetails.spotsPricing?.enabled && eventDetails.spotsPricing.tiers?.length > 0 && (
+                  <div className="bg-zinc-900/50 border border-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h3 className="text-lg font-bold text-white mb-4">📈 Demand Pricing Breakdown</h3>
+                    
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="p-4 rounded-lg border border-orange-500/30 bg-orange-900/10">
+                        <div className="text-sm text-gray-400 mb-1">Current Price Tier</div>
+                        {(() => {
+                          const booked = eventDetails.attendees?.reduce((s, a) => s + (a.quantity || 1), 0) || 0;
+                          const nextSpot = booked + 1;
+                          const active = eventDetails.spotsPricing.tiers.find(t => nextSpot >= t.minSpots && nextSpot <= t.maxSpots);
+                          return (
+                            <div className="text-xl font-bold text-white">
+                              {active ? `₹${active.price}` : 'N/A'}
+                              <span className="text-sm text-gray-400 ml-2 font-normal">{active?.label || ''}</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="p-4 rounded-lg border border-orange-500/30 bg-orange-900/10">
+                        <div className="text-sm text-gray-400 mb-1">Spots Booked</div>
+                        <div className="text-xl font-bold text-white">
+                          {eventDetails.spotsPricing.tiers.reduce((s, t) => s + (t.spotsBought || 0), 0)}
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-lg border border-orange-500/30 bg-orange-900/10">
+                        <div className="text-sm text-gray-400 mb-1">Total Revenue</div>
+                        <div className="text-xl font-bold text-white">
+                          ₹{eventDetails.spotsPricing.tiers.reduce((s, t) => s + (t.revenue || 0), 0).toLocaleString('en-IN')}
+                        </div>
+                        <div className="mt-1 space-y-0.5">
+                          {eventDetails.spotsPricing.tiers.filter(t => t.revenue > 0).map((t, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-400">{t.label} ({t.spotsBought} × ₹{t.price})</span>
+                              <span className="text-orange-400">₹{t.revenue.toLocaleString('en-IN')}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tier Table */}
+                    <div className="overflow-x-auto mb-6">
+                      <table className="min-w-full divide-y divide-gray-700 text-sm">
+                        <thead className="bg-zinc-800">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Tier</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Spot Range</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Price</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Tickets</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Spots</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Revenue</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {eventDetails.spotsPricing.tiers.map((tier, idx) => {
+                            const booked = eventDetails.spotsPricing.tiers.slice(0, idx).reduce((s, t) => s + (t.spotsBought || 0), 0);
+                            const totalBooked = eventDetails.spotsPricing.tiers.reduce((s, t) => s + (t.spotsBought || 0), 0);
+                            const nextSpot = totalBooked + 1;
+                            const isActive = nextSpot >= tier.minSpots && nextSpot <= tier.maxSpots;
+                            const isCompleted = nextSpot > tier.maxSpots;
+                            return (
+                              <tr key={idx} className={`hover:bg-zinc-800 ${isActive ? 'bg-green-900/10' : ''}`}>
+                                <td className="px-4 py-3 font-medium text-white">{tier.label}</td>
+                                <td className="px-4 py-3 text-gray-300">{tier.minSpots} - {tier.maxSpots}</td>
+                                <td className="px-4 py-3 text-white font-semibold">₹{tier.price}</td>
+                                <td className="px-4 py-3 text-center text-gray-300">{tier.ticketsBought || 0}</td>
+                                <td className="px-4 py-3 text-center text-gray-300">{tier.spotsBought || 0}</td>
+                                <td className="px-4 py-3 text-right text-green-400 font-medium">₹{(tier.revenue || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                    isCompleted ? 'bg-gray-600/20 text-gray-400' :
+                                    isActive ? 'bg-green-500/20 text-green-400' :
+                                    'bg-blue-500/20 text-blue-400'
+                                  }`}>
+                                    {isCompleted ? 'Completed' : isActive ? 'Active' : 'Upcoming'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Revenue Calculation per Spots Tier */}
+                    <h4 className="text-sm font-medium text-gray-400 mb-3">Revenue Calculation per Spots Tier</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-700 text-sm">
+                        <thead className="bg-zinc-800">
+                          <tr>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase">Tier</th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Price</th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Spots</th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Ticket Revenue</th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Total Amt Paid<span className="block text-[9px] normal-case text-gray-500 font-normal">(incl. Fees 5.6%)</span></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">IndulgeOut Fees<span className="block text-[9px] normal-case text-gray-500 font-normal">(3% + 2.6%)</span></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">CF Gateway<span className="block text-[9px] normal-case text-gray-500 font-normal">(1.6% of Amt Paid)</span></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">CF GST<span className="block text-[9px] normal-case text-gray-500 font-normal">(18% of CF Charge)</span></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Total CF Deduction</th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Proceeds after CF</th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">IO Revenue<span className="block text-[9px] normal-case text-gray-500 font-normal">(incl. GST 18%)</span></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">IO Revenue<span className="block text-[9px] normal-case text-gray-500 font-normal">(net GST 18%)</span></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase">Revenue %<span className="block text-[9px] normal-case text-gray-500 font-normal">(Final IO revenue as % ticket price)</span></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {(() => {
+                            // Build per-tier aggregation from actual attendee financial data
+                            // For tickets spanning multiple tiers, proportionally allocate finances
+                            const allAttendees = eventDetails.attendees || [];
+                            const allSettled = allAttendees.length > 0 && allAttendees.every(att => att.settlementStatus === 'settled');
+                            const tierMap = {};
+                            eventDetails.spotsPricing.tiers.forEach(t => {
+                              tierMap[t.label] = { label: t.label, price: t.price, spots: 0, totalBase: 0, totalPaid: 0, cfCharge: 0, cfTax: 0 };
+                            });
+
+                            allAttendees.forEach(att => {
+                              const bd = att.spotsPricingBreakdown;
+                              if (!bd?.length) return;
+                              const ticketBase = att.basePrice || 0;
+                              const ticketPaid = att.totalPaid || att.price || 0;
+                              const ticketCfCharge = att.cashfreeServiceCharge || 0;
+                              const ticketCfTax = att.cashfreeServiceTax || 0;
+                              // Total tier revenue from breakdown for proportional split
+                              const bdTotal = bd.reduce((s, b) => s + (b.count * b.price), 0);
+                              bd.forEach(b => {
+                                const tierRevenue = b.count * b.price;
+                                const ratio = bdTotal > 0 ? tierRevenue / bdTotal : 0;
+                                const bucket = tierMap[b.label];
+                                if (!bucket) return;
+                                bucket.spots += b.count;
+                                bucket.totalBase += tierRevenue;
+                                bucket.totalPaid += ticketPaid * ratio;
+                                bucket.cfCharge += ticketCfCharge * ratio;
+                                bucket.cfTax += ticketCfTax * ratio;
+                              });
+                            });
+
+                            const rows = Object.values(tierMap).filter(d => d.spots > 0).map(d => {
+                              const ticketRevenue = d.totalBase;
+                              const totalAmtPaid = d.totalPaid;
+                              const ioFees = totalAmtPaid - ticketRevenue;
+                              const cfCharge = allSettled && d.cfCharge > 0 ? d.cfCharge : totalAmtPaid * 0.016;
+                              const cfTax = allSettled && d.cfTax > 0 ? d.cfTax : cfCharge * 0.18;
+                              const cfTotal = cfCharge + cfTax;
+                              const proceeds = totalAmtPaid - cfTotal;
+                              const ioRevenueInclGST = proceeds - ticketRevenue;
+                              const ioRevenueNet = ioRevenueInclGST / 1.18;
+                              const pct = ticketRevenue > 0 ? (ioRevenueNet / ticketRevenue) * 100 : 0;
+                              return { label: d.label, price: d.price, spots: d.spots, ticketRevenue, totalAmtPaid, ioFees, cfCharge, cfTax, cfTotal, proceeds, ioRevenueInclGST, ioRevenueNet, pct, useActualCF: allSettled && d.cfCharge > 0 };
+                            });
+                            const totSpots = rows.reduce((s, r) => s + r.spots, 0);
+                            const totTicketRev = rows.reduce((s, r) => s + r.ticketRevenue, 0);
+                            const totAmtPaid = rows.reduce((s, r) => s + r.totalAmtPaid, 0);
+                            const totIoFees = rows.reduce((s, r) => s + r.ioFees, 0);
+                            const totCfCharge = rows.reduce((s, r) => s + r.cfCharge, 0);
+                            const totCfTax = rows.reduce((s, r) => s + r.cfTax, 0);
+                            const totCfTotal = rows.reduce((s, r) => s + r.cfTotal, 0);
+                            const totProceeds = rows.reduce((s, r) => s + r.proceeds, 0);
+                            const totIoInclGST = rows.reduce((s, r) => s + r.ioRevenueInclGST, 0);
+                            const totIoNet = rows.reduce((s, r) => s + r.ioRevenueNet, 0);
+                            const wAvgPrice = totSpots > 0 ? totTicketRev / totSpots : 0;
+                            const totPct = totTicketRev > 0 ? (totIoNet / totTicketRev) * 100 : 0;
+                            return (
+                              <>
+                                {rows.map((r) => (
+                                  <tr key={r.label} className="hover:bg-zinc-800">
+                                    <td className="px-3 py-3 text-white font-medium">{r.label}</td>
+                                    <td className="px-3 py-3 text-right text-gray-300">₹{r.price}</td>
+                                    <td className="px-3 py-3 text-right text-gray-300">{r.spots}</td>
+                                    <td className="px-3 py-3 text-right text-white">₹{r.ticketRevenue.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-white">₹{r.totalAmtPaid.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-gray-300">₹{r.ioFees.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-gray-300">
+                                      <div>₹{r.cfCharge.toFixed(2)}</div>
+                                      <div className="text-[9px] text-gray-500">{r.useActualCF ? '(Original CF settlement data)' : `(1.6% of ₹${r.totalAmtPaid.toFixed(2)})`}</div>
+                                    </td>
+                                    <td className="px-3 py-3 text-right text-gray-300">
+                                      <div>₹{r.cfTax.toFixed(2)}</div>
+                                      <div className="text-[9px] text-gray-500">{r.useActualCF ? '(Original CF settlement data)' : `(18% of ₹${r.cfCharge.toFixed(2)})`}</div>
+                                    </td>
+                                    <td className="px-3 py-3 text-right text-red-400">₹{r.cfTotal.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-white">₹{r.proceeds.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-green-400">₹{r.ioRevenueInclGST.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-green-400 font-medium">₹{r.ioRevenueNet.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-purple-400 font-semibold">{r.pct.toFixed(1)}%</td>
+                                  </tr>
+                                ))}
+                                {rows.length > 1 && (
+                                  <tr className="bg-zinc-800/80 border-t-2 border-gray-600 font-semibold">
+                                    <td className="px-3 py-3 text-yellow-400">
+                                      <div>Weighted Avg</div>
+                                    </td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">₹{wAvgPrice.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">{totSpots}</td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">₹{totTicketRev.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">₹{totAmtPaid.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">₹{totIoFees.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">
+                                      <div>₹{totCfCharge.toFixed(2)}</div>
+                                      <div className="text-[9px] font-normal text-gray-500">{allSettled ? '(Original CF settlement data)' : `(1.6% of ₹${totAmtPaid.toFixed(2)})`}</div>
+                                    </td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">
+                                      <div>₹{totCfTax.toFixed(2)}</div>
+                                      <div className="text-[9px] font-normal text-gray-500">{allSettled ? '(Original CF settlement data)' : `(18% of ₹${totCfCharge.toFixed(2)})`}</div>
+                                    </td>
+                                    <td className="px-3 py-3 text-right text-red-400">₹{totCfTotal.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-yellow-400">₹{totProceeds.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-green-400">₹{totIoInclGST.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-green-400 font-medium">₹{totIoNet.toFixed(2)}</td>
+                                    <td className="px-3 py-3 text-right text-purple-400 font-semibold">{totPct.toFixed(1)}%</td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
@@ -4006,11 +4232,23 @@ const AdminDashboard = () => {
                                     </div>
                                   );
                                 }
+                                // Split-tier breakdown for spots pricing
+                                if (attendee.spotsPricingBreakdown?.length > 1) {
+                                  return (
+                                    <div>
+                                      {attendee.spotsPricingBreakdown.map((b, i) => (
+                                        <div key={i} className="text-xs text-white">₹{b.price} <span className="text-gray-500">({b.label})</span></div>
+                                      ))}
+                                      <div className="text-xs text-gray-500">Per spot (split)</div>
+                                    </div>
+                                  );
+                                }
                                 return (
                                   <div>
                                     <div className="font-semibold text-white">₹{attendee.priceAtPurchase || attendee.price}</div>
                                     <div className="text-xs text-gray-500">Per spot</div>
                                     {attendee.pricingTimelineTier && <div className="text-xs text-purple-400">{attendee.pricingTimelineTier}</div>}
+                                    {attendee.spotsPricingTier && <div className="text-xs text-orange-400">{attendee.spotsPricingTier}</div>}
                                   </div>
                                 );
                               })()}
@@ -4031,6 +4269,18 @@ const AdminDashboard = () => {
                                         {gb.male > 0 && gb.female > 0 && ' + '}
                                         {gb.female > 0 && `F: ${gb.female} × ₹${gp.femalePrice}`}
                                       </div>
+                                    </div>
+                                  );
+                                }
+                                // Split-tier breakdown for spots pricing
+                                if (attendee.spotsPricingBreakdown?.length > 1) {
+                                  const total = attendee.spotsPricingBreakdown.reduce((sum, b) => sum + (b.count * b.price), 0);
+                                  return (
+                                    <div>
+                                      <div className="text-white">₹{attendee.basePrice || total}</div>
+                                      {attendee.spotsPricingBreakdown.map((b, i) => (
+                                        <div key={i} className="text-xs text-gray-500">{b.count} × ₹{b.price} ({b.label})</div>
+                                      ))}
                                     </div>
                                   );
                                 }

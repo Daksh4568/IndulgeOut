@@ -47,6 +47,7 @@ async function generateTicketPdf(opts) {
     qrCodeUrl,
     qrCodeBase64,
     eventImageUrl,
+    pricingTier,
   } = opts;
 
   // Fetch images in parallel
@@ -149,6 +150,7 @@ async function generateTicketPdf(opts) {
         { label: 'Time', value: eventTime },
         { label: 'Venue', value: venueName },
         { label: 'Tickets', value: ticketsValue },
+        ...(pricingTier ? [{ label: 'Pricing Tier', value: pricingTier }] : []),
         { label: 'Booking ID', value: ticketNumber },
       ];
 

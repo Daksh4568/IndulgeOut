@@ -148,6 +148,11 @@ const sendEventRegistrationEmail = async (userEmail, userName, event, ticket = n
           ${ticket.metadata.genderBreakdown.female > 0 ? `Female: ${ticket.metadata.genderBreakdown.female} spot${ticket.metadata.genderBreakdown.female > 1 ? 's' : ''}` : ''}
         </p>
         ` : ''}
+        ${(ticket.metadata?.spotsPricingTier || ticket.metadata?.pricingTimelineTier) ? `
+        <p style="color: #666; font-size: 14px; margin: 8px 0; background: #f3f4f6; padding: 8px 16px; border-radius: 6px; display: inline-block;">
+          <strong>💰 Pricing Tier:</strong> ${ticket.metadata.spotsPricingTier || ticket.metadata.pricingTimelineTier}
+        </p>
+        ` : ''}
         <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
           <img src="${qrCodeSrc}" alt="QR Code" style="width: 200px; height: 200px; max-width: 200px; margin: 10px auto; display: block; border: 2px solid #e5e7eb; padding: 10px; background: white;" />
           <p style="color: #666; font-size: 14px; margin: 15px 0 5px 0;">
@@ -287,6 +292,7 @@ const sendWhatsAppTicketNotification = async (user, event, ticket) => {
         qrCodeUrl: ticket?.qrCodeUrl || '',
         qrCodeBase64: ticket?.qrCode || '',
         eventImageUrl,
+        pricingTier: ticket?.metadata?.spotsPricingTier || ticket?.metadata?.pricingTimelineTier || null,
       });
       ticketPdfUrl = pdfResult?.url || '';
     } catch (pdfErr) {

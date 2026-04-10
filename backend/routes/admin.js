@@ -1647,6 +1647,29 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       }
     });
     
+    // Recalculate per-ticket spots pricing breakdown for audit report
+    const auditSpotsBreakdownMap = new Map();
+    if (event.spotsPricing?.enabled && event.spotsPricing.tiers?.length) {
+      const sortedTix = [...tickets].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const sortedTiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+      let runningBooked = 0;
+      for (const t of sortedTix) {
+        const qty = t.quantity || 1;
+        const bd = [];
+        let remaining = qty;
+        for (const tier of sortedTiers) {
+          if (remaining <= 0) break;
+          const nextSpot = runningBooked + (qty - remaining) + 1;
+          if (nextSpot > tier.maxSpots || nextSpot < tier.minSpots) continue;
+          const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpot + 1);
+          if (spotsInTier > 0) bd.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+          remaining -= spotsInTier;
+        }
+        auditSpotsBreakdownMap.set(t._id.toString(), bd);
+        runningBooked += qty;
+      }
+    }
+
     const report = {
       generatedAt: new Date().toISOString(),
       generatedBy: 'Admin',
@@ -1696,6 +1719,8 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       },
       tickets: tickets.map(t => {
         const basePrice = t.metadata?.basePrice || 0;
+        // Get recalculated spots breakdown for this ticket
+        const spotsBd = auditSpotsBreakdownMap.get(t._id.toString());
         
         // Get stored fee values if they exist
         let gstCharges = t.metadata?.gstAndOtherCharges || 0;
@@ -1746,7 +1771,10 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         femalePricePerSpot: hasGender && gp && gp.femalePrice != null ? gp.femalePrice : '',
         perTicketPrice: hasGender && gp && gp.malePrice != null
           ? `M:${gp.malePrice}/F:${gp.femalePrice}`
-          : (t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0)),
+          : (spotsBd?.length || t.metadata?.spotsPricingBreakdown?.length)
+            ? (spotsBd || t.metadata.spotsPricingBreakdown).map(b => `${b.count}×₹${b.price}`).join(' + ')
+            : (t.metadata?.priceAtPurchase || (basePrice && (t.quantity || 1) > 0 ? Math.round(basePrice / (t.quantity || 1)) : 0)),
+        spotsPricingTier: spotsBd?.length ? spotsBd.map(b => b.label).join(', ') : (t.metadata?.spotsPricingTier || ''),
         pricingTimelineTier: t.metadata?.pricingTimelineTier || '',
         groupingOffer: t.metadata?.groupingOffer || '',
         tierPeople: t.metadata?.tierPeople || '',
@@ -1843,11 +1871,68 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       regularSpots: tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).reduce((sum, t) => sum + (t.quantity || 1), 0),
       regularRevenue: parseFloat(tickets.filter(t => !t.metadata?.groupingOffer || (t.metadata?.tierPeople || 0) <= 1).reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0).toFixed(2))
     } : { enabled: false };
+
+    report.spotsPricing = event.spotsPricing?.enabled ? {
+      enabled: true,
+      tiers: (() => {
+        const tierStats = (event.spotsPricing.tiers || []).map(tier => ({
+          minSpots: tier.minSpots,
+          maxSpots: tier.maxSpots,
+          price: tier.price,
+          label: tier.label || `${tier.minSpots}-${tier.maxSpots} spots`,
+          ticketsBought: 0,
+          spotsBought: 0,
+          revenue: 0
+        }));
+
+        const sortedTickets = [...tickets].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        let runningBooked = 0;
+
+        for (const t of sortedTickets) {
+          const qty = t.quantity || 1;
+          if (t.metadata?.spotsPricingBreakdown?.length) {
+            for (const b of t.metadata.spotsPricingBreakdown) {
+              const stat = tierStats.find(s => s.label === b.label || (s.price === b.price && s.minSpots <= (runningBooked + 1) && s.maxSpots >= runningBooked));
+              if (stat) {
+                stat.spotsBought += b.count;
+                stat.revenue += b.count * b.price;
+              }
+            }
+            tierStats.forEach(s => {
+              if (t.metadata.spotsPricingBreakdown.some(b => b.label === s.label || b.price === s.price)) {
+                s.ticketsBought += 1;
+              }
+            });
+          } else {
+            let remaining = qty;
+            const sortedTiers = [...tierStats].sort((a, b) => a.minSpots - b.minSpots);
+            let touchedTiers = [];
+            for (const stat of sortedTiers) {
+              if (remaining <= 0) break;
+              const nextSpot = runningBooked + (qty - remaining) + 1;
+              if (nextSpot > stat.maxSpots || nextSpot < stat.minSpots) continue;
+              const spotsInTier = Math.min(remaining, stat.maxSpots - nextSpot + 1);
+              stat.spotsBought += spotsInTier;
+              stat.revenue += spotsInTier * stat.price;
+              remaining -= spotsInTier;
+              touchedTiers.push(stat);
+            }
+            for (const stat of touchedTiers) {
+              stat.ticketsBought += 1;
+            }
+          }
+          runningBooked += qty;
+        }
+
+        tierStats.forEach(s => { s.revenue = parseFloat(s.revenue.toFixed(2)); });
+        return tierStats;
+      })()
+    } : { enabled: false };
     
     if (format === 'csv') {
       const fields = [
         'ticketNumber', 'userName', 'userEmail', 'userPhone', 'purchaseDate',
-        'quantity', 'ticketType', 'maleSpots', 'femaleSpots', 'malePricePerSpot', 'femalePricePerSpot', 'perTicketPrice', 'pricingTimelineTier',
+        'quantity', 'ticketType', 'maleSpots', 'femaleSpots', 'malePricePerSpot', 'femalePricePerSpot', 'perTicketPrice', 'spotsPricingTier', 'pricingTimelineTier',
         'groupingOffer', 'tierPeople',
         'couponCode', 'couponDiscountType', 'couponDiscountApplied',
         'originalPriceBeforeCoupon', 'totalTicketPrice', 'gstAndOtherCharges', 'platformFees',
@@ -1926,6 +2011,15 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
         });
       }
       csvRows.push(`#`);
+      csvRows.push(`# SPOTS-BASED PRICING:`);
+      csvRows.push(`#   - Spots-Based Pricing: ${event.spotsPricing?.enabled ? 'Enabled' : 'Disabled'}`);
+      if (event.spotsPricing?.enabled && event.spotsPricing.tiers?.length > 0) {
+        const sp = report.spotsPricing;
+        sp.tiers.forEach((tier, i) => {
+          csvRows.push(`#   - Tier ${i + 1}: ${tier.label} — ₹${tier.price} — ${tier.ticketsBought} tickets, ${tier.spotsBought} spots, ₹${tier.revenue.toFixed(2)} revenue`);
+        });
+      }
+      csvRows.push(`#`);
       csvRows.push(`# FIELD EXPLANATIONS:`);
       csvRows.push(`#   - totalPaidByUser: Total amount customer paid (includes all fees)`);
       csvRows.push(`#   - gatewayPaymentAmount: Amount received by Cashfree from customer`);
@@ -1934,7 +2028,8 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
       csvRows.push(`#   - femaleSpots: Number of female spots in this ticket (if gender pricing enabled)`);
       csvRows.push(`#   - malePricePerSpot: Price per male spot at time of purchase`);
       csvRows.push(`#   - femalePricePerSpot: Price per female spot at time of purchase`);
-      csvRows.push(`#   - perTicketPrice: Per ticket price at the time of purchase (or M:price/F:price for gender pricing)`);
+      csvRows.push(`#   - perTicketPrice: Per ticket price at purchase (M:price/F:price for gender, or 5×₹10 + 2×₹6 for split-tier spots pricing)`);
+      csvRows.push(`#   - spotsPricingTier: Which spots-based pricing tier(s) applied at purchase (e.g. "Early Bird" or "Early Bird, Regular" for split-tier)`);
       csvRows.push(`#   - pricingTimelineTier: Which pricing timeline tier was active at purchase`);
       csvRows.push(`#   - groupingOffer: Group offer tier label (if applicable)`);
       csvRows.push(`#   - tierPeople: Number of people in the group tier`);
@@ -2843,8 +2938,37 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       dailySales[date].revenue += ticket.price?.amount || 0;
     });
     
+    // Recalculate per-ticket spots pricing breakdown using chronological simulation
+    // This fixes incorrect metadata from tickets created when currentParticipants was post-incremented
+    const ticketSpotsBreakdownMap = new Map();
+    if (event.spotsPricing?.enabled && event.spotsPricing.tiers?.length) {
+      const sortedTix = [...tickets].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const sortedTiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+      let runningBooked = 0;
+      for (const t of sortedTix) {
+        const qty = t.quantity || 1;
+        const breakdown = [];
+        let remaining = qty;
+        for (const tier of sortedTiers) {
+          if (remaining <= 0) break;
+          const nextSpot = runningBooked + (qty - remaining) + 1;
+          if (nextSpot > tier.maxSpots || nextSpot < tier.minSpots) continue;
+          const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpot + 1);
+          if (spotsInTier > 0) {
+            breakdown.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+          }
+          remaining -= spotsInTier;
+        }
+        ticketSpotsBreakdownMap.set(t._id.toString(), breakdown);
+        runningBooked += qty;
+      }
+    }
+
     // Format attendee list with purchase details
-    const attendees = tickets.map(ticket => ({
+    const attendees = tickets.map(ticket => {
+      // Get recalculated spots breakdown for this ticket
+      const spotsBd = ticketSpotsBreakdownMap.get(ticket._id.toString());
+      return {
       ticketNumber: ticket.ticketNumber,
       user: {
         _id: ticket.user?._id,
@@ -2856,8 +2980,13 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       price: ticket.price?.amount,
       quantity: ticket.quantity || 1,
       ticketType: ticket.metadata?.ticketType || 'general',
-      priceAtPurchase: ticket.metadata?.priceAtPurchase || (ticket.metadata?.basePrice ? Math.round(ticket.metadata.basePrice / (ticket.quantity || 1)) : ticket.price?.amount || 0),
+      priceAtPurchase: (() => {
+        if (spotsBd?.length === 1) return spotsBd[0].price;
+        return ticket.metadata?.priceAtPurchase || (ticket.metadata?.basePrice ? Math.round(ticket.metadata.basePrice / (ticket.quantity || 1)) : ticket.price?.amount || 0);
+      })(),
       pricingTimelineTier: ticket.metadata?.pricingTimelineTier || null,
+      spotsPricingTier: spotsBd?.length ? spotsBd.map(b => b.label).join(', ') : (ticket.metadata?.spotsPricingTier || null),
+      spotsPricingBreakdown: spotsBd?.length ? spotsBd : (ticket.metadata?.spotsPricingBreakdown || null),
       basePrice: ticket.metadata?.basePrice || 0,
       couponCode: ticket.metadata?.couponCode || null,
       couponDiscount: ticket.metadata?.couponDiscount || 0,
@@ -2884,7 +3013,8 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       reconciliationStatus: ticket.reconciliationStatus,
       lastReconciliationDate: ticket.lastReconciliationDate,
       refund: ticket.refund || null
-    }));
+    };
+    });
 
     // Calculate total refund amount for this event
     const totalRefundAmount = tickets
@@ -2996,6 +3126,35 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
       } : { enabled: false, tiers: [] },
       // Grouping offers data
       groupingOffers: event.groupingOffers || { enabled: false, tiers: [] },
+      // Spots-based pricing with per-tier stats
+      spotsPricing: event.spotsPricing?.enabled ? (() => {
+        const tierStats = (event.spotsPricing.tiers || []).map(tier => ({
+          minSpots: tier.minSpots,
+          maxSpots: tier.maxSpots,
+          price: tier.price,
+          label: tier.label || `${tier.minSpots}-${tier.maxSpots} spots`,
+          ticketsBought: 0,
+          spotsBought: 0,
+          revenue: 0
+        }));
+        // Aggregate from recalculated breakdown map
+        for (const bd of ticketSpotsBreakdownMap.values()) {
+          for (const b of bd) {
+            const stat = tierStats.find(s => s.label === b.label || (s.price === b.price));
+            if (stat) {
+              stat.spotsBought += b.count;
+              stat.revenue += b.count * b.price;
+            }
+          }
+          // Count ticket once per tier it touched
+          const touchedLabels = new Set(bd.map(b => b.label));
+          for (const stat of tierStats) {
+            if (touchedLabels.has(stat.label)) stat.ticketsBought += 1;
+          }
+        }
+        tierStats.forEach(s => { s.revenue = parseFloat(s.revenue.toFixed(2)); });
+        return { enabled: true, tiers: tierStats };
+      })() : { enabled: false, tiers: [] },
       // Gender pricing data
       genderPricing: event.genderPricing?.enabled ? {
         enabled: true,

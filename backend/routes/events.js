@@ -572,6 +572,32 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         }
       }
       
+      // Track which spots pricing tier(s) were active at purchase time
+      // NOTE: event.currentParticipants is already incremented by findOneAndUpdate above,
+      // so subtract ticketQuantity to get the pre-booking count for correct tier assignment
+      if (event?.spotsPricing?.enabled && event.spotsPricing.tiers?.length) {
+        const booked = (event.currentParticipants || 0) - (ticketQuantity || 1);
+        const tiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+        const qty = ticketQuantity || 1;
+        const breakdown = [];
+        let remaining = qty;
+        for (const tier of tiers) {
+          if (remaining <= 0) break;
+          const nextSpotNumber = booked + (qty - remaining) + 1;
+          if (nextSpotNumber > tier.maxSpots || nextSpotNumber < tier.minSpots) continue;
+          const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpotNumber + 1);
+          if (spotsInTier > 0) breakdown.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+          remaining -= spotsInTier;
+        }
+        if (breakdown.length > 0) {
+          ticketMetadata.spotsPricingTier = breakdown.map(b => b.label).join(', ');
+          ticketMetadata.spotsPricingBreakdown = breakdown;
+          if (!groupingOffer) {
+            ticketMetadata.priceAtPurchase = breakdown[0].price;
+          }
+        }
+      }
+      
       if (groupingOffer) {
         ticketMetadata.groupingOffer = groupingOffer.tierLabel;
         ticketMetadata.tierPeople = groupingOffer.tierPeople;
@@ -1116,6 +1142,32 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
     const notCheckedIn = tickets.filter(t => t.status === 'active').reduce((sum, t) => sum + (t.quantity || 1), 0);
     const cancelled = tickets.filter(t => t.status === 'cancelled').reduce((sum, t) => sum + (t.quantity || 1), 0);
     
+    // Recalculate per-ticket spots pricing breakdown using chronological simulation
+    // This fixes incorrect metadata from tickets created when currentParticipants was post-incremented
+    const ticketSpotsBreakdownMap = new Map();
+    if (event.spotsPricing?.enabled && event.spotsPricing.tiers?.length) {
+      const sortedTix = [...tickets].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const sortedTiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+      let runningBooked = 0;
+      for (const t of sortedTix) {
+        const qty = t.quantity || 1;
+        const breakdown = [];
+        let remaining = qty;
+        for (const tier of sortedTiers) {
+          if (remaining <= 0) break;
+          const nextSpot = runningBooked + (qty - remaining) + 1;
+          if (nextSpot > tier.maxSpots || nextSpot < tier.minSpots) continue;
+          const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpot + 1);
+          if (spotsInTier > 0) {
+            breakdown.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+          }
+          remaining -= spotsInTier;
+        }
+        ticketSpotsBreakdownMap.set(t._id.toString(), breakdown);
+        runningBooked += qty;
+      }
+    }
+
     // Format attendee data - filter out tickets with null users (deleted accounts)
     const attendees = tickets
       .filter(ticket => ticket.user != null) // Skip tickets with deleted users
@@ -1142,7 +1194,17 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           questionnaireResponses: questionnaireResponses,
           couponUsed: couponUsed, // Include coupon data if user applied one
           price: ticket.price, // Include price object
-          metadata: ticket.metadata, // Include full metadata (basePrice, totalPaid, etc.)
+          metadata: (() => {
+            const md = ticket.metadata?.toObject ? ticket.metadata.toObject() : { ...(ticket.metadata || {}) };
+            // Override spots pricing with recalculated data (fixes incorrect post-increment metadata)
+            const bd = ticketSpotsBreakdownMap.get(ticket._id.toString());
+            if (bd?.length) {
+              md.spotsPricingTier = bd.map(b => b.label).join(', ');
+              md.spotsPricingBreakdown = bd;
+              if (bd.length === 1) md.priceAtPurchase = bd[0].price;
+            }
+            return md;
+          })(),
           refund: ticket.refund || null
         };
       });
@@ -1452,6 +1514,66 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
             revenue: tierTickets.reduce((sum, t) => sum + (t.metadata?.basePrice || t.price?.amount || 0), 0)
           };
         })
+      } : { enabled: false, tiers: [] },
+      spotsPricing: event.spotsPricing?.enabled ? {
+        enabled: true,
+        tiers: (() => {
+          // Build per-tier spot/revenue accumulators
+          const tierStats = (event.spotsPricing.tiers || []).map(tier => ({
+            minSpots: tier.minSpots,
+            maxSpots: tier.maxSpots,
+            price: tier.price,
+            label: tier.label || `${tier.minSpots}-${tier.maxSpots} spots`,
+            ticketsBought: 0,
+            spotsBought: 0,
+            revenue: 0
+          }));
+
+          // Sort tickets by purchase date to simulate in order
+          const sortedTickets = [...tickets].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          let runningBooked = 0;
+
+          for (const t of sortedTickets) {
+            const qty = t.quantity || 1;
+            // If ticket has a stored breakdown, use it directly
+            if (t.metadata?.spotsPricingBreakdown?.length) {
+              for (const b of t.metadata.spotsPricingBreakdown) {
+                const stat = tierStats.find(s => s.label === b.label || (s.price === b.price && s.minSpots <= (runningBooked + 1) && s.maxSpots >= runningBooked));
+                if (stat) {
+                  stat.spotsBought += b.count;
+                  stat.revenue += b.count * b.price;
+                }
+              }
+              tierStats.forEach(s => {
+                if (t.metadata.spotsPricingBreakdown.some(b => b.label === s.label || b.price === s.price)) {
+                  s.ticketsBought += 1;
+                }
+              });
+            } else {
+              // Simulate split-tier assignment
+              let remaining = qty;
+              const sortedTiers = [...tierStats].sort((a, b) => a.minSpots - b.minSpots);
+              let touchedTiers = [];
+              for (const stat of sortedTiers) {
+                if (remaining <= 0) break;
+                const nextSpot = runningBooked + (qty - remaining) + 1;
+                if (nextSpot > stat.maxSpots || nextSpot < stat.minSpots) continue;
+                const spotsInTier = Math.min(remaining, stat.maxSpots - nextSpot + 1);
+                stat.spotsBought += spotsInTier;
+                stat.revenue += spotsInTier * stat.price;
+                remaining -= spotsInTier;
+                touchedTiers.push(stat);
+              }
+              // Count ticket once per tier it touched
+              for (const stat of touchedTiers) {
+                stat.ticketsBought += 1;
+              }
+            }
+            runningBooked += qty;
+          }
+
+          return tierStats;
+        })()
       } : { enabled: false, tiers: [] },
       statistics: {
         totalTickets: totalRegistered,

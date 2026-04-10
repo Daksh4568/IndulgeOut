@@ -206,12 +206,21 @@ router.post('/login/send', async (req, res) => {
     }
 
     // Check if user exists
-    const user = await User.findOne({ phoneNumber });
+    const users = await User.find({ phoneNumber });
     
-    if (!user) {
+    if (!users.length) {
       return res.status(404).json({ 
         message: 'Phone number not registered. Please sign up first.' 
       });
+    }
+
+    // If multiple accounts share this phone (legacy data), use the most recently active
+    const user = users.length > 1
+      ? users.sort((a, b) => (b.lastLoginAt || b.createdAt || 0) - (a.lastLoginAt || a.createdAt || 0))[0]
+      : users[0];
+
+    if (users.length > 1) {
+      console.warn(`⚠️ [OTP Login] Multiple accounts found for phone ${phoneNumber}: ${users.map(u => u.email).join(', ')}. Using: ${user.email}`);
     }
 
     // Check rate limiting (1 minute cooldown)

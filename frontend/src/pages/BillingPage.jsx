@@ -185,6 +185,35 @@ const BillingPage = () => {
     return tier.price;
   };
 
+  // Calculate split-tier total for spots-based pricing
+  // When a purchase spans multiple tiers, each spot is priced at its tier rate
+  // Spots are 1-indexed: spot 1 is the first booking, currentParticipants=0 means next spot is #1
+  const calculateSpotsPricingTotal = (spotsCount) => {
+    if (!event?.spotsPricing?.enabled || !event.spotsPricing.tiers?.length) return null;
+    const tiers = [...event.spotsPricing.tiers].sort((a, b) => a.minSpots - b.minSpots);
+    const currentBooked = event.currentParticipants || 0;
+    let total = 0;
+    let remaining = spotsCount;
+
+    for (const tier of tiers) {
+      if (remaining <= 0) break;
+      // The spot number being assigned (1-indexed)
+      const nextSpotNumber = currentBooked + (spotsCount - remaining) + 1;
+      if (nextSpotNumber > tier.maxSpots) continue; // past this tier
+      if (nextSpotNumber < tier.minSpots) continue; // not yet in this tier
+      const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpotNumber + 1);
+      total += spotsInTier * tier.price;
+      remaining -= spotsInTier;
+    }
+
+    // If there are remaining spots not covered by any tier, use last tier price
+    if (remaining > 0 && tiers.length > 0) {
+      total += remaining * tiers[tiers.length - 1].price;
+    }
+
+    return total;
+  };
+
   const calculatePricing = () => {
     let basePrice = 0;
     let numberOfPeople = 1;
@@ -197,17 +226,30 @@ const BillingPage = () => {
       basePrice = (maleSpots * malePrice) + (femaleSpots * femalePrice);
       numberOfPeople = maleSpots + femaleSpots;
     } else if (event?.groupingOffers?.enabled && selectedTier) {
-      basePrice = getEffectiveTierPrice(selectedTier);
+      // Check if spots pricing can split the group offer tier price
+      const spotsSplitTotal = calculateSpotsPricingTotal(selectedTier.people);
+      basePrice = spotsSplitTotal != null ? spotsSplitTotal : getEffectiveTierPrice(selectedTier);
       numberOfPeople = selectedTier.people;
     } else if (event?.groupingOffers?.enabled && customSpots > 0) {
-      // Custom spots: use effective 1-person price (synced with timeline)
-      const singleTier = event.groupingOffers.tiers.find(t => t.people === 1);
-      const perPersonPrice = singleTier ? getEffectiveTierPrice(singleTier) : (event.currentEffectivePrice ?? event.price?.amount ?? 0);
-      basePrice = perPersonPrice * customSpots;
+      // Custom spots: use split-tier if spots pricing enabled, else effective 1-person price
+      const spotsSplitTotal = calculateSpotsPricingTotal(customSpots);
+      if (spotsSplitTotal != null) {
+        basePrice = spotsSplitTotal;
+      } else {
+        const singleTier = event.groupingOffers.tiers.find(t => t.people === 1);
+        const perPersonPrice = singleTier ? getEffectiveTierPrice(singleTier) : (event.currentEffectivePrice ?? event.price?.amount ?? 0);
+        basePrice = perPersonPrice * customSpots;
+      }
       numberOfPeople = customSpots;
     } else {
-      const effectivePrice = event?.currentEffectivePrice ?? event?.price?.amount ?? 0;
-      basePrice = effectivePrice * quantity;
+      // Regular ticket: use split-tier if spots pricing enabled
+      const spotsSplitTotal = calculateSpotsPricingTotal(quantity);
+      if (spotsSplitTotal != null) {
+        basePrice = spotsSplitTotal;
+      } else {
+        const effectivePrice = event?.currentEffectivePrice ?? event?.price?.amount ?? 0;
+        basePrice = effectivePrice * quantity;
+      }
       numberOfPeople = quantity;
     }
 
@@ -343,6 +385,36 @@ const BillingPage = () => {
       }
 
       setIsProcessing(true);
+
+      // Re-fetch event to get latest currentParticipants before pricing
+      // This prevents stale data if another user booked between page load and payment
+      if (event?.spotsPricing?.enabled) {
+        try {
+          const freshRes = await api.get(`/events/${eventId}`);
+          const freshEvent = freshRes.data.event || freshRes.data;
+          const freshBooked = freshEvent.currentParticipants || 0;
+          const staleBooked = event.currentParticipants || 0;
+          if (freshBooked !== staleBooked) {
+            console.log(`🔄 [Spots] currentParticipants changed: ${staleBooked} → ${freshBooked}`);
+            // Update event state so calculatePricing uses fresh data
+            // We must update synchronously before calling calculatePricing
+            event.currentParticipants = freshBooked;
+            setEvent({ ...freshEvent });
+          }
+          // Also check if spots are still available
+          const spotsAvail = freshEvent.maxParticipants - freshBooked;
+          const needed = event?.genderPricing?.enabled ? (maleSpots + femaleSpots)
+            : event?.groupingOffers?.enabled ? (selectedTier ? selectedTier.people : customSpots)
+            : quantity;
+          if (needed > spotsAvail) {
+            toast.error(`Only ${spotsAvail} spot(s) available now. Please reduce quantity.`);
+            setIsProcessing(false);
+            return;
+          }
+        } catch (err) {
+          console.warn('⚠️ Failed to refresh event spots, proceeding with cached data:', err.message);
+        }
+      }
 
       const pricing = calculatePricing();
       
@@ -793,9 +865,102 @@ const BillingPage = () => {
                         </button>
                       </div>
                     </div>
+                    {/* Split-tier pricing breakdown */}
+                    {event?.spotsPricing?.enabled && (() => {
+                      const tiers = [...(event.spotsPricing.tiers || [])].sort((a, b) => a.minSpots - b.minSpots);
+                      const currentBooked = event.currentParticipants || 0;
+                      const breakdown = [];
+                      let remaining = quantity;
+                      for (const tier of tiers) {
+                        if (remaining <= 0) break;
+                        const nextSpotNumber = currentBooked + (quantity - remaining) + 1;
+                        if (nextSpotNumber > tier.maxSpots || nextSpotNumber < tier.minSpots) continue;
+                        const spotsInTier = Math.min(remaining, tier.maxSpots - nextSpotNumber + 1);
+                        if (spotsInTier > 0) breakdown.push({ label: tier.label || `Spots ${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
+                        remaining -= spotsInTier;
+                      }
+                      if (breakdown.length >= 1) {
+                        return (
+                          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1">
+                            <div className="text-xs text-gray-500 mb-1">Current tier: {breakdown[0].label} (spot #{currentBooked + 1})</div>
+                            {breakdown.map((b, i) => (
+                              <div key={i} className="flex justify-between text-xs">
+                                <span className="text-gray-400">{b.count} spot{b.count > 1 ? 's' : ''} × ₹{b.price} <span className="text-gray-500">({b.label})</span></span>
+                                <span className="text-white">₹{b.count * b.price}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 )}
               </div>
+
+              {/* Upcoming Pricing Info */}
+              {(event?.pricingTimeline?.enabled || event?.spotsPricing?.enabled) && (
+                <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border border-purple-700/30">
+                  <h5 className="text-white font-semibold text-sm mb-3 flex items-center">
+                    <svg className="h-4 w-4 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Pricing Schedule
+                  </h5>
+                  
+                  {event.pricingTimeline?.enabled && event.pricingTimeline.tiers?.length > 0 && (
+                    <div className="space-y-2">
+                      {event.pricingTimeline.tiers
+                        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+                        .map((tier, idx) => {
+                          const now = new Date();
+                          const start = new Date(tier.startDate);
+                          const end = new Date(tier.endDate);
+                          const isActive = now >= start && now <= end;
+                          const isUpcoming = now < start;
+                          return (
+                            <div key={idx} className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${isActive ? 'bg-green-500/10 border border-green-500/30' : isUpcoming ? 'bg-gray-800/50' : 'bg-gray-800/30 opacity-60'}`}>
+                              <div>
+                                <span className={`font-medium ${isActive ? 'text-green-400' : 'text-gray-300'}`}>{tier.label || `Tier ${idx + 1}`}</span>
+                                <span className="text-gray-500 ml-2">
+                                  {new Date(tier.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - {new Date(tier.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold ${isActive ? 'text-green-400' : 'text-white'}`}>₹{tier.price}</span>
+                                {isActive && <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">Now</span>}
+                                {isUpcoming && <span className="text-[10px] bg-gray-600/30 text-gray-400 px-1.5 py-0.5 rounded">Upcoming</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      <p className="text-[10px] text-gray-500 mt-1">Book early to get the best price!</p>
+                    </div>
+                  )}
+
+                  {event.spotsPricing?.enabled && event.spotsPricing.tiers?.length > 0 && (
+                    <div className="space-y-2">
+                      {event.spotsPricing.tiers.map((tier, idx) => {
+                        const booked = event.currentParticipants || 0;
+                        const isActive = booked >= tier.minSpots && booked <= tier.maxSpots;
+                        const isUpcoming = booked < tier.minSpots;
+                        return (
+                          <div key={idx} className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${isActive ? 'bg-green-500/10 border border-green-500/30' : isUpcoming ? 'bg-gray-800/50' : 'bg-gray-800/30 opacity-60'}`}>
+                            <div>
+                              <span className={`font-medium ${isActive ? 'text-green-400' : 'text-gray-300'}`}>{tier.label || `Spots ${tier.minSpots}-${tier.maxSpots}`}</span>
+                              <span className="text-gray-500 ml-2">({tier.minSpots}-{tier.maxSpots} spots)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold ${isActive ? 'text-green-400' : 'text-white'}`}>₹{tier.price}</span>
+                              {isActive && <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">Current</span>}
+                              {isUpcoming && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded">₹{tier.price - (event.currentEffectivePrice || 0) > 0 ? '+' : ''}{tier.price - (event.currentEffectivePrice || 0)}</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <p className="text-[10px] text-gray-500 mt-1">Price increases as more spots get booked. Book now for the best price!</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Additional Person Details */}
               <div className="mt-6 space-y-4">

@@ -186,6 +186,34 @@ const eventSchema = new mongoose.Schema({
       }
     }]
   },
+  // Spots-based pricing: price changes based on how many spots are booked
+  spotsPricing: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    tiers: [{
+      minSpots: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      maxSpots: {
+        type: Number,
+        required: true,
+        min: 1
+      },
+      price: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      label: {
+        type: String,
+        default: ''
+      }
+    }]
+  },
   // Track all price changes (both manual edits and timeline-based)
   priceChangeHistory: [{
     previousPrice: {
@@ -558,8 +586,16 @@ function toDateString(date) {
   return new Date(new Date(date).getTime() + IST_OFFSET).toISOString().split('T')[0];
 }
 
-// Get current effective price based on pricing timeline
+// Get current effective price based on pricing timeline and spots-based pricing
 eventSchema.methods.getCurrentPrice = function() {
+  // Spots-based pricing takes priority if enabled
+  // nextSpot is 1-indexed: the next person to book fills spot (currentParticipants + 1)
+  if (this.spotsPricing?.enabled && this.spotsPricing?.tiers?.length) {
+    const nextSpot = (this.currentParticipants || 0) + 1;
+    const activeTier = this.spotsPricing.tiers.find(t => nextSpot >= t.minSpots && nextSpot <= t.maxSpots);
+    if (activeTier) return activeTier.price;
+  }
+  
   if (!this.pricingTimeline?.enabled || !this.pricingTimeline?.tiers?.length) {
     return this.price?.amount || 0;
   }
