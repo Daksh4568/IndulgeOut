@@ -2,7 +2,7 @@
  * Backfill missing groupingOffer metadata on tickets.
  * Finds tickets with ticketType='group' but null tierPeople,
  * matches them to event groupingOffers tiers by quantity + basePrice.
- *
+ * Anything more complex (e.g. price changes, discounts) will be skipped to avoid incorrect matches.
  * Usage: node scripts/backfillGroupOfferMetadata.js
  * Add --confirm to actually update: node scripts/backfillGroupOfferMetadata.js --confirm
  */
