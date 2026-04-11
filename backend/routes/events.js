@@ -577,7 +577,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         gstAndOtherCharges: gstAndOtherCharges || 0,
         platformFees: platformFees || 0,
         priceAtPurchase: effectivePerTicketPrice,
-        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+        ticketType: ticketQuantity > 1 ? 'group' : 'general',
       };
       
       // Track which pricing timeline tier was active at purchase time
@@ -656,7 +656,7 @@ router.post('/:id/register', registrationLimiter, authMiddleware, async (req, re
         eventId: event._id,
         amount: finalAmount || event.getCurrentPrice() * ticketQuantity, // Use finalAmount after coupon discount
         paymentId: req.body.paymentId || null,
-        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+        ticketType: ticketQuantity > 1 ? 'group' : 'general',
         quantity: ticketQuantity,
         metadata: ticketMetadata
       });
@@ -1186,6 +1186,17 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
           }
           remaining -= spotsInTier;
         }
+        // Fallback: if no tier matched by position (e.g. ticket from before spots pricing was activated), match by price
+        if (remaining > 0 && breakdown.length === 0) {
+          const perSpotPrice = t.metadata?.priceAtPurchase || (t.metadata?.basePrice ? Math.round(t.metadata.basePrice / qty) : null);
+          if (perSpotPrice) {
+            const priceMatchTier = sortedTiers.find(tier => tier.price === perSpotPrice);
+            if (priceMatchTier) {
+              breakdown.push({ label: priceMatchTier.label || `${priceMatchTier.minSpots}-${priceMatchTier.maxSpots}`, count: remaining, price: priceMatchTier.price });
+              remaining = 0;
+            }
+          }
+        }
         ticketSpotsBreakdownMap.set(t._id.toString(), breakdown);
         runningBooked += qty;
       }
@@ -1629,6 +1640,19 @@ router.get('/:id/analytics', authMiddleware, async (req, res) => {
                 stat.revenue += spotsInTier * stat.price;
                 remaining -= spotsInTier;
                 touchedTiers.push(stat);
+              }
+              // Fallback: if no tier matched by position (e.g. ticket from before spots pricing was activated), match by price
+              if (remaining > 0 && touchedTiers.length === 0) {
+                const perSpotPrice = t.metadata?.priceAtPurchase || (t.metadata?.basePrice ? Math.round(t.metadata.basePrice / qty) : null);
+                if (perSpotPrice) {
+                  const priceMatchTier = sortedTiers.find(s => s.price === perSpotPrice);
+                  if (priceMatchTier) {
+                    priceMatchTier.spotsBought += remaining;
+                    priceMatchTier.revenue += remaining * priceMatchTier.price;
+                    touchedTiers.push(priceMatchTier);
+                    remaining = 0;
+                  }
+                }
               }
               // Count ticket once per tier it touched
               for (const stat of touchedTiers) {

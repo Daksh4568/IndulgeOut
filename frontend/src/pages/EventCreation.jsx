@@ -484,14 +484,14 @@ const EventCreation = () => {
   };
 
   const handleGroupingOfferToggle = (checked) => {
-    // In edit mode, don't allow switching to group offers if another feature was originally enabled
-    if (isEditMode && checked && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing')) {
-      toast.error('Cannot switch pricing feature on an existing event. You can only edit within the current pricing type.');
+    // In edit mode, don't allow disabling the active pricing feature
+    if (isEditMode && !checked && originalPricingFeature === 'groupingOffers') {
+      toast.error('Cannot disable the active pricing feature on an existing event.');
       return;
     }
-    // In edit mode, don't allow disabling group offers if it was the original feature
-    if (isEditMode && !checked && originalPricingFeature === 'groupingOffers') {
-      toast.error('Cannot disable the pricing feature on an existing event with bookings.');
+    // In edit mode, don't allow enabling if any pricing feature was originally set
+    if (isEditMode && checked && originalPricingFeature !== 'none') {
+      toast.error('Cannot switch pricing feature on an existing event. You can only edit within the current pricing type.');
       return;
     }
     setFormData((prev) => {
@@ -681,8 +681,13 @@ const EventCreation = () => {
 
   // Pricing Timeline handlers
   const handleEarlyBirdToggle = (checked) => {
-    // In edit mode, don't allow switching to early bird if another feature was originally enabled
-    if (isEditMode && checked && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing')) {
+    // In edit mode, don't allow disabling the active pricing feature
+    if (isEditMode && !checked && originalPricingFeature === 'earlyBird') {
+      toast.error('Cannot disable the active pricing feature on an existing event.');
+      return;
+    }
+    // In edit mode, don't allow enabling if any pricing feature was originally set
+    if (isEditMode && checked && originalPricingFeature !== 'none') {
       toast.error('Cannot switch pricing feature on an existing event. You can only edit within the current pricing type.');
       return;
     }
@@ -704,11 +709,6 @@ const EventCreation = () => {
         }));
       }
     } else {
-      // In edit mode, don't allow disabling if this was the original feature
-      if (isEditMode && originalPricingFeature === 'earlyBird') {
-        toast.error('Cannot disable the pricing feature on an existing event with bookings.');
-        return;
-      }
       // Disable both
       setFormData((prev) => ({
         ...prev,
@@ -2184,7 +2184,7 @@ const EventCreation = () => {
                 <label
                   htmlFor="categoryPricing"
                   className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                    (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled) || (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing')
+                    (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing') || (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled)
                       ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
                       : formData.genderPricing?.enabled
                         ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
@@ -2199,8 +2199,8 @@ const EventCreation = () => {
                       <span className="text-white text-sm font-medium">Smart Pricing</span>
                       <p className="text-[11px] text-gray-500">
                         {isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing'
-                          ? `Cannot switch — ${originalPricingFeature === 'groupingOffers' ? 'Group Offers' : 'Early Bird'} is already active`
-                          : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
+                            ? 'Cannot change pricing feature on an existing event'
+                            : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
                             ? 'Disable Early Bird first to use Smart Pricing'
                             : formData.groupingOffers?.enabled
                               ? 'Disable Group Offers first to use Smart Pricing'
@@ -2213,12 +2213,17 @@ const EventCreation = () => {
                       type="checkbox"
                       id="categoryPricing"
                       checked={formData.genderPricing?.enabled || false}
-                      disabled={(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled) || (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'genderPricing')}
+                      disabled={(isEditMode && originalPricingFeature !== 'none') || (!formData.genderPricing?.enabled && (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || formData.groupingOffers?.enabled))}
                       onChange={(e) => {
                         const checked = e.target.checked;
-                        // In edit mode, don't allow disabling if it was the original feature
+                        // In edit mode, don't allow disabling the active pricing feature
                         if (isEditMode && !checked && originalPricingFeature === 'genderPricing') {
-                          toast.error('Cannot disable the pricing feature on an existing event.');
+                          toast.error('Cannot disable the active pricing feature on an existing event.');
+                          return;
+                        }
+                        // In edit mode, don't allow enabling if any pricing feature was originally set
+                        if (isEditMode && checked && originalPricingFeature !== 'none') {
+                          toast.error('Cannot switch pricing feature on an existing event. You can only edit within the current pricing type.');
                           return;
                         }
                         setFormData((prev) => ({
@@ -2331,7 +2336,7 @@ const EventCreation = () => {
                 <label
                   htmlFor="groupingOffers"
                   className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                    formData.genderPricing?.enabled || (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) || (isEditMode && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing'))
+                    (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'groupingOffers') || formData.genderPricing?.enabled || (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
                       ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
                       : formData.groupingOffers?.enabled
                         ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
@@ -2345,11 +2350,13 @@ const EventCreation = () => {
                     <div>
                       <span className="text-white text-sm font-medium">Group Offers</span>
                       <p className="text-[11px] text-gray-500">
-                        {isEditMode && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing')
-                          ? `Cannot switch — ${originalPricingFeature === 'earlyBird' ? 'Early Bird' : 'Smart Pricing'} is already active on this event`
-                          : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
+                        {isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'groupingOffers'
+                            ? 'Cannot change pricing feature on an existing event'
+                            : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
                             ? 'Disable Early Bird first to use Group Offers'
-                            : 'Bulk discounts by group size'}
+                            : formData.genderPricing?.enabled
+                              ? 'Disable Smart Pricing first to use Group Offers'
+                              : 'Bulk discounts by group size'}
                       </p>
                     </div>
                   </div>
@@ -2359,7 +2366,7 @@ const EventCreation = () => {
                       id="groupingOffers"
                       checked={formData.groupingOffers?.enabled || false}
                       onChange={(e) => handleGroupingOfferToggle(e.target.checked)}
-                      disabled={formData.genderPricing?.enabled || (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) || (isEditMode && (originalPricingFeature === 'earlyBird' || originalPricingFeature === 'genderPricing'))}
+                      disabled={(isEditMode && originalPricingFeature !== 'none') || (!formData.groupingOffers?.enabled && (formData.genderPricing?.enabled || formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled))}
                       className="sr-only peer"
                     />
                     <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${(formData.genderPricing?.enabled || formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) ? 'bg-white/5' : 'bg-white/10'}`}></div>
@@ -2460,7 +2467,7 @@ const EventCreation = () => {
                 <label
                   htmlFor="earlyBird"
                   className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                    formData.groupingOffers?.enabled || formData.genderPricing?.enabled || (isEditMode && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing'))
+                    (isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'earlyBird') || formData.groupingOffers?.enabled || formData.genderPricing?.enabled
                       ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
                       : (formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled)
                         ? 'bg-[#7878E9]/10 border-[#7878E9]/40 cursor-pointer'
@@ -2474,9 +2481,9 @@ const EventCreation = () => {
                     <div>
                       <span className="text-white text-sm font-medium">Early Bird</span>
                       <p className="text-[11px] text-gray-500">
-                        {isEditMode && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing')
-                          ? `Cannot switch — ${originalPricingFeature === 'groupingOffers' ? 'Group Offers' : 'Smart Pricing'} is already active on this event`
-                          : formData.groupingOffers?.enabled
+                        {isEditMode && originalPricingFeature !== 'none' && originalPricingFeature !== 'earlyBird'
+                            ? 'Cannot change pricing feature on an existing event'
+                            : formData.groupingOffers?.enabled
                             ? 'Disable Group Offers first to use Early Bird'
                             : formData.genderPricing?.enabled
                               ? 'Disable Smart Pricing first to use Early Bird'
@@ -2490,7 +2497,7 @@ const EventCreation = () => {
                       id="earlyBird"
                       checked={formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled || false}
                       onChange={(e) => handleEarlyBirdToggle(e.target.checked)}
-                      disabled={formData.groupingOffers?.enabled || formData.genderPricing?.enabled || (isEditMode && (originalPricingFeature === 'groupingOffers' || originalPricingFeature === 'genderPricing'))}
+                      disabled={(isEditMode && originalPricingFeature !== 'none') || (!(formData.pricingTimeline?.enabled || formData.spotsPricing?.enabled) && (formData.groupingOffers?.enabled || formData.genderPricing?.enabled))}
                       className="sr-only peer"
                     />
                     <div className={`w-9 h-5 rounded-full peer peer-checked:bg-[#7878E9] transition-colors ${(formData.groupingOffers?.enabled || formData.genderPricing?.enabled) ? 'bg-white/5' : 'bg-white/10'}`}></div>

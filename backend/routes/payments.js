@@ -496,7 +496,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         orderId: orderId,
         basePrice: basePrice || 0, // Base price from frontend (organizer's revenue - ticket price only)
         priceAtPurchase: perTicketPrice, // Per-ticket price at purchase time
-        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+        ticketType: ticketQuantity > 1 ? 'group' : 'general',
         gstAndOtherCharges: gstAndOtherCharges || 0,
         platformFees: platformFees || 0,
         totalPaid: totalAmount || (basePrice + (gstAndOtherCharges || 0) + (platformFees || 0)) // Total amount customer paid
@@ -593,7 +593,7 @@ router.post('/verify-payment', authMiddleware, async (req, res) => {
         eventId: event._id,
         amount: basePrice || totalAmount || payment.payment_amount, // Use frontend basePrice for revenue
         paymentId: orderId,
-        ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+        ticketType: ticketQuantity > 1 ? 'group' : 'general',
         quantity: ticketQuantity,
         metadata: ticketMetadata
       });
@@ -1065,7 +1065,7 @@ router.post('/webhook', async (req, res) => {
           eventId: event._id,
           amount: basePrice, // Use base price (revenue amount)
           paymentId: orderId,
-          ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+          ticketType: ticketQuantity > 1 ? 'group' : 'general',
           quantity: ticketQuantity,
           metadata: {
             registrationSource: 'webhook',
@@ -1075,7 +1075,7 @@ router.post('/webhook', async (req, res) => {
             basePrice: basePrice,                     // ✅ Organizer revenue
             priceAtPurchase: ticketPrice,             // ✅ Per-ticket price at purchase
             pricingTimelineTier: pricingTimelineTier, // ✅ Active tier label
-            ticketType: groupingOffer ? 'group' : (ticketQuantity > 1 ? 'group' : 'general'),
+            ticketType: ticketQuantity > 1 ? 'group' : 'general',
             gstAndOtherCharges: gstAndOtherCharges,   // ✅ GST breakdown
             platformFees: platformFees,               // ✅ Platform fee breakdown
             totalPaid: paymentAmount,                 // ✅ Total customer paid

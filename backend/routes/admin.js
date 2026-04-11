@@ -1929,6 +1929,19 @@ router.get('/events/:eventId/audit-report', requirePermission('view_analytics'),
               remaining -= spotsInTier;
               touchedTiers.push(stat);
             }
+            // Fallback: if no tier matched by position (e.g. ticket from before spots pricing was activated), match by price
+            if (remaining > 0 && touchedTiers.length === 0) {
+              const perSpotPrice = t.metadata?.priceAtPurchase || (t.metadata?.basePrice ? Math.round(t.metadata.basePrice / qty) : null);
+              if (perSpotPrice) {
+                const priceMatchTier = sortedTiers.find(s => s.price === perSpotPrice);
+                if (priceMatchTier) {
+                  priceMatchTier.spotsBought += remaining;
+                  priceMatchTier.revenue += remaining * priceMatchTier.price;
+                  touchedTiers.push(priceMatchTier);
+                  remaining = 0;
+                }
+              }
+            }
             for (const stat of touchedTiers) {
               stat.ticketsBought += 1;
             }
@@ -2970,6 +2983,17 @@ router.get('/events/:eventId/complete-details', requirePermission('view_analytic
             breakdown.push({ label: tier.label || `${tier.minSpots}-${tier.maxSpots}`, count: spotsInTier, price: tier.price });
           }
           remaining -= spotsInTier;
+        }
+        // Fallback: if no tier matched by position (e.g. ticket from before spots pricing was activated), match by price
+        if (remaining > 0 && breakdown.length === 0) {
+          const perSpotPrice = t.metadata?.priceAtPurchase || (t.metadata?.basePrice ? Math.round(t.metadata.basePrice / qty) : null);
+          if (perSpotPrice) {
+            const priceMatchTier = sortedTiers.find(tier => tier.price === perSpotPrice);
+            if (priceMatchTier) {
+              breakdown.push({ label: priceMatchTier.label || `${priceMatchTier.minSpots}-${priceMatchTier.maxSpots}`, count: remaining, price: priceMatchTier.price });
+              remaining = 0;
+            }
+          }
         }
         ticketSpotsBreakdownMap.set(t._id.toString(), breakdown);
         runningBooked += qty;
